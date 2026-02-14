@@ -23,6 +23,71 @@ SauronSheet is a multi-user expense tracking web application that imports bank t
 
 For current phase objectives, consult `.specify/memory/project-roadmap.md` and `.specify/memory/execution-checklist.md`.
 
+---
+
+## 📋 Specification Management (IMPORTANT)
+
+### Single-File Rule
+**ALL phase specifications MUST be in a single file: `specs/phase-X-spec.md`**
+
+❌ **DO NOT CREATE**:
+- `.clarification-*.md` files
+- `.decisions-*.md` files  
+- `.resolved-*.md` files
+- Duplicate/split spec documents
+
+✅ **DO**:
+- Consolidate ALL information into ONE `specs/phase-X-spec.md` file
+- Include clarifications, decisions, user stories, requirements, architecture in same file
+- Use clear section headers to organize content
+- Update single file incrementally as spec evolves
+
+### Why Single File?
+- No information redundancy
+- Single source of truth
+- Easier to track changes
+- Clear narrative from user stories → implementation
+
+### Structure Template for Phase Specs
+```markdown
+# Phase X: [Feature Name]
+
+## Quick Reference
+- Status: [Draft/Ready for Tasks]
+- Duration: X-Y weeks
+- Dependencies: Phase X-1
+
+## Critical Decisions (if any)
+| Decision | Answer | Rationale |
+| ... |
+
+## Executive Summary
+...
+
+## User Scenarios & Testing
+### Story 1: ...
+
+## Requirements
+...
+
+## Architecture & Design
+...
+
+## Deliverables
+...
+
+## Test Specifications
+...
+
+## Success Criteria
+...
+
+## Next Phase
+...
+```
+
+---
+
 ## Architecture
 
 ### Clean Architecture + CQRS + Mediator Pattern
@@ -89,6 +154,7 @@ SauronSheet/
 - `Infrastructure/Persistence/` → Supabase repository implementations
 - `Frontend/Pages/` → Razor Pages (.cshtml + .cshtml.cs)
 - `Frontend/wwwroot/` → CSS (Tailwind output), JS
+- `specs/` → Phase specifications (ONE FILE PER PHASE, consolidated)
 
 ## Development Commands
 ```bash
@@ -116,6 +182,8 @@ dotnet test                    # Run domain/application tests
 - ❌ Domain logic in handlers (keep handlers thin orchestrators)
 - ❌ Mixing query/command logic (separate concerns)
 - ❌ Supabase client leaking into Application layer
+- ❌ **Creating multiple spec files for same phase** (consolidate into ONE)
+- ❌ **Splitting spec information across `.clarification-`, `.decisions-`, `.resolved-` files** (keep in main spec)
 
 ## Constitutional Compliance (Non-Negotiable)
 
@@ -131,6 +199,7 @@ dotnet test                    # Run domain/application tests
 - ❌ Domain/Application never reference Infrastructure or Frontend directly
 - ❌ No direct Supabase client calls outside Infrastructure layer
 - ❌ All queries must be scoped to current user's tenant
+- ❌ Creating redundant specification files (ONE file per phase)
 - ✅ Every Command/Query requires MediatR handler + integration test
 - ✅ Domain invariants prevent invalid states (proven in unit tests)
 
@@ -143,3 +212,8 @@ dotnet test                    # Run domain/application tests
 5. **Wire UI** — Create Razor Pages/commands to trigger operations
 
 For Phase X tasks, always consult `.specify/memory/execution-checklist.md` Phase X section.
+
+---
+
+**Last Updated**: 2026-02-14  
+**Version**: 1.1.0 (Added spec consolidation rules)
