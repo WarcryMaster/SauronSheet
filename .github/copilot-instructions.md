@@ -1,9 +1,27 @@
 # SauronSheet - AI Coding Instructions
 
+## Quick Links to Planning Documents
+
+📚 **Planning Hub**: See `.specify/memory/master-index.md` for complete documentation index  
+📋 **Constitution**: See `.specify/memory/constitution.md` for 5 core principles & governance (v1.0.0)  
+🚀 **Roadmap**: See `.specify/memory/project-roadmap.md` for 6-phase execution plan  
+✅ **Execution**: See `.specify/memory/execution-checklist.md` for daily tasks & phase checklists  
+📊 **Timeline**: See `.specify/memory/visual-roadmap.md` for Gantt charts, critical path, risks
+
 ## Project Overview
 SauronSheet is a multi-user expense tracking web application that imports bank transactions from PDF statements, provides analytics, and generates spending reports.
 
-**Stack:** .NET Core 10 (Razor Pages + C# backend), Supabase PostgreSQL, Tailwind CSS, JavaScript
+**Stack:** .NET Core 10 (Razor Pages + C# backend), Supabase PostgreSQL, Tailwind CSS, JavaScript  
+**Version**: Roadmap v1.0.0 (created 2026-02-14) | Constitution v1.0.0 (ratified 2026-02-14)
+
+## Project Phases & Current Context
+
+**Phase Execution Model**: 6 sequential phases (Phases 0-6), each with specific deliverables and exit criteria.  
+**Current Phase**: TBD (start with Phase 0: Foundation)  
+**MVP Launch**: End of Phase 3 (Week 14)  
+**Production Release**: End of Phase 6 (Week 24)
+
+For current phase objectives, consult `.specify/memory/project-roadmap.md` and `.specify/memory/execution-checklist.md`.
 
 ## Architecture
 
@@ -99,9 +117,29 @@ dotnet test                    # Run domain/application tests
 - ❌ Mixing query/command logic (separate concerns)
 - ❌ Supabase client leaking into Application layer
 
-## Spec-Driven Development
-- Start with behavior specs in Application tests
-- Define Mediator handlers to satisfy specs
-- Build Domain entities to support handlers
-- Implement Infrastructure to persist domain state
-- Wire Frontend UI to trigger commands/queries
+## Constitutional Compliance (Non-Negotiable)
+
+**5 Core Principles** (see `.specify/memory/constitution.md` for full details):
+
+1. **Clean Architecture & Layered Dependencies** — No upward layer references; Frontend → Application → Domain; Infrastructure → Domain only
+2. **CQRS + MediatR Pattern** — Commands for state-changing ops, Queries for read-only; all routed through MediatR
+3. **Domain-Driven Design** — Core business logic in entities/value objects; repositories abstract persistence
+4. **Test-First Development (NON-NEGOTIABLE)** — Write tests before code; 80% Domain, 70% Application coverage minimum
+5. **Spec-Driven Development** — Specifications in tests, implementation follows specs
+
+**Critical Rules**:
+- ❌ Domain/Application never reference Infrastructure or Frontend directly
+- ❌ No direct Supabase client calls outside Infrastructure layer
+- ❌ All queries must be scoped to current user's tenant
+- ✅ Every Command/Query requires MediatR handler + integration test
+- ✅ Domain invariants prevent invalid states (proven in unit tests)
+
+## Spec-Driven Development Workflow
+
+1. **Write Test Spec** — Behavior spec in Application tests (TDD)
+2. **Define Handler** — Create MediatR Command/Query handler stub
+3. **Build Domain** — Implement entities/value objects to satisfy handler
+4. **Implement Persistence** — Add Infrastructure repository implementations
+5. **Wire UI** — Create Razor Pages/commands to trigger operations
+
+For Phase X tasks, always consult `.specify/memory/execution-checklist.md` Phase X section.
