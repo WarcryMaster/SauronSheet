@@ -39,7 +39,7 @@ None (foundation phase has no user-facing features)
 | **NF-001: Clean Architecture** | 4-layer structure with unidirectional dependencies | `dotnet build` compiles, no upward refs |
 | **NF-002: CQRS Pattern** | Command/Query handlers via MediatR | Example CreateCategoryCommand + GetCategoriesQuery execute |
 | **NF-003: Test-First** | 11 tests written before implementation | `dotnet test` passes all 11 tests |
-| **NF-004: Multi-Tenancy** | ScopedQueryBehavior validates tenant isolation | T00-008: ScopedQueryBehavior rejects cross-tenant data |
+| **NF-004: Multi-Tenancy** | ScopedQueryBehavior validates tenant isolation via ITenantScoped marker | T00-008: ScopedQueryBehavior rejects cross-tenant ITenantScoped responses |
 | **NF-005: Exception Hierarchy** | Domain exceptions for strong typing | T00-006: DomainException throws/catches correctly |
 | **NF-006: Pagination Default** | ISpecification<T> enforces 1000-row limit | T00-007: ISpecification enforces MaxResults = 1000 |
 | **NF-007: CI/CD Pipeline** | GitHub Actions builds + tests on push | GitHub Actions workflow green |
@@ -125,12 +125,15 @@ SauronSheet/
 ## Deliverables
 
 ### Domain Layer
-- [ ] `Domain/Common/Entity.cs` - Abstract base class with Id property
+- [ ] `Domain/Common/IDomainEvent.cs` - Empty interface (placeholder for Phase 2+ event sourcing)
+- [ ] `Domain/Common/Entity.cs` - Abstract base class with Id property + GetDomainEvents() stub
 - [ ] `Domain/Common/ValueObject.cs` - Abstract base with GetEqualityComponents()
 - [ ] `Domain/Common/DomainException.cs` - Base exception class
 - [ ] `Domain/Exceptions/EntityNotFoundException.cs` - Subclass
 - [ ] `Domain/Exceptions/ValueObjectValidationException.cs` - Subclass
-- [ ] `Domain/Common/IRepository.cs` - Generic repository interface
+- [ ] `Domain/Common/IRepository.cs` - Generic repository interface with CRUD + GetBySpecificationAsync
+  - Methods: `AddAsync(T)`, `UpdateAsync(T)`, `DeleteAsync(Guid)`, `GetByIdAsync(Guid)`, `GetAllAsync()`, `GetBySpecificationAsync(ISpecification<T>)`
+  - Generic constraint: `where T : Entity<Guid>`
 - [ ] `Domain/Specifications/ISpecification<T>` - Base class with MaxResults = 1000 property
 
 ### Application Layer
@@ -138,11 +141,17 @@ SauronSheet/
   - Property: `UserId` (Guid)
   - Method: `IsAuthenticated()` → bool
   - Method: `IsAdmin()` → bool
+- [ ] `Application/Common/MockUserContext.cs` - **Phase 0 test implementation** (replaced by SupabaseUserContext in Phase 1)
+  - Property: `UserId` = Guid.Empty
+  - Method: `IsAuthenticated()` → false
+  - Method: `IsAdmin()` → false
 - [ ] `Application/Common/Behaviors/ValidationBehavior.cs` - FluentValidation middleware
 - [ ] `Application/Common/Behaviors/LoggingBehavior.cs` - Logging middleware
 - [ ] `Application/Common/Behaviors/ScopedQueryBehavior.cs` - **Tenant isolation enforcement**
-  - Validates every Query result has UserId == current.UserId
-  - Throws exception if cross-tenant data detected
+  - Validates Query responses implementing ITenantScoped
+  - Throws exception if response.TenantId != currentUser.UserId
+- [ ] `Application/Common/Abstractions/ITenantScoped.cs` - Marker interface for tenant-scoped queries/responses
+  - Property: `Guid TenantId { get; }`
 - [ ] `Application/Common/Dto/BaseDto.cs` - Base DTO class
 - [ ] `Application/Common/Handlers/ICommandHandler.cs` - Command handler interface
 - [ ] `Application/Common/Handlers/IQueryHandler.cs` - Query handler interface
@@ -151,9 +160,9 @@ SauronSheet/
 - [ ] `Application/Tests/Helpers/MockRepositoryFactory.cs` - Test helper for repository mocking
 
 ### Infrastructure Layer
-- [ ] `Infrastructure/Persistence/SupabaseContext.cs` - Connection management
-- [ ] `Infrastructure/Persistence/Migrations/001_InitialSchema.sql` - Initial migration template
-- [ ] `Infrastructure/DependencyInjection.cs` - DI registration module
+- [ ] `Infrastructure/Persistence/SupabaseContext.cs` - Connection management (abstract; no DB schema)
+- [ ] `Infrastructure/Persistence/Migrations/README.md` - Folder structure for future migrations (Phase 1+)
+- [ ] `Infrastructure/DependencyInjection.cs` - DI registration module (SupabaseContext, mock repository for testing)
 
 ### Frontend Layer
 - [ ] `Frontend/Pages/Shared/Layout.cshtml` - Base layout template
@@ -217,15 +226,15 @@ All 11 tests must be written **BEFORE** implementation code is written.
 **Implementation**: Unit test in `Domain.Tests/Specifications/SpecificationTests.cs`
 
 ### T00-008: ScopedQueryBehavior Rejects Queries Returning Cross-Tenant Data
-**Given**: ScopedQueryBehavior middleware + Query returning UserId != Current.UserId  
-**When**: Handler tries to return cross-tenant data  
-**Then**: Behavior throws exception  
+**Given**: ScopedQueryBehavior middleware + Query returning response implementing ITenantScoped with TenantId != Current.UserId  
+**When**: Handler returns cross-tenant ITenantScoped response  
+**Then**: Behavior throws SecurityException  
 **Implementation**: Integration test in `Application.Tests/Behaviors/ScopedQueryBehaviorTests.cs`
 
 ### T00-009: IUserContext Can Be Injected from DI Container
-**Given**: IUserContext.cs interface defined  
+**Given**: MockUserContext registered in DI container  
 **When**: IUserContext is injected into handler constructor  
-**Then**: Injection succeeds (Phase 1 implements, Phase 0 verifies interface exists)  
+**Then**: Injection succeeds and returns MockUserContext instance  
 **Implementation**: Unit test in `Application.Tests/Common/DependencyInjectionTests.cs`
 
 ### T00-010: Example CreateCategoryCommand Handler Receives Request and Returns Result
@@ -268,7 +277,10 @@ All 11 tests must be written **BEFORE** implementation code is written.
 
 ### Outgoing Dependencies
 - **Blocks**: All subsequent phases (1, 2, 3, 4, 5, 6)
-- **Critical for**: Phase 1 (Auth) depends on IUserContext abstraction, DI setup
+- **Critical for**: Phase 1 (Auth) depends on IUserContext abstraction, DI setup, SupabaseContext abstract class
+- **Phase 1 adds**: First migration (001_CreateUsersTable.sql), SupabaseUserContext implementation
+- **Phase 2 adds**: Domain entities (Category, Transaction, Budget) + corresponding migrations
+- **Pattern**: Each phase creates migrations when entities are implemented (spec-driven approach)
 
 ### External Dependencies
 - .NET Core 10 SDK
@@ -278,9 +290,29 @@ All 11 tests must be written **BEFORE** implementation code is written.
 
 ---
 
+## Clarifications
+
+### Session 2026-02-14
+
+- Q: IDomainEvent in Entity base class - definition and use? → A: Empty stub (interface + empty list in Phase 0; implement event sourcing Phase 2+)
+- Q: IRepository<T> methods - which are required in Phase 0? → A: CRUD + Query (Add, Update, Delete, GetByIdAsync, GetAllAsync, GetBySpecificationAsync)
+- Q: IUserContext - implementation Phase 0 or stub? → A: Mock implementation (MockUserContext in Phase 0; replaced by SupabaseUserContext in Phase 1)
+- Q: ScopedQueryBehavior validation - what exactly validates? → A: Marker interface pattern (ITenantScoped); behavior validates response.TenantId == currentUser.UserId only if response implements ITenantScoped
+- Q: Supabase schema/migrations - Phase 0 or Phase 1? → A: Phase 1+ responsibility (separate migrations per phase follow spec-driven approach; Phase 0 creates folder structure only)
+
+---
+
 ## Implementation Notes
 
 ### Key Files for Architecture
+
+**IDomainEvent.cs** - Event sourcing stub (Phase 0 placeholder):
+```csharp
+// Empty interface; full implementation in Phase 2+
+public interface IDomainEvent
+{
+}
+```
 
 **Entity.cs** - Base class for all domain entities:
 ```csharp
@@ -289,9 +321,14 @@ public abstract class Entity<TId>
     public TId Id { get; protected set; }
     protected Entity(TId id) => Id = id;
     protected Entity() { }
+    
+    // Phase 0: Returns empty list. Phase 2+: Returns actual domain events.
     public IReadOnlyCollection<IDomainEvent> GetDomainEvents() => new List<IDomainEvent>();
 }
 ```
+
+**Note on IDomainEvent:**
+Phase 0 defines the contract (`IDomainEvent` interface) but does not populate events. This allows future phases to implement event sourcing or event-driven architecture without refactoring Entity base class. Test T00-001 validates Entity immutability; event collection is not tested in Phase 0.
 
 **ValueObject.cs** - Base class for immutable value objects:
 ```csharp
@@ -303,14 +340,84 @@ public abstract class ValueObject : IEquatable<ValueObject>
 }
 ```
 
-**ScopedQueryBehavior.cs** - **CRITICAL** for multi-tenancy enforcement:
+**IRepository<T>** - Generic repository interface (CRUD + Query pattern):
+```csharp
+public interface IRepository<T> where T : Entity<Guid>
+{
+    // Create
+    Task AddAsync(T entity, CancellationToken cancellationToken = default);
+    
+    // Read
+    Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<T?> GetBySpecificationAsync(ISpecification<T> spec, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default);
+    
+    // Update
+    Task UpdateAsync(T entity, CancellationToken cancellationToken = default);
+    
+    // Delete
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+}
+```
+
+Note: Phase 0 defines interface only. Phase 1+ implements SupabaseRepository.
+
+**IUserContext** - Current user context abstraction:
+```csharp
+public interface IUserContext
+{
+    Guid UserId { get; }
+    bool IsAuthenticated();
+    bool IsAdmin();
+}
+```
+
+**MockUserContext** - Phase 0 test implementation (Phase 1 replaced by SupabaseUserContext):
+```csharp
+public class MockUserContext : IUserContext
+{
+    public Guid UserId { get; set; } = Guid.Empty;
+    
+    public bool IsAuthenticated() => false;
+    public bool IsAdmin() => false;
+}
+```
+
+Note on IUserContext: Phase 0 uses MockUserContext for DI testing. Phase 1 implements SupabaseUserContext with real Supabase Auth integration.
+
+**ITenantScoped** - Marker interface for tenant-scoped queries/responses:
+```csharp
+public interface ITenantScoped
+{
+    Guid TenantId { get; }
+}
+```
+
+**ScopedQueryBehavior<TRequest, TResponse>** - Tenant isolation enforcement:
 ```csharp
 public class ScopedQueryBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
 {
-    // Validates response doesn't contain cross-tenant data
-    // Throws if current user ID doesn't match response owner ID
+    // Validates that response (if ITenantScoped) has TenantId == currentUser.UserId
+    // Throws SecurityException if cross-tenant access detected
+    // Ignores responses not implementing ITenantScoped (assumed tenant-safe)
 }
 ```
+
+Note: ScopedQueryBehavior uses marker interface pattern for explicit opt-in to tenant validation. Queries/commands that return ITenantScoped responses are automatically validated.
+
+**SupabaseContext** - Connection management abstraction (Phase 0 placeholder):
+```csharp
+public abstract class SupabaseContext
+{
+    // Phase 0: Abstract; no DB operations.
+    // Phase 1+: Implement connection pool, DbSet<T> definitions for each entity added.
+    // Migrations (001_Users, 002_Categories, etc.) created when entities are implemented.
+}
+```
+
+Note on Migrations: Phase 0 creates `Infrastructure/Persistence/Migrations/` folder structure only. Each phase creates its migration when entities are implemented (Phase 1 → 001_CreateUsersTable.sql, Phase 2 → 002_CreateCategoriesTable.sql, etc.). This keeps schema versioning synchronized with code deliverables.
+
+**ScopedQueryBehavior.cs** - **CRITICAL** for multi-tenancy enforcement:
 
 **ISpecification<T>** - Base class for domain queries:
 ```csharp
@@ -371,14 +478,15 @@ public abstract class Specification<T>
 - [ ] Domain foundation: Entity.cs, ValueObject.cs, DomainException.cs + exceptions
 - [ ] Domain specifications: ISpecification<T> with MaxResults default
 - [ ] Domain repositories: IRepository<T> interface
-- [ ] Application: IUserContext.cs interface
-- [ ] Application: Behaviors (Validation, Logging, ScopedQuery)
+- [ ] Application: IUserContext.cs interface + MockUserContext implementation
+- [ ] Application: ITenantScoped marker interface
+- [ ] Application: Behaviors (Validation, Logging, ScopedQuery with ITenantScoped validation)
 - [ ] Application: Example command (CreateCategoryCommand + handler)
 - [ ] Application: Example query (GetCategoriesQuery + handler)
 - [ ] Application: MockRepositoryFactory test helper
-- [ ] Infrastructure: SupabaseContext.cs
-- [ ] Infrastructure: Migrations folder + 001_InitialSchema.sql template
-- [ ] Frontend: Program.cs with MediatR + DI config
+- [ ] Infrastructure: SupabaseContext.cs (abstract; no DB schema in Phase 0)
+- [ ] Infrastructure: Migrations folder structure + README.md (actual migrations Phase 1+)
+- [ ] Infrastructure: DependencyInjection.cs module
 - [ ] Frontend: Layout.cshtml + Index.cshtml
 - [ ] Tests: 11 tests written (T00-001 through T00-011)
 - [ ] CI/CD: GitHub Actions workflow created
