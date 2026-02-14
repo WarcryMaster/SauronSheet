@@ -15,13 +15,14 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         // Register MediatR with behaviors
-        services.AddMediatR(cfg =>
-        {
-            cfg.RegisterServicesFromAssemblies(typeof(DependencyInjection).Assembly);
-            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-            cfg.AddOpenBehavior(typeof(ScopedQueryBehavior<,>));
-        });
+        services
+            .AddMediatR(cfg =>
+            {
+                cfg.RegisterServicesFromAssemblies(typeof(DependencyInjection).Assembly);
+                cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+                cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+                cfg.AddOpenBehavior(typeof(ScopedQueryBehavior<,>));
+            });
 
         // Register user context (mock for Phase 0)
         services.AddScoped<IUserContext, MockUserContext>();
