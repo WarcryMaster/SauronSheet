@@ -1,10 +1,25 @@
 # Phase 1: Authentication & Multi-Tenancy
 
 **Feature Branch**: `001-authentication-multitenant`  
-**Version**: 1.0.0  
-**Status**: Ready for speckit.tasks generation  
+**Version**: 1.0.1 *(Updated with architectural decisions)*  
+**Status**: ✅ **READY FOR SPECKIT.TASKS** - All critical ambiguities resolved  
 **Duration**: 3-4 weeks  
 **Depends On**: Phase 0 Complete
+
+---
+
+## ✅ Critical Decisions RESOLVED
+
+| Decision | Answer | Rationale |
+|----------|--------|-----------|
+| **Q1: Auth Strategy** | Use **Supabase Auth Native API** | Reduces custom security code, bcrypt + password reset handled by Supabase |
+| **Q2: JWT Generation** | **Supabase issues JWT natively** | Proven approach, no custom token generation needed, secure key management |
+| **Password Storage** | **Supabase Auth table only** (NOT in users table) | Separation of concerns, Supabase handles crypto |
+| **Password Hashing** | **Supabase bcrypt** | Delegated to IdP, no local bcrypt |
+| **Token Lifetime** | **3600 seconds (1 hour)** | Configurable in Supabase, shorter for security |
+| **Multi-user/Roles** | **Phase 1: Single-user only** | Phase 5 will add sharing/multi-user |
+| **Token Refresh** | **Phase 2+** | Phase 1: No refresh, logout after expiry |
+| **Email Verification** | **Out of scope Phase 1** | Phase 3+ if needed |
 
 ---
 
@@ -14,7 +29,7 @@
 
 **What We Build**:
 - User entity + database migrations
-- Supabase authentication integration
+- ✅ Supabase Auth native integration (passwords + JWT handled by Supabase)
 - Real IUserContext from JWT tokens
 - User registration + login flows
 - Tenant isolation validation in queries
@@ -22,7 +37,7 @@
 
 **Success Criteria**:
 - ✅ User can register via email/password
-- ✅ User can login + receive JWT token
+- ✅ User can login + receive JWT token (from Supabase)
 - ✅ JWT token validated on each request
 - ✅ Queries filtered by current user's tenant
 - ✅ Cross-tenant access blocked + logged
@@ -128,17 +143,18 @@ A logged-in user wants to log out and end their session so others cannot access 
 ### Functional Requirements
 
 - **FR-001**: System MUST allow users to register with unique email and password (minimum 8 characters)
-- **FR-002**: System MUST hash passwords using bcrypt (or Supabase Auth default) before storing
-- **FR-003**: System MUST issue JWT token on successful login containing UserId claim (tenant identifier)
+- **FR-002**: ✅ **Supabase Auth MUST hash passwords using bcrypt before storing** (delegated to Supabase)
+- **FR-003**: ✅ **Supabase Auth MUST issue JWT token on successful login** containing UserId claim
 - **FR-004**: System MUST validate JWT token on every authenticated request using Supabase public key
 - **FR-005**: System MUST enforce tenant isolation: all queries must filter by current user's UserId
 - **FR-006**: System MUST return 401 Unauthorized if request lacks valid JWT token
 - **FR-007**: System MUST return 403 Forbidden if user attempts cross-tenant access (with security logging)
-- **FR-008**: System MUST allow users to log out, clearing session/cookie and invalidating token
-- **FR-009**: System MUST prevent duplicate registrations (email must be unique)
+- **FR-008**: System MUST allow users to log out, clearing session/cookie
+- **FR-009**: System MUST prevent duplicate registrations (email must be unique) - enforced by Supabase
 - **FR-010**: System MUST validate email format during registration (RFC 5322 compliant)
 - **FR-011**: System MUST extract UserId from JWT claim and inject into IUserContext for each request
 - **FR-012**: System MUST maintain audit log of failed login attempts (for future monitoring/alerts)
+- **FR-013**: ✅ **Supabase Auth MUST handle password hashing + storage** (no custom implementation)
 
 ### Key Entities
 
@@ -146,13 +162,17 @@ A logged-in user wants to log out and end their session so others cannot access 
   - Invariant: Email must be non-empty and valid
   - Invariant: Email must be unique across all users
   - Invariant: Id cannot be changed after creation
+  - **Password stored in**: Supabase Auth service, NOT in users table
 
-- **JWT Token**: Contains claims: UserId (sub), exp (expiry), iat (issued at), email (context)
-  - Lifetime: 24 hours (configurable)
-  - Signing: HS256 with Supabase JWT secret
+- **JWT Token**: Contains claims issued by Supabase Auth
+  - Claims: `sub` (UserId), `exp` (expiry), `iat` (issued at), `email`, `aud`
+  - Lifetime: 3600 seconds (1 hour) - configurable in Supabase
+  - Algorithm: HS256
+  - Signing: Supabase JWT secret (environment variable)
+  - Validation: Public key verification on each request
 
 - **IUserContext**: Provides current authenticated user's UserId (tenant identifier)
-  - Implementation: SupabaseUserContext extracts from JWT claim
+  - Implementation: SupabaseUserContext extracts UserId from JWT claim
   - Lifecycle: Scoped per HTTP request
 
 ---
@@ -194,6 +214,111 @@ CREATE INDEX idx_users_created_at ON users(created_at DESC);
 
 ---
 
+## Architectural Decisions (RESOLVED)
+
+### ✅ Decision 1: Supabase Auth Integration Strategy
+
+**DECISION**: Use **Supabase Auth Native API** (Option A)
+
+**Rationale**:
+- Supabase Auth handles password hashing with bcrypt
+- Reduces custom security code (security best practice)
+- Supabase manages password resets, account recovery
+- Proven authentication layer
+
+**Implementation**:
+- Passwords NOT stored in `users` table (Supabase Auth table only)
+- `SupabaseAuthClient` wraps Supabase Auth API
+- Call `POST /auth/v1/signup` for registration
+- Call `POST /auth/v1/token` for login
+
+**User Table Schema** (simplified):
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    -- NO password column - Supabase Auth handles it
+    CONSTRAINT email_not_empty CHECK (email <> '')
+);
+```
+
+---
+
+### ✅ Decision 2: JWT Token Generation & Issuance
+
+**DECISION**: **Supabase Auth issues JWT natively** (Option A - Supabase handles everything)
+
+**Rationale**:
+- Supabase Auth API returns JWT directly on successful login
+- JWT signed with Supabase's private key (securely managed)
+- We receive & store in HttpOnly cookie
+- No custom JwtTokenService needed
+- Aligns with industry best practice (use IdP for tokens)
+
+**Implementation**:
+```csharp
+// Call Supabase Auth API directly
+POST /auth/v1/token
+{
+  "grant_type": "password",
+  "email": "user@example.com",
+  "password": "password123",
+  "client_id": "SUPABASE_CLIENT_ID"
+}
+
+// Response from Supabase:
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "token_type": "bearer",
+  "expires_in": 86400,
+  "refresh_token": "...",
+  "user": { "id": "uuid", "email": "user@example.com" }
+}
+
+// We extract:
+// - access_token → store in HttpOnly cookie
+// - user.id → UserId for IUserContext
+```
+
+**JWT Token Structure** (issued by Supabase):
+- Claims: `sub` (UserId), `exp` (expiry), `iat` (issued), `email`, `aud` (audience)
+- Algorithm: HS256
+- Lifetime: 3600 seconds (1 hour) - configurable
+- Signed with Supabase JWT secret
+
+---
+
+## Simplified Dependencies & Architecture
+
+### REMOVED Complexity
+- ❌ NO custom JwtTokenService needed
+- ❌ NO local bcrypt implementation
+- ❌ NO custom JWT generation
+- ✅ Delegate everything to Supabase Auth
+
+### Architecture After Decisions
+```
+Frontend (Login.cshtml)
+    ↓ POST credentials
+SupabaseAuthClient (Infrastructure)
+    ↓ calls Supabase Auth API
+Supabase Auth Service
+    ↓ verifies + issues JWT
+SupabaseAuthClient receives JWT
+    ↓ returns to Frontend
+Frontend stores in HttpOnly cookie
+    ↓
+SupabaseUserContext extracts UserId from JWT claims
+    ↓
+ScopedQueryBehavior enforces tenant filtering
+```
+
+**No custom token generation code needed** 🎉
+
+---
+
 ## API Contracts & Integration
 
 ### Registration Endpoint
@@ -215,15 +340,19 @@ public record RegisterUserResponse(
 
 **Flow**:
 1. Frontend POST /register with { email, password }
-2. Application validates email format + password strength
-3. Infrastructure calls Supabase Auth API to create user
-4. Domain publishes UserCreatedDomainEvent
-5. Response: 201 Created with UserId + success message
+2. Application ValidationBehavior validates email + password (8+ chars minimum)
+3. Infrastructure: `SupabaseAuthClient.SignUp(email, password)`
+4. SupabaseAuthClient calls `POST /auth/v1/signup` on Supabase
+5. Supabase hashes password with bcrypt, stores in Auth table
+6. Response: { user_id, email, confirmation_required? }
+7. Domain: User entity created in `users` table
+8. Domain publishes UserCreatedDomainEvent
+9. Response: 201 Created with UserId + success message
 
 **Status Codes**:
 - 201 Created: User successfully registered
 - 400 Bad Request: Invalid email/password format
-- 409 Conflict: Email already exists
+- 409 Conflict: Email already exists (Supabase constraint)
 
 ---
 
@@ -246,9 +375,13 @@ public record LoginUserResponse(
 
 **Flow**:
 1. Frontend POST /login with { email, password }
-2. Infrastructure calls Supabase Auth API (verify credentials)
-3. JwtTokenService generates JWT token if credentials valid
-4. Response: 200 OK with token + user info
+2. Application ValidationBehavior validates input format
+3. Infrastructure: `SupabaseAuthClient.SignIn(email, password)`
+4. SupabaseAuthClient calls `POST /auth/v1/token` on Supabase
+5. Supabase verifies credentials, returns JWT + user info
+6. Response: { access_token, user { id, email }, expires_in }
+7. Response to Frontend: 200 OK { JwtToken, UserId, Email }
+8. Frontend stores JwtToken in HttpOnly cookie
 
 **Status Codes**:
 - 200 OK: Login successful
@@ -267,13 +400,69 @@ public record GetCategoriesQuery(Guid UserId)
 ```
 
 **Enforcement**:
+- SupabaseUserContext extracts UserId from JWT claims
 - MediatR ScopedQueryBehavior validates: response.TenantId == UserContext.UserId
 - Throws UnauthorizedAccessException if mismatch
 - Middleware logs all unauthorized attempts
 
 ---
 
-## Error Handling & Validations
+## Updated Dependencies & Configuration
+
+### NuGet Packages Required
+
+```xml
+<!-- Supabase Integration (Handles Auth + JWT) -->
+<PackageReference Include="Supabase.Postgrest" Version="0.8.0" />
+<PackageReference Include="Supabase.Core" Version="0.8.0" />
+
+<!-- JWT Token Validation (only for verification) -->
+<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.0" />
+
+<!-- Validation -->
+<PackageReference Include="FluentValidation" Version="12.1.1" /> <!-- Already added -->
+
+<!-- Existing -->
+<PackageReference Include="MediatR" Version="12.2.0" /> <!-- Already added -->
+<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+```
+
+**Note**: NO bcrypt package needed - Supabase handles it
+
+### Environment Variables (.env)
+
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_JWT_SECRET=your-jwt-secret (for token validation)
+JWT_ALGORITHM=HS256
+ALLOWED_ORIGINS=https://localhost:7001,https://example.com
+```
+
+### Startup Configuration (Program.cs)
+
+```csharp
+// In Program.cs
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => {
+        options.Authority = "https://your-project.supabase.co/auth/v1";
+        options.Audience = "authenticated"; // Supabase audience
+        options.TokenValidationParameters = new() {
+            ValidateIssuer = false, // Supabase handles
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(configuration["SUPABASE_JWT_SECRET"])
+            )
+        };
+    });
+
+builder.Services.AddAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+---
 
 ### Registration Errors
 
@@ -307,36 +496,38 @@ public record GetCategoriesQuery(Guid UserId)
 ## Security Considerations
 
 ### Password Security
-- Passwords hashed via Supabase Auth (bcrypt with salt)
-- Password minimum 8 characters
-- Complexity optional but recommended (upper + lower + digit + special)
+- **✅ Delegated to Supabase Auth**: Passwords hashed with bcrypt + salt
+- Password minimum: 8 characters
+- Password complexity: Optional (Supabase default)
 - No plaintext passwords in logs or responses
+- No passwords stored in `users` table
 - Supabase Auth handles password reset (out of scope Phase 1)
 
-### JWT Token Security
+### JWT Token Security (Issued by Supabase)
 - **Algorithm**: HS256 (HMAC SHA256)
-- **Lifetime**: 24 hours (configurable in .env)
-- **Claims**: `sub` (UserId), `exp` (expiry), `iat` (issued at), `email`
+- **Lifetime**: 3600 seconds (1 hour - configurable in Supabase)
+- **Claims**: `sub` (UserId), `exp` (expiry), `iat` (issued at), `email`, `aud` (audience)
 - **Signing Key**: Supabase JWT Secret (environment variable)
 - **Validation**: Public key verification on each request
 - **Storage**: HttpOnly cookie (not localStorage) - prevents XSS theft
+- **Refresh Token**: Supabase provides refresh token in response (out of scope Phase 1)
 
 ### CORS & Origin Policy
-- Only allow requests from whitelisted origins
+- Only allow requests from whitelisted origins (ALLOWED_ORIGINS env var)
 - No credentials in cross-origin requests without explicit CORS header
 - Set SameSite=Strict on session cookies
 
 ### Audit Logging
-- Log all login attempts (success + failure)
-- Log all failed authentication attempts (with rate limiting check)
+- Log all login attempts (success + failure) with timestamp + ip
+- Log all failed authentication attempts (rate limiting check)
 - Log ALL cross-tenant access attempts with user/resource context
-- Log token generation + expiry events
+- Log token generation + expiry events (via Supabase events - Phase 2+)
 - Audit table structure: event_type, user_id, timestamp, details, severity
 
 ### Rate Limiting
-- 5 failed login attempts per email → 15 minute lockout
-- 10 register attempts per IP → 1 hour lockout
-- Implement via middleware or Supabase rate limit policies
+- 5 failed login attempts per email → 15 minute lockout (via Supabase Auth)
+- 10 register attempts per IP → 1 hour lockout (implement in Frontend middleware)
+- Supabase Auth includes built-in rate limiting
 
 ### HTTPS & TLS
 - All auth endpoints must use HTTPS (enforced in production)
@@ -469,35 +660,34 @@ Logger.LogSecurity("Cross-tenant access attempt: UserA→UserB.Categories")
 Middleware catches → 403 Forbidden response
 ```
 
-## Deliverables (20+ items)
+## Deliverables (18 items - simplified)
 
 ### Domain Layer (2)
 - [ ] User entity (Id: UUID, Email, CreatedAt, UpdatedAt) with invariants
 - [ ] UserCreatedDomainEvent (for future event publishing)
 
-### Application Layer (8)
+### Application Layer (7) - No JwtTokenService needed!
 - [ ] SupabaseUserContext (implements IUserContext, extracts UserId from JWT)
 - [ ] RegisterUserCommand + RegisterUserCommandHandler
-- [ ] LoginUserCommand + LoginUserCommandHandler (returns JWT)
+- [ ] LoginUserCommand + LoginUserCommandHandler (returns Supabase JWT)
 - [ ] UserDto (Email, CreatedAt read-only)
-- [ ] JwtTokenService (generate token with claims)
 - [ ] AuthenticationBehavior (MediatR pipeline validation)
 - [ ] DependencyInjection.cs (register auth services)
 - [ ] Validators: RegisterUserValidator, LoginUserValidator (FluentValidation)
 
 ### Infrastructure Layer (5)
+- [ ] SupabaseAuthClient (Supabase Auth API wrapper for Sign Up + Sign In)
 - [ ] UserRepository (implements IRepository<User>)
-- [ ] SupabaseAuthClient (Supabase Auth API wrapper)
-- [ ] Migration: 001_CreateUsersTable.sql (with indexes)
+- [ ] Migration: 001_CreateUsersTable.sql (NO password column)
 - [ ] DependencyInjection.cs (register Supabase services)
-- [ ] JwtTokenProvider (generate/validate JWT tokens)
+- [ ] SupabaseJwtTokenProvider (validate JWT tokens from Supabase)
 
 ### Frontend Layer (3)
 - [ ] Register.cshtml + Register.cshtml.cs (PageModel)
 - [ ] Login.cshtml + Login.cshtml.cs (PageModel)
 - [ ] Profile.cshtml + Profile.cshtml.cs (display current user)
 
-### Middleware & Configuration (2)
+### Middleware & Configuration (1)
 - [ ] JwtAuthenticationMiddleware (validate token on each request)
 - [ ] SessionManagement (HttpOnly cookie setup)
 
