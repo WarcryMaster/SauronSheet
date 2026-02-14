@@ -1,20 +1,162 @@
 # SauronSheet Specifications Hub
 
-**Master Index for All Phase Specifications**
+**7-Phase Specification Suite - Phase 0 to Phase 6**
+
+All specifications consolidated into single files per phase for use with speckit framework.
 
 ---
 
-## 📚 Quick Navigation
+## 📋 Quick Navigation
 
-| Phase | Title | Duration | Status | Link |
-|-------|-------|----------|--------|------|
-| 0 | **Foundation & Infrastructure** | 2-3 weeks | ⏳ Ready | [Phase 0 Spec](./phase-0/SPEC.md) |
-| 1 | **Authentication & Multi-Tenancy** | 3-4 weeks | ⏳ Blocked by Phase 0 | [Phase 1 Spec](./phase-1/SPEC.md) |
-| 2 | **Core Data Model & Domain Entities** | 2-3 weeks | ⏳ Blocked by Phase 1 | [Phase 2 Spec](./phase-2/SPEC.md) |
-| 3 | **Transaction Import (PDF Parsing)** | 3-4 weeks | ⏳ Blocked by Phase 2 | [Phase 3 Spec](./phase-3/SPEC.md) |
-| **4** | **📊 Analytics Dashboard (MVP RELEASE)** | 3-4 weeks | ⏳ Blocked by Phase 3 | [Phase 4 Spec](./phase-4/SPEC.md) |
-| 5 | **Budget Management & Alerts** (OPTIONAL) | 2-3 weeks | ⏳ Optional | [Phase 5 Spec](./phase-5/SPEC.md) |
-| **6** | **🚀 UI Polish & Production Deploy** | 2-3 weeks | ⏳ Blocked by Phase 4 | [Phase 6 Spec](./phase-6/SPEC.md) |
+| Phase | Filename | Title | Duration | Status |
+|-------|----------|-------|----------|--------|
+| 0 | [phase-0-foundation-spec.md](./phase-0-foundation-spec.md) | Foundation & Infrastructure | 2-3 weeks | ✅ Ready |
+| 1 | [phase-1-auth-spec.md](./phase-1-auth-spec.md) | Authentication & Multi-Tenancy | 3-4 weeks | ⏳ Ready |
+| 2 | [phase-2-domain-spec.md](./phase-2-domain-spec.md) | Core Data Model | 2-3 weeks | ⏳ Ready |
+| 3 | [phase-3-pdf-import-spec.md](./phase-3-pdf-import-spec.md) | Transaction Import (PDF) | 3-4 weeks | ⏳ Ready |
+| **4** | [phase-4-analytics-spec.md](./phase-4-analytics-spec.md) | **Analytics Dashboard (MVP)** | 3-4 weeks | ⏳ Ready |
+| 5 | [phase-5-budgets-spec.md](./phase-5-budgets-spec.md) | Budget Management (OPTIONAL) | 2-3 weeks | ⏳ Ready |
+| **6** | [phase-6-production-spec.md](./phase-6-production-spec.md) | **UI Polish & Production** | 2-3 weeks | ⏳ Ready |
+
+---
+
+## 🚀 How to Use
+
+### Single Specification File = All Phase Info
+
+Each `phase-X-*-spec.md` contains:
+- Executive summary
+- Architecture overview
+- All deliverables (with file names)
+- Test specifications (numbered T0X-001, T0X-002, etc.)
+- Task breakdown (phases/steps)
+- Success criteria
+- Risk assessment (if applicable)
+
+**No separate documents** - Everything in one file per phase.
+
+### Workflow with speckit
+
+```bash
+# 1. Read the spec
+cat phase-0-foundation-spec.md
+
+# 2. Generate tasks file
+speckit.tasks phase-0-foundation-spec.md --output phase-0-foundation-tasks.md
+
+# 3. Generate implementation file
+speckit.implement phase-0-foundation-tasks.md --output phase-0-foundation-implement.md
+
+# 4. Use implement.md for coding
+# (phase-0-foundation-implement.md will contain step-by-step implementation guide)
+```
+
+---
+
+## 📖 Reading Order
+
+1. **Start**: Read [phase-0-foundation-spec.md](./phase-0-foundation-spec.md) (45-60 min)
+   - Understand 4-layer architecture
+   - Review 11 test specs
+   - See implementation patterns
+
+2. **Execute**: Run `speckit.tasks phase-0-foundation-spec.md` to generate tasks file
+
+3. **Implement**: Run `speckit.implement` to generate implementation guide
+
+4. **Repeat** for phases 1-6 sequentially
+
+---
+
+## 🎯 Milestones
+
+| Milestone | Phase | Week | Deliverable |
+|-----------|-------|------|-------------|
+| Phase 0 Complete | 0 | Week 3 | 4-layer architecture + CI/CD |
+| Phase 1 Complete | 1 | Week 7 | User auth + multi-tenancy |
+| Phase 2 Complete | 2 | Week 10 | Core domain entities |
+| Phase 3 Complete | 3 | Week 14 | PDF import working |
+| **MVP RELEASE** | **4** | **Week 18** | **Dashboard + analytics** |
+| Phase 5 Complete (optional) | 5 | Week 21 | Budget features |
+| **PRODUCTION RELEASE** | **6** | **Week 24** | **Full production deployment** |
+
+---
+
+## 📊 Test Coverage by Phase
+
+| Phase | Tests | Target | Status |
+|-------|-------|--------|--------|
+| 0 | 11 tests | 11/11 | ⏳ Not started |
+| 1 | 8 tests | 8/8 | ⏳ Blocked by Phase 0 |
+| 2 | 20 tests | 20/20 | ⏳ Blocked by Phase 1 |
+| 3 | 12 tests | 12/12 | ⏳ Blocked by Phase 2 |
+| **4** | **8 tests** | **8/8** | ⏳ **MVP Release** |
+| 5 | 8+ tests | 8+/8+ | ⏳ Optional |
+| **TOTAL (MVP)** | **59** | **59/59** | ⏳ **Week 18** |
+
+---
+
+## 🏗️ Architecture (4 Layers)
+
+All specs follow this architecture:
+
+```
+Frontend (Razor Pages + JS)
+    ↓ uses
+Application (CQRS + MediatR)
+    ↓ orchestrates
+Domain (Entities + Value Objects)
+    ↓ implemented by
+Infrastructure (Supabase + Repositories)
+
+✅ Dependency Rule: Frontend → Application → Domain ← Infrastructure
+❌ No upward dependencies (Domain never references Application/Infrastructure)
+```
+
+---
+
+## 💡 Each Spec Contains
+
+Every `phase-X-*-spec.md` has:
+
+1. **Executive Summary** - What we build + why + success criteria
+2. **Architecture Changes** - What's new in this phase
+3. **Deliverables** - Explicit file list (no ambiguity)
+4. **Test Specifications** - TDD spec (tests before code)
+5. **Task Breakdown** - Steps to implement
+6. **Risk Assessment** - What could go wrong + mitigations
+7. **Success Criteria** - How to know we're done
+8. **Code Patterns** - Example code (if applicable)
+
+---
+
+## 🔗 Related Documentation
+
+- **Constitution**: `.specify/memory/constitution.md` (5 core principles)
+- **Roadmap**: `.specify/memory/project-roadmap.md` (narrative overview)
+- **Planning**: `.specify/memory/execution-checklist.md` (weekly tasks)
+- **Remediation**: `.specify/memory/REMEDIATION-SUMMARY.md` (11 fixes applied)
+
+---
+
+## ✨ Next Steps
+
+1. **Phase 0**: 
+   - Read [phase-0-foundation-spec.md](./phase-0-foundation-spec.md)
+   - Run `speckit.tasks phase-0-foundation-spec.md`
+   - Start implementation
+
+2. **Automation**:
+   - All specs ready for speckit pipeline
+   - No manual task creation needed
+   - Focus on code, not planning
+
+---
+
+**Specs Version**: 1.0.0  
+**Format**: 7 consolidated phase files + speckit-ready  
+**Status**: ✅ All phases ready for execution  
+**Last Updated**: 2026-02-14
 
 ---
 
@@ -38,135 +180,4 @@
 
 ---
 
-## 📊 Test Progress Tracking
 
-| Phase | Tests | Target | Status |
-|-------|-------|--------|--------|
-| 0 - Foundation | 11 | 11/11 ✅ | ⏳ Not started |
-| 1 - Auth | 8 | 8/8 | ⏳ Blocked |
-| 2 - Domain | 20 | 20/20 | ⏳ Blocked |
-| 3 - PDF Import | 12 | 12/12 | ⏳ Blocked |
-| 4 - Analytics | 8 | 8/8 | ⏳ Blocked |
-| 5 - Budgets | 8+ | 8+/8+ | ⏳ Optional |
-| **TOTAL (MVP)** | **59** | **59/59** | ⏳ Target Week 18 |
-| **TOTAL (Full)** | **67+** | **67+/67+** | ⏳ Target Week 24 |
-
----
-
-## 🚀 How to Use These Specs
-
-### For Developers
-
-1. **Start with Phase 0**: Read [phase-0/SPEC.md](./phase-0/SPEC.md)
-   - Understand the 4-layer architecture
-   - Review the 11 test specifications
-   - Set up the project structure
-
-2. **Work sequentially through phases**:
-   - Each phase depends on the previous one
-   - Phase 3, 4, 6 can run in parallel after Phase 2
-   - Phase 5 is optional (can defer)
-
-3. **Test-First approach**:
-   - Read test specifications first
-   - Write tests before implementing code
-   - Verify all tests pass before moving to next phase
-
-4. **Reference documentation**:
-   - Each SPEC.md contains **all requirements, deliverables, tests**
-   - README.md in each phase folder provides **quick start guidance**
-   - Consult `/.specify/memory/execution-checklist.md` for **step-by-step tasks**
-
-### For Project Managers
-
-1. **MVP Timeline**: Phases 0-4 = 14 weeks → **Week 18 MVP Release**
-2. **Full Release**: Phases 0-6 = 17-20 weeks → **Week 24 Production Release**
-3. **Phase 5 (Budgets)**: Optional - can defer to post-MVP if timeline slips
-4. **Resource Needs**: 1 full-stack developer OR 1 backend + 1 frontend
-5. **Monitoring**: Track test pass rates at phase completion (0%, 50%, 100%)
-
-### For QA / Testing
-
-- Phase 0: 11 tests (foundation architecture)
-- Phase 1: 8 tests (auth + tenancy)
-- Phase 2: 20 tests (entities + validation)
-- Cumulative at Phase 4: **59 tests passing**
-- Manual tests for Phase 6 (performance, accessibility, load)
-
----
-
-## 💡 Key Principles (Non-Negotiable)
-
-All specifications follow these 5 core principles (see `.specify/memory/constitution.md`):
-
-1. **Clean Architecture** - 4-layer separation, unidirectional dependencies
-2. **CQRS + MediatR** - Command/Query handlers, ScopedQueryBehavior middleware
-3. **Domain-Driven Design** - Strong typing, immutable value objects, invariants
-4. **Test-First Development** - Tests written before code, 80% Domain coverage minimum
-5. **Spec-Driven Development** - Specifications in tests, implementation proves specs
-
----
-
-## 📋 Files in Each Phase Directory
-
-Each phase folder (`phase-0/` through `phase-6/`) contains:
-
-- **SPEC.md** - Complete specification (requirements, deliverables, tests, success criteria)
-- **README.md** - Quick start guide (3-5 minutes to understand phase)
-
----
-
-## 🔗 Related Documentation
-
-- **Planning Hub**: [/.specify/memory/master-index.md](../../.specify/memory/master-index.md)
-- **Constitution**: [/.specify/memory/constitution.md](../../.specify/memory/constitution.md) (5 core principles)
-- **Roadmap**: [/.specify/memory/project-roadmap.md](../../.specify/memory/project-roadmap.md) (detailed narrative roadmap)
-- **Execution Checklist**: [/.specify/memory/execution-checklist.md](../../.specify/memory/execution-checklist.md) (step-by-step tasks)
-- **Visual Roadmap**: [/.specify/memory/visual-roadmap.md](../../.specify/memory/visual-roadmap.md) (Gantt charts, timelines, risks)
-- **Remediation Summary**: [/.specify/memory/REMEDIATION-SUMMARY.md](../../.specify/memory/REMEDIATION-SUMMARY.md) (all 11 fixes documented)
-
----
-
-## ⚡ Quick Start: Phase 0
-
-```bash
-# 1. Read the spec
-cat phase-0/SPEC.md
-
-# 2. Follow execution checklist for step-by-step tasks
-cat ../../.specify/memory/execution-checklist.md | grep -A 100 "# Phase 0"
-
-# 3. Create solution structure
-dotnet new sln -n SauronSheet
-
-# 4. Add projects (Domain, Application, Infrastructure, Frontend)
-dotnet sln add src/Domain/Domain.csproj
-dotnet sln add src/Application/Application.csproj
-dotnet sln add src/Infrastructure/Infrastructure.csproj
-dotnet sln add src/Frontend/Frontend.csproj
-
-# 5. Install NuGet packages + configure DI
-# See phase-0/SPEC.md for full list
-
-# 6. Write 11 tests (T00-001 through T00-011)
-dotnet test
-
-# 7. Commit
-git commit -m "feat: phase 0 foundation setup complete"
-```
-
----
-
-## 📞 Support
-
-- **Specification Questions**: Check the SPEC.md file in each phase
-- **Task Breakdown**: See execution-checklist.md for step-by-step guidance
-- **Architecture Questions**: Review constitution.md for core principles
-- **Timeline Questions**: Consult visual-roadmap.md for Gantt charts
-
----
-
-**Hub Version**: 1.0.0  
-**Last Updated**: 2026-02-14  
-**Status**: Ready for Development  
-**Next Step**: Start Phase 0
