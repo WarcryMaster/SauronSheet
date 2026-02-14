@@ -26,37 +26,56 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 #### Objectives
 1. Initialize .NET Core 10 solution with 4-layer structure (Frontend, Application, Domain, Infrastructure)
 2. Configure Supabase project, migrations framework, connection pooling
-3. Setup MediatR pipeline with handlers, validators, behaviors
+3. Setup MediatR pipeline with handlers, validators, behaviors; define `IUserContext` abstraction
 4. Configure xUnit + Moq test infrastructure with test helpers
 5. Establish GitHub Actions CI/CD pipeline (build, test, deploy to staging)
-6. Document base architecture patterns in code examples
+6. Document base architecture patterns in code examples with working CQRS examples
+7. Define exception hierarchy (DomainException + subclasses) for domain validation
 
 #### Deliverables
-- ✅ Solution structure: `Frontend/`, `Application/`, `Domain/`, `Infrastructure/`
-- ✅ `Domain/Common/` with base Entity, ValueObject abstractions
-- ✅ `Application/Common/` with base handlers, DTOs, pipeline behaviors
-- ✅ Supabase project configuration, migrations folder structure
-- ✅ MediatR registration in `Program.cs` with pipeline
-- ✅ Test project setup: `Domain.Tests/`, `Application.Tests/`, `Infrastructure.Tests/`
-- ✅ CI/CD pipeline: `.github/workflows/build-test-deploy.yml`
-- ✅ README: Architecture diagram, folder structure explanation
+- [ ] Solution structure: `Frontend/`, `Application/`, `Domain/`, `Infrastructure/`
+- [ ] `Domain/Common/` with base Entity, ValueObject abstractions
+- [ ] `Domain/Exceptions/` with DomainException, EntityNotFoundException, ValueObjectValidationException + usage docs
+- [ ] `Application/Common/` with base handlers, DTOs, pipeline behaviors
+- [ ] `Application/Common/IUserContext.cs` abstraction + DI registration (implementation in Phase 1)
+- [ ] Example CQRS command: `CreateCategoryCommand` + handler + integration test
+- [ ] Example CQRS query: `GetCategoriesQuery` + handler + integration test
+- [ ] `Application/Common/ScopedQueryBehavior.cs` — MediatR behavior validating cross-tenant data rejection
+- [ ] `Domain/Specifications/ISpecification<T>` base class with `MaxResults = 1000` default + validation
+- [ ] Supabase project configuration, migrations folder structure (tool choice + naming convention documented)
+- [ ] MediatR registration in `Program.cs` with full pipeline (handlers, behaviors, validators)
+- [ ] Test project setup: `Domain.Tests/`, `Application.Tests/`, `Infrastructure.Tests/`
+- [ ] `Application/Tests/Helpers/` with repository mock factory + test data builders
+- [ ] CI/CD pipeline: `.github/workflows/build-test-deploy.yml`
+- [ ] README: Architecture diagram, folder structure explanation
 
 #### Tests (TDD)
-- [ ] T00-001: Verify Domain Entity constructor enforces immutability
-- [ ] T00-002: Verify MediatR handler resolves correctly from DI container
+- [ ] T00-001: Verify Domain Entity constructor enforces immutability (entity state is sealed)
+- [ ] T00-002: Verify MediatR handler resolves correctly from DI container + handler is registered
 - [ ] T00-003: Verify Supabase connection string configurable from appsettings
 - [ ] T00-004: Verify test helpers (FakeRepository, FakeUserContext) work
 - [ ] T00-005: Verify GitHub Actions runs tests on push
+- [ ] T00-006: Verify Domain exception hierarchy compiles and can be thrown correctly
+- [ ] T00-007: Verify ISpecification<T> enforces MaxResults = 1000 default limit
+- [ ] T00-008: Verify ScopedQueryBehavior rejects queries returning cross-tenant data
+- [ ] T00-009: Verify IUserContext can be injected and returns user claims
+- [ ] T00-010: Verify example CreateCategoryCommand handler receives request and returns result
+- [ ] T00-011: Verify example GetCategoriesQuery handler executes and applies pagination
 
 #### Dependency Chain
 - Nothing blocks Phase 0 (foundation)
 
 #### Definition of Done
-- [ ] All 4 layers compile without warnings (nullable enabled)
-- [ ] MediatR pipeline passes 5 unit tests
-- [ ] Supabase migrations run successfully
+- [ ] All 4 layers compile without warnings (nullable reference types enabled)
+- [ ] MediatR pipeline passes 11 unit tests (T00-001 through T00-011)
+- [ ] Supabase migrations run successfully on fresh instance
 - [ ] CI/CD pipeline green on all tests
-- [ ] Documentation includes architecture diagrams
+- [ ] Exception hierarchy tested: DomainException can be thrown + caught
+- [ ] Example CQRS command + query work end-to-end with handler logic
+- [ ] ScopedQueryBehavior validates tenant isolation (test passes when behavior blocks cross-tenant data)
+- [ ] Repository mocking pattern documented with working examples in test helpers
+- [ ] Pagination specification default tested + enforced
+- [ ] Documentation includes architecture diagrams + code examples
 
 ---
 
@@ -82,14 +101,16 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 - **US1.5**: System prevents user A from accessing user B's data
 
 #### Deliverables
-- ✅ `Domain/Entities/User.cs` with AggregateRoot, invariants (email, userId uniqueness)
-- ✅ `Domain/Specifications/UserSpecifications.cs` (IsUserOwner, IsAdmin)
-- ✅ `Application/Auth/` commands: `RegisterUserCommand`, `LoginUserCommand`
-- ✅ `Application/Common/IUserContext.cs` + implementation
-- ✅ `Infrastructure/Auth/SupabaseAuthService.cs` with JWT handling
-- ✅ `Frontend/Pages/Auth/` (Login.cshtml, Register.cshtml, Logout handler)
-- ✅ `Frontend/Shared/` layout with user menu, auth status
-- ✅ Database migrations: `users` table with auth metadata
+- [ ] `Domain/Entities/User.cs` with AggregateRoot, invariants (email, userId uniqueness)
+- [ ] `Domain/Specifications/UserSpecifications.cs` (IsUserOwner, IsAdmin)
+- [ ] `Application/Auth/` commands: `RegisterUserCommand`, `LoginUserCommand`
+- [ ] `Application/Common/IUserContext.cs` implementation (abstraction defined in Phase 0)
+- [ ] `Application/Repositories/IUserRepository.cs` interface (implementation deferred to Phase 3)
+- [ ] `Infrastructure/Auth/SupabaseAuthService.cs` with JWT handling
+- [ ] `Infrastructure/Persistence/UserRepository.cs` implementation using IUserRepository
+- [ ] `Frontend/Pages/Auth/` (Login.cshtml, Register.cshtml, Logout handler)
+- [ ] `Frontend/Shared/` layout with user menu, auth status
+- [ ] Database migrations: `users` table with auth metadata
 
 #### Tests (TDD)
 - [ ] T01-001: User can register with valid email/password
@@ -122,10 +143,12 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 #### Objectives
 1. Design Transaction, Category, Budget domain entities with value objects (Money, TransactionId, etc.)
 2. Implement domain logic: Budget.IsOverBudget(), Transaction.Validate(), Category hierarchy
-3. Create domain specifications for filtering (TransactionsByDateRange, TransactionsByCategory)
-4. Write domain unit tests: Entity invariants, value object equality, state transitions
-5. Define repository interfaces (ITransactionRepository, ICategoryRepository)
-6. Document DDD patterns: Aggregate roots, bounded contexts, ubiquitous language
+3. Define system default categories (Groceries, Transport, Utilities, Other) as immutable domain values with `Category.IsSystemDefault` property
+4. Implement `Category.CanDelete()` logic: prevent deletion of system defaults and categories with active transactions
+5. Create domain specifications for filtering (TransactionsByDateRange, TransactionsByCategory)
+6. Write domain unit tests: Entity invariants, value object equality, state transitions
+7. Define repository interfaces (ITransactionRepository, ICategoryRepository, IBudgetRepository)
+8. Document DDD patterns: Aggregate roots, bounded contexts, ubiquitous language
 
 #### User Stories (P1 Priority)
 - **US2.1**: System stores transaction records with (date, amount, category, description, user)
@@ -141,9 +164,9 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
   - Methods: IsOutlier(), MatchesPattern()
 
 - **Category** (AggregateRoot)
-  - Properties: Id, UserId, Name, Color, IsDefault
-  - Invariants: Name unique per user, Name max 50 chars
-  - Methods: CanDelete() (not system default)
+  - Properties: Id, UserId, Name, Color, IsSystemDefault, CreatedAt
+  - Invariants: Name unique per user, Name max 50 chars, system defaults immutable
+  - Methods: CanDelete() (returns false if IsSystemDefault=true or category has active transactions)
 
 - **Budget** (AggregateRoot)
   - Properties: Id, UserId, CategoryId, MonthlyLimit (Money), Month
@@ -158,12 +181,13 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 - **TransactionId, UserId, CategoryId** (ValueObjects)
 
 #### Deliverables
-- ✅ `Domain/Entities/Transaction.cs`, `Category.cs`, `Budget.cs`
-- ✅ `Domain/ValueObjects/Money.cs`, `TransactionId.cs`, `UserId.cs`, `CategoryId.cs`
-- ✅ `Domain/Specifications/TransactionSpecifications.cs` (ByDateRange, ByCategory, ByAmount)
-- ✅ `Domain/Repositories/ITransactionRepository.cs`, `ICategoryRepository.cs`, `IBudgetRepository.cs`
-- ✅ Unit tests: Entity invariants, value object operations (20+ tests)
-- ✅ Documentation: `Domain/README.md` with DDD patterns & entity diagrams
+- [ ] `Domain/Entities/Transaction.cs`, `Category.cs`, `Budget.cs`
+- [ ] `Domain/ValueObjects/Money.cs`, `TransactionId.cs`, `UserId.cs`, `CategoryId.cs`
+- [ ] `Domain/Services/CategoryService.cs` — manages system default categories + CanDelete logic
+- [ ] `Domain/Specifications/TransactionSpecifications.cs` (ByDateRange, ByCategory, ByAmount)
+- [ ] `Domain/Repositories/ITransactionRepository.cs`, `ICategoryRepository.cs`, `IBudgetRepository.cs`
+- [ ] Unit tests: Entity invariants, value object operations (20+ tests)
+- [ ] Documentation: `Domain/README.md` with DDD patterns, entity diagrams, system category definitions
 
 #### Tests (TDD)
 - [ ] T02-001: Transaction with negative amount raises DomainException
@@ -194,12 +218,13 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 **Status**: ⏳ BLOCKED
 
 #### Objectives
-1. Build PDF parsing service (iTextSharp/PdfSharp) to extract bank statement transactions
-2. Implement `ImportTransactionsFromPdfCommand` + handler with validation
-3. Create transaction creation/update/delete commands via MediatR
-4. Build Supabase repository implementations for Transaction, Category, Budget
-5. Write integration tests: PDF parsing, transaction persistence, rollback on validation
-6. Create Razor page for PDF upload with progress feedback
+1. **Spike Week (W11)**: Evaluate PDF parsing libraries (iTextSharp vs. PdfSharp); test with real bank PDFs (BBVA, Santander, etc.); document library choice + rationale in ADR
+2. Build PDF parsing service using chosen library to extract bank statement transactions
+3. Implement `ImportTransactionsFromPdfCommand` + handler with validation + duplicate detection
+4. Create transaction creation/update/delete commands via MediatR
+5. Build Supabase repository implementations for Transaction, Category, Budget (ITransactionRepository interface from Phase 2)
+6. Write integration tests: PDF parsing, transaction persistence, rollback on validation
+7. Create Razor page for PDF upload with progress feedback via Alpine.js
 
 #### User Stories (P1 MVP)
 - **US3.1**: User uploads bank PDF; system extracts transaction rows
@@ -271,15 +296,15 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 - **US4.6**: User can export report as CSV
 
 #### Deliverables
-- ✅ `Application/Features/Analytics/Queries/GetSpendingByCategoryQuery.cs` + handler
-- ✅ `Application/Features/Analytics/Queries/GetMonthlyTrendsQuery.cs` + handler
-- ✅ `Application/Features/Analytics/Queries/GetBudgetStatusQuery.cs` + handler
-- ✅ `Application/Features/Analytics/Queries/GetTransactionListQuery.cs` + handler (paginated)
-- ✅ DTOs: `SpendingByCategoryDto`, `MonthlyTrendDto`, `BudgetStatusDto`
-- ✅ `Frontend/Pages/Dashboard/Index.cshtml` + handler
-- ✅ `Frontend/Pages/Reports/` (monthly, yearly, category breakdowns)
-- ✅ Database indexes: `transactions(userId, date)`, `transactions(userId, categoryId)`
-- ✅ Integration tests: Query pagination, filtering, chart data accuracy
+- [ ] `Application/Features/Analytics/Queries/GetSpendingByCategoryQuery.cs` + handler
+- [ ] `Application/Features/Analytics/Queries/GetMonthlyTrendsQuery.cs` + handler
+- [ ] `Application/Features/Analytics/Queries/GetBudgetStatusQuery.cs` + handler
+- [ ] `Application/Features/Analytics/Queries/GetTransactionListQuery.cs` + handler (paginated)
+- [ ] DTOs: `SpendingByCategoryDto`, `MonthlyTrendDto`, `BudgetStatusDto`
+- [ ] `Frontend/Pages/Dashboard/Index.cshtml` + handler
+- [ ] `Frontend/Pages/Reports/` (monthly, yearly, category breakdowns)
+- [ ] Database indexes: `transactions(userId, date)`, `transactions(userId, categoryId)`
+- [ ] Integration tests: Query pagination, filtering, chart data accuracy
 
 #### Tests (TDD)
 - [ ] T04-001: GetSpendingByCategoryQuery returns accurate totals
@@ -328,15 +353,15 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 - **US5.6**: System suggests budget limits based on average historical spending
 
 #### Deliverables
-- ✅ `Application/Features/Budgets/Commands/CreateBudgetCommand.cs` + handler
-- ✅ `Application/Features/Budgets/Commands/UpdateBudgetCommand.cs` + handler
-- ✅ `Application/Features/Budgets/Commands/DeleteBudgetCommand.cs` + handler
-- ✅ `Application/Features/Budgets/Queries/GetBudgetsQuery.cs` + handler
-- ✅ `Domain/Services/BudgetAlertService.cs` (calculate alerts)
-- ✅ `Infrastructure/Notifications/EmailNotificationService.cs` (stub or SendGrid)
-- ✅ `Frontend/Pages/Budgets/Index.cshtml`, `Create.cshtml`, `Edit.cshtml`
-- ✅ Background job: Check budgets daily, send alerts (hangfire or similar)
-- ✅ Integration tests: Budget CRUD, alert calculation, email sending
+- [ ] `Application/Features/Budgets/Commands/CreateBudgetCommand.cs` + handler
+- [ ] `Application/Features/Budgets/Commands/UpdateBudgetCommand.cs` + handler
+- [ ] `Application/Features/Budgets/Commands/DeleteBudgetCommand.cs` + handler
+- [ ] `Application/Features/Budgets/Queries/GetBudgetsQuery.cs` + handler
+- [ ] `Domain/Services/BudgetAlertService.cs` (calculate alerts, suggest limits based on 3-month average excluding outliers)
+- [ ] `Infrastructure/Notifications/EmailNotificationService.cs` (stub or SendGrid integration)
+- [ ] `Frontend/Pages/Budgets/Index.cshtml`, `Create.cshtml`, `Edit.cshtml`
+- [ ] Background job: Check budgets daily, send alerts (Hangfire or similar)
+- [ ] Integration tests: Budget CRUD, alert calculation, email sending
 
 #### Tests (TDD)
 - [ ] T05-001: CreateBudgetCommand creates budget with valid limit
@@ -385,14 +410,14 @@ SauronSheet is a multi-user expense tracking application with PDF import, analyt
 - **Documentation**: User guide, API documentation for future integrations
 
 #### Deliverables
-- ✅ Responsive Tailwind CSS across all pages (mobile-first)
-- ✅ Alpine.js interactivity (budget modals, transaction filters)
-- ✅ 404/500 error pages with helpful messages
-- ✅ Centralized logging: Sentry or Application Insights
-- ✅ Production Supabase environment (separate from staging)
-- ✅ Vercel deployment configuration (`vercel.json`)
-- ✅ Load test results (1000 users, 500 concurrent)
-- ✅ Security audit checklist completed
+- [ ] Responsive Tailwind CSS across all pages (mobile-first, breakpoints: 375px, 768px, 1024px)
+- [ ] Alpine.js interactivity (budget modals, transaction filters, loading spinners)
+- [ ] 404/500 error pages with helpful messages
+- [ ] Centralized logging: Sentry or Application Insights (logging infrastructure from Phase 0 upgraded)
+- [ ] Production Supabase environment (separate from staging)
+- [ ] Vercel deployment configuration (`vercel.json`)
+- [ ] Load test results (1000 users, 500 concurrent)
+- [ ] Security audit checklist completed
 
 #### New User Stories (P3 Polish)
 - **US6.1**: Mobile users can use dashboard and upload PDFs
@@ -458,13 +483,13 @@ Phase 6 (Polish & Deploy) ←── Final stretch
 | 0 | 2-3w | W1 | W3 | — | "Architecture ready" |
 | 1 | 3-4w | W4 | W7 | — | "Auth working" |
 | 2 | 2-3w | W8 | W10 | — | "Domain tested" |
-| 3 | 3-4w | W11 | W14 | ✅ | "PDF upload works" |
-| 4 | 3-4w | W15 | W18 | ✅ | "Dashboard live" |
+| 3 | 3-4w | W11 | W14 | ⏳ | "PDF upload works" |
+| 4 | 3-4w | W15 | W18 | ✅ **FULL MVP** | "Dashboard live" |
 | 5 | 2-3w | W19 | W21 | ⚪ | "Budgets working" |
 | 6 | 2-3w | W22 | W24 | — | "Production ready" |
 
-**MVP Release Target**: End of Week 18 (Phases 0-4 complete)  
-**Full Release Target**: End of Week 24 (Phases 0-6 complete)
+**MVP Release Target**: End of Week 18 (Phases 0-4 complete) — PDF upload + analytics dashboard fully functional  
+**Full Release Target**: End of Week 24 (Phases 0-6 complete) — Production-ready with budgets, Polish, & monitoring
 
 ---
 

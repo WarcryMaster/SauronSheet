@@ -18,7 +18,7 @@ SauronSheet is a multi-user expense tracking web application that imports bank t
 
 **Phase Execution Model**: 6 sequential phases (Phases 0-6), each with specific deliverables and exit criteria.  
 **Current Phase**: TBD (start with Phase 0: Foundation)  
-**MVP Launch**: End of Phase 3 (Week 14)  
+**MVP Launch**: End of Phase 4 (Week 18) — Includes PDF upload + analytics dashboard  
 **Production Release**: End of Phase 6 (Week 24)
 
 For current phase objectives, consult `.specify/memory/project-roadmap.md` and `.specify/memory/execution-checklist.md`.
