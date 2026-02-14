@@ -1,0 +1,16 @@
+C:\Projects\SauronSheet\src\Infrastructure\bin\Debug\net9.0\Infrastructure.deps.json
+C:\Projects\SauronSheet\src\Infrastructure\bin\Debug\net9.0\Infrastructure.dll
+C:\Projects\SauronSheet\src\Infrastructure\bin\Debug\net9.0\Infrastructure.pdb
+C:\Projects\SauronSheet\src\Infrastructure\bin\Debug\net9.0\Domain.dll
+C:\Projects\SauronSheet\src\Infrastructure\bin\Debug\net9.0\Domain.pdb
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.csproj.AssemblyReference.cache
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.AssemblyInfoInputs.cache
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.AssemblyInfo.cs
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.csproj.CoreCompileInputs.cache
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.sourcelink.json
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastr.15EFFBFE.Up2Date
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.dll
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\refint\Infrastructure.dll
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\Infrastructure.pdb
+C:\Projects\SauronSheet\src\Infrastructure\obj\Debug\net9.0\ref\Infrastructure.dll
