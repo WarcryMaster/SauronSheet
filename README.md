@@ -14,7 +14,7 @@ A modern, multi-user expense tracking application that imports bank transactions
 ## Tech Stack
 
 ### Backend
-- **.NET Core 7+** - Web framework and API backend
+- **.NET Core 10** - Web framework and API backend
 - **MediatR** - CQRS pattern with mediator for request handling
 - **Clean Architecture** - Layered application with strict dependency rules
 
@@ -57,7 +57,7 @@ SauronSheet/
 ## Getting Started
 
 ### Prerequisites
-- .NET 7 SDK or higher
+- .NET 10 SDK or higher
 - Node.js 18+ (optional, if modifying Tailwind)
 - Supabase account (free tier available at https://supabase.com)
 

@@ -3,7 +3,7 @@
 ## Project Overview
 SauronSheet is a multi-user expense tracking web application that imports bank transactions from PDF statements, provides analytics, and generates spending reports.
 
-**Stack:** .NET Core (Razor Pages + C# backend), Supabase PostgreSQL, Tailwind CSS, JavaScript
+**Stack:** .NET Core 10 (Razor Pages + C# backend), Supabase PostgreSQL, Tailwind CSS, JavaScript
 
 ## Architecture
 
