@@ -29,12 +29,13 @@
 
 ### Core Project Setup
 - [ ] `dotnet new sln -n SauronSheet`
-- [ ] Domain project: `dotnet new classlib -n Domain`
-- [ ] Application: `dotnet new classlib -n Application`
-- [ ] Infrastructure: `dotnet new classlib -n Infrastructure`
-- [ ] Frontend: `dotnet new web -n Frontend` (Razor Pages template)
+- [ ] Domain project: `dotnet new classlib -n Domain` → `src/Domain/`
+- [ ] Application: `dotnet new classlib -n Application` → `src/Application/`
+- [ ] Infrastructure: `dotnet new classlib -n Infrastructure` → `src/Infrastructure/`
+- [ ] Frontend: `dotnet new web -n Frontend` → `src/Frontend/` (Razor Pages template)
 - [ ] Add projects to solution: `dotnet sln add ...`
-- [ ] Set nullable reference types: `<Nullable>enable</Nullable>` in all .csproj
+- [ ] Set nullable reference types in all .csproj: `<Nullable>enable</Nullable>`
+- [ ] Verify build: `dotnet build` (0 warnings)
 
 ### Domain Layer Foundation
 - [ ] Create `Domain/Common/Entity.cs` abstract base
@@ -42,23 +43,43 @@
   - [ ] Method: `GetDomainEvents()` for event sourcing (future)
 - [ ] Create `Domain/Common/ValueObject.cs` abstract base
   - [ ] Abstract method: `GetEqualityComponents()` for value equality
-- [ ] Create `Domain/Common/DomainException.cs` custom exception
+- [ ] Create `Domain/Common/DomainException.cs` custom exception (base)
+- [ ] Create `Domain/Exceptions/EntityNotFoundException.cs` (subclass)
+- [ ] Create `Domain/Exceptions/ValueObjectValidationException.cs` (subclass)
 - [ ] Create `Domain/Common/IRepository.cs` interface (generic)
+- [ ] Create `Domain/Specifications/ISpecification<T>` base class
+  - [ ] Property: `MaxResults = 1000` (default)
 - [ ] First domain unit test: `tests/Domain.Tests/Common/ValueObjectTests.cs`
   - [ ] Test: Two value objects with same properties are equal
 
 ### Application Layer Foundation
 - [ ] Install NuGet: `MediatR`, `MediatR.Extensions.Microsoft.DependencyInjection`
+- [ ] Create `Application/Common/IUserContext.cs` interface
+  - [ ] Property: `UserId` (current user's ID)
+  - [ ] Method: `IsAuthenticated()` → bool
+  - [ ] Method: `IsAdmin()` → bool
 - [ ] Create `Application/Common/Behaviors/ValidationBehavior.cs`
   - [ ] Install: `FluentValidation`
 - [ ] Create `Application/Common/Behaviors/LoggingBehavior.cs`
+- [ ] Create `Application/Common/Behaviors/ScopedQueryBehavior.cs`
+  - [ ] Validates every Query has UserId == Current.UserId
+  - [ ] Throws exception if cross-tenant data detected
 - [ ] Create `Application/Common/Dto/BaseDto.cs`
 - [ ] Create `Application/Common/Handlers/ICommandHandler.cs`, `IQueryHandler.cs`
+- [ ] Create example command: `Application/Common/Examples/CreateCategoryCommand.cs` + handler
+- [ ] Create example query: `Application/Common/Examples/GetCategoriesQuery.cs` + handler
+- [ ] Create `Application/Tests/Helpers/MockRepositoryFactory.cs`
+  - [ ] Factory: Easily create Moq<IRepository> instances
+  - [ ] Provide sample test data builders
 - [ ] Configure MediatR in `Frontend/Program.cs`:
   - [ ] Register assemblies
-  - [ ] Add behaviors
+  - [ ] Add behaviors (Validation, Logging, ScopedQuery)
+  - [ ] Register IUserContext from DI
 - [ ] First application test: `tests/Application.Tests/Common/MediatRTests.cs`
   - [ ] Test: MediatR resolves handler correctly
+  - [ ] Test: Example CreateCategoryCommand handler executes
+  - [ ] Test: Example GetCategoriesQuery handler with pagination
+  - [ ] Test: ScopedQueryBehavior rejects cross-tenant query results
 
 ### Infrastructure Layer Foundation
 - [ ] Create `Infrastructure/Persistence/SupabaseContext.cs`
@@ -100,10 +121,16 @@
 
 ### Phase 0 Exit Criteria
 - [ ] `dotnet build` succeeds with 0 warnings
-- [ ] `dotnet test` passes at least 5 tests
+- [ ] `dotnet test` passes all 11 tests (T00-001 through T00-011)
 - [ ] `dotnet run --project Frontend/` starts local server
 - [ ] GitHub Actions pipeline runs and shows green
-- [ ] All 4 layers have at least 1 test file
+- [ ] All 4 layers have test files + passing tests
+- [ ] Exception hierarchy tested (DomainException throws/catches)
+- [ ] ISpecification<T> enforces 1000-row pagination default
+- [ ] ScopedQueryBehavior blocks cross-tenant data attempts
+- [ ] IUserContext can be injected from DI container
+- [ ] Example CQRS command + query work end-to-end
+- [ ] Repository mocking examples documented in test helpers
 - [ ] Commit: "feat: phase 0 foundation setup complete"
 
 ---
@@ -243,18 +270,20 @@
 
 ### Domain Layer: Entities
 - [ ] Create `Domain/Entities/Category.cs` (AggregateRoot)
-  - [ ] Properties: `Id` (CategoryId), `UserId`, `Name`, `Color`, `IsDefault`
-  - [ ] Invariants: Name unique per user, Name max 50 chars, IsDefault cannot be deleted
-  - [ ] Methods: `CanDelete()` → bool
+  - [ ] Properties: `Id` (CategoryId), `UserId`, `Name`, `Color`, `IsSystemDefault`, `CreatedAt`
+  - [ ] Invariants: Name unique per user, Name max 50 chars, system defaults immutable
+  - [ ] Methods: `CanDelete()` → bool (returns false if IsSystemDefault or has active transactions)
 - [ ] Create `Domain/Entities/Transaction.cs` (AggregateRoot)
   - [ ] Properties: `Id` (TransactionId), `UserId`, `Amount` (Money), `Date`, `CategoryId`, `Description`
-  - [ ] Invariants: Amount > 0, Date <= today, required CategoryId
+  - [ ] Invariants: Amount > 0, Date ≤ today, required CategoryId
   - [ ] Immutable after creation (only allow update for soft validation fields)
   - [ ] Methods: `IsOutlier(stdDev)` → bool (for analytics)
 - [ ] Create `Domain/Entities/Budget.cs` (AggregateRoot)
   - [ ] Properties: `Id` (BudgetId), `UserId`, `CategoryId`, `MonthlyLimit` (Money), `Month` (int YYYYMM)
   - [ ] Invariants: Limit > 0, unique per (UserId, CategoryId, Month)
   - [ ] Methods: `IsOverBudget(currentSpend)` → bool, `RemainingAmount(currentSpend)` → Money
+- [ ] Create `Domain/Services/CategoryService.cs`
+  - [ ] Method: `GetSystemDefaultCategories()` → List (Groceries, Transport, Utilities, Other)
 
 ### Domain Layer: Specifications
 - [ ] Create `Domain/Specifications/TransactionSpecifications.cs`
@@ -277,7 +306,7 @@
 
 ### Database Migrations
 - [ ] Migration: `003_Categories_Table.sql`
-  - [ ] Columns: id, user_id, name, color, is_default, created_at
+  - [ ] Columns: id, user_id, name, color, is_system_default, created_at
   - [ ] Index: `categories(user_id, name)` UNIQUE
 - [ ] Migration: `004_Transactions_Table.sql`
   - [ ] Columns: id, user_id, amount, currency, date, category_id, description, created_at

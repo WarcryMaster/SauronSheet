@@ -84,11 +84,11 @@
 
 | Phase | Duration | Blocks | Deliverables | MVP? | Risk |
 |-------|----------|--------|--------------|------|------|
-| **0** | 2-3w | Phase 1+ | 4-layer architecture, MediatR, CI/CD | — | 🟢 Low |
-| **1** | 3-4w | Phase 2+ | Auth, JWT tokens, multi-tenancy | — | 🟠 Med |
-| **2** | 2-3w | Phase 3+ | Domain entities, repositories, schema | — | 🟢 Low |
-| **3** | 3-4w | Phase 4+ | PDF import, transaction CRUD | ✅ | 🔴 High |
-| **4** | 3-4w | Phase 5+ | Analytics, dashboard, charts | ✅ | 🟠 Med |
+| **0** | 2-3w | Phase 1+ | 4-layer architecture, MediatR, CI/CD, 11 tests | — | 🟢 Low |
+| **1** | 3-4w | Phase 2+ | Auth, JWT tokens, multi-tenancy, IUserContext impl | — | 🟠 Med |
+| **2** | 2-3w | Phase 3+ | Domain entities, CategoryService, system categories | — | 🟢 Low |
+| **3** | 3-4w | Phase 4+ | PDF import, transaction CRUD, duplicate detection | ⏳ | 🔴 High |
+| **4** | 3-4w | Phase 5+ | Analytics, dashboard, charts, CSV export | ✅ | 🟠 Med |
 | **5** | 2-3w | Phase 6 | Budget CRUD, alerts, email | ⚪ | 🟢 Low |
 | **6** | 2-3w | — | Polish, security, deploy, v1.0.0 | — | 🟠 Med |
 
@@ -126,7 +126,7 @@ Phase 4 (Analytics) ← FULL MVP RELEASE at end
 
 ```
 Week 3  ✅ ARCH READY
-        └─ Phase 0 done; foundation solid
+        └─ Phase 0 done; foundation solid (11 tests passing)
 
 Week 7  ✅ AUTH WORKING
         └─ Phase 1 done; users can login
@@ -134,13 +134,12 @@ Week 7  ✅ AUTH WORKING
 Week 10 ✅ ENTITIES TESTED
         └─ Phase 2 done; database schema ready
 
-Week 14 🎯 MVP LAUNCH
+Week 14 ⏳ IMPORT WORKING
         └─ Phase 3 done; users can upload PDFs
         └─ Staging: https://staging.sauronsheet.xyz
         └─ Tag: v0.1-mvp-import on GitHub
-        └─ Market: Open to early adopters
 
-Week 18 📊 FULL MVP RELEASE
+Week 18 🎯 **FULL MVP RELEASE**
         └─ Phase 4 done; analytics dashboard live
         └─ Tag: v0.2-full-mvp on GitHub
         └─ Market: Core features complete
