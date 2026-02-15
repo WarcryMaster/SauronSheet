@@ -22,48 +22,12 @@ All layers isolated by responsibility:
 
 **Layer Responsibilities:**
 
-|
- Layer 
-|
- Responsibility 
-|
- Depends On 
-|
-|
--------
-|
----------------
-|
-------------
-|
-|
- Frontend 
-|
- UI rendering, user input, page routing 
-|
- Application 
-|
-|
- Application 
-|
- Use case orchestration, CQRS handlers, DTOs, pipeline behaviors 
-|
- Domain 
-|
-|
- Domain 
-|
- Entities, value objects, domain services, specifications, repository interfaces 
-|
- Nothing 
-|
-|
- Infrastructure 
-|
- Supabase persistence, auth service, PDF parsing, external integrations 
-|
- Domain 
-|
+| Layer        | Responsibility                                         | Depends On   |
+|-------------|--------------------------------------------------------|--------------|
+| Frontend    | UI rendering, user input, page routing                 | Application  |
+| Application | Use case orchestration, CQRS handlers, DTOs, pipeline behaviors | Domain       |
+| Domain      | Entities, value objects, domain services, specifications, repository interfaces | Nothing      |
+| Infrastructure | Supabase persistence, auth service, PDF parsing, external integrations | Domain       |
 
 ### II. CQRS + MediatR Pattern
 
@@ -132,79 +96,19 @@ All features begin with written tests before implementation code.
 
 **Testing Pyramid:**
 
-|
- Level 
-|
- Scope 
-|
- Tools 
-|
-|
--------
-|
--------
-|
--------
-|
-|
- Unit Tests 
-|
- Domain entities, value objects, domain services 
-|
- xUnit + Moq 
-|
-|
- Integration Tests 
-|
- Application handlers with mocked repositories 
-|
- xUnit + Moq + in-memory doubles 
-|
-|
- End-to-End 
-|
- API → Database round-trip validation 
-|
- xUnit + test Supabase instance 
-|
+| Level            | Scope                                 | Tools                |
+|------------------|---------------------------------------|----------------------|
+| Unit Tests       | Domain entities, value objects, domain services | xUnit + Moq         |
+| Integration Tests| Application handlers with mocked repositories | xUnit + Moq + in-memory doubles |
+| End-to-End       | API → Database round-trip validation   | xUnit + test Supabase instance |
 
 **Coverage Requirements:**
 
-|
- Scope 
-|
- Minimum Coverage 
-|
- Notes 
-|
-|
--------
-|
------------------
-|
--------
-|
-|
- Domain Layer (global) 
-|
- 80% 
-|
- Constitution minimum across all phases 
-|
-|
- Domain Layer (domain-only phases) 
-|
- 100% 
-|
- When phase scope is Domain-only (e.g., Phase 2) 
-|
-|
- Application Layer 
-|
- 70% 
-|
- Handlers, pipeline behaviors, DTOs 
-|
+| Scope                        | Minimum Coverage | Notes                                 |
+|------------------------------|------------------|---------------------------------------|
+| Domain Layer (global)        | 80%              | Constitution minimum across all phases |
+| Domain Layer (domain-only phases) | 100%         | When phase scope is Domain-only (e.g., Phase 2) |
+| Application Layer            | 70%              | Handlers, pipeline behaviors, DTOs     |
 
 **Enforcement Rules:**
 - Failing tests MUST prove spec compliance before refactoring.
@@ -249,88 +153,16 @@ Development lifecycle follows a strict sequence for every feature:
 
 ### Domain Patterns Reference
 
-|
- Pattern 
-|
- Convention 
-|
- Example 
-|
-|
----------
-|
------------
-|
----------
-|
-|
- Aggregate Root 
-|
- Base class with Id, CreatedAt; parameterized constructor 
-|
-`Transaction`
-, 
-`Category`
-, 
-`Budget`
-|
-|
- Value Object 
-|
- Immutable; value-based equality; validated on construction 
-|
-`Money`
-, 
-`DateRange`
-, 
-`TransactionId`
-|
-|
- Strong-Typed ID 
-|
- Wrapper around Guid or string; prevents ID type mixing 
-|
-`TransactionId(Guid)`
-, 
-`UserId(string)`
-|
-|
- Domain Service 
-|
- Cross-entity logic; depends on repository interfaces 
-|
-`CategoryService`
-|
-|
- Specification 
-|
- Filtering with domain language; MaxResults default 1000 
-|
-`TransactionByDateRangeSpecification`
-|
-|
- Domain Exception 
-|
- Thrown on invariant violation; caught in Application layer 
-|
-`DomainException`
-, 
-`EntityNotFoundException`
-|
-|
- Guard Method 
-|
- Returns bool to prevent invalid operations 
-|
-`Category.CanDelete()`
-|
-|
- System Default 
-|
- Immutable seeded values; flagged with boolean property 
-|
-`Category.IsSystemDefault`
-|
+| Pattern         | Convention                                 | Example                       |
+|----------------|--------------------------------------------|-------------------------------|
+| Aggregate Root | Base class with Id, CreatedAt; parameterized constructor | `Transaction`, `Category`, `Budget` |
+| Value Object   | Immutable; value-based equality; validated on construction | `Money`, `DateRange`, `TransactionId` |
+| Strong-Typed ID| Wrapper around Guid or string; prevents ID type mixing | `TransactionId(Guid)`, `UserId(string)` |
+| Domain Service | Cross-entity logic; depends on repository interfaces | `CategoryService`               |
+| Specification  | Filtering with domain language; MaxResults default 1000 | `TransactionByDateRangeSpecification` |
+| Domain Exception| Thrown on invariant violation; caught in Application layer | `DomainException`, `EntityNotFoundException` |
+| Guard Method   | Returns bool to prevent invalid operations  | `Category.CanDelete()`          |
+| System Default | Immutable seeded values; flagged with boolean property | `Category.IsSystemDefault`      |
 
 ## Development Workflow
 
@@ -345,48 +177,12 @@ Development lifecycle follows a strict sequence for every feature:
 
 Each phase MUST declare its layer scope explicitly in the spec file:
 
-|
- Phase Type 
-|
- Layers In Scope 
-|
- Deliverables Allowed 
-|
-|
-------------
-|
-----------------
-|
----------------------
-|
-|
- Foundation 
-|
- All layers 
-|
- Solution structure, base abstractions, CI/CD 
-|
-|
- Domain-Only 
-|
- Domain 
-|
- Entities, value objects, services, specifications, repository interfaces, tests 
-|
-|
- Full-Stack 
-|
- All layers 
-|
- Commands, queries, handlers, DTOs, infrastructure implementations, UI, migrations 
-|
-|
- Polish 
-|
- Frontend + Infrastructure 
-|
- UI refinements, performance, deployment, security 
-|
+| Phase Type   | Layers In Scope         | Deliverables Allowed                                 |
+|--------------|------------------------|------------------------------------------------------|
+| Foundation   | All layers             | Solution structure, base abstractions, CI/CD         |
+| Domain-Only  | Domain                 | Entities, value objects, services, specifications, repository interfaces, tests |
+| Full-Stack   | All layers             | Commands, queries, handlers, DTOs, infrastructure implementations, UI, migrations |
+| Polish       | Frontend + Infrastructure | UI refinements, performance, deployment, security    |
 
 **Rule:** If a phase spec says "Domain Layer ONLY", any Application/Infrastructure deliverable
 in that phase is a constitution violation requiring immediate correction.
