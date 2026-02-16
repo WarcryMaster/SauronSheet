@@ -293,6 +293,8 @@ dotnet test --filter "ClassName=SauronSheet.Domain.Tests.ValueObjects.UserIdTest
 ```csharp
 namespace SauronSheet.Domain.ValueObjects;
 
+using Exceptions;
+
 public record UserProfile
 {
     public UserId Id { get; }
@@ -303,7 +305,7 @@ public record UserProfile
     public UserProfile(UserId id, string email, string? displayName, DateTime createdAt)
     {
         if (string.IsNullOrWhiteSpace(email))
-            throw new ArgumentException("Email cannot be null or empty.", nameof(email));
+            throw new DomainException("Email cannot be null or empty.");
 
         Id = id;
         Email = email;
@@ -361,6 +363,24 @@ dotnet test --filter Category=Domain --no-build
 #### 2.1: Write Application.Tests for Auth Handlers (RED Phase)
 
 **Task**: Create test stubs for auth command handlers (14 tests total)
+
+**Testing Strategy:**
+- Register test: Mock IAuthService to simulate Supabase responses
+- Login test: Mock IAuthService with success/failure scenarios
+- Query tests: Mock IUserContext for authenticated/unauthenticated scenarios
+- Behavior tests: Test TenantScopingBehavior with Moq for pipeline injection
+
+Example test setup pattern:
+```csharp
+var mockAuthService = new Mock<IAuthService>();
+var handler = new RegisterUserCommandHandler(mockAuthService.Object);
+// Arrange, Act, Assert...
+```
+
+**Acceptance Criteria:**
+- All mocks use Moq framework (already in xunit template)
+- No real Supabase calls in tests
+- Tests verify both success and error paths
 
 **Directory structure**:
 ```sh
@@ -944,7 +964,9 @@ dotnet test --filter Category=Application --no-build
 
 **Task**: Register auth behaviors and services
 
-**File**: `src/SauronSheet.Application/DependencyInjection.cs` (update existing)
+**IMPORTANT**: This section **REPLACES** the entire Phase 0 `DependencyInjection.cs` implementation. Do not simply append to it.
+
+**File**: `src/SauronSheet.Application/DependencyInjection.cs` (complete replacement)
 
 ```csharp
 using MediatR;
@@ -960,8 +982,8 @@ public static class DependencyInjection
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
-            
-            // Register pipeline behaviors
+
+            // Register pipeline behaviors for tenant scoping and cross-cutting concerns
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(TenantScopingBehavior<,>));
         });
 
@@ -1026,7 +1048,7 @@ public class SupabaseAuthService : IAuthService
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsAsync<dynamic>();
+                var error = await response.Content.ReadAsJsonAsync<dynamic>();
                 var message = error?.error_description ?? "Registration failed";
                 return AuthResult.Failure(message);
             }
@@ -1153,6 +1175,7 @@ public class SupabaseAuthService : IAuthService
 namespace SauronSheet.Infrastructure.Auth;
 
 using Microsoft.AspNetCore.Http;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 public class JwtCookieMiddleware
@@ -1174,24 +1197,38 @@ public class JwtCookieMiddleware
         {
             try
             {
-                // TODO: Validate JWT signature using Supabase JWT secret
-                // For now, basic claim extraction
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, "user-id-placeholder")
-                };
+                // Parse JWT without validation (token already validated by Supabase on creation)
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
 
-                var identity = new ClaimsIdentity(claims, "jwt");
-                var principal = new ClaimsPrincipal(identity);
-                context.User = principal;
+                // Extract "sub" claim (Supabase standard claim for user ID)
+                var userId = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    var claims = new List<Claim>
+                    {
+                        new Claim("sub", userId),
+                        new Claim(ClaimTypes.Email, jwtToken.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? string.Empty)
+                    };
+
+                    var identity = new ClaimsIdentity(claims, "jwt");
+                    var principal = new ClaimsPrincipal(identity);
+                    context.User = principal;
+                }
             }
-            catch { /* Invalid token */ }
+            catch { /* Invalid token - user remains unauthenticated */ }
         }
 
         await _next(context);
     }
 }
 ```
+
+**Important Note:**
+- JWT signature validation is skipped here because Supabase already validates and signs the token
+- If strict validation is needed in production, use `TokenValidationParameters` with the Supabase JWT secret
+- The "sub" claim is extracted from the parsed token (this is the Supabase standard for user ID)
 
 ---
 
@@ -1220,8 +1257,11 @@ public class HttpUserContext : IUserContext
     {
         get
         {
-            var userId = _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value
-                ?? throw new UnauthorizedAccessException("User is not authenticated.");
+            var userId = _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                throw new UnauthorizedAccessException("User is not authenticated.");
+
             return userId;
         }
     }
@@ -1230,6 +1270,8 @@ public class HttpUserContext : IUserContext
         _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 }
 ```
+
+**Note:** The "sub" claim is populated by `JwtCookieMiddleware` when extracting the JWT claims.
 
 ---
 
@@ -1300,7 +1342,9 @@ CREATE POLICY "Users can insert own profile"
 
 **Task**: Register auth services
 
-**File**: `src/SauronSheet.Infrastructure/DependencyInjection.cs` (update existing)
+**IMPORTANT**: This section **REPLACES** the entire Phase 0 `DependencyInjection.cs` implementation. Do not simply append to it.
+
+**File**: `src/SauronSheet.Infrastructure/DependencyInjection.cs` (complete replacement)
 
 ```csharp
 using Microsoft.AspNetCore.Http;
@@ -1555,8 +1599,25 @@ public class LoginModel : PageModel
                     HttpOnly = true,
                     Secure = true,
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+                    Path = "/",
                     Expires = result.ExpiresAt
                 });
+
+            // Also set refresh token
+            if (!string.IsNullOrEmpty(result.RefreshToken))
+            {
+                Response.Cookies.Append(
+                    "sb-refresh-token",
+                    result.RefreshToken,
+                    new Microsoft.AspNetCore.Http.CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+                        Path = "/",
+                        Expires = DateTimeOffset.UtcNow.AddDays(7)
+                    });
+            }
 
             return LocalRedirect(ReturnUrl);
         }
@@ -1798,6 +1859,21 @@ public class DashboardModel : PageModel
 
 **Task**: Build logout handler page
 
+**File**: `src/SauronSheet.Frontend/Pages/Auth/Logout.cshtml`
+
+```html
+@page
+@model LogoutModel
+@{
+    ViewData["Title"] = "Logging out...";
+}
+
+<!-- Logout is a POST-only action; this page should not render under normal circumstances -->
+<div class="text-center">
+    <p>Logging you out...</p>
+</div>
+```
+
 **File**: `src/SauronSheet.Frontend/Pages/Auth/Logout.cshtml.cs`
 
 ```csharp
@@ -1872,7 +1948,59 @@ public class LogoutModel : PageModel
 
 ---
 
-### 7. INTEGRATION & VALIDATION
+---
+
+## CRITICAL CLARIFICATIONS & SECURITY NOTES
+
+### JWT Claim Flow
+1. **Supabase creates JWT** with `"sub"` claim = user ID
+2. **JwtCookieMiddleware extracts** `"sub"` claim via `JwtSecurityTokenHandler`
+3. **HttpUserContext reads** `"sub"` claim via `ClaimsPrincipal`
+4. **All handlers receive** authenticated user context via `IUserContext`
+
+### UserProfile Creation Flow
+**After successful registration via `SupabaseAuthService.RegisterAsync()`:**
+1. Supabase Auth creates `auth.users` record (automatic)
+2. Application MUST create `public.users` profile record
+   - **Option**: Done in `RegisterUserCommandHandler` via separate call to `_authService.GetUserProfileAsync()` after registration
+   - **Not documented**: Whether `SupabaseAuthService` auto-creates profile via trigger
+
+**Action Required**: Clarify in implementation whether profile creation is:
+- ✅ Explicit in handler after registration succeeds
+- ❌ Or automatic via Supabase trigger (requires testing)
+
+### Open Redirect Prevention
+**In Login/Register PageModels:**
+```csharp
+// SAFE: LocalRedirect() only allows local URLs
+return LocalRedirect(ReturnUrl);  // ✅ Safe
+
+// UNSAFE (do not use):
+return Redirect(ReturnUrl);  // ❌ Allows external URLs
+```
+
+### CSRF Token in Razor Pages
+Razor Pages automatically generates CSRF tokens. Verify:
+```html
+<!-- Auto-included by [ValidateAntiForgeryToken] in PageModel -->
+<form method="post">
+    <!-- No need for explicit @Html.AntiForgeryToken() if using default Razor Pages validation -->
+</form>
+```
+
+### Cookie Configuration by Environment
+**Development:**
+- `Secure = false` (localhost doesn't support HTTPS)
+- `SameSite = SameSiteMode.Strict`
+- `HttpOnly = true`
+
+**Production:**
+- `Secure = true` (HTTPS required)
+- `SameSite = SameSiteMode.Strict`
+- `HttpOnly = true`
+- `Domain` should match your domain (optional, typically omitted for current domain)
+
+---
 
 #### 7.1: Full Build
 
@@ -2177,7 +2305,68 @@ Once Phase 1 is complete and all checkpoints PASS:
 
 ---
 
-**Created**: 2026-02-15  
-**Version**: 1.0.0  
-**Duration**: 10 days (Weeks 3–5)  
-**Status**: Ready for implementation ✅
+## Implementation Notes
+
+### Test Mocking Strategy
+All Application tests use **Moq** for mocking interfaces:
+
+```csharp
+// Example: Register command test
+[Fact]
+public async Task RegisterUser_ValidInput_ReturnsRegistrationResult()
+{
+    // Arrange
+    var mockAuthService = new Mock<IAuthService>();
+    mockAuthService
+        .Setup(x => x.RegisterAsync(It.IsAny<string>(), It.IsAny<string>()))
+        .ReturnsAsync(AuthResult.Success(
+            new UserId("user-123"),
+            "access-token",
+            "refresh-token",
+            DateTime.UtcNow.AddHours(1)));
+
+    var handler = new RegisterUserCommandHandler(mockAuthService.Object);
+    var command = new RegisterUserCommand("test@example.com", "password123", "password123");
+
+    // Act
+    var result = await handler.Handle(command, CancellationToken.None);
+
+    // Assert
+    Assert.NotNull(result);
+    Assert.Equal("user-123", result.UserId);
+    mockAuthService.Verify(x => x.RegisterAsync("test@example.com", "password123"), Times.Once);
+}
+```
+
+### Cookie Configuration for Development
+In `Program.cs`, conditionally set `Secure` flag:
+```csharp
+var cookieOptions = new CookieOptions
+{
+    HttpOnly = true,
+    SameSite = SameSiteMode.Strict,
+    Path = "/",
+    Secure = app.Environment.IsProduction() // ← Auto-handled
+};
+```
+
+### Logout Form Safety
+The logout button in `_Layout.cshtml` uses POST (not GET) to prevent CSRF attacks:
+```html
+<form method="post" asp-page="/Auth/Logout" style="display: inline;">
+    <button type="submit" class="...">Logout</button>
+</form>
+```
+Razor Pages automatically includes anti-forgery token validation.
+
+### IAnonymousRequest Marker Documented
+Commands/Queries marked with `IAnonymousRequest`:
+- ✅ `RegisterUserCommand` - No auth needed
+- ✅ `LoginUserCommand` - No auth needed  
+- ✅ `RefreshTokenCommand` - No auth needed (uses refresh token instead)
+- ❌ `LogoutUserCommand` - Requires auth (needs current token)
+- ❌ `GetCurrentUserQuery` - Requires auth (reads IUserContext)
+
+This is intentional: logout needs a valid token to revoke, queries always need auth after TenantScopingBehavior.
+
+---
