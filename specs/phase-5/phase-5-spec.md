@@ -14,116 +14,18 @@
 
 ## Critical Decisions
 
-|
- ID      
-|
- Decision                                                             
-|
- Rationale                                                                                    
-|
- Date       
-|
-|
----------
-|
-----------------------------------------------------------------------
-|
-----------------------------------------------------------------------------------------------
-|
-------------
-|
-|
- CD-5.1  
-|
- Budget alerts via visual indicators only (no push/email)             
-|
- Immediate dashboard feedback; push notifications deferred to post-MVP                        
-|
- 2026-02-15 
-|
-|
- CD-5.2  
-|
- Budget status thresholds: green < 60%, yellow 60–80%, red > 80%     
-|
- Industry-standard visual cues; overage (> 100%) gets distinct styling                        
-|
- 2026-02-15 
-|
-|
- CD-5.3  
-|
- Budget vs. actual comparison as dashboard widget + dedicated page    
-|
- Quick glance on dashboard; full detail on separate page                                      
-|
- 2026-02-15 
-|
-|
- CD-5.4  
-|
- Budget uniqueness enforced at handler level + DB constraint          
-|
- Belt-and-suspenders: handler validates before insert; DB 
-`UNIQUE`
- prevents race conditions   
-|
- 2026-02-15 
-|
-|
- CD-5.5  
-|
- Current spend calculated from transactions (not denormalized)        
-|
- Source of truth is transactions table; avoids stale cache issues                             
-|
- 2026-02-15 
-|
-|
- CD-5.6  
-|
- Budget month represented as DateRange (1st to last day of month)     
-|
- Consistent with domain model; allows flexible month boundaries                               
-|
- 2026-02-15 
-|
-|
- CD-5.7  
-|
- Budget management page separate from dashboard                       
-|
- Dashboard shows status summary; management page for CRUD operations                          
-|
- 2026-02-15 
-|
-|
- CD-5.8  
-|
- Budget status widget on dashboard replaces placeholder content       
-|
- Phase 1 stub "Your dashboard will appear here" fully replaced by Phase 4+5 content           
-|
- 2026-02-15 
-|
-|
- CD-5.9  
-|
- Overage percentage capped at display level (not domain)              
-|
- Domain returns raw percentage (can be > 1.0); UI caps visual bar at 100% with overflow label 
-|
- 2026-02-15 
-|
-|
- CD-5.10 
-|
- Budget deletion has no cascading effects on transactions             
-|
- Deleting a budget doesn't affect categorized transactions; budget is a tracking overlay       
-|
- 2026-02-15 
-|
+| ID | Decision | Rationale | Date |
+|---|---|---|---|
+| CD-5.1 | Budget alerts via visual indicators only (no push/email) | Immediate dashboard feedback; push notifications deferred to post-MVP | 2026-02-15 |
+| CD-5.2 | Budget status thresholds: green < 60%, yellow 60–80%, red > 80% | Industry-standard visual cues; overage (> 100%) gets distinct styling | 2026-02-15 |
+| CD-5.3 | Budget vs. actual comparison as dashboard widget + dedicated page | Quick glance on dashboard; full detail on separate page | 2026-02-15 |
+| CD-5.4 | Budget uniqueness enforced at handler level + DB constraint | Belt-and-suspenders: handler validates before insert; DB `UNIQUE` prevents race conditions | 2026-02-15 |
+| CD-5.5 | Current spend calculated from transactions (not denormalized) | Source of truth is transactions table; avoids stale cache issues | 2026-02-15 |
+| CD-5.6 | Budget month represented as DateRange (1st to last day of month) | Consistent with domain model; allows flexible month boundaries | 2026-02-15 |
+| CD-5.7 | Budget management page separate from dashboard | Dashboard shows status summary; management page for CRUD operations | 2026-02-15 |
+| CD-5.8 | Budget status widget on dashboard replaces placeholder content | Phase 1 stub "Your dashboard will appear here" fully replaced by Phase 4+5 content | 2026-02-15 |
+| CD-5.9 | Overage percentage capped at display level (not domain) | Domain returns raw percentage (can be > 1.0); UI caps visual bar at 100% with overflow label | 2026-02-15 |
+| CD-5.10 | Budget deletion has no cascading effects on transactions | Deleting a budget doesn't affect categorized transactions; budget is a tracking overlay | 2026-02-15 |
 
 ---
 
@@ -131,221 +33,41 @@
 
 ### In Scope
 
-|
- Area           
-|
- Deliverable                                                                                              
-|
-|
-----------------
-|
-----------------------------------------------------------------------------------------------------------
-|
-|
- Application    
-|
-`CreateBudgetCommand`
- + handler (create budget with uniqueness check)                                    
-|
-|
- Application    
-|
-`UpdateBudgetCommand`
- + handler (update budget limit)                                                    
-|
-|
- Application    
-|
-`DeleteBudgetCommand`
- + handler (delete budget)                                                          
-|
-|
- Application    
-|
-`GetBudgetsQuery`
- + handler (list budgets for user, optional month filter)                               
-|
-|
- Application    
-|
-`GetBudgetByIdQuery`
- + handler (single budget with current spend)                                        
-|
-|
- Application    
-|
-`GetBudgetStatusQuery`
- + handler (budget + current spend + percentage + status level)                    
-|
-|
- Application    
-|
-`GetBudgetVsActualQuery`
- + handler (all budgets vs. actual spending for a month)                         
-|
-|
- Application    
-|
-`GetBudgetSummaryForDashboardQuery`
- + handler (aggregated budget health for dashboard widget)             
-|
-|
- Application    
-|
- DTOs: 
-`BudgetDto`
-, 
-`BudgetStatusDto`
-, 
-`BudgetVsActualDto`
-, 
-`BudgetDashboardSummaryDto`
-|
-|
- Application    
-|
-`BudgetStatusLevel`
- enum (Green, Yellow, Red, Overage)                                                   
-|
-|
- Domain         
-|
-`BudgetService`
- domain service (uniqueness validation, spend calculation coordination)                    
-|
-|
- Infrastructure 
-|
-`SupabaseBudgetRepository`
- (implements 
-`IBudgetRepository`
-)                                              
-|
-|
- Infrastructure 
-|
- Database migration: 
-`budgets`
- table with indexes, unique constraint, and RLS                             
-|
-|
- Frontend       
-|
- Budget management page (
-`/Budgets`
-) — create, edit, delete                                               
-|
-|
- Frontend       
-|
- Budget detail page (
-`/Budgets/{id}`
-) — single budget with spend progress                                
-|
-|
- Frontend       
-|
- Budget vs. actual page (
-`/Budgets/Comparison`
-) — all budgets for a month                                 
-|
-|
- Frontend       
-|
- Dashboard budget status widget (green/yellow/red indicators)                                             
-|
-|
- Frontend       
-|
- Updated 
-`_Layout.cshtml`
- navigation with budget links                                                    
-|
-|
- Tests          
-|
- ≥36 tests (application handler tests + domain service tests)                                             
-|
+| Area | Deliverable |
+|---|---|
+| Application | `CreateBudgetCommand` + handler (create budget with uniqueness check) |
+| Application | `UpdateBudgetCommand` + handler (update budget limit) |
+| Application | `DeleteBudgetCommand` + handler (delete budget) |
+| Application | `GetBudgetsQuery` + handler (list budgets for user, optional month filter) |
+| Application | `GetBudgetByIdQuery` + handler (single budget with current spend) |
+| Application | `GetBudgetStatusQuery` + handler (budget + current spend + percentage + status level) |
+| Application | `GetBudgetVsActualQuery` + handler (all budgets vs. actual spending for a month) |
+| Application | `GetBudgetSummaryForDashboardQuery` + handler (aggregated budget health for dashboard widget) |
+| Application | DTOs: `BudgetDto`, `BudgetStatusDto`, `BudgetVsActualDto`, `BudgetDashboardSummaryDto` |
+| Application | `BudgetStatusLevel` enum (Green, Yellow, Red, Overage) |
+| Domain | `BudgetService` domain service (uniqueness validation, spend calculation coordination) |
+| Infrastructure | `SupabaseBudgetRepository` (implements `IBudgetRepository`) |
+| Infrastructure | Database migration: `budgets` table with indexes, unique constraint, and RLS |
+| Frontend | Budget management page (`/Budgets`) — create, edit, delete |
+| Frontend | Budget detail page (`/Budgets/{id}`) — single budget with spend progress |
+| Frontend | Budget vs. actual page (`/Budgets/Comparison`) — all budgets for a month |
+| Frontend | Dashboard budget status widget (green/yellow/red indicators) |
+| Frontend | Updated `_Layout.cshtml` navigation with budget links |
+| Tests | ≥36 tests (application handler tests + domain service tests) |
 
 ### Deferred (NOT in this phase)
 
-|
- Item                                           
-|
- Target Phase 
-|
- Reason                                              
-|
-|
-------------------------------------------------
-|
---------------
-|
------------------------------------------------------
-|
-|
- Budget alerts via email/push notifications     
-|
- Post-MVP     
-|
- Requires notification infrastructure                
-|
-|
- Recurring/auto-renewing budgets                
-|
- Post-MVP     
-|
- Monthly auto-creation adds complexity               
-|
-|
- Budget templates (copy from previous month)    
-|
- Post-MVP     
-|
- UX convenience; not core functionality              
-|
-|
- Budget history / trend analysis                
-|
- Post-MVP     
-|
- "How has my grocery budget changed over 6 months?"  
-|
-|
- Multi-category budgets (e.g., "Food" group)    
-|
- Post-MVP     
-|
- Category grouping not yet supported                 
-|
-|
- Budget sharing between users                   
-|
- Post-MVP     
-|
- Multi-user budget collaboration                     
-|
-|
- CSV/PDF export of budget reports               
-|
- Post-MVP     
-|
- Export feature                                       
-|
-|
- Budget rollover (unused amount carries forward)
-|
- Post-MVP     
-|
- Complex financial logic                              
-|
-|
- Animated progress bars                         
-|
- Phase 6      
-|
- Polish concern; static bars in this phase           
-|
+| Item | Target Phase | Reason |
+|---|---|---|
+| Budget alerts via email/push notifications | Post-MVP | Requires notification infrastructure |
+| Recurring/auto-renewing budgets | Post-MVP | Monthly auto-creation adds complexity |
+| Budget templates (copy from previous month) | Post-MVP | UX convenience; not core functionality |
+| Budget history / trend analysis | Post-MVP | "How has my grocery budget changed over 6 months?" |
+| Multi-category budgets (e.g., "Food" group) | Post-MVP | Category grouping not yet supported |
+| Budget sharing between users | Post-MVP | Multi-user budget collaboration |
+| CSV/PDF export of budget reports | Post-MVP | Export feature |
+| Budget rollover (unused amount carries forward) | Post-MVP | Complex financial logic |
+| Animated progress bars | Phase 6 | Polish concern; static bars in this phase |
 
 ---
 
@@ -1089,9 +811,11 @@ html
         ⚠️ Over budget by @((Model.PercentageUsed - 1) * 100):F0)%
     </span>
 }
-_BudgetStatusBadge.cshtml:
+```
 
-html
+#### _BudgetStatusBadge.cshtml
+
+```html
 @model BudgetStatusLevel
 <span class="px-2 py-1 rounded-full text-xs font-semibold
     @Model switch {
@@ -1107,20 +831,26 @@ html
         BudgetStatusLevel.Overage => "Over Budget",
     }
 </span>
-FR-5.06: Updated Navigation
-Authenticated Navigation Items (Updated):
+```
 
-Label	Route	Icon	Notes
-Dashboard	/Dashboard	📊	Default landing page
-Transactions	/Transactions	💳	Transaction list
-Search	/Transactions/Search	🔍	Multi-filter search
-Upload PDF	/Transactions/Upload	📄	PDF import
-Categories	/Categories	🏷️	Category management
-Budgets	/Budgets	💰	NEW: Budget management
-Comparison	/Budgets/Comparison	📊	NEW: Budget vs actual
-Logout	(POST action)	🚪	Clears session
-FR-5.07: Infrastructure DI Updates
-csharp
+### FR-5.06: Updated Navigation
+
+**Authenticated Navigation Items (Updated):**
+
+| Label | Route | Icon | Notes |
+|---|---|---|---|
+| Dashboard | /Dashboard | 📊 | Default landing page |
+| Transactions | /Transactions | 💳 | Transaction list |
+| Search | /Transactions/Search | 🔍 | Multi-filter search |
+| Upload PDF | /Transactions/Upload | 📄 | PDF import |
+| Categories | /Categories | 🏷️ | Category management |
+| Budgets | /Budgets | 💰 | NEW: Budget management |
+| Comparison | /Budgets/Comparison | 📊 | NEW: Budget vs actual |
+| Logout | (POST action) | 🚪 | Clears session |
+
+### FR-5.07: Infrastructure DI Updates
+
+```csharp
 public static IServiceCollection AddInfrastructureServices(
     this IServiceCollection services,
     IConfiguration configuration)
@@ -1135,17 +865,13 @@ public static IServiceCollection AddInfrastructureServices(
 
     return services;
 }
-text
-
-Ahora va la **Parte 2/2** — pégalo justo después:
-
-```markdown
-
----
+```
 
 ## Architecture Notes
 
 ### Budget Status Calculation Flow
+
+```
 ┌─────────────────────┐ ┌────────────────────────────────────┐ ┌──────────────────┐
 │ Dashboard / Budget │ │ Application Layer │ │ Infrastructure │
 │ Page (Frontend) │ │ │ │ │
@@ -1176,8 +902,9 @@ Ahora va la **Parte 2/2** — pégalo justo después:
 │ bar + badge │
 │ (Frontend) │
 └──────────────────┘
+```
 
-text
+---
 
 ### NuGet Packages (Phase 5 Additions)
 
@@ -1279,9 +1006,8 @@ GIVEN a budget owned by a different user
 WHEN DeleteBudgetCommandHandler handles the command
 THEN throws EntityNotFoundException (tenant isolation)
 
-text
-
 ### Budget Query Tests
+
 TEST T-5.14: GetBudgets_ReturnsOnlyUserBudgets
 GIVEN 3 budgets for user A, 2 budgets for user B
 AND current user is user A
@@ -1356,9 +1082,8 @@ GIVEN budgets with mixed status (some over, some under)
 WHEN GetBudgetVsActualQueryHandler handles the query
 THEN over-budget items appear before under-budget items
 
-text
-
 ### Dashboard Budget Summary Tests
+
 TEST T-5.26: GetBudgetSummaryForDashboard_CalculatesAggregates
 GIVEN 5 budgets: 2 Green, 1 Yellow, 1 Red, 1 Overage
 WHEN GetBudgetSummaryForDashboardQueryHandler handles the query
@@ -1690,140 +1415,17 @@ text
 
 ## Risks & Mitigations
 
-|
- ID    
-|
- Risk                                                                         
-|
- Impact 
-|
- Probability 
-|
- Mitigation                                                                                          
-|
-|
--------
-|
-------------------------------------------------------------------------------
-|
---------
-|
--------------
-|
------------------------------------------------------------------------------------------------------
-|
-|
- R-5.1 
-|
- Current spend calculation slow for users with many transactions              
-|
- Medium 
-|
- Medium      
-|
- Specification limits to 1000 rows; post-MVP: cache spend or use Supabase aggregate RPC              
-|
-|
- R-5.2 
-|
- Budget status widget slows dashboard load (additional queries)               
-|
- Medium 
-|
- Medium      
-|
- Dashboard already has 5+ queries; budget summary adds 1 more. Parallelize with 
-`Task.WhenAll`
- if needed 
-|
-|
- R-5.3 
-|
- Month boundary edge cases (timezone-related)                                 
-|
- Low    
-|
- Medium      
-|
- Use 
-`DateTime.UtcNow`
- consistently; DateRange handles boundaries; test month start/end explicitly    
-|
-|
- R-5.4 
-|
- Unique constraint race condition (two simultaneous creates)                  
-|
- Low    
-|
- Low         
-|
- DB 
-`UNIQUE`
- constraint catches at DB level; handler validates first for better UX error message      
-|
-|
- R-5.5 
-|
- BudgetStatusLevel threshold confusion (inclusive vs. exclusive boundaries)   
-|
- Low    
-|
- Medium      
-|
- Explicitly tested in T-5.35, T-5.36, T-5.37; documented thresholds use 
-`>`
- (not 
-`>=`
-)              
-|
-|
- R-5.6 
-|
- Budget vs. actual page empty for months with no data                         
-|
- Low    
-|
- Medium      
-|
- Show informational message: "No spending data for this month"                                       
-|
-|
- R-5.7 
-|
- Progress bar visual overflow when > 100%                                     
-|
- Low    
-|
- Low         
-|
- CSS 
-`max-width: 100%`
- with overflow label showing actual percentage                                 
-|
-|
- R-5.8 
-|
- Budget comparison bar chart unreadable with many categories                  
-|
- Low    
-|
- Medium      
-|
- Limit to 10 categories in chart; show full data in table                                            
-|
-|
- R-5.9 
-|
-`ON DELETE CASCADE`
- on category_id FK deletes budget when category is deleted
-|
- Medium 
-|
- Low         
-|
- Category deletion already blocked if has active transactions (Phase 3); budget deletion is separate  
-|
+| ID | Risk | Impact | Probability | Mitigation |
+|---|---|---|---|---|
+| R-5.1 | Current spend calculation slow for users with many transactions | Medium | Medium | Specification limits to 1000 rows; post-MVP: cache spend or use Supabase aggregate RPC |
+| R-5.2 | Budget status widget slows dashboard load (additional queries) | Medium | Medium | Dashboard already has 5+ queries; budget summary adds 1 more. Parallelize with `Task.WhenAll` if needed |
+| R-5.3 | Month boundary edge cases (timezone-related) | Low | Medium | Use `DateTime.UtcNow` consistently; DateRange handles boundaries; test month start/end explicitly |
+| R-5.4 | Unique constraint race condition (two simultaneous creates) | Low | Low | DB `UNIQUE` constraint catches at DB level; handler validates first for better UX error message |
+| R-5.5 | BudgetStatusLevel threshold confusion (inclusive vs. exclusive boundaries) | Low | Medium | Explicitly tested in T-5.35, T-5.36, T-5.37; documented thresholds use `>` (not `>=`) |
+| R-5.6 | Budget vs. actual page empty for months with no data | Low | Medium | Show informational message: "No spending data for this month" |
+| R-5.7 | Progress bar visual overflow when > 100% | Low | Low | CSS `max-width: 100%` with overflow label showing actual percentage |
+| R-5.8 | Budget comparison bar chart unreadable with many categories | Low | Medium | Limit to 10 categories in chart; show full data in table |
+| R-5.9 | `ON DELETE CASCADE` on category_id FK deletes budget when category is deleted | Medium | Low | Category deletion already blocked if has active transactions (Phase 3); budget deletion is separate |
 
 ---
 
