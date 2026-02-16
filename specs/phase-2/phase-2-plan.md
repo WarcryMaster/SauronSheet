@@ -131,9 +131,63 @@ public class TransactionIdTests
 }
 ```
 
-**Similar files to create:**
-- `CategoryIdTests.cs` (2 tests: valid Guid, empty Guid throws)
-- `BudgetIdTests.cs` (2 tests: valid Guid, empty Guid throws)
+**File**: `tests/SauronSheet.Domain.Tests/ValueObjects/CategoryIdTests.cs`
+
+```csharp
+using Xunit;
+using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Domain.Exceptions;
+
+namespace SauronSheet.Domain.Tests.ValueObjects;
+
+public class CategoryIdTests
+{
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void CategoryId_ValidGuid_SetsValue()
+    {
+        var guid = Guid.NewGuid();
+        var categoryId = new CategoryId(guid);
+        Assert.Equal(guid, categoryId.Value);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void CategoryId_EmptyGuid_ThrowsDomainException()
+    {
+        Assert.Throws<DomainException>(() => new CategoryId(Guid.Empty));
+    }
+}
+```
+
+**File**: `tests/SauronSheet.Domain.Tests/ValueObjects/BudgetIdTests.cs`
+
+```csharp
+using Xunit;
+using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Domain.Exceptions;
+
+namespace SauronSheet.Domain.Tests.ValueObjects;
+
+public class BudgetIdTests
+{
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void BudgetId_ValidGuid_SetsValue()
+    {
+        var guid = Guid.NewGuid();
+        var budgetId = new BudgetId(guid);
+        Assert.Equal(guid, budgetId.Value);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void BudgetId_EmptyGuid_ThrowsDomainException()
+    {
+        Assert.Throws<DomainException>(() => new BudgetId(Guid.Empty));
+    }
+}
+```
 
 **Verification**:
 ```sh
@@ -478,7 +532,8 @@ public record DateRange : ValueObject
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: All 38 Domain tests PASS (19 Phase 0+1 + 6 IDs + 13 Money+DateRange)
+# Expected: All 38 Domain tests PASS
+# Breakdown: 19 Phase 0+1 base + 6 Strong-Typed IDs + 13 Money+DateRange
 ```
 
 ---
@@ -818,7 +873,11 @@ public class Budget : AggregateRoot<BudgetId>
         => currentSpend.Amount > Limit.Amount;
 
     public decimal PercentageUsed(Money currentSpend)
-        => Limit.Amount == 0 ? 0m : currentSpend.Amount / Limit.Amount;
+        {
+            // Guard is defensive: constructor prevents Limit.Amount <= 0,
+            // but we keep this check for robustness against future changes
+            return Limit.Amount == 0 ? 0m : currentSpend.Amount / Limit.Amount;
+        }
 
     public Money RemainingAmount(Money currentSpend)
         => Limit.Minus(currentSpend);
@@ -868,7 +927,23 @@ public class CategoryServiceTests
     [Trait("Category", "Domain")]
     public async Task CategoryService_ValidateUniqueName_Duplicate_Throws()
     {
-        Assert.True(false, "Implement ValidateUniqueName");
+        // Arrange
+        var mockRepo = new Mock<ICategoryRepository>();
+        var userId = new UserId("user-123");
+        var existingCategory = new Category(
+            new CategoryId(Guid.NewGuid()),
+            userId,
+            "Groceries");
+
+        mockRepo
+            .Setup(r => r.FindByNameAndUserAsync(userId, "Groceries"))
+            .ReturnsAsync(existingCategory);
+
+        var service = new CategoryService(mockRepo.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(
+            () => service.ValidateUniqueName(userId, "Groceries"));
     }
 
     [Fact]
@@ -910,7 +985,15 @@ public class CategoryServiceTests
     [Trait("Category", "Domain")]
     public void CategoryService_GetSystemDefaults_AllHaveCorrectUserId()
     {
-        Assert.True(false, "Implement UserId assignment");
+        // Arrange
+        var userId = new UserId("user-456");
+        var service = new CategoryService(new Mock<ICategoryRepository>().Object);
+
+        // Act
+        var defaults = service.GetSystemDefaults(userId);
+
+        // Assert
+        Assert.All(defaults, category => Assert.Equal(userId, category.UserId));
     }
 
     [Fact]
@@ -1174,6 +1257,12 @@ dotnet test --filter Category=Domain --no-build
 
 **Task**: Define repository contracts (no implementation)
 
+**Important Pattern Decision**: 
+- All repository methods are `async Task<...>` (future-proof for Supabase)
+- `GetBy*Async` methods return `T?` when single entity (nullable for "not found" semantics)
+- Collection methods return `IReadOnlyList<T>` (never null; empty list if no results)
+- This pattern prevents null-checking burden while maintaining LINQ composability
+
 **Directory structure** (already exists from Phase 0):
 ```sh
 src/SauronSheet.Domain/Repositories/
@@ -1245,6 +1334,17 @@ public interface IBudgetRepository
 ```sh
 dotnet build
 # Expected: Build succeeds (no compilation errors)
+
+# Note on Repository Interface Patterns:
+# - GetByIdAsync returns T? (nullable) when entity not found
+# - GetByUserIdAsync, FindBySpecification, GetSystemDefaults return IReadOnlyList<T>
+#   Never null; empty collection when no results
+# - ExistsAsync returns bool
+# - HasTransactionsAsync returns bool
+# This pattern ensures:
+#   * Optional single entities use nullable reference types
+#   * Collections always valid (may be empty) for LINQ compatibility
+#   * Boolean checks for existence queries
 ```
 
 ---
@@ -1269,7 +1369,11 @@ dotnet build
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: 81 tests PASS (11 Phase 0 + 8 Phase 1 Domain + 62 Phase 2 Domain)
+# Phase 2 Target: 81 tests total
+# Breakdown:
+#   - Phase 0+1 Base: 19 tests (should still pass)
+#   - Phase 2 New: 62 tests (10 Transaction + 12 Category + 15 Budget + 8 Service + 8 Spec + 9 IDs+VO)
+# Expected: 81 tests total PASS
 ```
 
 ---
@@ -1365,7 +1469,7 @@ fi
 Status: ✓ PASS
 Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  ✓ 44 domain tests PASS (19 Phase 0+1 + 6 IDs + 13 Money+DateRange + 6 bonus early tests)
+  ✓ 38 domain tests PASS (19 Phase 0+1 + 6 Strong-Typed IDs + 13 Money+DateRange)
   ✓ Domain.csproj has ZERO dependencies (audit passed)
   ✓ All value objects immutable (record types)
   ✓ All arithmetic and validation working
@@ -1380,7 +1484,7 @@ Metrics:
 Status: ✓ PASS
 Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  ✓ 75 domain tests PASS (44 + 37 entity tests)
+  ✓ 75 domain tests PASS (38 from Checkpoint 2A + 37 entity tests)
   ✓ Transaction entity: 10 tests passing
   ✓ Category entity: 12 tests passing
   ✓ Budget entity: 15 tests passing
@@ -1398,7 +1502,9 @@ Metrics:
 Status: ✓ PASS
 Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  ✓ 91 domain tests PASS (75 + 8 CategoryService + 8 Specifications)
+  ✓ 91 domain tests PASS (75 from Checkpoint 2B + 8 CategoryService + 8 Specifications)
+  ⚠️ Note: Target is 81 Phase 2 Domain tests. 91 total includes Phase 0+1 base tests (19).
+     Phase 2-only: 91 - 19 = 72 tests (includes 8 service + 8 spec bonus coverage)
   ✓ CategoryService delegates to mocked ICategoryRepository
   ✓ BaseSpecification abstract base providing boilerplate
   ✓ 4 concrete specifications with working Criteria expressions
@@ -1439,8 +1545,8 @@ Final Metrics:
 | `record` inheritance edge cases with C# | Low | Low | Test equality and inheritance explicitly |
 | Large test count (81) makes maintenance costly | Low | Low | Tests are simple Arrange-Act-Assert; keep them maintainable |
 | Budget `PercentageUsed` division (limit = 0) | Low | Low | Constructor prevents zero limit; PercentageUsed guards against edge case |
-| CategoryService `GetSystemDefaults` generates new Guids each call | Low | Low | Expected behavior for factory method; in Phase 3, defaults are seeded once and persisted |
-| Specification expressions not compatible with Supabase later | Medium | Medium | Specs tested in-memory now; Phase 3 may need to translate expressions to SQL |
+| CategoryService `GetSystemDefaults` generates new Guids each call | Low | Low | Expected behavior for factory method in Phase 2. In Phase 3, defaults are seeded once in database and loaded via repository (deterministic per user). Tests should not depend on specific GUID values. |
+| Specification expressions not compatible with Supabase later | Medium | Medium | **Phase 2 Limitation**: Specifications tested in-memory via expression tree compilation. **Phase 3 Plan**: Evaluate if expression trees can be translated directly to Postgrest filters, or create adapter pattern. Document supported expression types. |
 
 ---
 
