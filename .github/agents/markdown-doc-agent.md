@@ -30,17 +30,20 @@ This agent is an expert in Markdown formatting and documentation. It automatical
 
 ## Attention to Common Errors
 
-- **Critical:** Always pay special attention to formatting tables, lists, and code blocks. Many files contain errors such as incorrect table separators, extra line breaks, or non-standard Markdown syntax. These issues are frequent and must be corrected every time.
-- **Tables:** Use the standard Markdown table format:
+**Critical:** Always pay special attention to formatting tables, lists, and code blocks. Many files contain errors such as incorrect table separators, extra line breaks, or non-standard Markdown syntax. These issues are frequent and must be corrected every time.
+
+**Tables:** Always convert tables to the standard Markdown table format, even if the user does not explicitly request it. Many files may have tables with vertical bars at the start of each line, extra line breaks, or other non-standard formats. Always:
 
   | Column1 | Column2 |
   |---------|---------|
   | Value1  | Value2  |
 
-- **Lists:** Use `-` or `*` for lists, not custom separators.
-- **Code blocks:** Use triple backticks (```) for code blocks.
-- **No extra line breaks or separators:** Remove any non-standard formatting.
-- **Review:** Always review the output for these errors, as they are common and must be fixed for proper documentation.
+If you find tables with lines starting with `|` and extra line breaks or separators, reformat them to the standard Markdown table format automatically.
+
+**Lists:** Use `-` or `*` for lists, not custom separators.
+**Code blocks:** Use triple backticks (```) for code blocks.
+**No extra line breaks or separators:** Remove any non-standard formatting.
+**Review:** Always review the output for these errors, as they are common and must be fixed for proper documentation.
 
 ## Author
 

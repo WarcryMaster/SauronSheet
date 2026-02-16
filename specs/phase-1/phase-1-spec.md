@@ -1,3 +1,4 @@
+
 # Phase 1: Authentication & Multi-Tenancy
 
 ## Quick Reference
@@ -16,14 +17,14 @@
 
 | ID     | Decision                                         | Rationale                                                               | Date       |
 |--------|--------------------------------------------------|------------------------------------------------------------------------|------------|
-| CD-1.1 | Supabase Auth as identity provider               | Free tier, built-in JWT, email/password ready, social login extensible| 2026-02-15 |
+| CD-1.1 | Supabase Auth as identity provider               | Free tier, built-in JWT, email/password ready, social login extensible  | 2026-02-15 |
 | CD-1.2 | JWT stored in secure HTTP-only cookies           | Prevents XSS token theft; standard web security practice; SameSite=Strict| 2026-02-15 |
-| CD-1.3 | Tenant scoping enforced in Application handlers  | Constitution: "enforced in handler, not UI" — prevents UI bypass      | 2026-02-15 |
+| CD-1.3 | Tenant scoping enforced in Application handlers  | Constitution: "enforced in handler, not UI" — prevents UI bypass        | 2026-02-15 |
 | CD-1.4 | `UserId` strong-typed value object for all user refs | Constitution: raw string for entity IDs is a compliance violation   | 2026-02-15 |
 | CD-1.5 | Auth middleware in Frontend extracts JWT claims  | Single point of authentication; all downstream layers receive `IUserContext`| 2026-02-15 |
-| CD-1.6 | `IAuthService` interface defined in Domain layer | Infrastructure implements it; Application depends on abstraction only  | 2026-02-15 |
-| CD-1.7 | Email/password authentication only for MVP       | Simplifies scope; social login deferred to post-MVP                    | 2026-02-15 |
-| CD-1.8 | Password minimum 8 characters                    | Industry standard minimum; Supabase enforces configurable policy       | 2026-02-15 |
+| CD-1.6 | `IAuthService` interface defined in Domain layer | Infrastructure implements it; Application depends on abstraction only    | 2026-02-15 |
+| CD-1.7 | Email/password authentication only for MVP       | Simplifies scope; social login deferred to post-MVP                      | 2026-02-15 |
+| CD-1.8 | Password minimum 8 characters                    | Industry standard minimum; Supabase enforces configurable policy         | 2026-02-15 |
 | CD-1.9 | Return URL support after login redirect          | Standard UX: user returns to originally requested page after authentication| 2026-02-15 |
 
 ---
