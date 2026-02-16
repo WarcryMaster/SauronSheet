@@ -470,3 +470,94 @@ Key Supabase tables:
 For questions or issues:
 
 🐛 GitHub Issues: https://github.com/yourusername/SauronSheet/issues
+
+
+/prompt:'prompts/speckit.tasks.prompt.md' 
+Genera el archivo phase-1-tasks.md para la fase actual del proyecto SpecKit.
+
+Entradas obligatorias:
+- #file:'C:\Projects\SauronSheet\.specify\memory\constitution.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-0\phase-0-plan.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-0\phase-0-spec.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-0\phase-0-tasks.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-plan.md' 
+#file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-spec.md' 
+- #file:'C:\Projects\SauronSheet\specs\spec.md' 
+
+Objetivo:
+Transformar el plan de implementación en una lista de tareas ejecutables paso a paso.
+
+REQUISITOS ESTRICTOS:
+
+1. Las tareas deben ser:
+- Atómicas
+- Secuenciales
+- Con dependencias explícitas
+- Listas para implementación
+- Sin ambigüedad
+- Orientadas a TDD cuando aplique
+
+2. Cada tarea debe incluir:
+- Path exacto del archivo
+- Acción (crear, modificar, eliminar)
+- Descripción clara del objetivo de implementación
+- Dependencias (si existen)
+- Criterios de validación
+
+3. No escribas código.
+Solo describe tareas.
+
+4. Respeta estrictamente:
+- Las reglas de constitution.md
+- La estructura definida en plan.md
+- Los requisitos de phase-X-spec.md
+- Los límites de Clean Architecture
+
+5. No implementes fases futuras.
+Solo genera tareas necesarias para la fase actual.
+
+6. Agrupa las tareas por capa:
+- Setup de solución
+- Domain
+- Application
+- Infrastructure
+- Frontend
+- Testing
+- Validación
+
+7. Las tareas deben ser lo suficientemente detalladas para que:
+- Un desarrollador junior pueda ejecutarlas.
+- Un agente AI pueda implementarlas sin interpretación adicional.
+- Cada tarea afecte solo una unidad lógica.
+
+Usa el siguiente formato:
+
+# Tasks
+
+## 1. Setup de solución
+
+### Tarea 1.1 – Crear estructura de solución
+- Path:
+- Acción:
+- Descripción:
+- Dependencias:
+- Validación:
+
+## 2. Domain
+
+### Tarea 2.1 – Crear clase base Entity
+- Path: src/Project.Domain/Common/Entity.cs
+- Acción: Crear archivo
+- Descripción:
+- Dependencias:
+- Validación:
+
+...
+
+## Orden de implementación
+
+Incluye al final una lista ordenada de ejecución.
+
+No expliques nada fuera del documento.
+No resumas.
+Produce únicamente el contenido completo de tasks.md.
