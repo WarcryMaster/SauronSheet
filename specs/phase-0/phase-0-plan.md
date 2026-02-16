@@ -341,6 +341,13 @@ dotnet sln list | grep "csproj"
 
 **Task**: Create test stubs for all 11 domain tests
 
+**Before creating test files**: Create directory structure
+```sh
+mkdir -p tests/SauronSheet.Domain.Tests/Common
+mkdir -p tests/SauronSheet.Domain.Tests/Exceptions
+mkdir -p tests/SauronSheet.Domain.Tests/Repositories
+```
+
 **File**: `tests/SauronSheet.Domain.Tests/Common/EntityBaseTests.cs`
 
 ```csharp
@@ -382,10 +389,10 @@ public class EntityBaseTests
 ```
 
 **Additional Test Files to Create**:
-- `ValueObjectBaseTests.cs` (2 tests: equality, inequality)
-- `DomainExceptionTests.cs` (2 tests: message, inner exception)
-- `EntityNotFoundExceptionTests.cs` (2 tests: message format, properties)
-- `SpecificationBaseTests.cs` (1 test: MaxResults default)
+- `Common/ValueObjectBaseTests.cs` (2 tests: equality, inequality)
+- `Exceptions/DomainExceptionTests.cs` (2 tests: message, inner exception)
+- `Exceptions/EntityNotFoundExceptionTests.cs` (2 tests: message format, properties)
+- `Repositories/SpecificationBaseTests.cs` (1 test: MaxResults default)
 
 **Total Stubs**: 11 tests, all marked `[Trait("Category", "Domain")]`
 
@@ -406,7 +413,7 @@ dotnet test --filter Category=Domain --no-build
 ```csharp
 namespace SauronSheet.Domain.Common;
 
-public abstract class Entity<TId>
+public abstract class Entity<TId> where TId : notnull
 {
     public TId Id { get; protected set; }
     public DateTime CreatedAt { get; protected set; }
@@ -414,7 +421,9 @@ public abstract class Entity<TId>
 
     protected Entity(TId id)
     {
-        if (id == null || id.Equals(default(TId)))
+        // For reference types: check null
+        // For value types: check default (which is zero-like value)
+        if (id == null || EqualityComparer<TId>.Default.Equals(id, default(TId)))
             throw new ArgumentException("Entity ID cannot be null or empty.", nameof(id));
 
         Id = id;
@@ -449,11 +458,16 @@ public abstract class Entity<TId>
 }
 ```
 
+**Rules Applied**:
+- `where TId : notnull` constraint enforces non-nullable type parameters (Guid, string, int are all valid)
+- `EqualityComparer<TId>.Default` handles null checks uniformly for all TId types
+- No more nullable warnings with `TreatWarningsAsErrors=true`
+
 **Verification**:
 
 ```sh
 dotnet test --filter Category=Domain --no-build -v n
-# Expected: T-0.01 to T-0.04 should now PASS (or close)
+# Expected: T-0.01 to T-0.04 should now PASS
 ```
 
 ---
@@ -772,16 +786,18 @@ dotnet test --filter Category=Application --no-build
 **Task**: Add MediatR to Application.csproj only (not Domain)
 
 ```sh
-dotnet add src/SauronSheet.Application/SauronSheet.Application.csproj package MediatR --version 12.0.0
-dotnet add src/SauronSheet.Application/SauronSheet.Application.csproj package MediatR.Extensions.Microsoft.DependencyInjection --version 12.0.0
+dotnet add src/SauronSheet.Application/SauronSheet.Application.csproj package MediatR
+dotnet add src/SauronSheet.Application/SauronSheet.Application.csproj package MediatR.Extensions.Microsoft.DependencyInjection
 ```
+
+**Note**: Do NOT pin exact version here. The `rollForward: latestMinor` in `global.json` handles version strategy consistently. This allows patch updates within MediatR 12.x without manual .csproj edits.
 
 **Verification**:
 
 ```sh
 # Verify packages in Application.csproj
 grep -E "MediatR" src/SauronSheet.Application/SauronSheet.Application.csproj
-# Expected: MediatR 12.0.0+
+# Expected: MediatR 12.0.0+ (actual version determined by rollForward)
 ```
 
 ---
@@ -882,21 +898,30 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Validation occurs at DI registration time (in Program.cs when AddInfrastructureServices called)
+        // If config is missing, InvalidOperationException thrown immediately - not deferred to first use
         var supabaseUrl = configuration["Supabase:Url"]
             ?? throw new InvalidOperationException("Configuration key 'Supabase:Url' is not set.");
 
         var supabaseKey = configuration["Supabase:Key"]
             ?? throw new InvalidOperationException("Configuration key 'Supabase:Key' is not set.");
 
-        // TODO: Register Supabase client as singleton
-        // services.AddSingleton(new SupabaseClient(new Uri(supabaseUrl), supabaseKey));
+        // TODO: Register Supabase client as singleton in Phase 1+
+        // var client = new SupabaseClient(new Uri(supabaseUrl), supabaseKey);
+        // services.AddSingleton(client);
 
         return services;
     }
 }
 ```
 
-**Note**: Supabase client registration deferred until actual package is chosen and tested.
+**Validation Timing**:
+- Configuration keys validated in `Program.cs` → `builder.Services.AddInfrastructureServices(config)`
+- If Supabase:Url or Supabase:Key missing → `InvalidOperationException` thrown immediately
+- App startup fails fast with clear message
+- No deferred validation to first request
+
+**Note**: Supabase client registration deferred until actual package is chosen and tested (Phase 1+).
 
 ---
 
@@ -905,6 +930,11 @@ public static class DependencyInjection
 ```sh
 dotnet build
 # Expected: Zero errors (Supabase client registration commented out for now)
+
+# Test config validation
+dotnet run --project src/SauronSheet.Frontend/SauronSheet.Frontend.csproj
+# With missing Supabase:Url in appsettings.json:
+# Expected: InvalidOperationException thrown during startup (not on first request)
 ```
 
 ---
@@ -1140,15 +1170,31 @@ dotnet test
 
 **Task**: Generate code coverage report (Domain ≥ 80%)
 
+**Coverage scope**: Only files in `src/SauronSheet.Domain/` → test files EXCLUDED
+**Expected coverage**: ≥ 80% of Domain.Common + Exceptions + Repositories
+
 ```sh
 # Install coverlet globally
 dotnet tool install -g coverlet.console
 
-# Run coverage
-coverlet tests/SauronSheet.Domain.Tests/ --target "dotnet" --targetargs "test tests/SauronSheet.Domain.Tests/ --no-build --no-restore" --format "opencover" --output "./coverage.xml"
+# Run coverage for Domain layer ONLY
+coverlet tests/SauronSheet.Domain.Tests/bin/Debug/net10.0/SauronSheet.Domain.Tests.dll \
+  --target "dotnet" \
+  --targetargs "test tests/SauronSheet.Domain.Tests/ --no-build --configuration Debug" \
+  --format "opencover" \
+  --output "./coverage.xml" \
+  --include "[SauronSheet.Domain]*" \
+  --exclude "[SauronSheet.Domain.Tests]*"
 
 # View report (if using codecov or similar service)
-# Expected: Domain layer ≥ 80% coverage
+# Expected: Domain layer files ≥ 80% coverage
+# Files measured:
+#   - SauronSheet.Domain/Common/Entity.cs
+#   - SauronSheet.Domain/Common/AggregateRoot.cs
+#   - SauronSheet.Domain/Common/ValueObject.cs
+#   - SauronSheet.Domain/Exceptions/DomainException.cs
+#   - SauronSheet.Domain/Exceptions/EntityNotFoundException.cs
+#   - SauronSheet.Domain/Repositories/ISpecification.cs
 ```
 
 ---
@@ -1158,21 +1204,44 @@ coverlet tests/SauronSheet.Domain.Tests/ --target "dotnet" --targetargs "test te
 **Task**: Audit .csproj files to ensure Clean Architecture
 
 ```sh
-# Check Domain has NO dependencies
+# Objective verification: Check Domain has NO dependencies
 echo "=== Domain Dependencies ==="
-grep -E "ProjectReference|PackageReference" src/SauronSheet.Domain/SauronSheet.Domain.csproj || echo "OK - No dependencies"
+if grep -E "ProjectReference|PackageReference" src/SauronSheet.Domain/SauronSheet.Domain.csproj > /dev/null; then
+  echo "❌ FAIL - Domain has dependencies"
+  grep -E "ProjectReference|PackageReference" src/SauronSheet.Domain/SauronSheet.Domain.csproj
+else
+  echo "✓ PASS - Domain has zero dependencies"
+fi
 
 # Check Application references ONLY Domain
 echo "=== Application Dependencies ==="
-grep "ProjectReference" src/SauronSheet.Application/SauronSheet.Application.csproj | grep -c "Domain" | grep -q "1" && echo "OK - References Domain"
+APP_REFS=$(grep "ProjectReference" src/SauronSheet.Application/SauronSheet.Application.csproj | grep -c "Domain")
+if [ "$APP_REFS" -eq 1 ]; then
+  echo "✓ PASS - Application references Domain only"
+else
+  echo "❌ FAIL - Application has incorrect references"
+  grep "ProjectReference" src/SauronSheet.Application/SauronSheet.Application.csproj
+fi
 
 # Check Infrastructure references ONLY Domain
 echo "=== Infrastructure Dependencies ==="
-grep "ProjectReference" src/SauronSheet.Infrastructure/SauronSheet.Infrastructure.csproj | grep -c "Domain" | grep -q "1" && echo "OK - References Domain"
+INFRA_REFS=$(grep "ProjectReference" src/SauronSheet.Infrastructure/SauronSheet.Infrastructure.csproj | grep -c "Domain")
+if [ "$INFRA_REFS" -eq 1 ]; then
+  echo "✓ PASS - Infrastructure references Domain only"
+else
+  echo "❌ FAIL - Infrastructure has incorrect references"
+  grep "ProjectReference" src/SauronSheet.Infrastructure/SauronSheet.Infrastructure.csproj
+fi
 
 # Check Frontend references Application + Infrastructure
 echo "=== Frontend Dependencies ==="
-grep "ProjectReference" src/SauronSheet.Frontend/SauronSheet.Frontend.csproj | wc -l | grep -q "2" && echo "OK - References 2 projects"
+FRONTEND_REFS=$(grep "ProjectReference" src/SauronSheet.Frontend/SauronSheet.Frontend.csproj | wc -l)
+if [ "$FRONTEND_REFS" -eq 2 ]; then
+  echo "✓ PASS - Frontend references 2 projects (Application + Infrastructure)"
+else
+  echo "❌ FAIL - Frontend has incorrect reference count: $FRONTEND_REFS (expected 2)"
+  grep "ProjectReference" src/SauronSheet.Frontend/SauronSheet.Frontend.csproj
+fi
 ```
 
 ---
@@ -1186,9 +1255,8 @@ grep "ProjectReference" src/SauronSheet.Frontend/SauronSheet.Frontend.csproj | w
 ✓ Domain coverage ≥ 80%
 ✓ Dependency rules enforced
 ✓ Frontend health check page renders at localhost
-✓ Solution structure correct (6 projects)
-✓ global.json pins SDK
-✓ Directory.Build.props configured
+✓ Supabase config validates
+✓ CI/CD scripts ready (dotnet build, dotnet test, if added)
 ```
 
 ---
@@ -1255,56 +1323,73 @@ Domain.Tests      App.Tests Infrastructure   json
 ### Checkpoint 1: Project Scaffolding (End of Day 2)
 ```
 Status: ✓ PASS
+Verification Command: dotnet build && dotnet sln list
 Metrics:
-  - dotnet build succeeds
-  - 6 projects created
-  - Dependency graph correct
+  ✓ dotnet build succeeds with zero errors, zero warnings
+  ✓ 6 projects created (visible in `dotnet sln list`)
+  ✓ Dependency graph verified via 6.4 script (below)
 ```
 
 ### Checkpoint 2: Domain Layer (End of Day 5)
 ```
 Status: ✓ PASS
+Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  - 11 domain tests PASS
-  - Domain.csproj has ZERO dependencies
-  - Coverage ≥ 80%
+  ✓ 11 domain tests PASS (all assertions green)
+  ✓ Domain.csproj has ZERO dependencies (audit script in 6.4)
+  ✓ Coverage ≥ 80% (coverlet report in 6.3)
 ```
 
 ### Checkpoint 3: Application Layer (End of Day 6)
 ```
 Status: ✓ PASS
+Verification Command: dotnet test --filter Category=Application --no-build
 Metrics:
-  - 2 application tests PASS
-  - MediatR resolves
-  - Total 13 tests PASS
+  ✓ 2 application tests PASS
+  ✓ MediatR resolves (T-0.12 assertion: Assert.NotNull(mediator))
+  ✓ Total 13 tests PASS (11 Domain + 2 Application)
 ```
 
 ### Checkpoint 4: Infrastructure Layer (End of Day 7)
 ```
 Status: ✓ PASS
+Verification Command: dotnet build && dotnet run --project src/SauronSheet.Frontend/
 Metrics:
-  - Infrastructure compiles
-  - Supabase config validation ready (commented, pending Phase 1)
+  ✓ Infrastructure compiles (Supabase client registration commented)
+  ✓ Supabase config validation works:
+    - Valid config: app starts
+    - Missing Supabase:Url: InvalidOperationException on startup (not deferred)
 ```
 
 ### Checkpoint 5: Frontend Layer (End of Day 8)
 ```
 Status: ✓ PASS
-Metrics:
-  - Frontend compiles
-  - Health check page renders
-  - Tailwind CDN loads
+Verification Command: dotnet run --project src/SauronSheet.Frontend/
+Visual Check (in browser at http://localhost:5000):
+  ✓ Page displays "SauronSheet" heading (h1)
+  ✓ Green status badge shows "System OK"
+  ✓ Navigation bar visible with Tailwind styling
+  ✓ Responsive layout (DevTools: resize to mobile, tablet, desktop)
+  ✓ Tailwind CDN loaded (inspect: <script src="https://cdn.tailwindcss.com"></script>)
 ```
 
 ### Checkpoint 6: Integration & Validation (End of Day 10)
 ```
 Status: ✓ PASS
-Metrics:
-  - Full build: zero errors, zero warnings
-  - All 13 tests: PASS
-  - Coverage reports generated
-  - Dependency rules verified
-  - Solution ready for Phase 1
+Verification Commands (run in order):
+  1. dotnet build                    # Exit code 0, zero warnings
+  2. dotnet test                     # Output: "13 passed"
+  3. coverlet (see 6.3)              # Domain coverage ≥ 80%
+  4. Bash script from 6.4            # All assertions PASS
+  5. dotnet run + browser            # Frontend renders at http://localhost:5000/
+
+Final Metrics:
+  ✓ Full build: zero errors, zero warnings (TreatWarningsAsErrors enforced)
+  ✓ All 13 tests: PASS (11 Domain + 2 Application)
+  ✓ Coverage reports generated (coverage.xml)
+  ✓ Dependency rules verified (Domain=0 refs, App→D, Infra→D, Frontend→A+I)
+  ✓ Solution structure correct (6 projects per FR-0.01)
+  ✓ Solution ready for Phase 1
 ```
 
 ---
@@ -1324,16 +1409,16 @@ Metrics:
 
 ## Success Criteria Summary
 
-| Criterion | Status | Validation |
+| Criterion | Status | Objective Validation Command |
 |-----------|--------|-----------|
-| 6 projects created | ✓ | `dotnet sln list` |
-| Build succeeds | ✓ | `dotnet build` → exit 0 |
-| 13 tests pass | ✓ | `dotnet test` → 13 PASS |
-| Domain coverage ≥ 80% | ✓ | coverlet report |
-| Dependency rules enforced | ✓ | Manual .csproj audit |
-| Frontend health check | ✓ | Browser at localhost |
-| Supabase config validates | ✓ | Missing config → exception |
-| CI/CD scripts ready | ✓ | `build.cmd`, `test.cmd` (if added) |
+| 6 projects created | ✓ | `dotnet sln list \| grep "csproj"` → output shows exactly 6 .csproj files |
+| Build succeeds | ✓ | `dotnet build` → exit code 0 (no errors, no warnings) |
+| 13 tests pass | ✓ | `dotnet test` → output shows "13 passed" |
+| Domain coverage ≥ 80% | ✓ | `coverlet` report (6.3) shows Domain files ≥ 80% |
+| Dependency rules enforced | ✓ | Bash script in 6.4 shows all assertions PASS |
+| Frontend health check | ✓ | Browser at `http://localhost:5000/` shows "System OK" page |
+| Supabase config validates | ✓ | Remove `Supabase:Url` from appsettings → app startup throws `InvalidOperationException` |
+| CI/CD scripts ready | ✓ | `dotnet build` + `dotnet test` commands work locally (no GitHub Actions yet) |
 
 ---
 
