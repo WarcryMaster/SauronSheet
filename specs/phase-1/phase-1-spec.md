@@ -469,19 +469,23 @@ public class JwtCookieMiddleware
         await _next(context);
     }
 }
-Cookie Configuration:
+#### Cookie Configuration
 
-Cookie	Name (default)	Flags
-Access Token	sb-access-token	HttpOnly, Secure, SameSite=Strict, Path=/
-Refresh Token	sb-refresh-token	HttpOnly, Secure, SameSite=Strict, Path=/
-Rules:
+| Cookie | Name (default) | Flags |
+|--------|---|---|
+| Access Token | sb-access-token | HttpOnly, Secure, SameSite=Strict, Path=/ |
+| Refresh Token | sb-refresh-token | HttpOnly, Secure, SameSite=Strict, Path=/ |
 
-Registered as middleware in Program.cs (before UseAuthorization)
-Reads JWT from named cookie (not Authorization header)
-Validates JWT signature using Supabase project's JWT secret
-Extracts sub claim as UserId
-Sets ClaimsPrincipal with claims: sub (UserId), email, exp (expiration)
-Transparent token refresh on expiration
+**Rules:**
+
+- Registered as middleware in Program.cs (before UseAuthorization)
+- Reads JWT from named cookie (not Authorization header)
+- Validates JWT signature using Supabase project's JWT secret
+- Extracts sub claim as UserId
+- Sets ClaimsPrincipal with claims: sub (UserId), email, exp (expiration)
+- Transparent token refresh on expiration
+
+#### HttpUserContext
 HttpUserContext
 csharp
 public class HttpUserContext : IUserContext
@@ -890,15 +894,20 @@ Browser request ──► JwtCookieMiddleware
                          │
                          ▼
                     Handler executes (scoped to UserId)
-Layer Dependencies (Phase 1 Additions)
-Layer	New Dependencies
-Domain	None (still zero external deps) — adds VOs + interface
-Application	Domain (IAuthService, UserId, AuthResult)
-Infrastructure	Domain (implements IAuthService), Supabase client
-Frontend	Application (MediatR), Infrastructure (DI registration)
-Test Specifications
-Domain.Tests — UserId & Auth Contracts
-text
+### Layer Dependencies (Phase 1 Additions)
+
+| Layer | New Dependencies |
+|-------|---|
+| Domain | None (still zero external deps) — adds VOs + interface |
+| Application | Domain (IAuthService, UserId, AuthResult) |
+| Infrastructure | Domain (implements IAuthService), Supabase client |
+| Frontend | Application (MediatR), Infrastructure (DI registration) |
+
+## Test Specifications
+
+### Domain.Tests — UserId & Auth Contracts
+
+```
 TEST: UserId_ValidString_SetsValue
   GIVEN a valid non-empty string "user-123"
   WHEN UserId is constructed
@@ -943,8 +952,11 @@ TEST: AuthResult_FailureFactory_SetsError
   THEN IsSuccess is false
   AND ErrorMessage equals "Invalid credentials"
   AND AccessToken is null/empty
-Application.Tests — Auth Handlers
-text
+```
+
+### Application.Tests — Auth Handlers
+
+```
 TEST: RegisterUser_ValidInput_ReturnsRegistrationResult
   GIVEN valid email "test@example.com", password "securepass123", matching confirm
   AND IAuthService.RegisterAsync returns success AuthResult
@@ -1031,98 +1043,116 @@ TEST: TenantScoping_AnonymousRequest_SkipsAuthCheck
   WHEN TenantScopingBehavior processes the request
   THEN the next handler in the pipeline IS invoked
   AND no exception is thrown
-Test Summary
-Test ID	Test Name	Category	Assert
-T-1.01	UserId_ValidString_SetsValue	Domain	Value equals input; ToString works
-T-1.02	UserId_NullString_ThrowsDomainException	Domain	DomainException "cannot be null or empty"
-T-1.03	UserId_EmptyString_ThrowsDomainException	Domain	DomainException "cannot be null or empty"
-T-1.04	UserId_WhitespaceString_ThrowsDomainException	Domain	DomainException "cannot be null or empty"
-T-1.05	UserId_Equality_SameValue	Domain	Equal + same hash code
-T-1.06	UserId_Inequality_DifferentValue	Domain	Not equal
-T-1.07	AuthResult_SuccessFactory_SetsProperties	Domain	IsSuccess=true, properties set, ErrorMessage null
-T-1.08	AuthResult_FailureFactory_SetsError	Domain	IsSuccess=false, ErrorMessage set
-T-1.09	RegisterUser_ValidInput_ReturnsResult	Application	RegistrationResultDto with UserId + Email
-T-1.10	RegisterUser_DuplicateEmail_ThrowsDomainException	Application	DomainException "already registered"
-T-1.11	RegisterUser_WeakPassword_ThrowsDomainException	Application	DomainException "at least 8 characters"
-T-1.12	RegisterUser_MismatchedPasswords_ThrowsDomainException	Application	DomainException "do not match"; auth NOT called
-T-1.13	LoginUser_ValidCredentials_ReturnsAuthToken	Application	AuthTokenDto with tokens + future expiration
-T-1.14	LoginUser_InvalidCredentials_ThrowsUnauthorized	Application	UnauthorizedAccessException
-T-1.15	LogoutUser_ValidToken_CallsAuthService	Application	LogoutAsync called once; no exception
-T-1.16	RefreshToken_ValidRefresh_ReturnsNewTokens	Application	New AuthTokenDto
-T-1.17	RefreshToken_InvalidRefresh_ThrowsUnauthorized	Application	UnauthorizedAccessException
-T-1.18	GetCurrentUser_Authenticated_ReturnsProfile	Application	UserProfileDto with correct data
-T-1.19	GetCurrentUser_Unauthenticated_ThrowsUnauthorized	Application	UnauthorizedAccessException
-T-1.20	TenantScoping_Authenticated_Proceeds	Application	Next handler invoked; no exception
-T-1.21	TenantScoping_Unauthenticated_ThrowsUnauthorized	Application	UnauthorizedAccessException; next NOT invoked
-T-1.22	TenantScoping_AnonymousRequest_SkipsCheck	Application	Next handler invoked despite unauthenticated
-Total: 22 tests (8 Domain + 14 Application)
+```
 
-Deliverables
-#	Deliverable	Layer	Acceptance
-D-1.01	UserId value object	Domain	Tests T-1.01 to T-1.06 pass
-D-1.02	IAuthService interface	Domain	Compiles; contract for auth operations
-D-1.03	AuthResult value object	Domain	Tests T-1.07 and T-1.08 pass
-D-1.04	UserProfile value object	Domain	Compiles; used by IAuthService
-D-1.05	RegisterUserCommand + handler	Application	Tests T-1.09 to T-1.12 pass
-D-1.06	LoginUserCommand + handler	Application	Tests T-1.13 and T-1.14 pass
-D-1.07	LogoutUserCommand + handler	Application	Test T-1.15 passes
-D-1.08	RefreshTokenCommand + handler	Application	Tests T-1.16 and T-1.17 pass
-D-1.09	GetCurrentUserQuery + handler	Application	Tests T-1.18 and T-1.19 pass
-D-1.10	TenantScopingBehavior	Application	Tests T-1.20 to T-1.22 pass
-D-1.11	IAnonymousRequest marker interface	Application	Used by Register + Login commands
-D-1.12	DTOs: UserProfileDto, AuthTokenDto, RegistrationResultDto	Application	Compile; used by handlers and frontend
-D-1.13	SupabaseAuthService	Infrastructure	Implements IAuthService; calls Supabase Auth API
-D-1.14	JwtCookieMiddleware	Infrastructure	JWT from cookie → ClaimsPrincipal; auto-refresh
-D-1.15	HttpUserContext	Infrastructure	Implements IUserContext; extracts sub claim
-D-1.16	AuthConfiguration	Infrastructure	Cookie names, expiration, JWT secret config
-D-1.17	001_CreateUsersTable.sql migration	Infrastructure	Users table + RLS policies applied to Supabase
-D-1.18	Login page (/Auth/Login)	Frontend	Form, validation, error display, redirect
-D-1.19	Register page (/Auth/Register)	Frontend	Form, validation, error display, auto-login
-D-1.20	Dashboard stub (/Dashboard)	Frontend	Protected; shows welcome message
-D-1.21	Updated _Layout.cshtml	Frontend	Auth-aware navigation (login/register vs logout)
-D-1.22	Updated Program.cs	Frontend	Auth middleware, HttpContextAccessor, IUserContext DI
-D-1.23	Updated appsettings.json	Frontend	Auth configuration section added
-D-1.24	Domain.Tests auth tests (8 tests)	Tests	dotnet test --filter Category=Domain all green
-D-1.25	Application.Tests auth tests (14 tests)	Tests	dotnet test --filter Category=Application all green
-Success Criteria
-#	Criterion	Metric
-SC-1.1	New user can register with email/password	E2E: /Register → form → submit → /Dashboard
-SC-1.2	Registered user can log in	E2E: /Login → form → submit → /Dashboard
-SC-1.3	JWT stored in HTTP-only secure cookie	Browser DevTools: cookie flags verified
-SC-1.4	Logged-in user can log out	Logout → cookies cleared → /Login redirect
-SC-1.5	Protected pages redirect unauthenticated users	/Dashboard → 302 → /Login?returnUrl=/Dashboard
-SC-1.6	Return URL works after login	Redirect to /Login?returnUrl=/Dashboard → login → /Dashboard
-SC-1.7	Tenant isolation enforced at handler level	TenantScopingBehavior tests pass
-SC-1.8	Anonymous requests bypass tenant scoping	Login/Register work without authentication
-SC-1.9	Navigation shows auth-appropriate links	Authenticated: logout + email; Guest: login + register
-SC-1.10	All Phase 1 tests pass	dotnet test ≥22 new tests green
-SC-1.11	Domain test coverage ≥ 80%	coverlet report (cumulative)
-SC-1.12	Application test coverage ≥ 70%	coverlet report
-SC-1.13	Supabase users table created with RLS	Supabase dashboard: table + policies visible
-SC-1.14	Registration creates profile in public.users	Query Supabase after registration: row exists
-SC-1.15	Invalid credentials show generic error (no info leakage)	Login with wrong password → "Invalid email or password"
-Assumptions
-Supabase Auth email/password provider is enabled in the Supabase dashboard (default configuration).
-Supabase JWT secret is available from the Supabase project settings (Settings → API → JWT Secret).
-No email verification required in Phase 1. Users can log in immediately after registration. Email verification deferred to Phase 6.
-Single role: All users have the same permissions. Role-based authorization (admin vs. user) is deferred to post-MVP.
-No CAPTCHA on registration form. Supabase's built-in rate limiting provides brute force protection.
-Session is per-device: Each browser/device has its own JWT cookie. There is no server-side session store.
-Token refresh is handled transparently by the middleware. The frontend does not need to know about token lifecycle.
-Supabase client library handles HTTP communication with Supabase Auth REST API. If the library has limitations, raw HTTP calls via HttpClient are acceptable.
-HTTPS is required in production. Development may use HTTP with app.UseDeveloperExceptionPage().
-Profile creation happens synchronously during registration (not via Supabase triggers/webhooks).
-Risks & Mitigations
-ID	Risk	Impact	Probability	Mitigation
-R-1.1	Supabase Auth rate limits during development	Low	Medium	Use separate Supabase project for dev; configure rate limits
-R-1.2	JWT cookie not sent on cross-origin requests	Medium	Low	SameSite=Strict is correct for same-origin; CORS not needed for pages
-R-1.3	Supabase C# client auth methods incomplete	Medium	Medium	Fall back to raw HTTP calls via HttpClient to Supabase REST API
-R-1.4	Token refresh race condition (concurrent requests)	Low	Low	Middleware handles refresh atomically; subsequent requests wait
-R-1.5	ClaimsPrincipal not propagated to IUserContext	High	Low	Integration test verifies full pipeline (T-1.20 to T-1.22)
-R-1.6	RLS policies misconfigured	High	Medium	Test RLS with two different users; verify isolation at DB level
-Implementation Notes
-Recommended Implementation Order
-text
+## Test Summary
+
+| Test ID | Test Name | Category | Assert |
+|---------|-----------|----------|--------|
+| T-1.01 | UserId_ValidString_SetsValue | Domain | Value equals input; ToString works |
+| T-1.02 | UserId_NullString_ThrowsDomainException | Domain | DomainException "cannot be null or empty" |
+| T-1.03 | UserId_EmptyString_ThrowsDomainException | Domain | DomainException "cannot be null or empty" |
+| T-1.04 | UserId_WhitespaceString_ThrowsDomainException | Domain | DomainException "cannot be null or empty" |
+| T-1.05 | UserId_Equality_SameValue | Domain | Equal + same hash code |
+| T-1.06 | UserId_Inequality_DifferentValue | Domain | Not equal |
+| T-1.07 | AuthResult_SuccessFactory_SetsProperties | Domain | IsSuccess=true, properties set, ErrorMessage null |
+| T-1.08 | AuthResult_FailureFactory_SetsError | Domain | IsSuccess=false, ErrorMessage set |
+| T-1.09 | RegisterUser_ValidInput_ReturnsResult | Application | RegistrationResultDto with UserId + Email |
+| T-1.10 | RegisterUser_DuplicateEmail_ThrowsDomainException | Application | DomainException "already registered" |
+| T-1.11 | RegisterUser_WeakPassword_ThrowsDomainException | Application | DomainException "at least 8 characters" |
+| T-1.12 | RegisterUser_MismatchedPasswords_ThrowsDomainException | Application | DomainException "do not match"; auth NOT called |
+| T-1.13 | LoginUser_ValidCredentials_ReturnsAuthToken | Application | AuthTokenDto with tokens + future expiration |
+| T-1.14 | LoginUser_InvalidCredentials_ThrowsUnauthorized | Application | UnauthorizedAccessException |
+| T-1.15 | LogoutUser_ValidToken_CallsAuthService | Application | LogoutAsync called once; no exception |
+| T-1.16 | RefreshToken_ValidRefresh_ReturnsNewTokens | Application | New AuthTokenDto |
+| T-1.17 | RefreshToken_InvalidRefresh_ThrowsUnauthorized | Application | UnauthorizedAccessException |
+| T-1.18 | GetCurrentUser_Authenticated_ReturnsProfile | Application | UserProfileDto with correct data |
+| T-1.19 | GetCurrentUser_Unauthenticated_ThrowsUnauthorized | Application | UnauthorizedAccessException |
+| T-1.20 | TenantScoping_Authenticated_Proceeds | Application | Next handler invoked; no exception |
+| T-1.21 | TenantScoping_Unauthenticated_ThrowsUnauthorized | Application | UnauthorizedAccessException; next NOT invoked |
+| T-1.22 | TenantScoping_AnonymousRequest_SkipsCheck | Application | Next handler invoked despite unauthenticated |
+
+**Total:** 22 tests (8 Domain + 14 Application)
+
+## Deliverables
+
+| # | Deliverable | Layer | Acceptance |
+|---|---|---|---|
+| D-1.01 | UserId value object | Domain | Tests T-1.01 to T-1.06 pass |
+| D-1.02 | IAuthService interface | Domain | Compiles; contract for auth operations |
+| D-1.03 | AuthResult value object | Domain | Tests T-1.07 and T-1.08 pass |
+| D-1.04 | UserProfile value object | Domain | Compiles; used by IAuthService |
+| D-1.05 | RegisterUserCommand + handler | Application | Tests T-1.09 to T-1.12 pass |
+| D-1.06 | LoginUserCommand + handler | Application | Tests T-1.13 and T-1.14 pass |
+| D-1.07 | LogoutUserCommand + handler | Application | Test T-1.15 passes |
+| D-1.08 | RefreshTokenCommand + handler | Application | Tests T-1.16 and T-1.17 pass |
+| D-1.09 | GetCurrentUserQuery + handler | Application | Tests T-1.18 and T-1.19 pass |
+| D-1.10 | TenantScopingBehavior | Application | Tests T-1.20 to T-1.22 pass |
+| D-1.11 | IAnonymousRequest marker interface | Application | Used by Register + Login commands |
+| D-1.12 | DTOs: UserProfileDto, AuthTokenDto, RegistrationResultDto | Application | Compile; used by handlers and frontend |
+| D-1.13 | SupabaseAuthService | Infrastructure | Implements IAuthService; calls Supabase Auth API |
+| D-1.14 | JwtCookieMiddleware | Infrastructure | JWT from cookie → ClaimsPrincipal; auto-refresh |
+| D-1.15 | HttpUserContext | Infrastructure | Implements IUserContext; extracts sub claim |
+| D-1.16 | AuthConfiguration | Infrastructure | Cookie names, expiration, JWT secret config |
+| D-1.17 | 001_CreateUsersTable.sql migration | Infrastructure | Users table + RLS policies applied to Supabase |
+| D-1.18 | Login page (/Auth/Login) | Frontend | Form, validation, error display, redirect |
+| D-1.19 | Register page (/Auth/Register) | Frontend | Form, validation, error display, auto-login |
+| D-1.20 | Dashboard stub (/Dashboard) | Frontend | Protected; shows welcome message |
+| D-1.21 | Updated _Layout.cshtml | Frontend | Auth-aware navigation (login/register vs logout) |
+| D-1.22 | Updated Program.cs | Frontend | Auth middleware, HttpContextAccessor, IUserContext DI |
+| D-1.23 | Updated appsettings.json | Frontend | Auth configuration section added |
+| D-1.24 | Domain.Tests auth tests (8 tests) | Tests | dotnet test --filter Category=Domain all green |
+| D-1.25 | Application.Tests auth tests (14 tests) | Tests | dotnet test --filter Category=Application all green |
+
+## Success Criteria
+
+| # | Criterion | Metric |
+|---|---|---|
+| SC-1.1 | New user can register with email/password | E2E: /Register → form → submit → /Dashboard |
+| SC-1.2 | Registered user can log in | E2E: /Login → form → submit → /Dashboard |
+| SC-1.3 | JWT stored in HTTP-only secure cookie | Browser DevTools: cookie flags verified |
+| SC-1.4 | Logged-in user can log out | Logout → cookies cleared → /Login redirect |
+| SC-1.5 | Protected pages redirect unauthenticated users | /Dashboard → 302 → /Login?returnUrl=/Dashboard |
+| SC-1.6 | Return URL works after login | Redirect to /Login?returnUrl=/Dashboard → login → /Dashboard |
+| SC-1.7 | Tenant isolation enforced at handler level | TenantScopingBehavior tests pass |
+| SC-1.8 | Anonymous requests bypass tenant scoping | Login/Register work without authentication |
+| SC-1.9 | Navigation shows auth-appropriate links | Authenticated: logout + email; Guest: login + register |
+| SC-1.10 | All Phase 1 tests pass | dotnet test ≥22 new tests green |
+| SC-1.11 | Domain test coverage ≥ 80% | coverlet report (cumulative) |
+| SC-1.12 | Application test coverage ≥ 70% | coverlet report |
+| SC-1.13 | Supabase users table created with RLS | Supabase dashboard: table + policies visible |
+| SC-1.14 | Registration creates profile in public.users | Query Supabase after registration: row exists |
+| SC-1.15 | Invalid credentials show generic error (no info leakage) | Login with wrong password → "Invalid email or password" |
+
+## Assumptions
+
+- Supabase Auth email/password provider is enabled in the Supabase dashboard (default configuration).
+- Supabase JWT secret is available from the Supabase project settings (Settings → API → JWT Secret).
+- No email verification required in Phase 1. Users can log in immediately after registration. Email verification deferred to Phase 6.
+- Single role: All users have the same permissions. Role-based authorization (admin vs. user) is deferred to post-MVP.
+- No CAPTCHA on registration form. Supabase's built-in rate limiting provides brute force protection.
+- Session is per-device: Each browser/device has its own JWT cookie. There is no server-side session store.
+- Token refresh is handled transparently by the middleware. The frontend does not need to know about token lifecycle.
+- Supabase client library handles HTTP communication with Supabase Auth REST API. If the library has limitations, raw HTTP calls via HttpClient are acceptable.
+- HTTPS is required in production. Development may use HTTP with app.UseDeveloperExceptionPage().
+- Profile creation happens synchronously during registration (not via Supabase triggers/webhooks).
+
+## Risks & Mitigations
+
+| ID | Risk | Impact | Probability | Mitigation |
+|---|---|---|---|---|
+| R-1.1 | Supabase Auth rate limits during development | Low | Medium | Use separate Supabase project for dev; configure rate limits |
+| R-1.2 | JWT cookie not sent on cross-origin requests | Medium | Low | SameSite=Strict is correct for same-origin; CORS not needed for pages |
+| R-1.3 | Supabase C# client auth methods incomplete | Medium | Medium | Fall back to raw HTTP calls via HttpClient to Supabase REST API |
+| R-1.4 | Token refresh race condition (concurrent requests) | Low | Low | Middleware handles refresh atomically; subsequent requests wait |
+| R-1.5 | ClaimsPrincipal not propagated to IUserContext | High | Low | Integration test verifies full pipeline (T-1.20 to T-1.22) |
+| R-1.6 | RLS policies misconfigured | High | Medium | Test RLS with two different users; verify isolation at DB level |
+
+## Implementation Notes
+
+### Recommended Implementation Order
+
+```
 Step 1: Write Domain.Tests for UserId + AuthResult (RED phase)
         └── Tests T-1.01 to T-1.08
         └── Verify: tests FAIL (red)

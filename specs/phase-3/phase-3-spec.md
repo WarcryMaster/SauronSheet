@@ -347,8 +347,9 @@ Handler Flow:
 2. Load `Transaction` by Id; throw `EntityNotFoundException` if not found
 3. Verify `Transaction.UserId` matches current user
 4. Delete via `ITransactionRepository.DeleteAsync()`
-GetTransactionsQuery
-csharp
+#### GetTransactionsQuery
+
+```csharp
 public record GetTransactionsQuery(
     int Page = 1,
     int PageSize = 50,
@@ -356,7 +357,9 @@ public record GetTransactionsQuery(
     DateTime? FromDate = null,
     DateTime? ToDate = null
 ) : IRequest<PaginatedResultDto<TransactionDto>>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Build specification(s) based on filters + `UserId`
@@ -364,25 +367,33 @@ Handler Flow:
 4. Apply pagination (skip/take)
 5. Map `Transaction` entities → `TransactionDto` list
 6. Return `PaginatedResultDto` with items, total count, page info
-GetTransactionByIdQuery
-csharp
+
+#### GetTransactionByIdQuery
+
+```csharp
 public record GetTransactionByIdQuery(
     Guid TransactionId
 ) : IRequest<TransactionDto>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Load `Transaction` by Id; throw `EntityNotFoundException` if not found
 3. Verify `Transaction.UserId` matches current user
 4. Map to `TransactionDto` and return
-CreateCategoryCommand
-csharp
+
+#### CreateCategoryCommand
+
+```csharp
 public record CreateCategoryCommand(
     string Name,
     string? Color = null,
     string? Icon = null
 ) : IRequest<Guid>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Validate unique name via `CategoryService.ValidateUniqueName(userId, name)`
@@ -390,13 +401,17 @@ Handler Flow:
 4. Create `Category` entity (public constructor — `IsSystemDefault = false`)
 5. Persist via `ICategoryRepository.AddAsync()`
 6. Return `CategoryId.Value`
-RenameCategoryCommand
-csharp
+
+#### RenameCategoryCommand
+
+```csharp
 public record RenameCategoryCommand(
     Guid CategoryId,
     string NewName
 ) : IRequest<Unit>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Load `Category` by Id; throw `EntityNotFoundException` if not found
@@ -404,12 +419,16 @@ Handler Flow:
 4. Validate unique name via `CategoryService.ValidateUniqueName(userId, newName)`
 5. Call `Category.Rename(newName)` (guards enforced by entity)
 6. Persist via `ICategoryRepository.UpdateAsync()`
-DeleteCategoryCommand
-csharp
+
+#### DeleteCategoryCommand
+
+```csharp
 public record DeleteCategoryCommand(
     Guid CategoryId
 ) : IRequest<Unit>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Load `Category` by Id; throw `EntityNotFoundException` if not found
@@ -417,20 +436,28 @@ Handler Flow:
 4. Check `hasActiveTransactions` via `ICategoryRepository.HasTransactionsAsync(categoryId)`
 5. Verify `Category.CanDelete(hasActiveTransactions)`; if false → throw `DomainException`
 6. Delete via `ICategoryRepository.DeleteAsync()`
-GetCategoriesQuery
-csharp
+
+#### GetCategoriesQuery
+
+```csharp
 public record GetCategoriesQuery : IRequest<List<CategoryDto>>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Ensure system defaults exist (seed if not present — idempotent)
 3. Load all categories via `ICategoryRepository.GetByUserIdAsync(userId)`
 4. Map to `CategoryDto` list (include `IsSystemDefault` flag, transaction count)
 5. Sort: system defaults first, then user-defined alphabetically
-SeedSystemDefaultsCommand
-csharp
+
+#### SeedSystemDefaultsCommand
+
+```csharp
 public record SeedSystemDefaultsCommand : IRequest<List<Guid>>;
-Handler Flow:
+```
+
+**Handler Flow:**
 
 1. Get `UserId` from `IUserContext`
 2. Check if system defaults already exist via `ICategoryRepository.GetSystemDefaultsAsync(userId)`
@@ -438,9 +465,12 @@ Handler Flow:
 4. If not exist: generate via `CategoryService.GetSystemDefaults(userId)`
 5. Persist each via `ICategoryRepository.AddAsync()`
 6. Return list of `CategoryId.Value`
-FR-3.03: Application DTOs
-TransactionDto
-csharp
+
+### FR-3.03: Application DTOs
+
+#### TransactionDto
+
+```csharp
 public record TransactionDto(
     Guid Id,
     decimal Amount,
@@ -452,8 +482,11 @@ public record TransactionDto(
     string? ImportedFrom,
     DateTime CreatedAt
 );
-ImportResultDto
-csharp
+```
+
+#### ImportResultDto
+
+```csharp
 public record ImportResultDto(
     int ImportedCount,
     int SkippedCount,
@@ -462,15 +495,21 @@ public record ImportResultDto(
     DateTime ImportedAt,
     List<ImportRowErrorDto> Errors
 );
-ImportRowErrorDto
-csharp
+```
+
+#### ImportRowErrorDto
+
+```csharp
 public record ImportRowErrorDto(
     int RowNumber,
     string RawData,
     string Reason
 );
-PaginatedResultDto<T>
-csharp
+```
+
+#### PaginatedResultDto<T>
+
+```csharp
 public record PaginatedResultDto<T>(
     List<T> Items,
     int TotalCount,
@@ -478,8 +517,11 @@ public record PaginatedResultDto<T>(
     int PageSize,
     int TotalPages
 );
-CategoryDto
-csharp
+```
+
+#### CategoryDto
+
+```csharp
 public record CategoryDto(
     Guid Id,
     string Name,
@@ -488,15 +530,22 @@ public record CategoryDto(
     bool IsSystemDefault,
     int TransactionCount
 );
-FR-3.04: Application Interfaces
-IPdfParser
-csharp
+```
+
+### FR-3.04: Application Interfaces
+
+#### IPdfParser
+
+```csharp
 public interface IPdfParser
 {
     Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream);
 }
-RawTransactionRow
-csharp
+```
+
+#### RawTransactionRow
+
+```csharp
 public record RawTransactionRow(
     int RowNumber,
     string? DateRaw,
@@ -683,8 +732,9 @@ CREATE POLICY "Users can update own transactions"
 CREATE POLICY "Users can delete own transactions"
     ON public.transactions FOR DELETE
     USING (auth.uid() = user_id);
-004_CreatePdfImportsTable.sql
-sql
+#### 004_CreatePdfImportsTable.sql
+
+```sql
 -- Migration: 004_CreatePdfImportsTable.sql
 -- Purpose: Metadata about imported PDF files
 
@@ -710,8 +760,11 @@ CREATE POLICY "Users can view own imports"
 CREATE POLICY "Users can insert own imports"
     ON public.pdf_imports FOR INSERT
     WITH CHECK (auth.uid() = user_id);
-FR-3.08: Frontend Pages
-text
+```
+
+### FR-3.08: Frontend Pages
+
+```
 Frontend/
 ├── Pages/
 │   ├── Transactions/
@@ -728,8 +781,11 @@ Frontend/
 │   └── Dashboard.cshtml.cs
 ├── Shared/
 │   └── _Layout.cshtml                  # Updated navigation
-Upload PDF Page (/Transactions/Upload)
-csharp
+```
+
+#### Upload PDF Page (/Transactions/Upload)
+
+```csharp
 [Authorize]
 public class UploadModel : PageModel
 {
@@ -745,7 +801,7 @@ public class UploadModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (PdfFile == null || PdfFile.Length == 0)
+         if (PdfFile == null || PdfFile.Length == 0)
         {
             ErrorMessage = "Please select a PDF file.";
             return Page();
@@ -940,7 +996,9 @@ public class CategoryManagementModel : PageModel
         return Page();
     }
 }
-View Requirements:
+```
+
+**View Requirements:**
 
 - Category list: Name | Color swatch | Icon | System Default badge | Actions
 - System defaults: lock icon, edit/delete buttons disabled/hidden
@@ -948,18 +1006,22 @@ View Requirements:
 - Rename: inline edit with save/cancel buttons
 - Delete: confirmation dialog with warning about active transactions
 - Transaction count shown per category
-FR-3.09: Updated Navigation (_Layout.cshtml)
-Authenticated Navigation Items:
 
-| Label        | Route                | Icon (optional) |
-|--------------|----------------------|-----------------|
-| Dashboard    | /Dashboard           | 📊              |
-| Transactions | /Transactions        | 💳              |
-| Upload PDF   | /Transactions/Upload | 📄              |
-| Categories   | /Categories          | 🏷️              |
-| Logout       | (POST action)        | 🚪              |
-FR-3.10: Infrastructure DI Updates
-csharp
+### FR-3.09: Updated Navigation (_Layout.cshtml)
+
+**Authenticated Navigation Items:**
+
+| Label | Route | Icon (optional) |
+|---|---|---|
+| Dashboard | /Dashboard | 📊 |
+| Transactions | /Transactions | 💳 |
+| Upload PDF | /Transactions/Upload | 📄 |
+| Categories | /Categories | 🏷️ |
+| Logout | (POST action) | 🚪 |
+
+### FR-3.10: Infrastructure DI Updates
+
+```csharp
 public static IServiceCollection AddInfrastructureServices(
     this IServiceCollection services,
     IConfiguration configuration)
@@ -979,9 +1041,13 @@ public static IServiceCollection AddInfrastructureServices(
 
     return services;
 }
-Architecture Notes
-PDF Import Pipeline Flow
-text
+```
+
+## Architecture Notes
+
+### PDF Import Pipeline Flow
+
+```
 ┌─────────────┐     ┌──────────────────────────────┐     ┌──────────────────┐
 │   Frontend   │     │       Application Layer       │     │  Infrastructure  │
 │  Upload Page │     │                                │     │                  │
@@ -1017,27 +1083,25 @@ text
 │                                                      │    .AddAsync()
 │  6. Return ImportResultDto                           │            
 └──────────────────────────────────────────────────────┘            
-NuGet Packages (Phase 3 Additions)
+```
 
-| Project                      | New Packages               | Notes                                         |
-|------------------------------|----------------------------|-----------------------------------------------|
-| SauronSheet.Domain           | None (still zero)          | Constitution mandate maintained               |
-| SauronSheet.Application      | No new packages            | MediatR already registered in Phase 0         |
-| SauronSheet.Infrastructure   | UglyToad.PdfPig (Apache 2.0) | PDF text extraction library                   |
-| SauronSheet.Application.Tests | No new packages            | xUnit + Moq already available                 |
-Layer Dependencies (Phase 3 Additions)
+### NuGet Packages (Phase 3 Additions)
 
-| Layer          | New Dependencies                                              |
-|----------------|---------------------------------------------------------------|
-| Domain         | None — adds ImportBatch VO only                               |
-| Application    | Domain (entities, VOs, repository interfaces, CategoryService) |
+| Project | New Packages | Notes |
+|---|---|---|
+| SauronSheet.Domain | None (still zero) | Constitution mandate maintained |
+| SauronSheet.Application | No new packages | MediatR already registered in Phase 0 |
+| SauronSheet.Infrastructure | UglyToad.PdfPig (Apache 2.0) | PDF text extraction library |
+| SauronSheet.Application.Tests | No new packages | xUnit + Moq already available |
+
+### Layer Dependencies (Phase 3 Additions)
+
+| Layer | New Dependencies |
+|---|---|
+| Domain | None — adds ImportBatch VO only |
+| Application | Domain (entities, VOs, repository interfaces, CategoryService) |
 | Infrastructure | Domain (implements repository interfaces), PdfPig (PDF parsing) |
-| Frontend       | Application (MediatR commands/queries), Infrastructure (DI only) |
-text
-
-Ahora va la **Parte 2/2** — pégalo justo después de lo anterior:
-
-```markdown
+| Frontend | Application (MediatR commands/queries), Infrastructure (DI only) |
 
 ---
 
