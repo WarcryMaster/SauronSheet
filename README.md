@@ -561,3 +561,5 @@ Incluye al final una lista ordenada de ejecución.
 No expliques nada fuera del documento.
 No resumas.
 Produce únicamente el contenido completo de tasks.md.
+
+/prompt:'prompts/speckit.clarify.prompt.md' verifica que no haya en la #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-tasks.md'  #file:'C:\Projects\SauronSheet\.specify\memory\constitution.md'  #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-plan.md' #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-spec.md' inconsistencias o casos no contemplados o ambiguos

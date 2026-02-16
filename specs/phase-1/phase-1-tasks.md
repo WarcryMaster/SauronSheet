@@ -10,11 +10,24 @@
 
 ## 1. Pre-Implementation Validation
 
+### Tarea 1.0 – Verificar que IUserContext interface existe en Phase 0
+- **Path**: `src/SauronSheet.Application/Common/IUserContext.cs`
+- **Acción**: Verificar (crear si no existe)
+- **Descripción**: El spec de Phase 0 menciona que IUserContext debe ser una interfaz definida en la capa Application. Verificar que existe. Si no existe, crear:
+  - Interfaz `IUserContext` en `src/SauronSheet.Application/Common/IUserContext.cs`
+  - Dos propiedades: `string UserId { get; }` y `bool IsAuthenticated { get; }`
+  - Namespace: `SauronSheet.Application.Common`
+- **Dependencias**: Phase 0 completado
+- **Validación**: 
+  - Archivo `src/SauronSheet.Application/Common/IUserContext.cs` existe
+  - Contiene interface `IUserContext` con ambas propiedades
+  - Es referenciable desde Application y Infrastructure
+
 ### Tarea 1.1 – Validar que Phase 0 está completo
 - **Path**: N/A (validación local)
 - **Acción**: Validar
 - **Descripción**: Ejecutar `dotnet build` y `dotnet test` para asegurar que Phase 0 se compiló correctamente y todos los 13 tests pasan. Si Phase 0 tiene errores, **NO proceder** a Phase 1.
-- **Dependencias**: Ninguna (pero requiere que Phase 0 esté completado)
+- **Dependencias**: Tarea 1.0
 - **Validación**: 
   - `dotnet build` exit code 0, cero warnings
   - `dotnet test` salida contiene "13 passed"
@@ -483,11 +496,12 @@
 ### Tarea 6.15 – Ejecutar tests Application para Commands (GREEN)
 - **Path**: N/A (command line)
 - **Acción**: Ejecutar comando
-- **Descripción**: Ejecutar `dotnet test --filter "Namespace~SauronSheet.Application.Tests.Features.Auth.Commands --no-build"` para verificar que los tests T-1.09 a T-1.17 pasan.
+- **Descripción**: Ejecutar `dotnet test tests/SauronSheet.Application.Tests/Features/Auth/Commands/ --no-build` para verificar que los handlers de comandos están correctamente implementados. Alternativamente, ejecutar `dotnet test --filter "Category=Application --no-build"` y verificar que todos los tests de aplicación pasan.
 - **Dependencias**: Tareas 6.11 a 6.14
 - **Validación**: 
   - Tests T-1.09 a T-1.17 pasan (9 tests)
   - Exit code 0
+  - Todos los handlers de Command compilan sin errores
 
 ---
 
@@ -552,11 +566,13 @@
   - Dentro: `services.AddMediatR(cfg => { cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly); cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(TenantScopingBehavior<,>)); });`
   - Retornar `services`
   - **Nota**: El método `AddMediatR` debe incluir la línea `cfg.AddBehavior(...)` para registrar TenantScopingBehavior como pipeline behavior
+  - **IMPORTANTE**: Este método NOT debe referenciar Infrastructure (usar solo Domain + MediatR). DI de Infrastructure se hace EN FRONTEND Program.cs
 - **Dependencias**: Tarea 7.2 (TenantScopingBehavior)
 - **Validación**: 
   - Archivo compila
   - MediatR se registra correctamente
   - TenantScopingBehavior se registra como behavior
+  - NO hay referencias a Infrastructure (validar que solo usa MediatR y Common)
 
 ---
 
@@ -621,13 +637,15 @@
 ### Tarea 10.4 – Crear archivo HttpUserContext.cs
 - **Path**: `src/SauronSheet.Infrastructure/Auth/HttpUserContext.cs`
 - **Acción**: Crear archivo
-- **Descripción**: Crear clase `HttpUserContext` que implemente `IUserContext` (de Application). Constructor inyecta `IHttpContextAccessor`. Implementa las 2 propiedades:
+- **Descripción**: Crear clase `HttpUserContext` que implemente `IUserContext` (interfaz definida en Application.Common desde Phase 0). Constructor inyecta `IHttpContextAccessor`. Implementa las 2 propiedades:
   - `string UserId`: retornar `_httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value` o lanzar `UnauthorizedAccessException` si nulo
   - `bool IsAuthenticated`: retornar `_httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false`
-- **Dependencias**: Tarea 10.1, Application IUserContext
+  - **IMPORTANTE**: IUserContext es una interfaz que DEBE estar definida en `src/SauronSheet.Application/Common/IUserContext.cs` desde Phase 0. Si no existe, crearla antes de esta tarea.
+- **Dependencias**: Tarea 10.1, Application IUserContext (Phase 0 o crear si no existe)
 - **Validación**: 
   - Archivo compila
   - Implementa IUserContext correctamente
+  - IUserContext interface existe en Application.Common
 
 ### Tarea 10.5 – Crear archivo AuthConfiguration.cs
 - **Path**: `src/SauronSheet.Infrastructure/Auth/AuthConfiguration.cs`
@@ -682,7 +700,7 @@
 ### Tarea 12.1 – Actualizar DependencyInjection.cs en Infrastructure (REEMPLAZO completo)
 - **Path**: `src/SauronSheet.Infrastructure/DependencyInjection.cs`
 - **Acción**: Modificar archivo (reemplazar contenido completo)
-- **Descripción**: Reemplazar el contenido completo de `DependencyInjection.cs` para registrar servicios de auth. El archivo debe:
+- **Descripción**: Reemplazar el contenido completo de `DependencyInjection.cs` para registrar servicios de auth. Si hay contenido existente de Phase 0, asegurar que se mantiene la registración de Supabase client (si la hay). El archivo debe:
   - Usar `using Auth;`, `using Domain.Services;`, `using Application.Common;`
   - Clase estática `DependencyInjection`
   - Método `public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)`
@@ -694,10 +712,12 @@
   - Registrar `IUserContext` como scoped: `services.AddScoped<IUserContext, HttpUserContext>()`
   - Registrar `IHttpContextAccessor`: `services.AddHttpContextAccessor()`
   - Retornar `services`
+  - **NOTA**: Si Phase 0 tenía registraciones adicionales, COMBINAR (no descartar)
 - **Dependencias**: Tareas 10.2 a 10.5
 - **Validación**: 
   - Archivo compila
   - `dotnet build src/SauronSheet.Infrastructure/` exitoso
+  - Todas las dependencias (Supabase client, auth services) registradas correctamente
 
 ---
 
@@ -835,16 +855,19 @@
 - **Acción**: Crear archivo
 - **Descripción**: Crear PageModel `LogoutModel` que:
   - Inyecte `IMediator`
+  - **Nota**: Logout es POST-only (no GET)
   - Método `public async Task<IActionResult> OnPostAsync()`:
     - Leer JWT del cookie: `Request.Cookies["sb-access-token"]`
     - Si existe: enviar `LogoutUserCommand(token)` via mediator
     - Catch cualquier excepción y ignorar (logout puede fallar si sesión ya expiró)
     - Limpiar cookies: `Response.Cookies.Delete("sb-access-token")` y `Response.Cookies.Delete("sb-refresh-token")`
     - `return RedirectToPage("/Auth/Login")`
+  - **NO implementar OnGet()** (logout es POST-only para CSRF safety)
 - **Dependencias**: Tarea 14.5
 - **Validación**: 
   - Archivo compila
   - OnPostAsync retorna IActionResult
+  - No hay método OnGet (validación manual si es necesario)
 
 ### Tarea 14.7 – Crear archivo Dashboard.cshtml
 - **Path**: `src/SauronSheet.Frontend/Pages/Dashboard.cshtml`
@@ -865,15 +888,20 @@
 - **Descripción**: Crear PageModel `DashboardModel` que:
   - Inyecte `IMediator`
   - Propiedad `public UserProfileDto? UserProfile`
+  - **IMPORTANTE**: Esta página DEBE ser protegida. Implementar la protección de una de estas formas:
+    - **Opción 1 (Recomendado)**: Agregar atributo `[Authorize]` en la clase PageModel
+    - **Opción 2 (Manual)**: En OnGetAsync, verificar `User.Identity?.IsAuthenticated` y retornar RedirectToPage("/Auth/Login") si es false
   - Método `public async Task<IActionResult> OnGetAsync()`:
     - Enviar `GetCurrentUserQuery()` via mediator
     - Si success: asignar a `UserProfile`, retornar Page()
     - Si falla (UnauthorizedAccessException): `return RedirectToPage("/Auth/Login")`
-  - **Nota**: Esta página DEBE ser protegida (requiere auth). El middleware TenantScopingBehavior lo asegura.
+  - **Nota**: TenantScopingBehavior en Application layer garantiza que queries solo tengan acceso a datos del usuario autenticado
 - **Dependencias**: Tarea 14.7
 - **Validación**: 
   - Archivo compila
   - Usa GetCurrentUserQuery
+  - Implementa protección de autenticación (Authorize attribute O validación manual)
+  - Unauthenticated requests redirigen a /Auth/Login
 
 ---
 
@@ -931,30 +959,30 @@
 ### Tarea 16.3 – Verificar Domain coverage >= 80%
 - **Path**: N/A (coverage report)
 - **Acción**: Generar reporte
-- **Descripción**: Usar coverlet para generar reporte de cobertura del Domain layer. Comando:
+- **Descripción**: Usar coverlet para generar reporte de cobertura del Domain layer. Este comando se ejecuta DESPUÉS de `dotnet build` (tarea 16.1):
 ```
 dotnet tool install -g coverlet.console
-coverlet tests/SauronSheet.Domain.Tests/bin/Debug/net10.0/SauronSheet.Domain.Tests.dll \
-  --target "dotnet" \
-  --targetargs "test tests/SauronSheet.Domain.Tests/ --no-build --configuration Debug" \
-  --format "opencover" \
-  --output "./coverage-domain.xml" \
-  --include "[SauronSheet.Domain]*" \
-  --exclude "[SauronSheet.Domain.Tests]*"
+coverlet tests/SauronSheet.Domain.Tests/bin/Debug/net10.0/SauronSheet.Domain.Tests.dll --target "dotnet" --targetargs "test tests/SauronSheet.Domain.Tests/SauronSheet.Domain.Tests.dll --no-build" --format "opencover" --output "./coverage-domain.xml" --include "[SauronSheet.Domain]*" --exclude "[SauronSheet.Domain.Tests]*"
 ```
-- **Dependencias**: Tarea 16.1
+Alternativamente, usar ReportGenerator para generar un reporte HTML más legible.
+- **Dependencias**: Tarea 16.1 (debe ejecutarse DESPUÉS de build para que existan los .dll)
 - **Validación**: 
-  - coverage-domain.xml generado
+  - coverage-domain.xml generado en raíz de solución
   - Domain layer coverage >= 80%
+  - Archivos reportados incluyen UserId, AuthResult, UserProfile, IAuthService
 
 ### Tarea 16.4 – Verificar Application coverage >= 70%
 - **Path**: N/A (coverage report)
 - **Acción**: Generar reporte
-- **Descripción**: Usar coverlet para generar reporte de cobertura del Application layer. Similar a tarea 16.3 pero para Application.
-- **Dependencias**: Tarea 16.1
+- **Descripción**: Usar coverlet para generar reporte de cobertura del Application layer. Similar a tarea 16.3 pero para Application. Ejecutar DESPUÉS de `dotnet build`:
+```
+coverlet tests/SauronSheet.Application.Tests/bin/Debug/net10.0/SauronSheet.Application.Tests.dll --target "dotnet" --targetargs "test tests/SauronSheet.Application.Tests/SauronSheet.Application.Tests.dll --no-build" --format "opencover" --output "./coverage-app.xml" --include "[SauronSheet.Application]*" --exclude "[SauronSheet.Application.Tests]*"
+```
+- **Dependencias**: Tarea 16.1 (debe ejecutarse DESPUÉS de build)
 - **Validación**: 
-  - coverage-app.xml generado
+  - coverage-app.xml generado en raíz de solución
   - Application layer coverage >= 70%
+  - Handlers, DTOs, y behaviors incluidos en reporte
 
 ### Tarea 16.5 – Verificar dependencias (Domain = 0)
 - **Path**: `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
@@ -1093,88 +1121,89 @@ grep "ProjectReference" src/SauronSheet.Application/SauronSheet.Application.cspr
 
 ## Orden de Implementación
 
-1. Tarea 1.1 – Validar Phase 0 completado
-2. Tarea 1.2 – Verificar Supabase Auth habilitado
-3. Tarea 1.3 – Obtener JWT Secret
-4. Tarea 2.1 – Crear estructura Domain
-5. Tarea 2.2 – Crear UserId.cs (schema)
-6. Tarea 2.3 – Crear AuthResult.cs (schema)
-7. Tarea 2.4 – Crear UserProfile.cs (schema)
-8. Tarea 2.5 – Crear IAuthService.cs (schema)
-9. Tarea 3.1 – Crear estructura Domain.Tests
-10. Tarea 3.2 – Crear UserIdTests.cs (RED)
-11. Tarea 3.3 – Crear AuthResultTests.cs (RED)
-12. Tarea 3.4 – Ejecutar tests Domain RED
-13. Tarea 4.1 – Implementar UserId.cs (GREEN)
-14. Tarea 4.2 – Implementar AuthResult.cs (GREEN)
-15. Tarea 4.3 – Completar UserProfile.cs (GREEN)
-16. Tarea 4.4 – Ejecutar tests Domain GREEN
-17. Tarea 5.1 – Crear estructura Application.Tests
-18. Tarea 5.2 – Crear RegisterUserCommandTests.cs (RED)
-19. Tarea 5.3 – Crear LoginUserCommandTests.cs (RED)
-20. Tarea 5.4 – Crear LogoutUserCommandTests.cs (RED)
-21. Tarea 5.5 – Crear RefreshTokenCommandTests.cs (RED)
-22. Tarea 5.6 – Crear GetCurrentUserQueryTests.cs (RED)
-23. Tarea 5.7 – Crear TenantScopingBehaviorTests.cs (RED)
-24. Tarea 5.8 – Ejecutar tests Application RED
-25. Tarea 6.1 – Crear estructura Application
-26. Tarea 6.2 – Crear IAnonymousRequest.cs
-27. Tarea 6.3 – Crear RegisterUserCommand.cs
-28. Tarea 6.4 – Crear LoginUserCommand.cs
-29. Tarea 6.5 – Crear LogoutUserCommand.cs
-30. Tarea 6.6 – Crear RefreshTokenCommand.cs
-31. Tarea 6.7 – Crear GetCurrentUserQuery.cs
-32. Tarea 6.8 – Crear RegistrationResultDto.cs
-33. Tarea 6.9 – Crear AuthTokenDto.cs
-34. Tarea 6.10 – Crear UserProfileDto.cs
-35. Tarea 6.11 – Crear RegisterUserCommandHandler.cs (GREEN)
-36. Tarea 6.12 – Crear LoginUserCommandHandler.cs (GREEN)
-37. Tarea 6.13 – Crear LogoutUserCommandHandler.cs (GREEN)
-38. Tarea 6.14 – Crear RefreshTokenCommandHandler.cs (GREEN)
-39. Tarea 6.15 – Ejecutar tests Application Commands GREEN
-40. Tarea 7.1 – Crear GetCurrentUserQueryHandler.cs (GREEN)
-41. Tarea 7.2 – Crear TenantScopingBehavior.cs (GREEN)
-42. Tarea 7.3 – Crear directorio Behaviors
-43. Tarea 7.4 – Ejecutar tests Application GREEN
-44. Tarea 8.1 – Actualizar DependencyInjection.cs (Application)
-45. Tarea 9.1 – Agregar Microsoft.AspNetCore.Http NuGet
-46. Tarea 10.1 – Crear directorio Auth (Infrastructure)
-47. Tarea 10.2 – Crear SupabaseAuthService.cs
-48. Tarea 10.3 – Crear JwtCookieMiddleware.cs
-49. Tarea 10.4 – Crear HttpUserContext.cs
-50. Tarea 10.5 – Crear AuthConfiguration.cs
-51. Tarea 11.1 – Crear directorio Migrations
-52. Tarea 11.2 – Crear 001_CreateUsersTable.sql
-53. Tarea 12.1 – Actualizar DependencyInjection.cs (Infrastructure)
-54. Tarea 13.1 – Crear directorio Auth (Frontend Pages)
-55. Tarea 13.2 – Actualizar Program.cs (Frontend)
-56. Tarea 13.3 – Actualizar _Layout.cshtml
-57. Tarea 14.1 – Crear Login.cshtml
-58. Tarea 14.2 – Crear Login.cshtml.cs
-59. Tarea 14.3 – Crear Register.cshtml
-60. Tarea 14.4 – Crear Register.cshtml.cs
-61. Tarea 14.5 – Crear Logout.cshtml
-62. Tarea 14.6 – Crear Logout.cshtml.cs
-63. Tarea 14.7 – Crear Dashboard.cshtml
-64. Tarea 14.8 – Crear Dashboard.cshtml.cs
-65. Tarea 15.1 – Actualizar appsettings.json (Frontend)
-66. Tarea 16.1 – Full solution build
-67. Tarea 16.2 – Ejecutar todos los tests
-68. Tarea 16.3 – Verificar Domain coverage >= 80%
-69. Tarea 16.4 – Verificar Application coverage >= 70%
-70. Tarea 16.5 – Verificar dependencias (Domain = 0)
-71. Tarea 16.6 – Verificar dependencias (Application -> Domain)
-72. Tarea 16.7 – Verificar dependencias (Infrastructure -> Domain)
-73. Tarea 16.8 – Verificar dependencias (Frontend -> App+Infra)
-74. Tarea 16.9 – Aplicar migración SQL en Supabase
-75. Tarea 16.10 – Manual E2E: Registrar usuario
-76. Tarea 16.11 – Manual E2E: Login usuario
-77. Tarea 16.12 – Manual E2E: Logout usuario
-78. Tarea 16.13 – Manual E2E: Validación formularios
-79. Tarea 16.14 – Manual E2E: Tenant isolation
+1. Tarea 1.0 – Verificar que IUserContext existe (crear si no existe)
+2. Tarea 1.1 – Validar Phase 0 completado
+3. Tarea 1.2 – Verificar Supabase Auth habilitado
+4. Tarea 1.3 – Obtener JWT Secret
+5. Tarea 2.1 – Crear estructura Domain
+6. Tarea 2.2 – Crear UserId.cs (schema)
+7. Tarea 2.3 – Crear AuthResult.cs (schema)
+8. Tarea 2.4 – Crear UserProfile.cs (schema)
+9. Tarea 2.5 – Crear IAuthService.cs (schema)
+10. Tarea 3.1 – Crear estructura Domain.Tests
+11. Tarea 3.2 – Crear UserIdTests.cs (RED)
+12. Tarea 3.3 – Crear AuthResultTests.cs (RED)
+13. Tarea 3.4 – Ejecutar tests Domain RED
+14. Tarea 4.1 – Implementar UserId.cs (GREEN)
+15. Tarea 4.2 – Implementar AuthResult.cs (GREEN)
+16. Tarea 4.3 – Completar UserProfile.cs (GREEN)
+17. Tarea 4.4 – Ejecutar tests Domain GREEN
+18. Tarea 5.1 – Crear estructura Application.Tests
+19. Tarea 5.2 – Crear RegisterUserCommandTests.cs (RED)
+20. Tarea 5.3 – Crear LoginUserCommandTests.cs (RED)
+21. Tarea 5.4 – Crear LogoutUserCommandTests.cs (RED)
+22. Tarea 5.5 – Crear RefreshTokenCommandTests.cs (RED)
+23. Tarea 5.6 – Crear GetCurrentUserQueryTests.cs (RED)
+24. Tarea 5.7 – Crear TenantScopingBehaviorTests.cs (RED)
+25. Tarea 5.8 – Ejecutar tests Application RED
+26. Tarea 6.1 – Crear estructura Application
+27. Tarea 6.2 – Crear IAnonymousRequest.cs
+28. Tarea 6.3 – Crear RegisterUserCommand.cs
+29. Tarea 6.4 – Crear LoginUserCommand.cs
+30. Tarea 6.5 – Crear LogoutUserCommand.cs
+31. Tarea 6.6 – Crear RefreshTokenCommand.cs
+32. Tarea 6.7 – Crear GetCurrentUserQuery.cs
+33. Tarea 6.8 – Crear RegistrationResultDto.cs
+34. Tarea 6.9 – Crear AuthTokenDto.cs
+35. Tarea 6.10 – Crear UserProfileDto.cs
+36. Tarea 6.11 – Crear RegisterUserCommandHandler.cs (GREEN)
+37. Tarea 6.12 – Crear LoginUserCommandHandler.cs (GREEN)
+38. Tarea 6.13 – Crear LogoutUserCommandHandler.cs (GREEN)
+39. Tarea 6.14 – Crear RefreshTokenCommandHandler.cs (GREEN)
+40. Tarea 6.15 – Ejecutar tests Application Commands GREEN
+41. Tarea 7.1 – Crear GetCurrentUserQueryHandler.cs (GREEN)
+42. Tarea 7.2 – Crear TenantScopingBehavior.cs (GREEN)
+43. Tarea 7.3 – Crear directorio Behaviors
+44. Tarea 7.4 – Ejecutar tests Application GREEN
+45. Tarea 8.1 – Actualizar DependencyInjection.cs (Application)
+46. Tarea 9.1 – Agregar Microsoft.AspNetCore.Http NuGet
+47. Tarea 10.1 – Crear directorio Auth (Infrastructure)
+48. Tarea 10.2 – Crear SupabaseAuthService.cs
+49. Tarea 10.3 – Crear JwtCookieMiddleware.cs
+50. Tarea 10.4 – Crear HttpUserContext.cs
+51. Tarea 10.5 – Crear AuthConfiguration.cs
+52. Tarea 11.1 – Crear directorio Migrations
+53. Tarea 11.2 – Crear 001_CreateUsersTable.sql
+54. Tarea 12.1 – Actualizar DependencyInjection.cs (Infrastructure)
+55. Tarea 13.1 – Crear directorio Auth (Frontend Pages)
+56. Tarea 13.2 – Actualizar Program.cs (Frontend)
+57. Tarea 13.3 – Actualizar _Layout.cshtml
+58. Tarea 14.1 – Crear Login.cshtml
+59. Tarea 14.2 – Crear Login.cshtml.cs
+60. Tarea 14.3 – Crear Register.cshtml
+61. Tarea 14.4 – Crear Register.cshtml.cs
+62. Tarea 14.5 – Crear Logout.cshtml
+63. Tarea 14.6 – Crear Logout.cshtml.cs
+64. Tarea 14.7 – Crear Dashboard.cshtml
+65. Tarea 14.8 – Crear Dashboard.cshtml.cs
+66. Tarea 15.1 – Actualizar appsettings.json (Frontend)
+67. Tarea 16.1 – Full solution build
+68. Tarea 16.2 – Ejecutar todos los tests
+69. Tarea 16.3 – Verificar Domain coverage >= 80%
+70. Tarea 16.4 – Verificar Application coverage >= 70%
+71. Tarea 16.5 – Verificar dependencias (Domain = 0)
+72. Tarea 16.6 – Verificar dependencias (Application -> Domain)
+73. Tarea 16.7 – Verificar dependencias (Infrastructure -> Domain)
+74. Tarea 16.8 – Verificar dependencias (Frontend -> App+Infra)
+75. Tarea 16.9 – Aplicar migración SQL en Supabase
+76. Tarea 16.10 – Manual E2E: Registrar usuario
+77. Tarea 16.11 – Manual E2E: Login usuario
+78. Tarea 16.12 – Manual E2E: Logout usuario
+79. Tarea 16.13 – Manual E2E: Validación formularios
+80. Tarea 16.14 – Manual E2E: Tenant isolation
 
 ---
 
-**Total Tasks: 79**  
-**Estimated Duration: 10 days (Weeks 3-5)**  
+**Total Tasks: 80**  
+**Estimated Duration: 10 days (Weeks 3–5)**  
 **Status**: Ready for implementation ✅
