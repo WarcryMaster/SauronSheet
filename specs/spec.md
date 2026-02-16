@@ -726,87 +726,91 @@ public class CategoryService
 
 ## Test Specifications
 
-| Transaction Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.01  | Transaction_ValidConstruction_SetsAllProperties	| All properties match constructor args                    |
-| T-2.02  | Transaction_FutureDate_ThrowsDomainException	| DomainException "cannot be in the future"                |
-| T-2.03  | Transaction_EmptyDescription_ThrowsDomainException	| DomainException "Description is required"                |
-| T-2.04  | Transaction_Categorize_UpdatesCategoryId		| CategoryId changes to new value                          |
-| T-2.05  | Transaction_UpdateDescription_ChangesDescription	| Description updated; UpdatedAt set                        |
-| T-2.06  | Transaction_NullUserId_ThrowsDomainException		| DomainException on null UserId                            |
+**Total: 81 tests (all Domain) — distributed across 8 areas**
 
-| Category Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.07  | Category_ValidConstruction_SetsProperties		| All properties match                                      |
-| T-2.08  | Category_SystemDefault_CanDeleteReturnsFalse		| CanDelete(false) → false                                  |
-| T-2.09  | Category_WithActiveTransactions_CanDeleteReturnsFalse	| CanDelete(true) → false (even if not system default)    |
-| T-2.10  | Category_UserDefined_NoTransactions_CanDeleteReturnsTrue	| CanDelete(false) → true                                    |
-| T-2.11  | Category_SystemDefault_CanRenameReturnsFalse		| CanRename() → false                                      |
-| T-2.12  | Category_UserDefined_RenameChangesName		| Name updated; UpdatedAt set                              |
-| T-2.13  | Category_EmptyName_ThrowsDomainException		| DomainException "Name is required"                       |
-| T-2.14  | Category_CreateSystemDefault_SetsFlag		| IsSystemDefault == true                                  |
-
-| Budget Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.15  | Budget_ValidConstruction_SetsProperties		| All properties match                                      |
-| T-2.16  | Budget_IsOverBudget_SpendExceedsLimit_ReturnsTrue	| Spend 150, Limit 100 → true                              |
-| T-2.17  | Budget_IsOverBudget_SpendUnderLimit_ReturnsFalse	| Spend 50, Limit 100 → false                              |
-| T-2.18  | Budget_PercentageUsed_CalculatesCorrectly		| Spend 75, Limit 100 → 0.75                              |
-| T-2.19  | Budget_RemainingAmount_CalculatesCorrectly		| Limit 100 - Spend 75 → Money(25)                        |
-| T-2.20  | Budget_RemainingAmount_Negative_WhenOverBudget		| Limit 100 - Spend 150 → Money(-50)                      |
-| T-2.21  | Budget_UpdateLimit_ChangesLimit				| Limit updated; UpdatedAt set                              |
-| T-2.22  | Budget_ZeroLimit_ThrowsDomainException		| DomainException "Limit must be positive"                 |
-
-| Money Value Object Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.23  | Money_Plus_SameCurrency_AddsAmounts		| 100 EUR + 50 EUR = 150 EUR                               |
-| T-2.24  | Money_Minus_SameCurrency_SubtractsAmounts		| 100 EUR - 30 EUR = 70 EUR                               |
-| T-2.25  | Money_Plus_DifferentCurrency_ThrowsDomainException	| EUR + USD → DomainException "Currency mismatch"          |
-| T-2.26  | Money_IsPositive_PositiveAmount_ReturnsTrue		| Money(50) → IsPositive = true                            |
-| T-2.27  | Money_IsNegative_NegativeAmount_ReturnsTrue		| Money(-50) → IsNegative = true                            |
-| T-2.28  | Money_IsZero_ZeroAmount_ReturnsTrue		| Money(0) → IsZero = true                                |
-| T-2.29  | Money_Equality_SameAmountAndCurrency		| Money(100, "EUR") == Money(100, "EUR")                  |
-| T-2.30  | Money_Inequality_DifferentAmount			| Money(100) != Money(200)                                |
-| T-2.31  | Money_Inequality_DifferentCurrency		| Money(100, "EUR") != Money(100, "USD")                  |
-
-| DateRange Value Object Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.32  | DateRange_ValidConstruction_SetsProperties		| Start and End match                                      |
-| T-2.33  | DateRange_EndBeforeStart_ThrowsDomainException		| DomainException "End must be >= Start"                   |
-| T-2.34  | DateRange_Equality_SameValues			| Same start+end → equal                                  |
-
-| Strong-Typed ID Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.35  | TransactionId_EmptyGuid_ThrowsDomainException		| Guid.Empty → DomainException                             |
-| T-2.36  | TransactionId_ValidGuid_SetsValue			| Value matches input Guid                                |
-| T-2.37  | CategoryId_EmptyGuid_ThrowsDomainException		| Guid.Empty → DomainException                             |
-| T-2.38  | BudgetId_EmptyGuid_ThrowsDomainException			| Guid.Empty → DomainException                             |
-
-| CategoryService Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.39  | CategoryService_ValidateUniqueName_Duplicate_Throws	| DomainException "already exists"                         |
-| T-2.40  | CategoryService_ValidateUniqueName_Unique_NoException	| No exception thrown                                       |
-| T-2.41  | CategoryService_CanDeleteCategory_SystemDefault_False	| Returns false                                            |
-| T-2.42  | CategoryService_CanDeleteCategory_ActiveTxns_False	| Returns false                                            |
-| T-2.43  | CategoryService_CanDeleteCategory_Eligible_True	| Returns true                                             |
-| T-2.44  | CategoryService_GetSystemDefaults_ReturnsFourCategories	| List.Count == 4                                       |
-
-| Specification Tests
-| Test ID | Test Name                                       | Assert                                                    |
-|---------|------------------------------------------------|-----------------------------------------------------------|
-| T-2.45  | DateRangeSpec_MatchesTransactionsInRange		| Criteria evaluates true for in-range                      |
-| T-2.46  | DateRangeSpec_ExcludesTransactionsOutOfRange		| Criteria evaluates false for out-of-range                 |
-| T-2.47  | CategorySpec_MatchesTransactionsWithCategory		| Criteria evaluates true for matching CategoryId           |
-| T-2.48  | AmountRangeSpec_MatchesTransactionsInRange		| Criteria evaluates true for in-range amounts              |
-| T-2.49  | UserSpec_MatchesTransactionsForUser			| Criteria evaluates true for matching UserId                |
-| T-2.50  | AllSpecs_DefaultMaxResults_1000			| MaxResults == 1000 for each spec                        |
+| Test ID | Test Name | Area | Assert |
+|---------|-----------|------|--------|
+| T-2.01 | Transaction_ValidConstruction_SetsAllProperties | Transaction | All properties match constructor args |
+| T-2.02 | Transaction_FutureDate_ThrowsDomainException | Transaction | DomainException "cannot be in the future" |
+| T-2.03 | Transaction_EmptyDescription_ThrowsDomainException | Transaction | DomainException "Description is required" |
+| T-2.04 | Transaction_Categorize_UpdatesCategoryId | Transaction | CategoryId changes to new value |
+| T-2.05 | Transaction_UpdateDescription_ChangesDescription | Transaction | Description updated; UpdatedAt set |
+| T-2.06 | Transaction_NullUserId_ThrowsDomainException | Transaction | DomainException on null UserId |
+| T-2.51 | Transaction_UpdateDescription_Empty_ThrowsDomainException | Transaction | DomainException "Description is required" |
+| T-2.52 | Transaction_Categorize_SetsUpdatedAt | Transaction | UpdatedAt set on categorization |
+| T-2.57 | Transaction_WhitespaceDescription_ThrowsDomainException | Transaction | DomainException on whitespace description |
+| T-2.58 | Transaction_WithOptionalFields_SetsCorrectly | Transaction | Optional CategoryId and ImportedFrom set |
+| T-2.07 | Category_ValidConstruction_SetsProperties | Category | All properties match |
+| T-2.08 | Category_SystemDefault_CanDeleteReturnsFalse | Category | CanDelete(false) → false for system default |
+| T-2.09 | Category_WithActiveTransactions_CanDeleteReturnsFalse | Category | CanDelete(true) → false with transactions |
+| T-2.10 | Category_UserDefined_NoTransactions_CanDeleteReturnsTrue | Category | CanDelete(false) → true for user-defined |
+| T-2.11 | Category_SystemDefault_CanRenameReturnsFalse | Category | CanRename() → false for system default |
+| T-2.12 | Category_UserDefined_RenameChangesName | Category | Name updated; UpdatedAt set |
+| T-2.13 | Category_EmptyName_ThrowsDomainException | Category | DomainException "Name is required" |
+| T-2.14 | Category_CreateSystemDefault_SetsFlag | Category | IsSystemDefault == true |
+| T-2.53 | Category_CanRename_UserDefined_ReturnsTrue | Category | CanRename() → true for user-defined |
+| T-2.59 | Category_Rename_SystemDefault_ThrowsDomainException | Category | DomainException on rename system default |
+| T-2.60 | Category_Rename_EmptyName_ThrowsDomainException | Category | DomainException on empty rename |
+| T-2.61 | Category_WithColorAndIcon_SetsOptionalProperties | Category | Optional Color and Icon set |
+| T-2.15 | Budget_ValidConstruction_SetsProperties | Budget | All properties match |
+| T-2.16 | Budget_IsOverBudget_SpendExceedsLimit_ReturnsTrue | Budget | Spend 150, Limit 100 → true |
+| T-2.17 | Budget_IsOverBudget_SpendUnderLimit_ReturnsFalse | Budget | Spend 50, Limit 100 → false |
+| T-2.18 | Budget_PercentageUsed_CalculatesCorrectly | Budget | Spend 75, Limit 100 → 0.75 |
+| T-2.19 | Budget_RemainingAmount_CalculatesCorrectly | Budget | Limit 100 - Spend 75 → Money(25) |
+| T-2.20 | Budget_RemainingAmount_Negative_WhenOverBudget | Budget | Limit 100 - Spend 150 → Money(-50) |
+| T-2.21 | Budget_UpdateLimit_ChangesLimit | Budget | Limit updated; UpdatedAt set |
+| T-2.22 | Budget_ZeroLimit_ThrowsDomainException | Budget | DomainException "Limit must be positive" |
+| T-2.56 | Budget_PercentageUsed_ZeroSpend_ReturnsZero | Budget | Spend 0 → percentage 0.0 |
+| T-2.62 | Budget_NegativeLimit_ThrowsDomainException | Budget | DomainException on negative limit |
+| T-2.63 | Budget_UpdateLimit_ZeroAmount_ThrowsDomainException | Budget | DomainException on zero update |
+| T-2.64 | Budget_IsOverBudget_ExactLimit_ReturnsFalse | Budget | Spend == Limit → false (not over) |
+| T-2.65 | Budget_NullUserId_ThrowsDomainException | Budget | DomainException on null UserId |
+| T-2.66 | Budget_NullCategoryId_ThrowsDomainException | Budget | DomainException on null CategoryId |
+| T-2.67 | Budget_NullMonth_ThrowsDomainException | Budget | DomainException on null DateRange |
+| T-2.23 | Money_Plus_SameCurrency_AddsAmounts | Money | 100 EUR + 50 EUR = 150 EUR |
+| T-2.24 | Money_Minus_SameCurrency_SubtractsAmounts | Money | 100 EUR - 30 EUR = 70 EUR |
+| T-2.25 | Money_Plus_DifferentCurrency_ThrowsDomainException | Money | EUR + USD → DomainException |
+| T-2.26 | Money_IsPositive_PositiveAmount_ReturnsTrue | Money | Money(50) → IsPositive = true |
+| T-2.27 | Money_IsNegative_NegativeAmount_ReturnsTrue | Money | Money(-50) → IsNegative = true |
+| T-2.28 | Money_IsZero_ZeroAmount_ReturnsTrue | Money | Money(0) → IsZero = true |
+| T-2.29 | Money_Equality_SameAmountAndCurrency | Money | Money(100, "EUR") == Money(100, "EUR") |
+| T-2.30 | Money_Inequality_DifferentAmount | Money | Money(100) != Money(200) |
+| T-2.31 | Money_Inequality_DifferentCurrency | Money | Money(100, "EUR") != Money(100, "USD") |
+| T-2.54 | Money_EmptyCurrency_ThrowsDomainException | Money | DomainException on empty currency |
+| T-2.68 | Money_Minus_DifferentCurrency_ThrowsDomainException | Money | EUR - USD → DomainException |
+| T-2.69 | Money_DefaultCurrency_IsEUR | Money | Default currency == "EUR" |
+| T-2.70 | Money_ToString_FormatsCorrectly | Money | Money(150.5, "EUR") → "150.50 EUR" |
+| T-2.32 | DateRange_ValidConstruction_SetsProperties | DateRange | Start and End match |
+| T-2.33 | DateRange_EndBeforeStart_ThrowsDomainException | DateRange | DomainException "End must be >= Start" |
+| T-2.34 | DateRange_Equality_SameValues | DateRange | Same start+end → equal |
+| T-2.55 | DateRange_SameStartAndEnd_IsValid | DateRange | Same date is valid |
+| T-2.71 | DateRange_ToString_FormatsCorrectly | DateRange | Formats as "YYYY-MM-DD to YYYY-MM-DD" |
+| T-2.35 | TransactionId_EmptyGuid_ThrowsDomainException | Strong-Typed ID | Guid.Empty → DomainException |
+| T-2.36 | TransactionId_ValidGuid_SetsValue | Strong-Typed ID | Value matches input Guid |
+| T-2.37 | CategoryId_EmptyGuid_ThrowsDomainException | Strong-Typed ID | Guid.Empty → DomainException |
+| T-2.38 | BudgetId_EmptyGuid_ThrowsDomainException | Strong-Typed ID | Guid.Empty → DomainException |
+| T-2.72 | CategoryId_ValidGuid_SetsValue | Strong-Typed ID | Value matches input Guid |
+| T-2.73 | BudgetId_ValidGuid_SetsValue | Strong-Typed ID | Value matches input Guid |
+| T-2.74 | TransactionId_Equality_SameGuid | Strong-Typed ID | Same Guid → equal |
+| T-2.75 | TransactionId_Inequality_DifferentGuid | Strong-Typed ID | Different Guids → not equal |
+| T-2.39 | CategoryService_ValidateUniqueName_Duplicate_Throws | CategoryService | DomainException "already exists" |
+| T-2.40 | CategoryService_ValidateUniqueName_Unique_NoException | CategoryService | No exception thrown |
+| T-2.41 | CategoryService_CanDeleteCategory_SystemDefault_False | CategoryService | Returns false |
+| T-2.42 | CategoryService_CanDeleteCategory_ActiveTxns_False | CategoryService | Returns false |
+| T-2.43 | CategoryService_CanDeleteCategory_Eligible_True | CategoryService | Returns true |
+| T-2.44 | CategoryService_GetSystemDefaults_ReturnsFourCategories | CategoryService | List.Count == 4 |
+| T-2.76 | CategoryService_GetSystemDefaults_AllHaveValidIds | CategoryService | All have non-empty CategoryId |
+| T-2.77 | CategoryService_GetSystemDefaults_AllHaveCorrectUserId | CategoryService | All have correct UserId |
+| T-2.45 | DateRangeSpec_MatchesTransactionsInRange | Specification | In-range criteria → true |
+| T-2.46 | DateRangeSpec_ExcludesTransactionsOutOfRange | Specification | Out-of-range criteria → false |
+| T-2.47 | CategorySpec_MatchesTransactionsWithCategory | Specification | Matching CategoryId → true |
+| T-2.48 | AmountRangeSpec_MatchesTransactionsInRange | Specification | In-range amount → true |
+| T-2.49 | UserSpec_MatchesTransactionsForUser | Specification | Matching UserId → true |
+| T-2.50 | AllSpecs_DefaultMaxResults_1000 | Specification | MaxResults == 1000 for each |
+| T-2.78 | DateRangeSpec_IncludesBoundaryDates | Specification | Boundary dates included |
+| T-2.79 | CategorySpec_ExcludesTransactionsWithDifferentCategory | Specification | Different CategoryId → false |
+| T-2.80 | AmountRangeSpec_ExcludesTransactionsOutOfRange | Specification | Out-of-range amount → false |
+| T-2.81 | UserSpec_ExcludesTransactionsForDifferentUser | Specification | Different UserId → false |
 
 ---
 
@@ -814,16 +818,16 @@ public class CategoryService
 
 | #   | Deliverable                             | Layer          | Acceptance                                              |
 |-----|-----------------------------------------|----------------|---------------------------------------------------------|
-| D-2.01 | Transaction aggregate root            | Domain         | 6 unit tests passing (T-2.01 to T-2.06)                |
-| D-2.02 | Category aggregate root               | Domain         | 8 unit tests passing (T-2.07 to T-2.14)                 |
-| D-2.03 | Budget aggregate root                 | Domain         | 8 unit tests passing (T-2.15 to T-2.22)                 |
-| D-2.04 | Money value object                    | Domain         | 9 unit tests passing (T-2.23 to T-2.31)                 |
-| D-2.05 | DateRange value object                | Domain         | 3 unit tests passing (T-2.32 to T-2.34)                 |
-| D-2.06 | TransactionId, CategoryId, BudgetId  | Domain         | 4 unit tests passing (T-2.35 to T-2.38)                 |
-| D-2.07 | CategoryService                       | Domain         | 6 unit tests passing (T-2.39 to T-2.44)                 |
-| D-2.08 | 4 Specifications                      | Domain         | 6 unit tests passing (T-2.45 to T-2.50)                 |
+| D-2.01 | Transaction aggregate root            | Domain         | 10 unit tests passing (T-2.01–T-2.06, T-2.51, T-2.52, T-2.57, T-2.58) |
+| D-2.02 | Category aggregate root               | Domain         | 12 unit tests passing (T-2.07–T-2.14, T-2.53, T-2.59–T-2.61)         |
+| D-2.03 | Budget aggregate root                 | Domain         | 15 unit tests passing (T-2.15–T-2.22, T-2.56, T-2.62–T-2.67)         |
+| D-2.04 | Money value object                    | Domain         | 13 unit tests passing (T-2.23–T-2.31, T-2.54, T-2.68–T-2.70)         |
+| D-2.05 | DateRange value object                | Domain         | 5 unit tests passing (T-2.32–T-2.34, T-2.55, T-2.71)                 |
+| D-2.06 | TransactionId, CategoryId, BudgetId  | Domain         | 8 unit tests passing (T-2.35–T-2.38, T-2.72–T-2.75)                  |
+| D-2.07 | CategoryService                       | Domain         | 8 unit tests passing (T-2.39–T-2.44, T-2.76, T-2.77)                 |
+| D-2.08 | 4 Specifications                      | Domain         | 10 unit tests passing (T-2.45–T-2.50, T-2.78–T-2.81)                 |
 | D-2.09 | 3 Repository interfaces               | Domain         | Compile check; no implementation                        |
-| D-2.10 | All Domain.Tests (50 tests)          | Tests          | 100% domain coverage; all green                        |
+| D-2.10 | All Domain.Tests (81 tests)          | Tests          | 100% domain coverage; all green                         |
 
 ---
 
@@ -831,13 +835,18 @@ public class CategoryService
 
 | #     | Criterion                                                   | Metric                                |
 |-------|-------------------------------------------------------------|---------------------------------------|
-| SC-2.1 | All 50 domain tests pass                                    | `dotnet test --filter Category=Domain` |
-| SC-2.2 | Domain test coverage = 100%                                | coverlet report (domain-only phase)   |
-| SC-2.3 | No Application/Infrastructure code created                  | Manual audit of project files          |
-| SC-2.4 | All entities use strong-typed IDs                          | Code review: no raw Guid/string       |
-| SC-2.5 | All value objects are immutable                            | No public setters; record types       |
-| SC-2.6 | CategoryService uses mocked repository interfaces            | Test inspection: Moq used             |
-| SC-2.7 | Domain project has ZERO NuGet dependencies                  | No <PackageReference> in Domain.csproj |
+| SC-2.1 | All 81 domain tests pass                                    | `dotnet test --filter Category=Domain` exit code 0           |
+| SC-2.2 | Domain test coverage = 100%                                | coverlet report (domain-only phase rule)                    |
+| SC-2.3 | No Application/Infrastructure code created                  | Manual audit: no changes outside Domain/ and Domain.Tests/   |
+| SC-2.4 | All entities use strong-typed IDs                          | Code review: no raw Guid/string used as entity identifiers   |
+| SC-2.5 | All value objects are immutable                            | No public setters; all use C# record types                   |
+| SC-2.6 | CategoryService uses mocked repository interfaces            | Test inspection: Moq used for `ICategoryRepository`          |
+| SC-2.7 | Domain project has ZERO NuGet dependencies                  | No `<PackageReference>` in Domain.csproj                     |
+| SC-2.8 | Domain project has ZERO project references                  | No `<ProjectReference>` in Domain.csproj                     |
+| SC-2.9 | All repository interfaces define async methods only         | Code review: all return `Task<T>`                            |
+| SC-2.10 | System default categories are exactly 4 with correct names  | Test T-2.44 validates count and names                        |
+| SC-2.11 | Money arithmetic enforces same-currency constraint          | Tests T-2.25 and T-2.68 validate cross-currency rejection    |
+| SC-2.12 | Existing Phase 0 and Phase 1 tests still pass              | `dotnet test` (all) exit code 0; no regressions              |
 
 ---
 

@@ -69,10 +69,18 @@ Each phase declares which layers are in scope. Deliverables **MUST NOT** cross l
 4. ✅ If analysis needed: mention findings inline in spec/code comments
 5. ✅ Update existing docs instead of creating new ones
 
-### Clean Up Rule
-- If you create a temporary analysis document, delete it after using it
-- Keep only documents that serve ongoing project needs
-- Archive or delete completed phase analysis reports
+### Clean Up Rule ⚠️ **MANDATORY**
+**ALWAYS clean up temporary files after finishing analysis or changes.**
+
+- ✅ **BEFORE finishing:** Delete ALL temporary analysis, audit, or reasoning files
+- ❌ **NEVER leave behind:** `*ANALYSIS.md`, `*CORRECTIONS.md`, `*READY.md`, `*AUDIT.md`, `.txt` temp files
+- ✅ **Keep ONLY:** Final deliverables (code changes, updated specs, test files)
+- 🧹 **Workflow:**
+  1. Perform analysis → Create temporary files if needed
+  2. Make changes → Update specs, code, tests
+  3. **DELETE temp files** → Run through workspace before committing
+  4. Verify → Commit ONLY final deliverables
+- 📋 **Exception:** Keep only if explicitly part of project documentation (README, guides, etc.)
 
 ### Structure Template for Phase Specs
 ```markdown

@@ -51,7 +51,7 @@
 | Specifications    | `TransactionByDateRangeSpecification`, `TransactionByCategorySpecification`                        |
 | Specifications    | `TransactionByAmountRangeSpecification`, `TransactionByUserSpecification`                          |
 | Repository Ifaces | `ITransactionRepository`, `ICategoryRepository`, `IBudgetRepository`                               |
-| Tests             | ≥56 unit tests with 100% domain coverage                                                          |
+| Tests             | 81 unit tests with 100% domain coverage (8 areas: Transaction, Category, Budget, Money, DateRange, Strong-Typed IDs, CategoryService, Specifications) |
 
 ### Deferred (NOT in this phase)
 
