@@ -40,6 +40,40 @@ Each phase declares which layers are in scope. Deliverables **MUST NOT** cross l
 * ❌ **DO NOT CREATE:** `.clarification-*.md`, `.decisions-*.md`, `.resolved-*.md` or split spec documents.
 * ✅ **DO:** Consolidate ALL information into ONE file. Update it incrementally and **declare layer scope explicitly** at the top.
 
+---
+
+## 📝 Documentation Policy (IMPORTANT)
+
+### Minimize Documentation Clutter
+**Goal:** Keep repository clean. Create ONLY essential documents required by speckit workflow.
+
+### ❌ DO NOT CREATE:
+- Analysis reports (unless explicitly requested for review)
+- Reasoning documents or thought processes
+- Temporary clarification files
+- Decision logs or resolution documents
+- Audit reports (unless critical blocker)
+- Multiple versions of same specification
+
+### ✅ DO CREATE ONLY:
+1. **Phase Specifications** (`specs/phase-X-spec.md`) - Required, single-file rule
+2. **Constitution & Memory** (`.specify/memory/`) - Once per project, rarely updated
+3. **Agent Instructions** (`.github/agents/`) - Once per agent type
+4. **README & Guides** - Public documentation only
+5. **Test Results** - Only if demonstrating compliance or blocking issues
+
+### Documentation Workflow
+1. ✅ Perform analysis (in memory, no file output)
+2. ✅ Create final deliverables (code, tests, specs)
+3. ❌ Do NOT create intermediate reasoning files
+4. ✅ If analysis needed: mention findings inline in spec/code comments
+5. ✅ Update existing docs instead of creating new ones
+
+### Clean Up Rule
+- If you create a temporary analysis document, delete it after using it
+- Keep only documents that serve ongoing project needs
+- Archive or delete completed phase analysis reports
+
 ### Structure Template for Phase Specs
 ```markdown
 # Phase X: [Feature Name]
@@ -330,6 +364,9 @@ Supabase__Key=your-public-anon-key
 - ❌ Splitting spec info across .clarification-, .decisions-, .resolved- files.
 - ❌ Deliverables crossing declared phase layer boundaries.
 - ❌ Domain events without IDomainEvent base infrastructure (verify Phase 0 first).
+- ❌ **Creating unnecessary documentation files** (analysis reports, reasoning docs, temp clarifications).
+- ❌ **Leaving temporary analysis documents in repository** (delete after use).
+- ❌ **Generating documentation that doesn't serve ongoing project needs**.
 
 ---
 

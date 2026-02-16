@@ -122,62 +122,14 @@
   - Global error toast for unexpected errors
 - **Empty states (per page):**
 
-|
- Page                
-|
- Empty State Message                                                    
-|
- Action Link                
-|
-|
----------------------
-|
-------------------------------------------------------------------------
-|
-----------------------------
-|
-|
- Transaction list    
-|
- "No transactions yet."                                                 
-|
- Import PDF / Add manually  
-|
-|
- Dashboard           
-|
- "No spending data. Import or add transactions to see analytics."       
-|
- Import PDF / Add manually  
-|
-|
- Categories          
-|
- "Default categories are ready. Create custom ones below."              
-|
- Create category form       
-|
-|
- Budgets             
-|
- "No budgets set for {month}. Create one to start tracking."            
-|
- Create budget              
-|
-|
- Budget comparison   
-|
- "No data for {month}. Set budgets and add transactions first."         
-|
- Create budget / Import PDF 
-|
-|
- Search results      
-|
- "No transactions match your filters."                                  
-|
- Clear filters button       
-|
+| Page | Empty State Message | Action Link |
+|---|---|---|
+| Transaction list | "No transactions yet." | Import PDF / Add manually |
+| Dashboard | "No spending data. Import or add transactions to see analytics." | Import PDF / Add manually |
+| Categories | "Default categories are ready. Create custom ones below." | Create category form |
+| Budgets | "No budgets set for {month}. Create one to start tracking." | Create budget |
+| Budget comparison | "No data for {month}. Set budgets and add transactions first." | Create budget / Import PDF |
+| Search results | "No transactions match your filters." | Clear filters button |
 
 ### Scenario 6.3: Accessibility Compliance
 
@@ -281,10 +233,8 @@ Frontend/
 ├── tailwind-input.css # NEW: Tailwind directives (@tailwind base/components/utilities)
 ├── wwwroot/
 │ └── css/
-│ ├── site.css # REPLACED: compiled + purged + minified Tailwind output
+| │ ├── site.css # REPLACED: compiled + purged + minified Tailwind output
 │ └── site.css.map # Source map (development only)
-
-text
 
 #### tailwind.config.js
 
@@ -467,21 +417,27 @@ public class ForgotPasswordModel : PageModel
 
 ```csharp
 public record RequestPasswordResetCommand(string Email) : IRequest<Unit>, IAnonymousRequest;
-Handler Flow:
+```
 
-text
-1. Call IAuthService.RequestPasswordResetAsync(email)
+**Handler Flow:**
+
+1. Call `IAuthService.RequestPasswordResetAsync(email)`
 2. Supabase sends reset email if account exists
-3. Return Unit (success regardless — prevents enumeration)
+3. Return `Unit` (success regardless — prevents enumeration)
 4. Log attempt for audit purposes
-IAuthService Addition
-csharp
+
+#### IAuthService Addition
+
+```csharp
 // Add to existing IAuthService interface (Domain)
 Task RequestPasswordResetAsync(string email);
-Note: This is a minor addition to an existing Domain interface. It does not create new domain entities or business logic. The implementation is purely in Infrastructure (Supabase API call).
+```
 
-FR-6.04: Toast Notification Component
-html
+**Note:** This is a minor addition to an existing Domain interface. It does not create new domain entities or business logic. The implementation is purely in Infrastructure (Supabase API call).
+
+### FR-6.04: Toast Notification Component
+
+```html
 <!-- Shared/Components/_Toast.cshtml -->
 <div x-data="toastManager()"
      x-on:show-toast.window="show($event.detail)"
