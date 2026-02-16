@@ -17,114 +17,18 @@
 
 ## Critical Decisions
 
-|
- ID     
-|
- Decision                                                           
-|
- Rationale                                                                                  
-|
- Date       
-|
-|
---------
-|
---------------------------------------------------------------------
-|
---------------------------------------------------------------------------------------------
-|
-------------
-|
-|
- CD-4.1 
-|
- Chart.js via CDN for frontend charts                               
-|
- Lightweight, free, well-documented, CDN available; no npm build pipeline needed             
-|
- 2026-02-15 
-|
-|
- CD-4.2 
-|
- Aggregation queries in Application layer (not DB views/functions)  
-|
- Keeps logic testable with mocked repos; Supabase free tier limits server-side views         
-|
- 2026-02-15 
-|
-|
- CD-4.3 
-|
- Dashboard is the new default authenticated landing page            
-|
- Users expect summary on login; replaces Phase 1 stub dashboard                             
-|
- 2026-02-15 
-|
-|
- CD-4.4 
-|
- Date range filter defaults to current month                        
-|
- Most common use case; configurable via date picker                                         
-|
- 2026-02-15 
-|
-|
- CD-4.5 
-|
- All analytics queries use domain specifications for filtering      
-|
- Consistent with architecture; filtering expressed in domain language                       
-|
- 2026-02-15 
-|
-|
- CD-4.6 
-|
- Transaction search uses server-side filtering (not client-side)    
-|
- Handles large datasets; specifications compose filters at query level                      
-|
- 2026-02-15 
-|
-|
- CD-4.7 
-|
- Chart data fetched via PageModel (server-rendered JSON)            
-|
- Simplifies architecture; no separate API endpoints needed for MVP                          
-|
- 2026-02-15 
-|
-|
- CD-4.8 
-|
- Spending amounts aggregated as absolute values for analytics       
-|
- Expenses shown as positive numbers in charts for readability; sign used only in net calc   
-|
- 2026-02-15 
-|
-|
- CD-4.9 
-|
- No user preferences persistence in this phase                      
-|
- Filter state maintained via query parameters (URL); persistence deferred to Phase 6        
-|
- 2026-02-15 
-|
-|
- CD-4.10
-|
- Recent transactions widget shows last 10 transactions              
-|
- Quick glance without navigating to full list; links to full transaction page                
-|
- 2026-02-15 
-|
+| ID | Decision | Rationale | Date |
+|---|---|---|---|
+| CD-4.1 | Chart.js via CDN for frontend charts | Lightweight, free, well-documented, CDN available; no npm build pipeline needed | 2026-02-15 |
+| CD-4.2 | Aggregation queries in Application layer (not DB views/functions) | Keeps logic testable with mocked repos; Supabase free tier limits server-side views | 2026-02-15 |
+| CD-4.3 | Dashboard is the new default authenticated landing page | Users expect summary on login; replaces Phase 1 stub dashboard | 2026-02-15 |
+| CD-4.4 | Date range filter defaults to current month | Most common use case; configurable via date picker | 2026-02-15 |
+| CD-4.5 | All analytics queries use domain specifications for filtering | Consistent with architecture; filtering expressed in domain language | 2026-02-15 |
+| CD-4.6 | Transaction search uses server-side filtering (not client-side) | Handles large datasets; specifications compose filters at query level | 2026-02-15 |
+| CD-4.7 | Chart data fetched via PageModel (server-rendered JSON) | Simplifies architecture; no separate API endpoints needed for MVP | 2026-02-15 |
+| CD-4.8 | Spending amounts aggregated as absolute values for analytics | Expenses shown as positive numbers in charts for readability; sign used only in net calc | 2026-02-15 |
+| CD-4.9 | No user preferences persistence in this phase | Filter state maintained via query parameters (URL); persistence deferred to Phase 6 | 2026-02-15 |
+| CD-4.10 | Recent transactions widget shows last 10 transactions | Quick glance without navigating to full list; links to full transaction page | 2026-02-15 |
 
 ---
 
@@ -132,209 +36,40 @@
 
 ### In Scope
 
-|
- Area           
-|
- Deliverable                                                                                              
-|
-|
-----------------
-|
-----------------------------------------------------------------------------------------------------------
-|
-|
- Application    
-|
-`GetSpendingByCategoryQuery`
- + handler (category breakdown for date range)                               
-|
-|
- Application    
-|
-`GetMonthlyTrendsQuery`
- + handler (monthly spending totals for a given year)                             
-|
-|
- Application    
-|
-`GetYearlyComparisonQuery`
- + handler (compare two years side-by-side)                                    
-|
-|
- Application    
-|
-`GetTransactionSummaryQuery`
- + handler (total income, total expenses, net, transaction count)            
-|
-|
- Application    
-|
-`GetRecentTransactionsQuery`
- + handler (last N transactions for dashboard widget)                        
-|
-|
- Application    
-|
-`SearchTransactionsQuery`
- + handler (multi-filter search: keyword, date range, category, amount range)   
-|
-|
- Application    
-|
- DTOs: 
-`CategorySpendingDto`
-, 
-`MonthlyTrendDto`
-, 
-`YearlyComparisonDto`
-, 
-`TransactionSummaryDto`
-, 
-`TransactionSearchResultDto`
-|
-|
- Domain         
-|
-`TransactionByDescriptionKeywordSpecification`
- (new specification for text search)                       
-|
-|
- Domain         
-|
-`CompositeSpecification<T>`
- (combines multiple specifications with AND logic)                            
-|
-|
- Infrastructure 
-|
- Repository query methods optimized for analytics aggregations                                            
-|
-|
- Frontend       
-|
- Dashboard page (complete replacement of Phase 1 stub) with summary cards, charts, recent transactions    
-|
-|
- Frontend       
-|
- Chart.js integration: pie chart (category breakdown), line chart (monthly trends), bar chart (yearly comparison) 
-|
-|
- Frontend       
-|
- Date range filter component (reusable across dashboard and transaction list)                              
-|
-|
- Frontend       
-|
- Transaction search page with multi-filter UI (
-`/Transactions/Search`
-)                                    
-|
-|
- Frontend       
-|
- Updated transaction list page with filter controls                                                        
-|
-|
- Frontend       
-|
- Updated 
-`_Layout.cshtml`
- with dashboard as default landing page                                           
-|
-|
- Tests          
-|
- ≥32 tests (application handler tests + domain specification tests)                                        
-|
+| Area | Deliverable |
+|---|---|
+| Application | `GetSpendingByCategoryQuery` + handler (category breakdown for date range) |
+| Application | `GetMonthlyTrendsQuery` + handler (monthly spending totals for a given year) |
+| Application | `GetYearlyComparisonQuery` + handler (compare two years side-by-side) |
+| Application | `GetTransactionSummaryQuery` + handler (total income, total expenses, net, transaction count) |
+| Application | `GetRecentTransactionsQuery` + handler (last N transactions for dashboard widget) |
+| Application | `SearchTransactionsQuery` + handler (multi-filter search: keyword, date range, category, amount range) |
+| Application | DTOs: `CategorySpendingDto`, `MonthlyTrendDto`, `YearlyComparisonDto`, `TransactionSummaryDto`, `TransactionSearchResultDto` |
+| Domain | `TransactionByDescriptionKeywordSpecification` (new specification for text search) |
+| Domain | `CompositeSpecification<T>` (combines multiple specifications with AND logic) |
+| Infrastructure | Repository query methods optimized for analytics aggregations |
+| Frontend | Dashboard page (complete replacement of Phase 1 stub) with summary cards, charts, recent transactions |
+| Frontend | Chart.js integration: pie chart (category breakdown), line chart (monthly trends), bar chart (yearly comparison) |
+| Frontend | Date range filter component (reusable across dashboard and transaction list) |
+| Frontend | Transaction search page with multi-filter UI (`/Transactions/Search`) |
+| Frontend | Updated transaction list page with filter controls |
+| Frontend | Updated `_Layout.cshtml` with dashboard as default landing page |
+| Tests | ≥32 tests (application handler tests + domain specification tests) |
 
 ### Deferred (NOT in this phase)
 
-|
- Item                                  
-|
- Target Phase 
-|
- Reason                                           
-|
-|
----------------------------------------
-|
---------------
-|
---------------------------------------------------
-|
-|
- Budget vs. actual comparison          
-|
- Phase 5      
-|
- Budget Management phase                          
-|
-|
- Budget status indicators on dashboard 
-|
- Phase 5      
-|
- Requires budget CRUD first                       
-|
-|
- CSV/Excel data export                 
-|
- Post-MVP     
-|
- Export feature; not core analytics                
-|
-|
- Scheduled/automated reports           
-|
- Post-MVP     
-|
- Requires background jobs infrastructure          
-|
-|
- Anomaly detection / spending alerts   
-|
- Phase 5      
-|
- Tied to budget overage system                    
-|
-|
- User preferences persistence          
-|
- Phase 6      
-|
- Polish; filter state via URL params for now       
-|
-|
- Advanced chart interactivity          
-|
- Phase 6      
-|
- Click-through, drill-down; polish concern         
-|
-|
- Dashboard widget customization        
-|
- Post-MVP     
-|
- Users choose which widgets to display             
-|
-|
- Comparison with previous period       
-|
- Post-MVP     
-|
- "vs. last month" percentage changes               
-|
-|
- Spending forecast / projections       
-|
- Post-MVP     
-|
- ML/statistical analysis                           
-|
+| Item | Target Phase | Reason |
+|---|---|---|
+| Budget vs. actual comparison | Phase 5 | Budget Management phase |
+| Budget status indicators on dashboard | Phase 5 | Requires budget CRUD first |
+| CSV/Excel data export | Post-MVP | Export feature; not core analytics |
+| Scheduled/automated reports | Post-MVP | Requires background jobs infrastructure |
+| Anomaly detection / spending alerts | Phase 5 | Tied to budget overage system |
+| User preferences persistence | Phase 6 | Polish; filter state via URL params for now |
+| Advanced chart interactivity | Phase 6 | Click-through, drill-down; polish concern |
+| Dashboard widget customization | Post-MVP | Users choose which widgets to display |
+| Comparison with previous period | Post-MVP | "vs. last month" percentage changes |
+| Spending forecast / projections | Post-MVP | ML/statistical analysis |
 
 ---
 
@@ -963,29 +698,41 @@ Pagination controls
 FR-4.04: Updated Navigation
 Authenticated Navigation Items (Updated):
 
-Label	Route	Icon	Notes
-Dashboard	/Dashboard	📊	Default landing page
-Transactions	/Transactions	💳	Transaction list
-Search	/Transactions/Search	🔍	Multi-filter search
-Upload PDF	/Transactions/Upload	📄	PDF import
-Categories	/Categories	🏷️	Category management
-Logout	(POST action)	🚪	Clears session
-FR-4.05: Layout Updates
-Chart.js CDN Addition:
+### FR-4.04: Updated Navigation
 
-html
+**Authenticated Navigation Items (Updated):**
+
+| Label | Route | Icon | Notes |
+|---|---|---|---|
+| Dashboard | /Dashboard | 📊 | Default landing page |
+| Transactions | /Transactions | 💳 | Transaction list |
+| Search | /Transactions/Search | 🔍 | Multi-filter search |
+| Upload PDF | /Transactions/Upload | 📄 | PDF import |
+| Categories | /Categories | 🏷️ | Category management |
+| Logout | (POST action) | 🚪 | Clears session |
+
+### FR-4.05: Layout Updates
+
+**Chart.js CDN Addition:**
+
+```html
 <!-- In _Layout.cshtml <head> section -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.x.x/dist/chart.umd.min.js"></script>
-Default Redirect Update:
+```
 
-csharp
+**Default Redirect Update:**
+
+```csharp
 // In Program.cs or via convention
 // After login: redirect to /Dashboard (already configured in Phase 1)
 // Root "/" health check remains public
-FR-4.06: Infrastructure Optimizations
-Repository Enhancements for Analytics:
+```
 
-csharp
+### FR-4.06: Infrastructure Optimizations
+
+**Repository Enhancements for Analytics:**
+
+```csharp
 // ITransactionRepository additions (or new methods in existing interface)
 // These may use optimized Supabase queries
 
@@ -994,15 +741,20 @@ csharp
 
 // For MVP: Option A is preferred (reuse existing spec-based queries)
 // Post-MVP: Optimize with Supabase RPC functions if needed
-Supabase Query Optimization Notes:
+```
 
-Analytics queries load all user transactions for the period, then aggregate in memory
-For MVP, this is acceptable given the 1000-row MaxResults default
-For large datasets (post-MVP), consider Supabase RPC functions for server-side aggregation
-Index idx_transactions_user_date supports efficient date-range queries
-Architecture Notes
-Analytics Query Flow
-text
+**Supabase Query Optimization Notes:**
+
+- Analytics queries load all user transactions for the period, then aggregate in memory
+- For MVP, this is acceptable given the 1000-row MaxResults default
+- For large datasets (post-MVP), consider Supabase RPC functions for server-side aggregation
+- Index idx_transactions_user_date supports efficient date-range queries
+
+## Architecture Notes
+
+### Analytics Query Flow
+
+```
 ┌─────────────┐     ┌───────────────────────────────────┐     ┌──────────────────┐
 │  Dashboard   │     │         Application Layer          │     │  Infrastructure  │
 │  PageModel   │     │                                     │     │                  │
@@ -1041,9 +793,12 @@ text
        └─► _mediator.Send(GetRecentTransactionsQuery)                 
                 │ (load user txns → sort by date desc → take 10)      
                 ▼                                                     
-           ... handler → repo → map → DTO list                       
-Specification Composition Pattern
-text
+            ... handler → repo → map → DTO list                       
+```
+
+### Specification Composition Pattern
+
+```
 SearchTransactionsQuery(keyword="coffee", fromDate=Jan 1, categoryId=X)
     │
     ▼
@@ -1061,8 +816,18 @@ Compose:
     │
     ▼
 Query: ITransactionRepository.FindBySpecificationAsync(composed)
-NuGet Packages (Phase 4 Additions)
-Project	New Packages	Notes
+```
+
+### NuGet Packages (Phase 4 Additions)
+
+| Project | New Packages | Notes |
+|---|---|---|
+| SauronSheet.Domain | None | Still zero dependencies |
+| SauronSheet.Application | None | No new packages needed |
+| SauronSheet.Infrastructure | None | Existing Supabase client handles analytics queries |
+| SauronSheet.Frontend | None | Chart.js added via CDN in layout |
+| SauronSheet.Domain.Tests | None | Existing xUnit + Moq |
+| SauronSheet.Application.Tests | None | Existing xUnit + Moq |
 SauronSheet.Domain	None	Still zero dependencies
 SauronSheet.Application	None	No new packages needed
 SauronSheet.Infrastructure	None	Existing Supabase client handles analytics queries
@@ -1214,8 +979,6 @@ AND date range covers only January
 WHEN GetTransactionSummaryQueryHandler handles the query
 THEN TotalExpenses = 100 (February excluded)
 AND TransactionCount = 1
-
-text
 
 ### Recent Transactions & Search Tests
 TEST T-4.15: GetRecentTransactions_ReturnsLastN
@@ -1446,135 +1209,17 @@ text
 
 ## Risks & Mitigations
 
-| ID    | Risk                                                                     | Impact | Probability | Mitigation                
-|
- ID    
-|
- Risk                                                                     
-|
- Impact 
-|
- Probability 
-|
- Mitigation                                                                                       
-|
-|
--------
-|
---------------------------------------------------------------------------
-|
---------
-|
--------------
-|
---------------------------------------------------------------------------------------------------
-|
-|
- R-4.1 
-|
- In-memory aggregation slow for users with many transactions              
-|
- Medium 
-|
- Medium      
-|
- 1000-row MaxResults limits data; post-MVP: Supabase RPC for server-side aggregation              
-|
-|
- R-4.2 
-|
- Chart.js CDN unavailable or slow                                         
-|
- Low    
-|
- Low         
-|
- Fallback: bundle Chart.js locally; CDN has high availability                                     
-|
-|
- R-4.3 
-|
-`Expression.Invoke`
- in CompositeSpecification not compatible with Supabase 
-|
- Medium 
-|
- Medium      
-|
- Specs evaluated in-memory after repo loads data; document as known limitation                     
-|
-|
- R-4.4 
-|
- Date range filter edge cases (timezone, month boundaries)                
-|
- Medium 
-|
- Medium      
-|
- Use 
-`DateTime.UtcNow`
- consistently; test boundary dates explicitly                               
-|
-|
- R-4.5 
-|
- Dashboard loads slowly (multiple sequential queries)                     
-|
- Medium 
-|
- Medium      
-|
- Queries are independent — can parallelize with 
-`Task.WhenAll`
- if needed; optimize post-MVP       
-|
-|
- R-4.6 
-|
- Pie chart unreadable with many small categories                          
-|
- Low    
-|
- Medium      
-|
- Group into "Other" when > 6 categories; tested in T-4.04                                         
-|
-|
- R-4.7 
-|
- Search keyword injection (malicious input)                               
-|
- Low    
-|
- Low         
-|
- Specifications use parameterized expressions; Supabase Postgrest handles escaping                
-|
-|
- R-4.8 
-|
- Yearly comparison meaningless for new users (no prior year data)         
-|
- Low    
-|
- High        
-|
- Show zero bars for year with no data; informational message in UI                                
-|
-|
- R-4.9 
-|
- Chart.js version mismatch with documentation examples                    
-|
- Low    
-|
- Low         
-|
- Pin specific Chart.js version in CDN URL (e.g., 
-`chart.js@4.4.0`
-)                               
-|
+| ID | Risk | Impact | Probability | Mitigation |
+|---|---|---|---|---|
+| R-4.1 | In-memory aggregation slow for users with many transactions | Medium | Medium | 1000-row MaxResults limits data; post-MVP: Supabase RPC for server-side aggregation |
+| R-4.2 | Chart.js CDN unavailable or slow | Low | Low | Fallback: bundle Chart.js locally; CDN has high availability |
+| R-4.3 | `Expression.Invoke` in CompositeSpecification not compatible with Supabase | Medium | Medium | Specs evaluated in-memory after repo loads data; document as known limitation |
+| R-4.4 | Date range filter edge cases (timezone, month boundaries) | Medium | Medium | Use `DateTime.UtcNow` consistently; test boundary dates explicitly |
+| R-4.5 | Dashboard loads slowly (multiple sequential queries) | Medium | Medium | Queries are independent — can parallelize with `Task.WhenAll` if needed; optimize post-MVP |
+| R-4.6 | Pie chart unreadable with many small categories | Low | Medium | Group into "Other" when > 6 categories; tested in T-4.04 |
+| R-4.7 | Search keyword injection (malicious input) | Low | Low | Specifications use parameterized expressions; Supabase Postgrest handles escaping |
+| R-4.8 | Yearly comparison meaningless for new users (no prior year data) | Low | High | Show zero bars for year with no data; informational message in UI |
+| R-4.9 | Chart.js version mismatch with documentation examples | Low | Low | Pin specific Chart.js version in CDN URL (e.g., `chart.js@4.4.0`) |
 
 ---
 
