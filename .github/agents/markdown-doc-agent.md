@@ -28,6 +28,20 @@ This agent is an expert in Markdown formatting and documentation. It automatical
 - Does not generate new documentation, only formats existing content.
 - Does not convert to other formats (HTML, PDF, etc.).
 
+## Attention to Common Errors
+
+- **Critical:** Always pay special attention to formatting tables, lists, and code blocks. Many files contain errors such as incorrect table separators, extra line breaks, or non-standard Markdown syntax. These issues are frequent and must be corrected every time.
+- **Tables:** Use the standard Markdown table format:
+
+  | Column1 | Column2 |
+  |---------|---------|
+  | Value1  | Value2  |
+
+- **Lists:** Use `-` or `*` for lists, not custom separators.
+- **Code blocks:** Use triple backticks (```) for code blocks.
+- **No extra line breaks or separators:** Remove any non-standard formatting.
+- **Review:** Always review the output for these errors, as they are common and must be fixed for proper documentation.
+
 ## Author
 
 - SauronSheet Project Team

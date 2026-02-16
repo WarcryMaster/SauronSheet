@@ -14,108 +14,17 @@
 
 ## Critical Decisions
 
-|
- ID     
-|
- Decision                                                
-|
- Rationale                                                                              
-|
- Date       
-|
-|
---------
-|
----------------------------------------------------------
-|
-----------------------------------------------------------------------------------------
-|
-------------
-|
-|
- CD-1.1 
-|
- Supabase Auth as identity provider                      
-|
- Free tier, built-in JWT, email/password ready, social login extensible                 
-|
- 2026-02-15 
-|
-|
- CD-1.2 
-|
- JWT stored in secure HTTP-only cookies                  
-|
- Prevents XSS token theft; standard web security practice; SameSite=Strict              
-|
- 2026-02-15 
-|
-|
- CD-1.3 
-|
- Tenant scoping enforced in Application handlers         
-|
- Constitution: "enforced in handler, not UI" — prevents UI bypass                       
-|
- 2026-02-15 
-|
-|
- CD-1.4 
-|
-`UserId`
- strong-typed value object for all user refs    
-|
- Constitution: raw string for entity IDs is a compliance violation                      
-|
- 2026-02-15 
-|
-|
- CD-1.5 
-|
- Auth middleware in Frontend extracts JWT claims          
-|
- Single point of authentication; all downstream layers receive 
-`IUserContext`
-|
- 2026-02-15 
-|
-|
- CD-1.6 
-|
-`IAuthService`
- interface defined in Domain layer        
-|
- Infrastructure implements it; Application depends on abstraction only                  
-|
- 2026-02-15 
-|
-|
- CD-1.7 
-|
- Email/password authentication only for MVP              
-|
- Simplifies scope; social login deferred to post-MVP                                    
-|
- 2026-02-15 
-|
-|
- CD-1.8 
-|
- Password minimum 8 characters                           
-|
- Industry standard minimum; Supabase enforces configurable policy                       
-|
- 2026-02-15 
-|
-|
- CD-1.9 
-|
- Return URL support after login redirect                 
-|
- Standard UX: user returns to originally requested page after authentication            
-|
- 2026-02-15 
-|
+| ID     | Decision                                         | Rationale                                                               | Date       |
+|--------|--------------------------------------------------|------------------------------------------------------------------------|------------|
+| CD-1.1 | Supabase Auth as identity provider               | Free tier, built-in JWT, email/password ready, social login extensible| 2026-02-15 |
+| CD-1.2 | JWT stored in secure HTTP-only cookies           | Prevents XSS token theft; standard web security practice; SameSite=Strict| 2026-02-15 |
+| CD-1.3 | Tenant scoping enforced in Application handlers  | Constitution: "enforced in handler, not UI" — prevents UI bypass      | 2026-02-15 |
+| CD-1.4 | `UserId` strong-typed value object for all user refs | Constitution: raw string for entity IDs is a compliance violation   | 2026-02-15 |
+| CD-1.5 | Auth middleware in Frontend extracts JWT claims  | Single point of authentication; all downstream layers receive `IUserContext`| 2026-02-15 |
+| CD-1.6 | `IAuthService` interface defined in Domain layer | Infrastructure implements it; Application depends on abstraction only  | 2026-02-15 |
+| CD-1.7 | Email/password authentication only for MVP       | Simplifies scope; social login deferred to post-MVP                    | 2026-02-15 |
+| CD-1.8 | Password minimum 8 characters                    | Industry standard minimum; Supabase enforces configurable policy       | 2026-02-15 |
+| CD-1.9 | Return URL support after login redirect          | Standard UX: user returns to originally requested page after authentication| 2026-02-15 |
 
 ---
 
@@ -123,232 +32,42 @@
 
 ### In Scope
 
-|
- Area                      
-|
- Deliverable                                                                           
-|
-|
----------------------------
-|
----------------------------------------------------------------------------------------
-|
-|
- Domain                    
-|
-`UserId`
- value object (validation, equality, empty guard)                             
-|
-|
- Domain                    
-|
-`IAuthService`
- interface (contract for auth operations)                               
-|
-|
- Application               
-|
- Auth commands: 
-`RegisterUserCommand`
-, 
-`LoginUserCommand`
-, 
-`LogoutUserCommand`
-, 
-`RefreshTokenCommand`
-|
-|
- Application               
-|
- Auth query: 
-`GetCurrentUserQuery`
-|
-|
- Application               
-|
-`IUserContext`
- implementation (resolves from HTTP context)                             
-|
-|
- Application               
-|
-`TenantScopingBehavior`
- MediatR pipeline behavior                                     
-|
-|
- Application               
-|
-`UserProfileDto`
- data transfer object                                                 
-|
-|
- Application               
-|
- Auth result types: 
-`AuthTokenResult`
-, 
-`RegistrationResult`
-|
-|
- Infrastructure            
-|
-`SupabaseAuthService`
- (implements 
-`IAuthService`
-)                                     
-|
-|
- Infrastructure            
-|
-`JwtCookieMiddleware`
- (reads JWT from cookie, validates, sets ClaimsPrincipal)         
-|
-|
- Infrastructure            
-|
-`HttpUserContext`
- (implements 
-`IUserContext`
- from HTTP context)                        
-|
-|
- Infrastructure            
-|
-`users`
- profile table migration with Row Level Security policies                      
-|
-|
- Frontend                  
-|
- Login page (
-`/Login`
-)                                                                 
-|
-|
- Frontend                  
-|
- Register page (
-`/Register`
-)                                                           
-|
-|
- Frontend                  
-|
- Logout flow (navigation button + cookie clearing)                                     
-|
-|
- Frontend                  
-|
- Dashboard stub page (
-`/Dashboard`
- — protected, shows welcome message)                 
-|
-|
- Frontend                  
-|
- Auth-protected page routing (redirect unauthenticated → 
-`/Login`
-)                     
-|
-|
- Frontend                  
-|
- Updated 
-`_Layout.cshtml`
- with auth-aware navigation                                   
-|
-|
- Tests                     
-|
- ≥18 tests (domain + application + infrastructure validation)                          
-|
+| Area         | Deliverable                                                                 |
+|--------------|----------------------------------------------------------------------------|
+| Domain       | `UserId` value object (validation, equality, empty guard)                  |
+| Domain       | `IAuthService` interface (contract for auth operations)                    |
+| Application  | Auth commands: `RegisterUserCommand`, `LoginUserCommand`, `LogoutUserCommand`, `RefreshTokenCommand` |
+| Application  | Auth query: `GetCurrentUserQuery`                                          |
+| Application  | `IUserContext` implementation (resolves from HTTP context)                 |
+| Application  | `TenantScopingBehavior` MediatR pipeline behavior                          |
+| Application  | `UserProfileDto` data transfer object                                      |
+| Application  | Auth result types: `AuthTokenResult`, `RegistrationResult`                 |
+| Infrastructure | `SupabaseAuthService` (implements `IAuthService`)                        |
+| Infrastructure | `JwtCookieMiddleware` (reads JWT from cookie, validates, sets ClaimsPrincipal) |
+| Infrastructure | `HttpUserContext` (implements `IUserContext` from HTTP context)          |
+| Infrastructure | `users` profile table migration with Row Level Security policies         |
+| Frontend     | Login page (`/Login`)                                                      |
+| Frontend     | Register page (`/Register`)                                                |
+| Frontend     | Logout flow (navigation button + cookie clearing)                          |
+| Frontend     | Dashboard stub page (`/Dashboard` — protected, shows welcome message)      |
+| Frontend     | Auth-protected page routing (redirect unauthenticated → `/Login`)          |
+| Frontend     | Updated `_Layout.cshtml` with auth-aware navigation                        |
+| Tests        | ≥18 tests (domain + application + infrastructure validation)               |
 
 ### Deferred
 
-|
- Item                                
-|
- Target Phase 
-|
- Reason                                           
-|
-|
--------------------------------------
-|
--------------
-|
---------------------------------------------------
-|
-|
- Social login (Google, GitHub)       
-|
- Post-MVP    
-|
- Email/password sufficient for MVP                
-|
-|
- Password reset flow                 
-|
- Phase 6     
-|
- Polish phase; Supabase has built-in support      
-|
-|
- Role-based authorization (admin)    
-|
- Post-MVP    
-|
- Single role (user) sufficient for MVP            
-|
-|
- Multi-factor authentication (MFA)   
-|
- Post-MVP    
-|
- Not required for expense tracking                
-|
-|
- Session management UI               
-|
- Phase 6     
-|
- Polish phase (list active sessions, logout all)  
-|
-|
- Email verification flow             
-|
- Phase 6     
-|
- Polish phase; Supabase supports it built-in      
-|
-|
- Account deletion                    
-|
- Post-MVP    
-|
- GDPR consideration; deferred                     
-|
-|
- User profile editing                
-|
- Phase 6     
-|
- Display name, avatar — polish                    
-|
-|
- Rate limiting middleware            
-|
- Phase 6     
-|
- Supabase has built-in; custom middleware deferred 
-|
-|
- Remember me / persistent sessions  
-|
- Phase 6     
-|
- Cookie expiration tuning                         
-|
+| Item                              | Target Phase | Reason                                    |
+|------------------------------------|--------------|-------------------------------------------|
+| Social login (Google, GitHub)      | Post-MVP     | Email/password sufficient for MVP         |
+| Password reset flow                | Phase 6      | Polish phase; Supabase has built-in support|
+| Role-based authorization (admin)   | Post-MVP     | Single role (user) sufficient for MVP     |
+| Multi-factor authentication (MFA)  | Post-MVP     | Not required for expense tracking         |
+| Session management UI              | Phase 6      | Polish phase (list active sessions, logout all) |
+| Email verification flow            | Phase 6      | Polish phase; Supabase supports it built-in|
+| Account deletion                   | Post-MVP     | GDPR consideration; deferred              |
+| User profile editing               | Phase 6      | Display name, avatar — polish             |
+| Rate limiting middleware           | Phase 6      | Supabase has built-in; custom middleware deferred |
+| Remember me / persistent sessions  | Phase 6      | Cookie expiration tuning                  |
 
 ---
 
@@ -1127,7 +846,7 @@ User clicks "Login" ─────►│   Login.cshtml   │
                           ┌──────────────────┐
                           │ Set HTTP-only     │
                           │ Cookies           │
-                          │ (Frontend)        │
+                          │ (Frontend)        |
                           └────────┬─────────┘
                                    │ Redirect
                                    ▼
@@ -1451,6 +1170,8 @@ Step	Workflow Stage	Phase 1 Action
 3	Build Domain	✅ UserId VO, IAuthService, AuthResult (Step 2)
 4	Implement Persistence	✅ SupabaseAuthService, users table migration (Steps 5 and 6)
 5	Wire UI	✅ Login, Register, Dashboard pages (Step 7)
+6	End-to-end Test	✅ Manual testing of all scenarios
+7	Deployment Preparation	✅ Supabase settings configured, code ready for deployment
 Security Checklist
  JWT cookie: HttpOnly = true
  JWT cookie: Secure = true
