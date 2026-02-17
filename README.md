@@ -563,3 +563,59 @@ No resumas.
 Produce únicamente el contenido completo de tasks.md.
 
 /prompt:'prompts/speckit.clarify.prompt.md' verifica que no haya en la #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-tasks.md'  #file:'C:\Projects\SauronSheet\.specify\memory\constitution.md'  #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-plan.md' #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-spec.md' inconsistencias o casos no contemplados o ambiguos
+
+Implementa la fase actual del proyecto SpecKit siguiendo los documentos de referencia.
+
+Entradas:
+- constitution.md (autoridad arquitectónica)
+- plan.md (plan de implementación)
+- tasks.md (lista de tareas de la fase actual)
+- phase-X-spec.md (spec de la fase actual)
+- Otras phase specs (solo para contexto)
+
+Objetivo:
+Generar la implementación de todas las tareas de tasks.md en código real y completo, lista para compilar y ejecutar, respetando Clean Architecture y las reglas de constitution.md.
+
+REQUISITOS ESTRICTOS:
+
+1. Implementa exactamente las tareas definidas en tasks.md.
+   - No agregar tareas no listadas.
+   - No implementar tareas de fases futuras.
+
+2. Código:
+   - Correcto, compilable y funcional.
+   - Con namespaces correctos.
+   - Con convenciones de código definidas en constitution.md.
+   - Cada clase, archivo, test y configuración debe coincidir con plan.md.
+   - Mantener separación por capas (Domain, Application, Infrastructure, Frontend, Tests).
+
+3. Tests:
+   - Implementar los tests definidos en plan.md / phase-X-spec.md.
+   - Seguir naming convention y patrón Arrange-Act-Assert.
+   - Deben ser ejecutables con `dotnet test`.
+
+4. Documentación y comentarios:
+   - Incluir comentarios claros donde sea necesario.
+   - Comentar “TODO” si algún elemento depende de fases futuras.
+   - No omitir ninguna parte requerida del plan.
+
+5. Archivos de configuración:
+   - global.json, Directory.Build.props, appsettings.json
+   - Deben ser generados según plan.md.
+   - Validar consistencia con la fase actual.
+
+6. Estructura de solución:
+   - Crear o modificar archivos exactamente en las rutas definidas.
+   - Mantener dependencia entre proyectos según plan.md.
+
+7. No mezclar fases:
+   - Implementar solo lo definido para la fase actual.
+   - Si hay elementos marcados como futuros o deferred, solo colocar comentarios TODO.
+
+Formato de salida:
+
+- Entregar como archivos de código estructurados por carpeta.
+- Cada archivo con su path correspondiente.
+- Para tests, mostrar el contenido completo.
+- No resumir.
+- No explicar fuera de los archivos.
