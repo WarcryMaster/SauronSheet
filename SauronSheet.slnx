@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SauronSheet.Application/SauronSheet.Application.csproj" />
+    <Project Path="src/SauronSheet.Domain/SauronSheet.Domain.csproj" />
+    <Project Path="src/SauronSheet.Frontend/SauronSheet.Frontend.csproj" />
+    <Project Path="src/SauronSheet.Infrastructure/SauronSheet.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SauronSheet.Application.Tests/SauronSheet.Application.Tests.csproj" />
+    <Project Path="tests/SauronSheet.Domain.Tests/SauronSheet.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
