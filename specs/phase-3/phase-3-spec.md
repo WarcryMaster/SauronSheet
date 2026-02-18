@@ -54,13 +54,13 @@
 | Infrastructure | `SupabaseCategoryRepository` (implements `ICategoryRepository`)                                        |
 | Infrastructure | `SupabasePdfImportRepository` (tracks import batches)                                                  |
 | Infrastructure | `PdfParserFactory` + `GenericBankPdfParser` (strategy pattern)                                         |
-| Infrastructure | Database migrations: `transactions`, `categories`, `pdf_imports` tables with indexes and RLS           |
+| Infrastructure | Database migrations: `users`, `categories`, `transactions`, `pdf_imports` tables with indexes and RLS |
 | Frontend       | Upload PDF page (`/Transactions/Upload`)                                                               |
 | Frontend       | Transaction list page (`/Transactions`) — paginated, sorted                                            |
 | Frontend       | Manual add transaction page (`/Transactions/Add`)                                                      |
 | Frontend       | Category management page (`/Categories`)                                                               |
 | Frontend       | Updated `_Layout.cshtml` navigation with new page links                                                |
-| Tests          | ≥38 tests (33 Application + 5 Domain — ImportBatch VO tests)                                          |
+| Tests          | ≥38 tests (33 Application + 5 Domain — ImportBatch Entity tests)                                      |
 
 ### Deferred (NOT in this phase)
 
@@ -194,7 +194,12 @@
 
 #### ImportBatch Entity (NOT Value Object)
 
-> **Note:** ImportBatch is an **Entity**, not a Value Object, because it has database identity (`id UUID PRIMARY KEY` in `pdf_imports` table). Entities have lifecycle and identity; value objects do not.
+> **CRITICAL CLARIFICATION**: ImportBatch is an **Entity** (not a Value Object) because it has:
+> 1. Database identity (`id UUID PRIMARY KEY` in `pdf_imports` table)
+> 2. Lifecycle (created once per import, persisted, queried later)
+> 3. Mutable state (though properties are private set, the entity itself has identity-based equality)
+>
+> Value Objects have no identity and are immutable by value. Entities have identity and lifecycle.
 
 ```csharp
 public class ImportBatch : Entity<Guid>
@@ -1495,17 +1500,21 @@ text
 ## Assumptions
 
 1. **Phases 0, 1, and 2 are fully implemented and tested.** All base abstractions, auth, domain model, entities, value objects, services, and repository interfaces are available and stable.
-2. **PdfPig library (`UglyToad.PdfPig`) is available via NuGet.** Apache 2.0 license is compatible with the project.
+2. **PdfPig library (`UglyToad.PdfPig` version 0.1.8) is available via NuGet.** Apache 2.0 license is compatible with the project.
 3. **A sample PDF bank statement is available for testing.** At minimum, a mock PDF or test fixture with known transaction data is used for integration tests.
 4. **GenericBankPdfParser handles a reasonable "generic" bank statement format.** Specific bank format support is deferred to post-MVP. The parser uses heuristics (date patterns, amount patterns) to extract rows.
 5. **Supabase Postgrest client supports all required CRUD operations.** If the client has limitations for specific queries (e.g., `ExistsDuplicateAsync`), raw SQL via Supabase RPC functions is acceptable.
 6. **Frontend uses Tailwind CSS CDN** (same as Phase 0). No build pipeline changes.
-7. **Alpine.js is introduced in this phase** for interactive components (confirmation dialogs, inline edit, dropdown selectors). Added via CDN in `_Layout.cshtml`.
-8. **Pagination is implemented at the Application handler level**, not via Supabase-specific pagination features (to keep handlers testable with mocked repositories).
+7. **Alpine.js (version 3 latest) is introduced in this phase** for interactive components (confirmation dialogs, inline edit, dropdown selectors). Added via CDN in `_Layout.cshtml`.
+8. **Pagination is implemented at the Application handler level**, not via Supabase-specific pagination features (to keep handlers testable with mocked repositories). **TotalPages calculation**: `(int)Math.Ceiling(totalCount / (double)pageSize)`.
 9. **Import batch metadata is stored in `pdf_imports` table** for audit trail purposes. It does not affect transaction functionality.
-10. **Category `TransactionCount` in `CategoryDto` is calculated by querying the transaction table**, not stored as a denormalized field. This is acceptable for MVP performance.
+10. **Category `TransactionCount` in `CategoryDto` is calculated by batch querying the transaction table** via `ITransactionRepository.GetCountsByCategoriesAsync()` to avoid N+1 queries. This is acceptable for MVP performance.
 11. **`IPdfParser` is defined in the Application layer** (not Domain) because PDF parsing is a use-case concern, not a domain concept. The interface is implemented in Infrastructure.
 12. **No background job processing.** PDF import is synchronous within the HTTP request. For very large PDFs, this may cause timeout — mitigated by the 10MB file size limit.
+13. **NC-1 VERIFIED**: `auth.uid()` function in Supabase RLS policies is automatically provided by Supabase Auth. The `public.users` table references `auth.users(id)` correctly.
+14. **NC-2 MITIGATED**: Frontend PageModels include comprehensive error handling for network failures (`HttpRequestException`), domain validation errors (`DomainException`), and unexpected errors.
+15. **NC-3 MITIGATED**: PDF parser wraps PdfPig calls in try-catch to handle encoding issues (UTF-16, scanned PDFs, password-protected PDFs). Errors are logged and user receives descriptive message.
+16. **NC-4 ADDRESSED**: Concurrent PDF uploads are handled by RLS policies + unique transaction index. UI shows spinner during upload to discourage concurrent uploads from same user.
 
 ---
 
@@ -1516,7 +1525,7 @@ text
 | R-3.1 | PDF parsing produces inconsistent results across bank formats      | High   | High        | Start with one generic format; strategy pattern allows adding bank-specific parsers later    |
 | R-3.2 | Large PDF upload causes HTTP timeout                               | Medium | Medium      | 10MB file size limit; synchronous processing acceptable for MVP; async pipeline post-MVP    |
 | R-3.3 | Supabase Postgrest client lacks `ExistsDuplicateAsync` equivalent  | Medium | Medium      | Implement via Supabase RPC function or composite query; wrap in repository                  |
-| R-3.4 | Duplicate detection hash collisions (different transactions match) | Low    | Low         | Hash uses 4 fields (userId, date, amount, description); false positives extremely unlikely  |
+| R-3.4 | Duplicate detection hash collisions (different transactions match) | Low    | Low         | **C-3 RESOLVED**: Duplicate check uses 4 fields (userId, date, amount, description) but **ignores currency**. Rationale: Same-day, same-amount transactions in different currencies are extremely rare in personal finance. If needed post-MVP, currency can be added to duplicate check. |
 | R-3.5 | RLS policies block legitimate operations                           | Medium | Medium      | Test all CRUD operations with authenticated user; verify policies match expected access      |
 | R-3.6 | Alpine.js CDN conflicts with existing JavaScript                   | Low    | Low         | Minimal JS in Phase 0-2; Alpine.js is self-contained                                       |
 | R-3.7 | Category seeding race condition (concurrent requests)              | Low    | Low         | `UNIQUE(user_id, name)` constraint prevents duplicate defaults; idempotent check in handler |

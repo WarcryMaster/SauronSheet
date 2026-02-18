@@ -1,134 +1,27 @@
-/prompt:'prompts/speckit.plan.prompt.md
+/prompt:'prompts/speckit.plan.prompt.md' 
 
 Actúa como un arquitecto de software senior experto en Spec Driven Development (SDD) usando Speckit.
 
-Necesito que generes un archivo `speckit.plan` COMPLETO y detallado para el siguiente proyecto:
-
-## 📌 CONTEXTO DEL PROYECTO
-- **Nombre del proyecto:** [NOMBRE]
-- **Descripción:** [DESCRIPCIÓN BREVE]
-- **Tipo de aplicación:** [web app / API / CLI / librería / microservicio / etc.]
-- **Stack tecnológico:** [lenguajes, frameworks, bases de datos, etc.]
-- **Usuarios objetivo:** [quiénes van a usar esto]
-- **Problema que resuelve:** [problema principal]
-
-## 📐 REQUISITOS CLAVE
-1. [Requisito funcional 1]
-2. [Requisito funcional 2]
-3. [Requisito funcional 3]
-...
-
-## 🚫 RESTRICCIONES / LIMITACIONES
-- [Restricción 1]
-- [Restricción 2]
-
-## 🔗 INTEGRACIONES EXTERNAS
-- [API / servicio externo 1]
-- [API / servicio externo 2]
-
+Necesito que generes un archivo `speckit.plan` COMPLETO y detallado para la fase 3 #file:'C:\Projects\SauronSheet\specs\phase-3\phase-3-spec.md' 
 ---
 
-## INSTRUCCIONES PARA EL speckit.plan
-
-El `speckit.plan` que generes DEBE incluir las siguientes secciones completas:
-
-### 1. **project_overview**
-   - Nombre, descripción, objetivo principal
-   - Alcance (qué SÍ incluye y qué NO incluye)
-   - Supuestos y dependencias externas
-
-### 2. **architecture**
-   - Patrón arquitectónico elegido y justificación
-   - Diagrama de componentes (en texto/mermaid)
-   - Flujo de datos principal
-   - Decisiones arquitectónicas clave (ADRs resumidos)
-
-### 3. **modules**
-   - Lista de cada módulo/componente del sistema
-   - Para CADA módulo:
-     - Nombre y descripción
-     - Responsabilidades (Single Responsibility)
-     - Inputs / Outputs
-     - Dependencias internas y externas
-     - Archivos/specs asociados que se generarán
-
-### 4. **data_model**
-   - Entidades principales
-   - Atributos y tipos de cada entidad
-   - Relaciones entre entidades
-   - Reglas de validación críticas
-
-### 5. **api_surface** (si aplica)
-   - Endpoints / interfaces públicas
-   - Métodos, parámetros, respuestas esperadas
-   - Códigos de error y manejo de errores
-   - Autenticación/autorización
-
-### 6. **specs_breakdown**
-   - Lista ordenada de TODOS los archivos `.spec` que se deben crear
-   - Cada spec debe tener:
-     - Nombre del archivo
-     - Propósito
-     - Dependencias con otros specs
-     - Criterios de aceptación resumidos
-   - Orden de implementación sugerido (dependencias primero)
-
-### 7. **phases**
-   - Fases de desarrollo en orden
-   - Qué specs/módulos se implementan en cada fase
-   - Entregables por fase
-   - Criterios de "done" por fase
-
-### 8. **testing_strategy**
-   - Tipos de tests (unit, integration, e2e)
-   - Cobertura mínima esperada
-   - Casos edge críticos a cubrir
-   - Herramientas de testing
-
-### 9. **conventions**
-   - Estructura de carpetas del proyecto
-   - Naming conventions
-   - Patrones de código a seguir
-   - Manejo de errores estándar
-   - Formato de logs
-
-### 10. **context_for_ai**
-   - Resumen ejecutivo del proyecto para que cualquier LLM entienda el contexto
-   - Glosario de términos del dominio
-   - Reglas de negocio críticas que NO se deben violar
-   - Ejemplos de uso típicos (happy path)
-   - Anti-patrones a evitar en este proyecto
-
----
-
-## FORMATO DE SALIDA
-
-- Usa formato YAML o TOML (el nativo de speckit)
-- Sé ESPECÍFICO, no genérico — cada campo debe tener contenido real basado en mi proyecto
-- Incluye comentarios inline explicando decisiones importantes
-- Asegúrate de que los specs tengan un DAG (grafo acíclico dirigido) claro de dependencias
-- Cada spec debe ser lo suficientemente granular para implementarse en UNA sesión de trabajo
-
-## CRITERIOS DE CALIDAD
-
-El plan debe ser:
-✅ Auto-contenido (cualquier dev nuevo entiende el proyecto leyendo solo el plan)
-✅ Implementable (no hay ambigüedades)
-✅ Ordenado por dependencias (nada se implementa antes que sus dependencias)
-✅ Trazable (cada requisito está mapeado a al menos un spec)
-✅ Consistente (no hay contradicciones entre secciones)
+## CONTEXTO PARA EL speckit.plan
+Que siga el documento el mismo formato que las fases previas:
+#file:'C:\Projects\SauronSheet\.specify\memory\constitution.md' 
+#file:'C:\Projects\SauronSheet\specs\phase-0\phase-0-plan.md' 
+#file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-plan.md' 
+#file:'C:\Projects\SauronSheet\specs\phase-2\phase-2-plan.md' 
+#file:'C:\Projects\SauronSheet\specs\spec.md' 
 
 -------------------------------------------------------------
 
 /prompt:'prompts/speckit.clarify.prompt.md' 
 
-verifica que no haya en los archivos 
+verifica que no haya en los archivos inconsistencias o casos no contemplados o ambiguos
 #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-tasks.md'  
 #file:'C:\Projects\SauronSheet\.specify\memory\constitution.md'  
 #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-plan.md' 
 #file:'C:\Projects\SauronSheet\specs\phase-1\phase-1-spec.md' 
-
-inconsistencias o casos no contemplados o ambiguos
 
 -------------------------------------------------------------
 
