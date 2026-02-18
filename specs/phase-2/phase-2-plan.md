@@ -30,7 +30,7 @@ Phase 2 is a **Domain-Only phase** that completes the SauronSheet domain model. 
 - ✅ 1 abstract specification base: `BaseSpecification<T>`
 - ✅ 4 concrete specifications: `TransactionByDateRange`, `TransactionByCategory`, `TransactionByAmountRange`, `TransactionByUser`
 - ✅ 3 repository interfaces (Domain contracts, NO implementation)
-- ✅ **81 unit tests** with **100% domain coverage** (domain-only phase rule)
+- ✅ **96 unit tests total** (19 Phase 0+1 + 77 Phase 2) with **100% domain coverage** (domain-only phase rule)
 - ✅ Updated `Directory.Build.props` if needed (dependencies unchanged)
 - ✅ Constitution compliance verified (zero violations)
 
@@ -39,7 +39,7 @@ Phase 2 is a **Domain-Only phase** that completes the SauronSheet domain model. 
 **Constitutional Compliance:**
 - ✅ Clean Architecture: Domain layer remains zero external dependencies
 - ✅ DDD: Strong-typed IDs, value objects with validation, guard methods, system defaults pattern
-- ✅ Test-First: 81 tests written before implementation (RED phase), then implementation (GREEN), then refactor
+- ✅ Test-First: 96 tests total (19 Phase 0+1 + 77 Phase 2) written before implementation (RED phase), then implementation (GREEN), then refactor
 - ✅ Spec-Driven: Single phase spec, layer boundaries enforced (Domain ONLY)
 - ✅ Coverage: 100% domain layer (domain-only phase mandate from Constitution)
 
@@ -146,16 +146,14 @@ public class CategoryIdTests
     [Trait("Category", "Domain")]
     public void CategoryId_ValidGuid_SetsValue()
     {
-        var guid = Guid.NewGuid();
-        var categoryId = new CategoryId(guid);
-        Assert.Equal(guid, categoryId.Value);
+        Assert.True(false, "Implement CategoryId");
     }
 
     [Fact]
     [Trait("Category", "Domain")]
     public void CategoryId_EmptyGuid_ThrowsDomainException()
     {
-        Assert.Throws<DomainException>(() => new CategoryId(Guid.Empty));
+        Assert.True(false, "Implement CategoryId empty guard");
     }
 }
 ```
@@ -175,16 +173,14 @@ public class BudgetIdTests
     [Trait("Category", "Domain")]
     public void BudgetId_ValidGuid_SetsValue()
     {
-        var guid = Guid.NewGuid();
-        var budgetId = new BudgetId(guid);
-        Assert.Equal(guid, budgetId.Value);
+        Assert.True(false, "Implement BudgetId");
     }
 
     [Fact]
     [Trait("Category", "Domain")]
     public void BudgetId_EmptyGuid_ThrowsDomainException()
     {
-        Assert.Throws<DomainException>(() => new BudgetId(Guid.Empty));
+        Assert.True(false, "Implement BudgetId empty guard");
     }
 }
 ```
@@ -194,6 +190,7 @@ public class BudgetIdTests
 dotnet test --filter Category=Domain --no-build
 # Expected: 6 new tests FAIL (red) — IDs not yet implemented
 # Expected: 19 Phase 0+1 tests still PASS
+# Total discovered: 25 tests (19 passing, 6 failing)
 ```
 
 ---
@@ -443,8 +440,9 @@ public class DateRangeTests
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: 13 new Money + DateRange tests FAIL (red)
+# Expected: 18 new Money + DateRange tests FAIL (red) - 13 Money + 5 DateRange
 # Expected: 25 prior tests still PASS
+# Total discovered: 43 tests (25 passing, 18 failing)
 ```
 
 ---
@@ -477,12 +475,16 @@ public record Money : ValueObject
 
     public Money Plus(Money other)
     {
+        if (other == null)
+            throw new ArgumentNullException(nameof(other));
         EnsureSameCurrency(other);
         return new Money(Amount + other.Amount, Currency);
     }
 
     public Money Minus(Money other)
     {
+        if (other == null)
+            throw new ArgumentNullException(nameof(other));
         EnsureSameCurrency(other);
         return new Money(Amount - other.Amount, Currency);
     }
@@ -532,8 +534,8 @@ public record DateRange : ValueObject
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: All 38 Domain tests PASS
-# Breakdown: 19 Phase 0+1 base + 6 Strong-Typed IDs + 13 Money+DateRange
+# Expected: All 43 Domain tests PASS
+# Breakdown: 19 Phase 0+1 base + 6 Strong-Typed IDs + 13 Money + 5 DateRange
 ```
 
 ---
@@ -640,8 +642,9 @@ public class TransactionTests
 **Verification**:
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: 37 new entity tests FAIL (red)
-# Expected: 38 prior tests still PASS
+# Expected: 37 new entity tests FAIL (red) - 10 Transaction + 12 Category + 15 Budget
+# Expected: 43 prior tests still PASS
+# Total discovered: 80 tests (43 passing, 37 failing)
 ```
 
 ---
@@ -686,6 +689,9 @@ public class Transaction : AggregateRoot<TransactionId>
         if (userId == null)
             throw new DomainException("UserId is required.");
 
+        if (amount == null)
+            throw new DomainException("Amount is required.");
+
         if (date > DateTime.UtcNow)
             throw new DomainException("Transaction date cannot be in the future.");
 
@@ -700,7 +706,11 @@ public class Transaction : AggregateRoot<TransactionId>
         ImportedFrom = importedFrom;
     }
 
-    public void Categorize(CategoryId categoryId)
+    /// <summary>
+    /// Assigns or updates the category for this transaction.
+    /// </summary>
+    /// <param name="categoryId">The category to assign. Pass null to remove categorization.</param>
+    public void Categorize(CategoryId? categoryId)
     {
         CategoryId = categoryId;
         UpdatedAt = DateTime.UtcNow;
@@ -722,7 +732,7 @@ public class Transaction : AggregateRoot<TransactionId>
 ```sh
 dotnet test --filter Category=Domain --no-build
 # Expected: Transaction tests PASS (10 tests)
-# Expected: 48 total tests PASS
+# Expected: 53 total tests PASS (43 + 10)
 ```
 
 ---
@@ -807,6 +817,9 @@ public class Category : AggregateRoot<CategoryId>
         if (string.IsNullOrWhiteSpace(newName))
             throw new DomainException("Category name is required.");
 
+        if (newName == Name)
+            return; // No-op if same name
+
         Name = newName;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -818,7 +831,7 @@ public class Category : AggregateRoot<CategoryId>
 ```sh
 dotnet test --filter Category=Domain --no-build
 # Expected: Category tests PASS (12 tests)
-# Expected: 60 total tests PASS
+# Expected: 65 total tests PASS (53 + 12)
 ```
 
 ---
@@ -873,14 +886,21 @@ public class Budget : AggregateRoot<BudgetId>
         => currentSpend.Amount > Limit.Amount;
 
     public decimal PercentageUsed(Money currentSpend)
-        {
-            // Guard is defensive: constructor prevents Limit.Amount <= 0,
-            // but we keep this check for robustness against future changes
-            return Limit.Amount == 0 ? 0m : currentSpend.Amount / Limit.Amount;
-        }
+        => currentSpend.Amount / Limit.Amount;
 
+    /// <summary>
+    /// Calculates the remaining budget amount.
+    /// </summary>
+    /// <param name="currentSpend">Current spending in the same currency as the limit.</param>
+    /// <returns>Remaining amount (can be negative if over budget).</returns>
+    /// <exception cref="DomainException">Thrown when currentSpend currency does not match Limit currency.</exception>
     public Money RemainingAmount(Money currentSpend)
-        => Limit.Minus(currentSpend);
+    {
+        if (currentSpend.Currency != Limit.Currency)
+            throw new DomainException(
+                $"Cannot calculate remaining amount: currentSpend is in {currentSpend.Currency} but limit is in {Limit.Currency}.");
+        return Limit.Minus(currentSpend);
+    }
 
     public void UpdateLimit(Money newLimit)
     {
@@ -898,7 +918,7 @@ public class Budget : AggregateRoot<BudgetId>
 ```sh
 dotnet test --filter Category=Domain --no-build
 # Expected: Budget tests PASS (15 tests)
-# Expected: 75 total tests PASS
+# Expected: 80 total tests PASS (65 + 15)
 ```
 
 ---
@@ -1080,8 +1100,9 @@ public class SpecificationTests
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: 16 new service + spec tests FAIL (red)
-# Expected: 75 prior tests still PASS
+# Expected: 18 new service + spec tests FAIL (red) - 8 CategoryService + 10 Specifications
+# Expected: 80 prior tests still PASS
+# Total discovered: 98 tests (80 passing, 18 failing)
 ```
 
 ---
@@ -1119,6 +1140,16 @@ public class CategoryService
     public bool CanDeleteCategory(Category category, bool hasActiveTransactions)
         => category.CanDelete(hasActiveTransactions);
 
+    /// <summary>
+    /// Creates a new list of system default categories with randomly generated IDs.
+    /// </summary>
+    /// <param name="userId">The user ID to assign to the categories.</param>
+    /// <returns>Read-only list of 4 system default categories.</returns>
+    /// <remarks>
+    /// Phase 2 Note: IDs are generated on each call and not persisted.
+    /// In Phase 3, system defaults will be seeded in the database with deterministic IDs.
+    /// Tests should not depend on specific GUID values.
+    /// </remarks>
     public IReadOnlyList<Category> GetSystemDefaults(UserId userId)
     {
         return new List<Category>
@@ -1137,7 +1168,7 @@ public class CategoryService
 ```sh
 dotnet test --filter Category=Domain --no-build
 # Expected: CategoryService tests PASS (8 tests)
-# Expected: 83 total tests PASS
+# Expected: 88 total tests PASS (80 + 8)
 ```
 
 ---
@@ -1163,6 +1194,8 @@ public abstract class BaseSpecification<T> : ISpecification<T>
 {
     public Expression<Func<T, bool>> Criteria { get; }
     public int MaxResults { get; protected set; } = 1000;
+
+    // TODO Phase 3: Includes and IncludeStrings will be used for eager loading related entities
     public List<Expression<Func<T, object>>> Includes { get; } = new();
     public List<string> IncludeStrings { get; } = new();
 
@@ -1245,8 +1278,9 @@ public class TransactionByUserSpecification : BaseSpecification<Transaction>
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: Specification tests PASS (8 tests)
-# Expected: 91 total tests PASS (but we have 81 target, so we're ahead)
+# Expected: Specification tests PASS (10 tests)
+# Expected: 98 total tests PASS (88 + 10)
+# Note: Target is 96 tests (19 Phase 0+1 + 77 Phase 2), we have 2 extra test coverage
 ```
 
 ---
@@ -1280,7 +1314,18 @@ public interface ITransactionRepository
 {
     Task<Transaction?> GetByIdAsync(TransactionId id);
     Task<IReadOnlyList<Transaction>> GetByUserIdAsync(UserId userId);
+
+    /// <summary>
+    /// Finds transactions matching the given specification.
+    /// </summary>
+    /// <param name="specification">Filtering criteria, ordering, and result limit.</param>
+    /// <returns>
+    /// Collection of matching transactions, limited by <see cref="ISpecification{T}.MaxResults"/>.
+    /// Never returns null; returns empty collection if no matches.
+    /// Implementation MUST enforce MaxResults limit.
+    /// </returns>
     Task<IReadOnlyList<Transaction>> FindBySpecificationAsync(ISpecification<Transaction> specification);
+
     Task AddAsync(Transaction transaction);
     Task UpdateAsync(Transaction transaction);
     Task DeleteAsync(TransactionId id);
@@ -1369,11 +1414,19 @@ dotnet build
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Phase 2 Target: 81 tests total
+# Phase 2 Target: 96 tests total (19 Phase 0+1 + 77 Phase 2)
 # Breakdown:
 #   - Phase 0+1 Base: 19 tests (should still pass)
-#   - Phase 2 New: 62 tests (10 Transaction + 12 Category + 15 Budget + 8 Service + 8 Spec + 9 IDs+VO)
-# Expected: 81 tests total PASS
+#   - Phase 2 New: 77 tests breakdown:
+#     * Strong-Typed IDs: 6 tests (2 per ID × 3)
+#     * Money: 13 tests
+#     * DateRange: 5 tests
+#     * Transaction: 10 tests
+#     * Category: 12 tests
+#     * Budget: 15 tests
+#     * CategoryService: 8 tests
+#     * Specifications: 8 tests
+# Expected: 96 tests total PASS (may have 2 extra from bonus coverage = 98)
 ```
 
 ---
@@ -1469,7 +1522,7 @@ fi
 Status: ✓ PASS
 Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  ✓ 38 domain tests PASS (19 Phase 0+1 + 6 Strong-Typed IDs + 13 Money+DateRange)
+  ✓ 43 domain tests PASS (19 Phase 0+1 + 6 Strong-Typed IDs + 13 Money + 5 DateRange)
   ✓ Domain.csproj has ZERO dependencies (audit passed)
   ✓ All value objects immutable (record types)
   ✓ All arithmetic and validation working
@@ -1484,7 +1537,7 @@ Metrics:
 Status: ✓ PASS
 Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  ✓ 75 domain tests PASS (38 from Checkpoint 2A + 37 entity tests)
+  ✓ 80 domain tests PASS (43 from Checkpoint 2A + 37 entity tests)
   ✓ Transaction entity: 10 tests passing
   ✓ Category entity: 12 tests passing
   ✓ Budget entity: 15 tests passing
@@ -1502,9 +1555,9 @@ Metrics:
 Status: ✓ PASS
 Verification Command: dotnet test --filter Category=Domain --no-build
 Metrics:
-  ✓ 91 domain tests PASS (75 from Checkpoint 2B + 8 CategoryService + 8 Specifications)
-  ⚠️ Note: Target is 81 Phase 2 Domain tests. 91 total includes Phase 0+1 base tests (19).
-     Phase 2-only: 91 - 19 = 72 tests (includes 8 service + 8 spec bonus coverage)
+  ✓ 98 domain tests PASS (80 from Checkpoint 2B + 8 CategoryService + 10 Specifications)
+  ⚠️ Note: Target is 96 total tests (19 Phase 0+1 + 77 Phase 2).
+     Phase 2-only: 98 - 19 = 79 tests (2 extra from bonus coverage)
   ✓ CategoryService delegates to mocked ICategoryRepository
   ✓ BaseSpecification abstract base providing boilerplate
   ✓ 4 concrete specifications with working Criteria expressions
@@ -1528,7 +1581,7 @@ Verification Commands (run in order):
 
 Final Metrics:
   ✓ Full build: zero errors, zero warnings (TreatWarningsAsErrors enforced)
-  ✓ All 81 domain tests: PASS (11 Phase 0 + 8 Phase 1 + 62 Phase 2)
+  ✓ All 96+ domain tests: PASS (11 Phase 0 + 8 Phase 1 + 77 Phase 2 = 96, may have 2 bonus = 98)
   ✓ Coverage reports generated (coverage.xml shows 100% Phase 2)
   ✓ Dependency rules verified (Domain=0 refs, no App/Infra/Frontend changes)
   ✓ Constitution compliance verified (Domain-Only phase respected)
@@ -1554,7 +1607,7 @@ Final Metrics:
 
 | Criterion | Status | Objective Validation Command |
 |-----------|--------|-----------|
-| 81 domain tests pass | ✓ | `dotnet test --filter Category=Domain` → output shows "81 passed" |
+| 96+ domain tests pass | ✓ | `dotnet test --filter Category=Domain` → output shows "96 passed" (or 98 with bonus coverage) |
 | Domain coverage = 100% | ✓ | `coverlet` report shows Phase 2 Domain files = 100% |
 | No Application/Infrastructure/Frontend changes | ✓ | `git status` shows ONLY changes in `src/Domain/` and `tests/Domain.Tests/` |
 | Dependency rules enforced | ✓ | Bash script in 5.4 shows all assertions PASS |
