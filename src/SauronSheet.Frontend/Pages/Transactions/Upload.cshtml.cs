@@ -53,7 +53,7 @@ public class UploadModel : PageModel
             ImportResult = await _mediator.Send(
                 new ImportTransactionsFromPdfCommand(stream, PdfFile.FileName));
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
             // Network error (Supabase offline, timeout, etc.)
             ErrorMessage = "Network error. Please check your connection and try again.";
@@ -69,7 +69,7 @@ public class UploadModel : PageModel
             // Domain validation error (future date, etc.)
             ErrorMessage = ex.Message;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Unexpected error
             ErrorMessage = "An unexpected error occurred. Please try again later.";

@@ -45,7 +45,7 @@ public class ImportTransactionsFromPdfCommandHandler
         ImportTransactionsFromPdfCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.PdfStream == null || request.PdfStream.Length == 0)
+        if (request.PdfStream == null)
             throw new ArgumentException("PDF stream is required.", nameof(request.PdfStream));
 
         if (!request.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))

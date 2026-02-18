@@ -1,6 +1,6 @@
 namespace SauronSheet.Infrastructure.PDF;
 
-using Application.Interfaces;
+using SauronSheet.Application.Interfaces;
 using Parsers;
 
 /// <summary>

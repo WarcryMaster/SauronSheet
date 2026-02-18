@@ -47,7 +47,7 @@ public class IndexModel : PageModel
         {
             ErrorMessage = ex.Message;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ErrorMessage = "An error occurred while creating the category.";
             // TODO Phase 6: Log exception
@@ -68,7 +68,7 @@ public class IndexModel : PageModel
         {
             ErrorMessage = ex.Message;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ErrorMessage = "An error occurred while renaming the category.";
             // TODO Phase 6: Log exception
@@ -89,7 +89,7 @@ public class IndexModel : PageModel
         {
             ErrorMessage = ex.Message;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ErrorMessage = "An error occurred while deleting the category.";
             // TODO Phase 6: Log exception

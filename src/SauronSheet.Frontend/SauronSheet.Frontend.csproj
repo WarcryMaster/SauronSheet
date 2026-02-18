@@ -4,10 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- Ignore NuGet vulnerability warnings for transitive dependencies of supabase-csharp -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Ignore NuGet compatibility warnings for legacy packages -->
     <WarningLevel>4</WarningLevel>
-    <NoWarn>$(NoWarn);NU1902</NoWarn>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

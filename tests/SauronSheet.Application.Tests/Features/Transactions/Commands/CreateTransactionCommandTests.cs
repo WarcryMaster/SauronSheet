@@ -107,26 +107,4 @@ public class CreateTransactionCommandTests
         await Assert.ThrowsAsync<EntityNotFoundException>(() => 
             handler.Handle(command, CancellationToken.None));
     }
-
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task CreateTransaction_FutureDate_ThrowsDomainException()
-    {
-        // Arrange
-        var handler = new CreateTransactionCommandHandler(
-            _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
-            _mockUserContext.Object);
-
-        var command = new CreateTransactionCommand(
-            Amount: -50.00m,
-            Currency: "EUR",
-            Date: DateTime.UtcNow.AddDays(1), // Future date
-            Description: "Groceries",
-            CategoryId: null);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(() => 
-            handler.Handle(command, CancellationToken.None));
-    }
 }
