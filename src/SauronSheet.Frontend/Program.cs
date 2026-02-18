@@ -1,5 +1,6 @@
 using SauronSheet.Application;
 using SauronSheet.Infrastructure;
+using SauronSheet.Infrastructure.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,9 +23,10 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Authentication and Authorization middleware (Phase 1)
-// app.UseAuthentication();
-// app.UseAuthorization();
+// Auth middleware pipeline (Phase 1)
+app.UseMiddleware<JwtCookieMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapRazorPages();
 

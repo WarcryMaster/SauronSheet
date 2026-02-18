@@ -1,0 +1,24 @@
+@page "/Dashboard"
+@model DashboardModel
+@using Microsoft.AspNetCore.Authorization
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="space-y-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-3xl font-bold text-gray-900">
+            Welcome, @Model.UserProfile?.Email
+        </h1>
+        <p class="mt-2 text-gray-600">
+            Your personal expense tracking dashboard
+        </p>
+    </div>
+
+    <div class="bg-blue-50 rounded-lg border border-blue-200 p-6">
+        <p class="text-blue-900">
+            Dashboard features will be available in Phase 4 (Analytics & Dashboard).
+        </p>
+    </div>
+</div>

@@ -13,11 +13,28 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-blue-600">SauronSheet</h1>
+                    <a href="/" class="flex items-center">
+                        <h1 class="text-2xl font-bold text-blue-600">SauronSheet</h1>
+                    </a>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <!-- Placeholder nav links -->
-                    <a href="/" class="text-gray-700 hover:text-blue-600">Home</a>
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        <a href="/Dashboard" class="text-gray-700 hover:text-blue-600">Dashboard</a>
+                        <span class="text-sm text-gray-600">@User.FindFirst("email")?.Value</span>
+                        <form method="post" asp-page="/Auth/Logout" style="display: inline;">
+                            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                                Logout
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a href="/Auth/Login" class="text-gray-700 hover:text-blue-600">Sign In</a>
+                        <a href="/Auth/Register" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Sign Up
+                        </a>
+                    }
                 </div>
             </div>
         </div>
@@ -29,7 +46,7 @@
 
     <footer class="bg-white border-t mt-12">
         <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-600">
-            <p>&copy; 2026 SauronSheet. Version 1.0.0 (Phase 0)</p>
+            <p>&copy; 2026 SauronSheet. Version 1.0.0 (Phase 1)</p>
         </div>
     </footer>
 </body>
