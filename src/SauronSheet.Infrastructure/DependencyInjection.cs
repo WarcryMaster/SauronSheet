@@ -1,14 +1,21 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 using SauronSheet.Infrastructure.Auth;
 using SauronSheet.Domain.Services;
+using SauronSheet.Domain.Repositories;
+using SauronSheet.Application.Common;
+using SauronSheet.Application.Interfaces;
+using SauronSheet.Infrastructure.Persistence;
+using SauronSheet.Infrastructure.PDF;
+using SauronSheet.Infrastructure.PDF.Parsers;
 
 namespace SauronSheet.Infrastructure;
 
 /// <summary>
 /// Extension methods for registering Infrastructure layer services.
 /// Validates Supabase configuration on startup (fast-fail).
-/// Registers auth services and HTTP client.
+/// Registers auth services, repositories, and PDF parsing (Phase 3).
 /// </summary>
 public static class DependencyInjection
 {
@@ -36,12 +43,31 @@ public static class DependencyInjection
         services.AddHttpClient<IAuthService, SupabaseAuthService>()
             .ConfigureHttpClient(client => client.BaseAddress = new Uri(supabaseUrl));
 
-        // Note: HttpUserContext is registered in Application layer DependencyInjection
-        // Infrastructure keeps clean dependency flow: Infrastructure -> Domain only
+        services.AddScoped<IUserContext, HttpUserContext>();
+        services.AddHttpContextAccessor();
 
-        // TODO: Register Supabase client as singleton in Phase 3+
-        // var client = new SupabaseClient(new Uri(supabaseUrl), supabaseKey);
-        // services.AddSingleton(client);
+        // CRITICAL FIX C-1: Supabase client registration (Phase 3)
+        services.AddSingleton<Supabase.Client>(sp =>
+        {
+            var options = new Supabase.SupabaseOptions
+            {
+                AutoRefreshToken = true,
+                AutoConnectRealtime = false
+            };
+            return new Supabase.Client(supabaseUrl, supabaseKey, options);
+        });
+
+        // Repository implementations (NEW in Phase 3)
+        services.AddScoped<ITransactionRepository, SupabaseTransactionRepository>();
+        services.AddScoped<ICategoryRepository, SupabaseCategoryRepository>();
+        services.AddScoped<IPdfImportRepository, SupabasePdfImportRepository>();
+
+        // PDF parsing (NEW in Phase 3)
+        services.AddScoped<IPdfParser, GenericBankPdfParser>();
+        services.AddSingleton<PdfParserFactory>();
+
+        // Domain services (NEW in Phase 3)
+        services.AddScoped<CategoryService>();
 
         return services;
     }

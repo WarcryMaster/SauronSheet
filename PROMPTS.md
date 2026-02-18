@@ -117,16 +117,16 @@ Produce únicamente el contenido completo de tasks.md.
 
 --------------------------------------------------------------
 
-/prompt:'prompts/speckit.implement.prompt.md
+/prompt:'prompts/speckit.implement.prompt.md' 
 
-Implementa la fase actual del proyecto SpecKit siguiendo los documentos de referencia.
+Implementa la fase 3 del proyecto SpecKit siguiendo los documentos de referencia: #file:'C:\Projects\SauronSheet\specs\phase-3\phase-3-tasks.md' 
 
 Entradas:
-- constitution.md (autoridad arquitectónica)
-- plan.md (plan de implementación)
-- tasks.md (lista de tareas de la fase actual)
-- phase-X-spec.md (spec de la fase actual)
-- Otras phase specs (solo para contexto)
+- #file:'C:\Projects\SauronSheet\.specify\memory\constitution.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-3\phase-3-spec.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-3\phase-3-plan.md' 
+- #file:'C:\Projects\SauronSheet\specs\phase-2\phase-2-tasks.md' 
+- #file:'C:\Projects\SauronSheet\specs\spec.md' 
 
 Objetivo:
 Generar la implementación de todas las tareas de tasks.md en código real y completo, lista para compilar y ejecutar, respetando Clean Architecture y las reglas de constitution.md.

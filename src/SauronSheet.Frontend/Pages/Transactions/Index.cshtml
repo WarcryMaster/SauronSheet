@@ -1,0 +1,134 @@
+@page
+@model SauronSheet.Frontend.Pages.Transactions.IndexModel
+@{
+    ViewData["Title"] = "Transactions";
+}
+
+<div>
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Transactions</h1>
+        <div class="space-x-2">
+            <a href="/Transactions/Upload" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                📄 Upload PDF
+            </a>
+            <a href="/Transactions/Add" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                ➕ Add Transaction
+            </a>
+        </div>
+    </div>
+
+    @if (Model.Transactions.Items.Count == 0)
+    {
+        <div class="text-center py-12 bg-white rounded-lg shadow">
+            <p class="text-gray-500 mb-4">No transactions yet.</p>
+            <a href="/Transactions/Upload" class="text-blue-600 hover:text-blue-700">Import a PDF</a>
+            <span class="text-gray-500"> or </span>
+            <a href="/Transactions/Add" class="text-blue-600 hover:text-blue-700">add one manually</a>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Description
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Amount
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach (var transaction in Model.Transactions.Items)
+                    {
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @transaction.Date.ToString("yyyy-MM-dd")
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                @transaction.Description
+                                @if (!string.IsNullOrEmpty(transaction.ImportedFrom))
+                                {
+                                    <span class="text-xs text-gray-500">(from @transaction.ImportedFrom)</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium @(transaction.Amount >= 0 ? "text-green-600" : "text-red-600")">
+                                @transaction.Amount.ToString("F2") @transaction.Currency
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                @if (string.IsNullOrEmpty(transaction.CategoryName))
+                                {
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">Uncategorized</span>
+                                }
+                                else
+                                {
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">@transaction.CategoryName</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@transaction.Id" style="display: inline;">
+                                    <button type="submit" class="text-red-600 hover:text-red-900" 
+                                            onclick="return confirm('Are you sure you want to delete this transaction?')">
+                                        🗑️ Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            @if (Model.Transactions.TotalPages > 1)
+            {
+                <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        @if (Model.Transactions.PageNumber > 1)
+                        {
+                            <a href="?PageNumber=@(Model.Transactions.PageNumber - 1)" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </a>
+                        }
+                        @if (Model.Transactions.PageNumber < Model.Transactions.TotalPages)
+                        {
+                            <a href="?PageNumber=@(Model.Transactions.PageNumber + 1)" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </a>
+                        }
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Showing <span class="font-medium">@((Model.Transactions.PageNumber - 1) * Model.Transactions.PageSize + 1)</span>
+                                to <span class="font-medium">@Math.Min(Model.Transactions.PageNumber * Model.Transactions.PageSize, Model.Transactions.TotalCount)</span>
+                                of <span class="font-medium">@Model.Transactions.TotalCount</span> results
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                @for (int i = 1; i <= Model.Transactions.TotalPages; i++)
+                                {
+                                    <a href="?PageNumber=@i" 
+                                       class="@(i == Model.Transactions.PageNumber ? "bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50") relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                                        @i
+                                    </a>
+                                }
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

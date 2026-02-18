@@ -1,0 +1,56 @@
+@page
+@model SauronSheet.Frontend.Pages.Transactions.UploadModel
+@{
+    ViewData["Title"] = "Upload PDF";
+}
+
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Upload Bank Statement</h1>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="rounded-md bg-red-50 p-4 mb-6">
+            <p class="text-sm text-red-700">@Model.ErrorMessage</p>
+        </div>
+    }
+
+    @if (Model.ImportResult != null)
+    {
+        <div class="rounded-md bg-green-50 p-4 mb-6">
+            <p class="text-lg font-semibold text-green-900">
+                ✅ Import Complete: @Model.ImportResult.ImportedCount imported, @Model.ImportResult.SkippedCount skipped
+            </p>
+            @if (Model.ImportResult.Errors.Any())
+            {
+                <details class="mt-4">
+                    <summary class="cursor-pointer text-sm text-green-700">Show errors (@Model.ImportResult.Errors.Count)</summary>
+                    <ul class="mt-2 space-y-1">
+                        @foreach (var error in Model.ImportResult.Errors)
+                        {
+                            <li class="text-sm text-red-600">Row @error.RowNumber: @error.ErrorMessage</li>
+                        }
+                    </ul>
+                </details>
+            }
+            <a href="/Transactions" class="mt-4 inline-block text-blue-600 hover:text-blue-700">
+                View imported transactions →
+            </a>
+        </div>
+    }
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <label for="pdfFile" class="block text-sm font-medium text-gray-700">
+                Select PDF Bank Statement
+            </label>
+            <input type="file" id="pdfFile" name="PdfFile" accept=".pdf"
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            <p class="mt-1 text-sm text-gray-500">Max file size: 10MB</p>
+        </div>
+
+        <button type="submit"
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+            Upload and Import
+        </button>
+    </form>
+</div>

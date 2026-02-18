@@ -4,9 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SauronSheet</title>
-    
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js for interactivity (Phase 3) - CLARIFICATION A-2: version @3 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gray-50">
     <nav class="bg-white shadow">
@@ -20,7 +23,10 @@
                 <div class="flex items-center space-x-4">
                     @if (User?.Identity?.IsAuthenticated == true)
                     {
-                        <a href="/Dashboard" class="text-gray-700 hover:text-blue-600">Dashboard</a>
+                        <a href="/Dashboard" class="text-gray-700 hover:text-blue-600">📊 Dashboard</a>
+                        <a href="/Transactions" class="text-gray-700 hover:text-blue-600">💳 Transactions</a>
+                        <a href="/Transactions/Upload" class="text-gray-700 hover:text-blue-600">📄 Upload PDF</a>
+                        <a href="/Categories" class="text-gray-700 hover:text-blue-600">🏷️ Categories</a>
                         <span class="text-sm text-gray-600">@User.FindFirst("email")?.Value</span>
                         <form method="post" asp-page="/Auth/Logout" style="display: inline;">
                             <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
@@ -46,7 +52,7 @@
 
     <footer class="bg-white border-t mt-12">
         <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-600">
-            <p>&copy; 2026 SauronSheet. Version 1.0.0 (Phase 1)</p>
+            <p>&copy; 2026 SauronSheet. Version 1.0.0 (Phase 3)</p>
         </div>
     </footer>
 </body>
