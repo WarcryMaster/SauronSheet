@@ -3,10 +3,10 @@ namespace SauronSheet.Infrastructure.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Domain.Entities;
-using Domain.Repositories;
-using Domain.ValueObjects;
-using Domain.Specifications;
+using SauronSheet.Domain.Entities;
+using SauronSheet.Domain.Repositories;
+using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Domain.Specifications;
 
 /// <summary>
 /// Supabase implementation of ITransactionRepository.

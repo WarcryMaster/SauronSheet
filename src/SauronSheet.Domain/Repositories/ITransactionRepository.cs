@@ -3,9 +3,9 @@ namespace SauronSheet.Domain.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Entities;
-using ValueObjects;
-using Specifications;
+using SauronSheet.Domain.Entities;
+using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Domain.Specifications;
 
 /// <summary>
 /// Repository interface for Transaction aggregate.

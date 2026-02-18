@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using SauronSheet.Application.Common.Models;
 using SauronSheet.Application.Interfaces;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
+using iTextSharp.text.pdf;
+using iTextSharp.text.pdf.parser;
 
 /// <summary>
 /// Generic bank PDF parser implementation.
@@ -20,55 +20,51 @@ public class GenericBankPdfParser : IPdfParser
 
         try
         {
-            using (var document = PdfDocument.Open(pdfStream))
+            var reader = new PdfReader(pdfStream);
+            var rowNumber = 0;
+
+            for (int pageNum = 1; pageNum <= reader.NumberOfPages; pageNum++)
             {
-                var rowNumber = 0;
-
-                foreach (var page in document.GetPages())
+                try
                 {
-                    try
+                    var text = PdfTextExtractor.GetTextFromPage(reader, pageNum);
+                    var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    foreach (var line in lines)
                     {
-                        var text = page.Text;
-                        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                        rowNumber++;
 
-                        foreach (var line in lines)
-                        {
-                            rowNumber++;
+                        // Heuristic parsing: assumes format "DD/MM/YYYY Description AMOUNT EUR"
+                        var parts = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-                            // Heuristic parsing: assumes format "DD/MM/YYYY Description AMOUNT EUR"
-                            // TODO Phase 3F: Implement robust parsing logic with regex patterns
-                            var parts = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length < 3)
+                            continue; // Skip invalid lines
 
-                            if (parts.Length < 3)
-                                continue; // Skip invalid lines
+                        var dateRaw = parts[0];
+                        var amountRaw = parts.Length >= 2 ? parts[^2] : null; // Second-to-last part
+                        var currencyRaw = parts.Length >= 1 ? parts[^1] : null; // Last part
+                        var descriptionRaw = parts.Length > 2 
+                            ? string.Join(" ", parts[1..^2]) 
+                            : null; // Middle parts
 
-                            var dateRaw = parts[0];
-                            var amountRaw = parts.Length >= 2 ? parts[^2] : null; // Second-to-last part
-                            var currencyRaw = parts.Length >= 1 ? parts[^1] : null; // Last part
-                            var descriptionRaw = parts.Length > 2 
-                                ? string.Join(" ", parts[1..^2]) 
-                                : null; // Middle parts
-
-                            rows.Add(new RawTransactionRow(
-                                rowNumber,
-                                dateRaw,
-                                descriptionRaw,
-                                amountRaw,
-                                currencyRaw));
-                        }
+                        rows.Add(new RawTransactionRow(
+                            rowNumber,
+                            dateRaw,
+                            descriptionRaw,
+                            amountRaw,
+                            currencyRaw));
                     }
-                    catch (Exception ex)
-                    {
-                        // CRITICAL FIX NC-3: Log page-level errors but continue processing
-                        // TODO Phase 6: Add proper logging (Sentry)
-                        Console.WriteLine($"Warning: Error parsing page {page.Number}: {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    // CRITICAL FIX NC-3: Log page-level errors but continue processing
+                    Console.WriteLine($"Warning: Error parsing page {pageNum}: {ex.Message}");
                 }
             }
         }
-        catch (UglyToad.PdfPig.Exceptions.PdfDocumentFormatException ex)
+        catch (InvalidOperationException ex) when (ex.Message.Contains("encrypted"))
         {
-            // CRITICAL FIX NC-3: Handle password-protected/corrupted PDFs
+            // CRITICAL FIX NC-3: Handle password-protected PDFs
             throw new InvalidOperationException(
                 "PDF cannot be read. It may be password-protected, corrupted, or use an unsupported format.", 
                 ex);
@@ -91,3 +87,4 @@ public class GenericBankPdfParser : IPdfParser
         return rows;
     }
 }
+

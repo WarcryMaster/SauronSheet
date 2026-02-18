@@ -7,6 +7,7 @@ using SauronSheet.Application.Common.Models;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Domain.Entities;
+using SauronSheet.Domain.Services;
 using MediatR;
 
 namespace SauronSheet.Application.Tests.Features.Transactions.Commands;
