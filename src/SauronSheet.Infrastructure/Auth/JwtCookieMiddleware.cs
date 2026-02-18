@@ -1,8 +1,9 @@
 namespace SauronSheet.Infrastructure.Auth;
 
-using Microsoft.AspNetCore.Http;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
 /// <summary>
 /// JWT Cookie Middleware.
@@ -14,10 +15,10 @@ public class JwtCookieMiddleware
     private readonly RequestDelegate _next;
     private readonly AuthConfiguration _config;
 
-    public JwtCookieMiddleware(RequestDelegate next, AuthConfiguration config)
+    public JwtCookieMiddleware(RequestDelegate next, IOptions<AuthConfiguration> options)
     {
         _next = next;
-        _config = config;
+        _config = options.Value;
     }
 
     public async Task InvokeAsync(HttpContext context)
