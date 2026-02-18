@@ -36,7 +36,7 @@
 
 | Area           | Deliverable                                                                                           |
 |----------------|-------------------------------------------------------------------------------------------------------|
-| Domain         | `ImportBatch` value object (batch metadata), minor entity additions if needed                          |
+| Domain         | `ImportBatch` **entity** (batch metadata with identity; persists to `pdf_imports` table)               |
 | Application    | `ImportTransactionsFromPdfCommand` + handler (PDF import pipeline orchestration)                       |
 | Application    | `CreateTransactionCommand` + handler (manual transaction creation)                                     |
 | Application    | `UpdateTransactionCategoryCommand` + handler                                                           |
@@ -60,7 +60,7 @@
 | Frontend       | Manual add transaction page (`/Transactions/Add`)                                                      |
 | Frontend       | Category management page (`/Categories`)                                                               |
 | Frontend       | Updated `_Layout.cshtml` navigation with new page links                                                |
-| Tests          | ≥28 tests (application handler integration tests)                                                      |
+| Tests          | ≥38 tests (33 Application + 5 Domain — ImportBatch VO tests)                                          |
 
 ### Deferred (NOT in this phase)
 
@@ -192,17 +192,25 @@
 
 ### FR-3.01: Domain Layer Additions
 
-#### ImportBatch Value Object
+#### ImportBatch Entity (NOT Value Object)
+
+> **Note:** ImportBatch is an **Entity**, not a Value Object, because it has database identity (`id UUID PRIMARY KEY` in `pdf_imports` table). Entities have lifecycle and identity; value objects do not.
 
 ```csharp
-public record ImportBatch : ValueObject
+public class ImportBatch : Entity<Guid>
 {
-    public string Filename { get; }
-    public int ImportedCount { get; }
-    public int SkippedCount { get; }
-    public DateTime ImportedAt { get; }
+    public string Filename { get; private set; }
+    public int ImportedCount { get; private set; }
+    public int SkippedCount { get; private set; }
+    public DateTime ImportedAt { get; private set; }
 
-    public ImportBatch(string filename, int importedCount, int skippedCount, DateTime importedAt)
+    public ImportBatch(
+        Guid id,
+        string filename,
+        int importedCount,
+        int skippedCount,
+        DateTime importedAt)
+        : base(id)  // Call Entity<Guid> constructor
     {
         if (string.IsNullOrWhiteSpace(filename))
             throw new DomainException("Filename is required.");
@@ -222,6 +230,7 @@ public record ImportBatch : ValueObject
     public override string ToString()
         => $"{Filename}: {ImportedCount} imported, {SkippedCount} skipped at {ImportedAt:yyyy-MM-dd HH:mm}";
 }
+```
 FR-3.02: Application Layer — Commands & Queries
 text
 Application/
@@ -1397,11 +1406,11 @@ text
 | T-3.31  | GetCategories_SortsSystemDefaultsFirst                      | Application | Category Queries    |
 | T-3.32  | SeedSystemDefaults_FirstTime_CreatesFour                    | Application | System Defaults     |
 | T-3.33  | SeedSystemDefaults_AlreadyExist_ReturnsExisting             | Application | System Defaults     |
-| T-3.34  | ImportBatch_ValidConstruction_SetsProperties                | Domain      | ImportBatch VO      |
-| T-3.35  | ImportBatch_EmptyFilename_ThrowsDomainException             | Domain      | ImportBatch VO      |
-| T-3.36  | ImportBatch_NegativeImportedCount_ThrowsDomainException     | Domain      | ImportBatch VO      |
-| T-3.37  | ImportBatch_NegativeSkippedCount_ThrowsDomainException      | Domain      | ImportBatch VO      |
-| T-3.38  | ImportBatch_ToString_FormatsCorrectly                       | Domain      | ImportBatch VO      |
+| T-3.34  | ImportBatch_ValidConstruction_SetsProperties                | Domain      | ImportBatch Entity  |
+| T-3.35  | ImportBatch_EmptyFilename_ThrowsDomainException             | Domain      | ImportBatch Entity  |
+| T-3.36  | ImportBatch_NegativeImportedCount_ThrowsDomainException     | Domain      | ImportBatch Entity  |
+| T-3.37  | ImportBatch_NegativeSkippedCount_ThrowsDomainException      | Domain      | ImportBatch Entity  |
+| T-3.38  | ImportBatch_ToString_FormatsCorrectly                       | Domain      | ImportBatch Entity  |
 
 **Total: 38 tests (33 Application + 5 Domain)**
 
@@ -1415,7 +1424,7 @@ text
 | Category CRUD       | 7          | T-3.23–T-3.29               |
 | Category Queries    | 2          | T-3.30–T-3.31               |
 | System Defaults     | 2          | T-3.32–T-3.33               |
-| ImportBatch VO      | 5          | T-3.34–T-3.38               |
+| ImportBatch Entity  | 5          | T-3.34–T-3.38               |
 
 ---
 
