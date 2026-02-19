@@ -55,9 +55,9 @@ public class AddModel : PageModel
             ErrorMessage = ex.Message;
             return Page();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            ErrorMessage = "An error occurred while adding the transaction.";
+            ErrorMessage = $"An error occurred: {ex.GetType().Name}: {ex.Message}";
             // TODO Phase 6: Log exception
             return Page();
         }
