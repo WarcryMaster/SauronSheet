@@ -112,12 +112,12 @@
                     <div class="flex gap-2">
                         @if (Model.Results.PageNumber > 1)
                         {
-                            <a href="/Transactions/Search?Page=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                            <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
                                class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">← Previous</a>
                         }
                         @if (Model.Results.PageNumber < Model.Results.TotalPages)
                         {
-                            <a href="/Transactions/Search?Page=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                            <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
                                class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Next →</a>
                         }
                     </div>

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Domain.Repositories;
+using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
@@ -39,7 +40,8 @@ public class GetRecentTransactionsQueryHandler
     {
         var userId = new UserId(_userContext.UserId);
 
-        var allTransactions = await _transactionRepo.GetByUserIdAsync(userId);
+        var userSpec = new TransactionByUserSpecification(userId);
+        var allTransactions = await _transactionRepo.FindBySpecificationAsync(userSpec);
 
         // Load categories for name lookup
         var categories = await _categoryRepo.GetByUserIdAsync(userId);

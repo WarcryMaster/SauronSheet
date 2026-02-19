@@ -40,7 +40,7 @@ public class SearchModel : PageModel
     public decimal? MaxAmount { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public int Page { get; set; } = 1;
+    public int PageNumber { get; set; } = 1;
 
     public SearchModel(IMediator mediator)
     {
@@ -60,7 +60,7 @@ public class SearchModel : PageModel
                 CategoryId: CategoryId,
                 MinAmount: MinAmount,
                 MaxAmount: MaxAmount,
-                Page: Page,
+                Page: PageNumber,
                 PageSize: 50));
 
             return Page();

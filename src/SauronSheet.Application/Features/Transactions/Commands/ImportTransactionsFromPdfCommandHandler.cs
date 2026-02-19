@@ -150,7 +150,7 @@ public class ImportTransactionsFromPdfCommandHandler
             skippedCount,
             DateTime.UtcNow);
 
-        await _pdfImportRepo.AddAsync(importBatch);
+        await _pdfImportRepo.AddAsync(importBatch, new UserId(_userContext.UserId));
 
         return new ImportResultDto(
             importedCount,

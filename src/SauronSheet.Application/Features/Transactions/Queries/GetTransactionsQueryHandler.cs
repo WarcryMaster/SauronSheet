@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Domain.Repositories;
+using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
@@ -34,23 +35,32 @@ public class GetTransactionsQueryHandler
     {
         var userId = new UserId(_userContext.UserId);
 
-        // TODO Phase 4: Apply specifications for filtering
-        var allTransactions = await _transactionRepo.GetByUserIdAsync(userId);
-
-        // Apply filters manually for Phase 3
-        var filtered = allTransactions.AsQueryable();
+        // Build composed specification from filters
+        ISpecification<Domain.Entities.Transaction> spec = new TransactionByUserSpecification(userId);
 
         if (request.CategoryId.HasValue)
         {
-            var categoryId = new CategoryId(request.CategoryId.Value);
-            filtered = filtered.Where(t => t.CategoryId == categoryId);
+            var categorySpec = new TransactionByCategorySpecification(new CategoryId(request.CategoryId.Value));
+            spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, categorySpec);
         }
 
-        if (request.StartDate.HasValue)
-            filtered = filtered.Where(t => t.Date >= request.StartDate.Value);
+        if (request.StartDate.HasValue && request.EndDate.HasValue)
+        {
+            var dateSpec = new TransactionByDateRangeSpecification(request.StartDate.Value, request.EndDate.Value);
+            spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, dateSpec);
+        }
+        else if (request.StartDate.HasValue)
+        {
+            var dateSpec = new TransactionByDateRangeSpecification(request.StartDate.Value, DateTime.MaxValue);
+            spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, dateSpec);
+        }
+        else if (request.EndDate.HasValue)
+        {
+            var dateSpec = new TransactionByDateRangeSpecification(DateTime.MinValue, request.EndDate.Value);
+            spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, dateSpec);
+        }
 
-        if (request.EndDate.HasValue)
-            filtered = filtered.Where(t => t.Date <= request.EndDate.Value);
+        var filtered = await _transactionRepo.FindBySpecificationAsync(spec);
 
         // Sort by date descending
         var sorted = filtered.OrderByDescending(t => t.Date);
