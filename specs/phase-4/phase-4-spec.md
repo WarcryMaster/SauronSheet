@@ -44,7 +44,7 @@
 | Application | `GetTransactionSummaryQuery` + handler (total income, total expenses, net, transaction count) |
 | Application | `GetRecentTransactionsQuery` + handler (last N transactions for dashboard widget) |
 | Application | `SearchTransactionsQuery` + handler (multi-filter search: keyword, date range, category, amount range) |
-| Application | DTOs: `CategorySpendingDto`, `MonthlyTrendDto`, `YearlyComparisonDto`, `TransactionSummaryDto`, `TransactionSearchResultDto` |
+| Application | DTOs: `CategorySpendingDto`, `MonthlyTrendDto`, `YearlyComparisonDto`, `TransactionSummaryDto` |
 | Domain | `TransactionByDescriptionKeywordSpecification` (new specification for text search) |
 | Domain | `CompositeSpecification<T>` (combines multiple specifications with AND logic) |
 | Infrastructure | Repository query methods optimized for analytics aggregations |
@@ -211,8 +211,11 @@ public class TransactionByDescriptionKeywordSpecification : BaseSpecification<Tr
             throw new DomainException("Search keyword cannot be empty.");
     }
 }
-CompositeSpecification<T>
-csharp
+```
+
+#### CompositeSpecification\<T\>
+
+```csharp
 public class CompositeSpecification<T> : BaseSpecification<T>
 {
     private CompositeSpecification(Expression<Func<T, bool>> criteria)
@@ -233,16 +236,21 @@ public class CompositeSpecification<T> : BaseSpecification<T>
         return new CompositeSpecification<T>(lambda);
     }
 }
-File Structure:
+```
 
-text
+**File Structure:**
+
+```text
 Domain/
 ├── Specifications/                                    # Additions
 │   ├── (existing from Phase 2)
 │   ├── TransactionByDescriptionKeywordSpecification.cs  # NEW
 │   └── CompositeSpecification.cs                        # NEW
-FR-4.02: Application Layer — Analytics Queries
-text
+```
+
+### FR-4.02: Application Layer — Analytics Queries
+
+```text
 Application/
 ├── Features/
 │   ├── Analytics/
@@ -269,15 +277,20 @@ Application/
 │       │   └── SearchTransactionsQueryHandler.cs          # NEW
 │       └── DTOs/
 │           └── (existing from Phase 3)
-GetSpendingByCategoryQuery
-csharp
+```
+
+#### GetSpendingByCategoryQuery
+
+```csharp
 public record GetSpendingByCategoryQuery(
     DateTime FromDate,
     DateTime ToDate
 ) : IRequest<List<CategorySpendingDto>>;
-Handler Flow:
+```
 
-text
+**Handler Flow:**
+
+```text
 1. Get UserId from IUserContext
 2. Build DateRange from FromDate/ToDate
 3. Load all transactions for user within date range
@@ -291,8 +304,11 @@ text
 7. Sort by amount descending
 8. If more than 6 categories: group remaining into "Other"
 9. Return List<CategorySpendingDto>
-CategorySpendingDto
-csharp
+```
+
+#### CategorySpendingDto
+
+```csharp
 public record CategorySpendingDto(
     Guid? CategoryId,
     string CategoryName,
@@ -301,14 +317,19 @@ public record CategorySpendingDto(
     string Currency,
     decimal Percentage
 );
-GetMonthlyTrendsQuery
-csharp
+```
+
+#### GetMonthlyTrendsQuery
+
+```csharp
 public record GetMonthlyTrendsQuery(
     int Year
 ) : IRequest<List<MonthlyTrendDto>>;
-Handler Flow:
+```
 
-text
+**Handler Flow:**
+
+```text
 1. Get UserId from IUserContext
 2. Build DateRange for full year (Jan 1 – Dec 31)
 3. Load all transactions for user within year
@@ -319,8 +340,11 @@ text
    c. Calculate net (income - expenses)
 6. Fill missing months with zero values
 7. Return List<MonthlyTrendDto> (always 12 entries, Jan–Dec)
-MonthlyTrendDto
-csharp
+```
+
+#### MonthlyTrendDto
+
+```csharp
 public record MonthlyTrendDto(
     int Month,
     string MonthName,
@@ -330,15 +354,20 @@ public record MonthlyTrendDto(
     string Currency,
     int TransactionCount
 );
-GetYearlyComparisonQuery
-csharp
+```
+
+#### GetYearlyComparisonQuery
+
+```csharp
 public record GetYearlyComparisonQuery(
     int Year1,
     int Year2
 ) : IRequest<List<YearlyComparisonDto>>;
-Handler Flow:
+```
 
-text
+**Handler Flow:**
+
+```text
 1. Get UserId from IUserContext
 2. Load all transactions for user in Year1 and Year2
 3. Group each year's transactions by month
@@ -349,8 +378,11 @@ text
    d. Percentage change ((Year2 - Year1) / Year1 * 100)
 5. Fill missing months with zero values
 6. Return List<YearlyComparisonDto> (always 12 entries)
-YearlyComparisonDto
-csharp
+```
+
+#### YearlyComparisonDto
+
+```csharp
 public record YearlyComparisonDto(
     int Month,
     string MonthName,
@@ -360,17 +392,22 @@ public record YearlyComparisonDto(
     decimal? PercentageChange,
     string Currency
 );
-Note: PercentageChange is null when Year1Amount is 0 (division by zero protection).
+```
 
-GetTransactionSummaryQuery
-csharp
+> **Note:** PercentageChange is null when Year1Amount is 0 (division by zero protection).
+
+#### GetTransactionSummaryQuery
+
+```csharp
 public record GetTransactionSummaryQuery(
     DateTime FromDate,
     DateTime ToDate
 ) : IRequest<TransactionSummaryDto>;
-Handler Flow:
+```
 
-text
+**Handler Flow:**
+
+```text
 1. Get UserId from IUserContext
 2. Build specifications: user + date range
 3. Load all matching transactions
@@ -380,8 +417,11 @@ text
    c. NetAmount: TotalIncome - TotalExpenses
    d. TransactionCount: total number of transactions
 5. Return TransactionSummaryDto
-TransactionSummaryDto
-csharp
+```
+
+#### TransactionSummaryDto
+
+```csharp
 public record TransactionSummaryDto(
     decimal TotalIncome,
     decimal TotalExpenses,
@@ -391,21 +431,29 @@ public record TransactionSummaryDto(
     DateTime FromDate,
     DateTime ToDate
 );
-GetRecentTransactionsQuery
-csharp
+```
+
+#### GetRecentTransactionsQuery
+
+```csharp
 public record GetRecentTransactionsQuery(
     int Count = 10
 ) : IRequest<List<TransactionDto>>;
-Handler Flow:
+```
 
-text
+**Handler Flow:**
+
+```text
 1. Get UserId from IUserContext
 2. Load transactions for user, sorted by date descending
 3. Take first N (default 10)
 4. Map to TransactionDto list
 5. Return list
-SearchTransactionsQuery
-csharp
+```
+
+#### SearchTransactionsQuery
+
+```csharp
 public record SearchTransactionsQuery(
     string? Keyword = null,
     DateTime? FromDate = null,
@@ -416,9 +464,11 @@ public record SearchTransactionsQuery(
     int Page = 1,
     int PageSize = 50
 ) : IRequest<PaginatedResultDto<TransactionDto>>;
-Handler Flow:
+```
 
-text
+**Handler Flow:**
+
+```text
 1. Get UserId from IUserContext
 2. Start with TransactionByUserSpecification(userId)
 3. If Keyword provided: AND with TransactionByDescriptionKeywordSpecification
@@ -429,8 +479,11 @@ text
 8. Query via ITransactionRepository.FindBySpecificationAsync()
 9. Apply pagination
 10. Return PaginatedResultDto<TransactionDto>
-FR-4.03: Frontend — Dashboard Page
-text
+```
+
+### FR-4.03: Frontend — Dashboard Page
+
+```text
 Frontend/
 ├── Pages/
 │   ├── Dashboard.cshtml               # Complete replacement of Phase 1 stub
@@ -451,8 +504,11 @@ Frontend/
 │   ├── _Layout.cshtml                 # Updated: Chart.js CDN, dashboard as default
 │   └── Components/
 │       └── _DateRangeFilter.cshtml    # NEW: reusable date range filter partial
-Dashboard PageModel
-csharp
+```
+
+#### Dashboard PageModel
+
+```csharp
 [Authorize]
 public class DashboardModel : PageModel
 {
@@ -514,17 +570,22 @@ public class DashboardModel : PageModel
         };
     }
 }
-Dashboard View Requirements
-Summary Cards Section:
+```
 
-Card	Value	Icon	Color	Format
-Total Income	Summary.TotalIncome	📈	Green (text-green-600)	€1,234.56
-Total Expenses	Summary.TotalExpenses	📉	Red (text-red-600)	€1,234.56
-Net Amount	Summary.NetAmount	💰	Green if ≥ 0, Red if < 0	€1,234.56
-Transactions	Summary.TransactionCount	📊	Blue (text-blue-600)	123
-Charts Section:
+#### Dashboard View Requirements
 
-html
+**Summary Cards Section:**
+
+| Card | Value | Icon | Color | Format |
+|------|-------|------|-------|--------|
+| Total Income | Summary.TotalIncome | 📈 | Green (text-green-600) | €1,234.56 |
+| Total Expenses | Summary.TotalExpenses | 📉 | Red (text-red-600) | €1,234.56 |
+| Net Amount | Summary.NetAmount | 💰 | Green if ≥ 0, Red if < 0 | €1,234.56 |
+| Transactions | Summary.TransactionCount | 📊 | Blue (text-blue-600) | 123 |
+
+**Charts Section:**
+
+```html
 <!-- Pie Chart: Category Breakdown -->
 <div class="bg-white rounded-lg shadow p-6">
     <h3 class="text-lg font-semibold mb-4">Spending by Category</h3>
@@ -542,9 +603,11 @@ html
     <h3 class="text-lg font-semibold mb-4">Year over Year</h3>
     <canvas id="yearlyComparisonChart"></canvas>
 </div>
-Chart.js Configuration Pattern:
+```
 
-javascript
+**Chart.js Configuration Pattern:**
+
+```javascript
 // Data passed from server via JSON in a <script> block
 const categoryData = @Html.Raw(Json.Serialize(Model.SpendingByCategory));
 const monthlyData = @Html.Raw(Json.Serialize(Model.MonthlyTrends));
@@ -616,15 +679,18 @@ new Chart(document.getElementById('yearlyComparisonChart'), {
     },
     options: { responsive: true, scales: { y: { beginAtZero: true } } }
 });
-Recent Transactions Widget:
+```
 
-Table with columns: Date, Description, Amount, Category
-Maximum 10 rows
-"View all transactions →" link at bottom
-Amount formatted with color (green positive, red negative)
-Date Range Filter Component (_DateRangeFilter.cshtml):
+**Recent Transactions Widget:**
 
-html
+- Table with columns: Date, Description, Amount, Category
+- Maximum 10 rows
+- "View all transactions →" link at bottom
+- Amount formatted with color (green positive, red negative)
+
+**Date Range Filter Component (`_DateRangeFilter.cshtml`):**
+
+```html
 <!-- Reusable partial view -->
 <div x-data="{ showCustom: false }" class="flex flex-wrap gap-2 items-center mb-6">
     <select name="DateFilter" class="rounded-md border-gray-300 ..."
@@ -643,8 +709,11 @@ html
 
     <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md">Apply</button>
 </div>
-Search Transactions Page (/Transactions/Search)
-csharp
+```
+
+#### Search Transactions Page (`/Transactions/Search`)
+
+```csharp
 [Authorize]
 public class SearchTransactionsModel : PageModel
 {
@@ -683,20 +752,20 @@ public class SearchTransactionsModel : PageModel
             Keyword, FromDate, ToDate, CategoryId, MinAmount, MaxAmount, Page));
     }
 }
-View Requirements:
+```
 
-Filter panel at top:
-Keyword text input with search icon
-Date range: From and To date pickers
-Category dropdown (all categories + "All Categories" option)
-Amount range: Min and Max number inputs
-Search button + Clear filters button
-Results table (same format as transaction list)
-Result count: "Showing N of M transactions"
-Filters preserved in URL query parameters
-Pagination controls
-FR-4.04: Updated Navigation
-Authenticated Navigation Items (Updated):
+**View Requirements:**
+
+- Filter panel at top:
+  - Keyword text input with search icon
+  - Date range: From and To date pickers
+  - Category dropdown (all categories + "All Categories" option)
+  - Amount range: Min and Max number inputs
+  - Search button + Clear filters button
+- Results table (same format as transaction list)
+- Result count: "Showing N of M transactions"
+- Filters preserved in URL query parameters
+- Pagination controls
 
 ### FR-4.04: Updated Navigation
 
@@ -828,14 +897,10 @@ Query: ITransactionRepository.FindBySpecificationAsync(composed)
 | SauronSheet.Frontend | None | Chart.js added via CDN in layout |
 | SauronSheet.Domain.Tests | None | Existing xUnit + Moq |
 | SauronSheet.Application.Tests | None | Existing xUnit + Moq |
-SauronSheet.Domain	None	Still zero dependencies
-SauronSheet.Application	None	No new packages needed
-SauronSheet.Infrastructure	None	Existing Supabase client handles analytics queries
-SauronSheet.Frontend	None	Chart.js added via CDN in layout
-SauronSheet.Domain.Tests	None	Existing xUnit + Moq
-SauronSheet.Application.Tests	None	Existing xUnit + Moq
-File Structure (Phase 4 Additions)
-text
+
+**File Structure (Phase 4 Additions)**
+
+```text
 Domain/
 ├── Specifications/
 │   ├── (existing from Phase 2)
@@ -881,11 +946,7 @@ Frontend/
 ├── wwwroot/
 │   └── js/
 │       └── charts.js                                        # NEW (Chart.js initialization)
-text
-
-Ahora va la **Parte 2/2** — pégalo justo después:
-
-```markdown
+```
 
 ---
 
@@ -1042,8 +1103,6 @@ THEN returns 25 items (page 2)
 AND TotalCount = 100
 AND TotalPages = 4
 
-text
-
 ### Domain Specification Tests
 TEST T-4.26: DescriptionKeywordSpec_MatchesPartialKeyword
 GIVEN a Transaction with description = "Morning Coffee at Starbucks"
@@ -1085,8 +1144,6 @@ GIVEN specs: user + dateRange + category
 AND a Transaction matching user and dateRange but NOT category
 WHEN all three composed with And
 THEN returns false (all conditions must be true)
-
-text
 
 ---
 
@@ -1204,6 +1261,7 @@ text
 8. **Search keyword is a simple `Contains` match** on the description field. Full-text search (PostgreSQL `tsvector`) is a post-MVP optimization.
 9. **`CompositeSpecification<T>` uses `Expression.Invoke`** which may not translate directly to all ORM query providers. For Supabase Postgrest (in-memory evaluation), this is fine. Document as known limitation.
 10. **No caching of analytics results.** Each dashboard load re-queries the database. Caching is a Phase 6 optimization.
+11. **Alpine.js is available from Phase 3.** The date range filter component uses Alpine.js directives (`x-data`, `x-show`, `x-on:change`). Alpine.js was added to the layout in Phase 3 (Transaction Import Pipeline) and does not need to be re-added.
 
 ---
 
@@ -1346,8 +1404,6 @@ Step 22: Final test + coverage validation
 └── Audit: no forbidden layer references
 └── ✅ MVP CHECKPOINT: All core features operational
 
-text
-
 ### Spec-Driven Workflow Compliance
 
 | Step | Workflow Stage           | Phase 4 Action                                                                |
@@ -1401,44 +1457,56 @@ const incomeLineColor = '#10B981';  // Green
 // Bar chart colors
 const year1BarColor = '#3B82F6';    // Blue
 const year2BarColor = '#8B5CF6';    // Purple
-Security Considerations
-☑️ All analytics queries verify UserId from IUserContext (handler-level tenant isolation)
-☑️ Search keyword is used in expression lambda (not raw SQL) — no injection risk
-☑️ Date range inputs validated (ToDate ≥ FromDate; no future dates beyond reasonable range)
-☑️ Amount range inputs validated (MinAmount ≤ MaxAmount; non-negative)
-☑️ URL query parameters are server-validated (malicious values rejected gracefully)
-☑️ Chart.js CDN loaded via HTTPS with integrity hash (SRI) when available
-☑️ JSON data serialized server-side (no client-side API calls for analytics)
-☑️ No sensitive data exposed in chart tooltips or labels
-Cumulative Test Count (Phases 0–4)
-Phase	Domain Tests	Application Tests	Total Phase	Cumulative Total
-Phase 0	11	2	13	13
-Phase 1	8	14	22	35
-Phase 2	81	0	81	116
-Phase 3	5	33	38	154
-Phase 4	7	25	32	186
-MVP Completion Checklist
-✅ This checklist validates that the MVP is fully operational after Phase 4.
+```
 
-#	Feature	Phase Delivered	Status
-1	User registration (email/password)	Phase 1	✅
-2	User login with JWT cookies	Phase 1	✅
-3	User logout	Phase 1	✅
-4	Tenant isolation (handler + RLS)	Phase 1	✅
-5	Domain model (entities, VOs, services)	Phase 2	✅
-6	PDF bank statement import	Phase 3	✅
-7	Duplicate transaction detection	Phase 3	✅
-8	Manual transaction creation	Phase 3	✅
-9	Transaction categorization	Phase 3	✅
-10	Transaction deletion	Phase 3	✅
-11	Category CRUD with system default guards	Phase 3	✅
-12	System default categories (4)	Phase 3	✅
-13	Analytics dashboard with summary cards	Phase 4	✅
-14	Spending by category pie chart	Phase 4	✅
-15	Monthly trends line chart	Phase 4	✅
-16	Yearly comparison bar chart	Phase 4	✅
-17	Transaction search with multi-filter	Phase 4	✅
-18	Date range filter (reusable component)	Phase 4	✅
-19	Responsive design (mobile + desktop)	Phase 4	✅
-20	≥186 automated tests passing	Phase 0–4	✅
+### Security Considerations
+
+- ☑️ All analytics queries verify UserId from IUserContext (handler-level tenant isolation)
+- ☑️ Search keyword is used in expression lambda (not raw SQL) — no injection risk
+- ☑️ Date range inputs validated (ToDate ≥ FromDate; no future dates beyond reasonable range)
+- ☑️ Amount range inputs validated (MinAmount ≤ MaxAmount; non-negative)
+- ☑️ URL query parameters are server-validated (malicious values rejected gracefully)
+- ☑️ Chart.js CDN loaded via HTTPS with integrity hash (SRI) when available
+- ☑️ JSON data serialized server-side (no client-side API calls for analytics)
+- ☑️ No sensitive data exposed in chart tooltips or labels
+
+### Cumulative Test Count (Phases 0–4)
+
+| Phase | Domain Tests | Application Tests | Total Phase | Cumulative Total |
+|-------|-------------|-------------------|-------------|-----------------|
+| Phase 0 | 11 | 2 | 13 | 13 |
+| Phase 1 | 8 | 14 | 22 | 35 |
+| Phase 2 | 81 | 0 | 81 | 116 |
+| Phase 3 | 5 | 33 | 38 | 154 |
+| Phase 4 | 7 | 25 | 32 | 186 |
+
+### MVP Completion Checklist
+
+> ✅ This checklist validates that the MVP is fully operational after Phase 4.
+
+| # | Feature | Phase Delivered | Status |
+|---|---------|-----------------|--------|
+| 1 | User registration (email/password) | Phase 1 | ✅ |
+| 2 | User login with JWT cookies | Phase 1 | ✅ |
+| 3 | User logout | Phase 1 | ✅ |
+| 4 | Tenant isolation (handler + RLS) | Phase 1 | ✅ |
+| 5 | Domain model (entities, VOs, services) | Phase 2 | ✅ |
+| 6 | PDF bank statement import | Phase 3 | ✅ |
+| 7 | Duplicate transaction detection | Phase 3 | ✅ |
+| 8 | Manual transaction creation | Phase 3 | ✅ |
+| 9 | Transaction categorization | Phase 3 | ✅ |
+| 10 | Transaction deletion | Phase 3 | ✅ |
+| 11 | Category CRUD with system default guards | Phase 3 | ✅ |
+| 12 | System default categories (4) | Phase 3 | ✅ |
+| 13 | Analytics dashboard with summary cards | Phase 4 | ✅ |
+| 14 | Spending by category pie chart | Phase 4 | ✅ |
+| 15 | Monthly trends line chart | Phase 4 | ✅ |
+| 16 | Yearly comparison bar chart | Phase 4 | ✅ |
+| 17 | Transaction search with multi-filter | Phase 4 | ✅ |
+| 18 | Date range filter (reusable component) | Phase 4 | ✅ |
+| 19 | Responsive design (mobile + desktop) | Phase 4 | ✅ |
+| 20 | ≥186 automated tests passing | Phase 0–4 | ✅ |
+
+---
+
 Phase Spec Version: 1.0.0 | Created: 2026-02-15 | Aligned with Constitution v1.1.0
