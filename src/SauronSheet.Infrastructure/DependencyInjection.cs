@@ -41,7 +41,12 @@ public static class DependencyInjection
 
         // Auth services (Phase 1)
         services.AddHttpClient<IAuthService, SupabaseAuthService>()
-            .ConfigureHttpClient(client => client.BaseAddress = new Uri(supabaseUrl));
+            .ConfigureHttpClient(client =>
+            {
+                // Ensure trailing slash for relative URI resolution
+                var baseUrl = supabaseUrl.TrimEnd('/') + "/";
+                client.BaseAddress = new Uri(baseUrl);
+            });
 
         services.AddScoped<IUserContext, HttpUserContext>();
         services.AddHttpContextAccessor();

@@ -2,6 +2,7 @@ namespace SauronSheet.Infrastructure.Auth;
 
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
 
@@ -9,18 +10,22 @@ using SauronSheet.Domain.ValueObjects;
 /// Supabase Auth Service Implementation.
 /// Implements IAuthService from Domain layer.
 /// Calls Supabase Auth REST API endpoints for authentication operations.
+/// HttpClient.BaseAddress is pre-configured to the Supabase URL via DI.
 /// </summary>
 public class SupabaseAuthService : IAuthService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _supabaseUrl;
     private readonly string _supabaseKey;
 
-    public SupabaseAuthService(HttpClient httpClient, string supabaseUrl, string supabaseKey)
+    public SupabaseAuthService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _supabaseUrl = supabaseUrl;
-        _supabaseKey = supabaseKey;
+        _supabaseKey = configuration["Supabase:Key"]
+            ?? throw new InvalidOperationException("Supabase:Key is not configured.");
+
+        // Set the apikey header required by Supabase REST API
+        _httpClient.DefaultRequestHeaders.Remove("apikey");
+        _httpClient.DefaultRequestHeaders.Add("apikey", _supabaseKey);
     }
 
     public async Task<AuthResult> RegisterAsync(string email, string password)
@@ -29,7 +34,7 @@ public class SupabaseAuthService : IAuthService
         {
             var payload = new { email, password };
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_supabaseUrl}/auth/v1/signup",
+                "auth/v1/signup",
                 payload);
 
             if (!response.IsSuccessStatusCode)
@@ -38,7 +43,9 @@ public class SupabaseAuthService : IAuthService
                 var jsonDoc = JsonDocument.Parse(errorContent);
                 var message = jsonDoc.RootElement.TryGetProperty("error_description", out var errorDesc)
                     ? errorDesc.GetString() ?? "Registration failed"
-                    : "Registration failed";
+                    : jsonDoc.RootElement.TryGetProperty("msg", out var msg)
+                        ? msg.GetString() ?? "Registration failed"
+                        : "Registration failed";
                 return AuthResult.Failure(message);
             }
 
@@ -47,9 +54,15 @@ public class SupabaseAuthService : IAuthService
             var root = doc.RootElement;
 
             var userId = root.GetProperty("user").GetProperty("id").GetString() ?? "";
-            var accessToken = root.GetProperty("session").GetProperty("access_token").GetString() ?? "";
-            var refreshToken = root.GetProperty("session").GetProperty("refresh_token").GetString() ?? "";
-            var expiresIn = root.GetProperty("session").GetProperty("expires_in").GetInt32();
+            // Supabase may return null session if email confirmation is required
+            if (!root.TryGetProperty("session", out var session) || session.ValueKind == JsonValueKind.Null)
+            {
+                return AuthResult.Failure("Registration successful. Please check your email to confirm your account.");
+            }
+
+            var accessToken = session.GetProperty("access_token").GetString() ?? "";
+            var refreshToken = session.GetProperty("refresh_token").GetString() ?? "";
+            var expiresIn = session.GetProperty("expires_in").GetInt32();
 
             return AuthResult.Success(
                 new UserId(userId),
@@ -75,7 +88,7 @@ public class SupabaseAuthService : IAuthService
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_supabaseUrl}/auth/v1/token?grant_type=password",
+                "auth/v1/token?grant_type=password",
                 payload);
 
             if (!response.IsSuccessStatusCode)
@@ -106,7 +119,7 @@ public class SupabaseAuthService : IAuthService
     {
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{_supabaseUrl}/auth/v1/logout");
+            var request = new HttpRequestMessage(HttpMethod.Post, "auth/v1/logout");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
             await _httpClient.SendAsync(request);
@@ -128,7 +141,7 @@ public class SupabaseAuthService : IAuthService
             };
 
             var response = await _httpClient.PostAsJsonAsync(
-                $"{_supabaseUrl}/auth/v1/token?grant_type=refresh_token",
+                "auth/v1/token?grant_type=refresh_token",
                 payload);
 
             if (!response.IsSuccessStatusCode)
@@ -159,7 +172,7 @@ public class SupabaseAuthService : IAuthService
     {
         try
         {
-            var response = await _httpClient.GetAsync($"{_supabaseUrl}/auth/v1/user");
+            var response = await _httpClient.GetAsync("auth/v1/user");
             if (!response.IsSuccessStatusCode)
                 return null;
 
