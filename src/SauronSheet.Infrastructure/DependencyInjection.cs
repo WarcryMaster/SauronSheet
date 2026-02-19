@@ -52,12 +52,23 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
 
         // CRITICAL FIX C-1: Supabase client registration (Phase 3)
-        services.AddSingleton<Supabase.Client>(sp =>
+        // Scoped: each request gets a client with the user's JWT for RLS compliance
+        services.AddScoped<Supabase.Client>(sp =>
         {
+            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+            var token = httpContextAccessor.HttpContext?.Request.Cookies["sb-access-token"];
+
+            var headers = new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(token))
+            {
+                headers["Authorization"] = $"Bearer {token}";
+            }
+
             var options = new Supabase.SupabaseOptions
             {
-                AutoRefreshToken = true,
-                AutoConnectRealtime = false
+                AutoRefreshToken = false,
+                AutoConnectRealtime = false,
+                Headers = headers
             };
             return new Supabase.Client(supabaseUrl, supabaseKey, options);
         });
