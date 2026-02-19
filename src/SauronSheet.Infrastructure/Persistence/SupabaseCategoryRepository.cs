@@ -2,10 +2,79 @@ namespace SauronSheet.Infrastructure.Persistence;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Postgrest;
+using Postgrest.Attributes;
+using Postgrest.Models;
 using Domain.Entities;
 using Domain.Repositories;
 using Domain.ValueObjects;
+
+/// <summary>
+/// Postgrest DTO for the categories table.
+/// </summary>
+[Table("categories")]
+internal class CategoryRow : BaseModel
+{
+    [PrimaryKey("id", false)]
+    [Column("id")]
+    public string Id { get; set; } = "";
+
+    [Column("user_id")]
+    public string UserId { get; set; } = "";
+
+    [Column("name")]
+    public string Name { get; set; } = "";
+
+    [Column("color")]
+    public string? Color { get; set; }
+
+    [Column("icon")]
+    public string? Icon { get; set; }
+
+    [Column("is_system_default")]
+    public bool IsSystemDefault { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    [Column("updated_at")]
+    public DateTime? UpdatedAt { get; set; }
+
+    public Category ToDomain()
+    {
+        if (IsSystemDefault)
+        {
+            return Category.CreateSystemDefault(
+                new CategoryId(Guid.Parse(Id)),
+                new UserId(UserId),
+                Name);
+        }
+
+        return new Category(
+            new CategoryId(Guid.Parse(Id)),
+            new UserId(UserId),
+            Name,
+            Color,
+            Icon);
+    }
+
+    public static CategoryRow FromDomain(Category c)
+    {
+        return new CategoryRow
+        {
+            Id = c.Id.Value.ToString(),
+            UserId = c.UserId.Value,
+            Name = c.Name,
+            Color = c.Color,
+            Icon = c.Icon,
+            IsSystemDefault = c.IsSystemDefault,
+            CreatedAt = c.CreatedAt,
+            UpdatedAt = c.UpdatedAt
+        };
+    }
+}
 
 /// <summary>
 /// Supabase implementation of ICategoryRepository.
@@ -21,52 +90,75 @@ public class SupabaseCategoryRepository : ICategoryRepository
 
     public async Task<Category?> GetByIdAsync(CategoryId id)
     {
-        // TODO Phase 3F: Implement Supabase query
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase GetByIdAsync");
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.Id == id.Value.ToString())
+            .Get();
+
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task<IReadOnlyList<Category>> GetByUserIdAsync(UserId userId)
     {
-        // TODO Phase 3F: Implement Supabase query
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase GetByUserIdAsync");
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Order("name", Constants.Ordering.Ascending)
+            .Get();
+
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 
     public async Task<Category?> FindByNameAndUserAsync(UserId userId, string name)
     {
-        // TODO Phase 3F: Implement Supabase query
-        // SELECT * FROM categories WHERE user_id = userId.Value AND name = name LIMIT 1
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase FindByNameAndUserAsync");
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.Name == name)
+            .Limit(1)
+            .Get();
+
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task<IReadOnlyList<Category>> GetSystemDefaultsAsync(UserId userId)
     {
-        // TODO Phase 3F: Implement Supabase query
-        // SELECT * FROM categories WHERE user_id = userId.Value AND is_system_default = TRUE
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase GetSystemDefaultsAsync");
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.IsSystemDefault == true)
+            .Get();
+
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 
     public async Task AddAsync(Category category)
     {
-        // TODO Phase 3F: Implement Supabase insert
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase AddAsync");
+        var row = CategoryRow.FromDomain(category);
+        await _client.From<CategoryRow>().Insert(row);
     }
 
     public async Task UpdateAsync(Category category)
     {
-        // TODO Phase 3F: Implement Supabase update
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase UpdateAsync");
+        var row = CategoryRow.FromDomain(category);
+        await _client.From<CategoryRow>()
+            .Where(x => x.Id == category.Id.Value.ToString())
+            .Update(row);
     }
 
     public async Task DeleteAsync(CategoryId id)
     {
-        // TODO Phase 3F: Implement Supabase delete
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase DeleteAsync");
+        await _client.From<CategoryRow>()
+            .Where(x => x.Id == id.Value.ToString())
+            .Delete();
     }
 
     public async Task<bool> HasTransactionsAsync(CategoryId categoryId)
     {
-        // TODO Phase 3F: Implement Supabase query
-        // SELECT COUNT(*) FROM transactions WHERE category_id = categoryId.Value
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase HasTransactionsAsync");
+        var catIdStr = categoryId.Value.ToString();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.CategoryId == catIdStr)
+            .Limit(1)
+            .Get();
+
+        return response.Models.Any();
     }
 }

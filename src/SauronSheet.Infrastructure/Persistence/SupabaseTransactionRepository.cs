@@ -2,15 +2,88 @@ namespace SauronSheet.Infrastructure.Persistence;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Postgrest;
+using Postgrest.Attributes;
+using Postgrest.Models;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Domain.Specifications;
 
 /// <summary>
+/// Postgrest DTO for the transactions table.
+/// </summary>
+[Table("transactions")]
+internal class TransactionRow : BaseModel
+{
+    [PrimaryKey("id", false)]
+    [Column("id")]
+    public string Id { get; set; } = "";
+
+    [Column("user_id")]
+    public string UserId { get; set; } = "";
+
+    [Column("amount")]
+    public decimal Amount { get; set; }
+
+    [Column("currency")]
+    public string Currency { get; set; } = "EUR";
+
+    [Column("date")]
+    public DateTime Date { get; set; }
+
+    [Column("description")]
+    public string Description { get; set; } = "";
+
+    [Column("category_id")]
+    public string? CategoryId { get; set; }
+
+    [Column("imported_from")]
+    public string? ImportedFrom { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    [Column("updated_at")]
+    public DateTime? UpdatedAt { get; set; }
+
+    public Transaction ToDomain()
+    {
+        return new Transaction(
+            new TransactionId(Guid.Parse(Id)),
+            new UserId(UserId),
+            new Money(Amount, Currency),
+            Date,
+            Description,
+            string.IsNullOrEmpty(CategoryId) ? null : new CategoryId(Guid.Parse(CategoryId)),
+            ImportedFrom);
+    }
+
+    public static TransactionRow FromDomain(Transaction t)
+    {
+        return new TransactionRow
+        {
+            Id = t.Id.Value.ToString(),
+            UserId = t.UserId.Value,
+            Amount = t.Amount.Amount,
+            Currency = t.Amount.Currency,
+            Date = t.Date,
+            Description = t.Description,
+            CategoryId = t.CategoryId?.Value.ToString(),
+            ImportedFrom = t.ImportedFrom,
+            CreatedAt = t.CreatedAt,
+            UpdatedAt = t.UpdatedAt
+        };
+    }
+}
+
+/// <summary>
 /// Supabase implementation of ITransactionRepository.
-/// CRITICAL FIX C-1: Supabase.Client injected via DI.
+/// Uses Postgrest client for CRUD operations.
+/// Specifications are evaluated in-memory after fetching user transactions.
 /// </summary>
 public class SupabaseTransactionRepository : ITransactionRepository
 {
@@ -23,67 +96,98 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<Transaction?> GetByIdAsync(TransactionId id)
     {
-        // TODO Phase 3F: Implement Supabase query
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase GetByIdAsync");
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.Id == id.Value.ToString())
+            .Get();
+
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAsync(UserId userId)
     {
-        // TODO Phase 3F: Implement Supabase query
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase GetByUserIdAsync");
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Order("date", Constants.Ordering.Descending)
+            .Get();
+
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 
     public async Task<IReadOnlyList<Transaction>> FindBySpecificationAsync(
         ISpecification<Transaction> specification)
     {
-        // TODO Phase 3F: Implement specification to Postgrest query translation
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase FindBySpecificationAsync");
+        // Fetch all user transactions from Supabase, then apply specification in-memory.
+        // The specification's Criteria expression is compiled and used as a filter.
+        // This approach works for MVP scale. For large datasets, translate specs to Postgrest filters.
+        var response = await _client.From<TransactionRow>()
+            .Limit(specification.MaxResults)
+            .Get();
+
+        var allTransactions = response.Models.Select(r => r.ToDomain()).ToList();
+        var predicate = specification.Criteria.Compile();
+        return allTransactions.Where(predicate).ToList().AsReadOnly();
     }
 
     public async Task AddAsync(Transaction transaction)
     {
-        // TODO Phase 3F: Implement Supabase insert
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase AddAsync");
+        var row = TransactionRow.FromDomain(transaction);
+        await _client.From<TransactionRow>().Insert(row);
     }
 
     public async Task UpdateAsync(Transaction transaction)
     {
-        // TODO Phase 3F: Implement Supabase update
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase UpdateAsync");
+        var row = TransactionRow.FromDomain(transaction);
+        await _client.From<TransactionRow>()
+            .Where(x => x.Id == transaction.Id.Value.ToString())
+            .Update(row);
     }
 
     public async Task DeleteAsync(TransactionId id)
     {
-        // TODO Phase 3F: Implement Supabase delete
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase DeleteAsync");
+        await _client.From<TransactionRow>()
+            .Where(x => x.Id == id.Value.ToString())
+            .Delete();
     }
 
     public async Task<bool> ExistsAsync(TransactionId id)
     {
-        // TODO Phase 3F: Implement Supabase exists check
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase ExistsAsync");
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.Id == id.Value.ToString())
+            .Get();
+
+        return response.Models.Any();
     }
 
-    /// <summary>
-    /// Checks if a duplicate transaction exists.
-    /// CRITICAL FIX C-3: Duplicate detection ignores currency.
-    /// Rationale: Users are unlikely to have same-day, same-amount transactions
-    /// in different currencies. If this becomes an issue, currency can be added post-MVP.
-    /// </summary>
     public async Task<bool> ExistsDuplicateAsync(
         UserId userId, DateTime date, decimal amount, string description)
     {
-        // TODO Phase 3F: Implement duplicate check
-        // NOTE: Currency is NOT checked
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase ExistsDuplicateAsync");
+        // CRITICAL FIX C-3: Duplicate detection ignores currency
+        var dateStr = date.ToString("yyyy-MM-dd");
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.Amount == amount)
+            .Where(x => x.Description == description)
+            .Get();
+
+        // Filter by date in-memory (Postgrest date filtering can be tricky with timezone)
+        return response.Models.Any(r => r.Date.Date == date.Date);
     }
 
-    /// <summary>
-    /// CRITICAL FIX I-4: Get transaction counts grouped by category.
-    /// </summary>
     public async Task<Dictionary<CategoryId, int>> GetCountsByCategoriesAsync(List<CategoryId> categoryIds)
     {
-        // TODO Phase 3F: Implement batch count query
-        throw new NotImplementedException("TODO Phase 3F: Implement Supabase GetCountsByCategoriesAsync");
+        var result = new Dictionary<CategoryId, int>();
+
+        foreach (var catId in categoryIds)
+        {
+            var catIdStr = catId.Value.ToString();
+            var response = await _client.From<TransactionRow>()
+                .Where(x => x.CategoryId == catIdStr)
+                .Get();
+
+            result[catId] = response.Models.Count;
+        }
+
+        return result;
     }
 }
