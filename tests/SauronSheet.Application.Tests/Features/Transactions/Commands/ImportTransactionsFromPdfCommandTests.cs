@@ -70,7 +70,7 @@ public class ImportTransactionsFromPdfCommandTests
         Assert.Equal(0, result.SkippedCount);
         Assert.Equal(2, result.TotalProcessed);
         _mockTransactionRepo.Verify(x => x.AddAsync(It.IsAny<Transaction>()), Times.Exactly(2));
-        _mockPdfImportRepo.Verify(x => x.AddAsync(It.IsAny<ImportBatch>()), Times.Once);
+        _mockPdfImportRepo.Verify(x => x.AddAsync(It.IsAny<ImportBatch>(), It.IsAny<UserId>()), Times.Once);
     }
 
     [Fact]

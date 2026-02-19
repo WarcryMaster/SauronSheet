@@ -10,6 +10,6 @@ using ValueObjects;
 /// </summary>
 public interface IPdfImportRepository
 {
-    Task AddAsync(ImportBatch importBatch);
+    Task AddAsync(ImportBatch importBatch, UserId userId);
     Task<IReadOnlyList<ImportBatch>> GetByUserIdAsync(UserId userId);
 }

@@ -74,20 +74,9 @@ public class SupabasePdfImportRepository : IPdfImportRepository
         _client = client ?? throw new ArgumentNullException(nameof(client));
     }
 
-    public async Task AddAsync(ImportBatch importBatch)
+    public async Task AddAsync(ImportBatch importBatch, UserId userId)
     {
-        // ImportBatch doesn't carry UserId — we need it from context.
-        // For now, extract from the Supabase client auth or pass a default.
-        // TODO: Refactor to pass userId explicitly when architecture allows.
-        var row = new PdfImportRow
-        {
-            Id = importBatch.Id.ToString(),
-            UserId = "", // Will be set by RLS or caller context
-            Filename = importBatch.Filename,
-            ImportedCount = importBatch.ImportedCount,
-            SkippedCount = importBatch.SkippedCount,
-            ImportedAt = importBatch.ImportedAt
-        };
+        var row = PdfImportRow.FromDomain(importBatch, userId.Value);
         await _client.From<PdfImportRow>().Insert(row);
     }
 

@@ -5,6 +5,7 @@ using SauronSheet.Application.Features.Transactions.DTOs;
 using SauronSheet.Application.Features.Transactions.Queries;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
+using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
 
 namespace SauronSheet.Application.Tests.Features.Transactions.Queries;
@@ -49,7 +50,7 @@ public class GetRecentTransactionsQueryTests
             .ToList();
 
         _transactionRepoMock
-            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
             .ReturnsAsync(transactions);
         _categoryRepoMock
             .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
@@ -74,7 +75,7 @@ public class GetRecentTransactionsQueryTests
             .ToList();
 
         _transactionRepoMock
-            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
             .ReturnsAsync(transactions);
         _categoryRepoMock
             .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
@@ -93,7 +94,7 @@ public class GetRecentTransactionsQueryTests
     {
         // Arrange
         _transactionRepoMock
-            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
             .ReturnsAsync(new List<Transaction>());
         _categoryRepoMock
             .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
