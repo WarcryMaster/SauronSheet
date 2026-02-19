@@ -16,12 +16,14 @@ public class SupabaseAuthService : IAuthService
 {
     private readonly HttpClient _httpClient;
     private readonly string _supabaseKey;
+    private readonly string _siteUrl;
 
     public SupabaseAuthService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _supabaseKey = configuration["Supabase:Key"]
             ?? throw new InvalidOperationException("Supabase:Key is not configured.");
+        _siteUrl = configuration["Supabase:SiteUrl"] ?? "https://localhost:54099";
 
         // Set the apikey header required by Supabase REST API
         _httpClient.DefaultRequestHeaders.Remove("apikey");
@@ -32,7 +34,15 @@ public class SupabaseAuthService : IAuthService
     {
         try
         {
-            var payload = new { email, password };
+            var payload = new
+            {
+                email,
+                password,
+                options = new
+                {
+                    emailRedirectTo = $"{_siteUrl}/Auth/Login"
+                }
+            };
             var response = await _httpClient.PostAsJsonAsync(
                 "auth/v1/signup",
                 payload);
@@ -47,19 +57,37 @@ public class SupabaseAuthService : IAuthService
             var doc = JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
 
-            // Extract user ID (required)
-            if (!root.TryGetProperty("user", out var userElement) ||
-                !userElement.TryGetProperty("id", out var idElement))
+            // Supabase returns two formats:
+            // 1. With session (email confirmation OFF): { "user": { "id": "..." }, "session": { ... } }
+            // 2. Without session (email confirmation ON): { "id": "...", "email": "...", "confirmation_sent_at": "..." }
+            string userId;
+
+            if (root.TryGetProperty("user", out var userElement) &&
+                userElement.TryGetProperty("id", out var nestedIdElement))
             {
-                return AuthResult.Failure("Registration response missing user data. Raw: " + jsonContent);
+                // Format 1: user nested inside "user" property
+                userId = nestedIdElement.GetString() ?? "";
+            }
+            else if (root.TryGetProperty("id", out var directIdElement))
+            {
+                // Format 2: user object returned directly at root
+                userId = directIdElement.GetString() ?? "";
+            }
+            else
+            {
+                return AuthResult.Failure("Registration response missing user ID.");
             }
 
-            var userId = idElement.GetString() ?? "";
+            // Check if email confirmation is required (no session returned)
+            if (root.TryGetProperty("confirmation_sent_at", out _))
+            {
+                return AuthResult.Failure("Registration successful! Please check your email to confirm your account.");
+            }
 
-            // Supabase may return null session if email confirmation is required
+            // Extract session if available
             if (!root.TryGetProperty("session", out var session) || session.ValueKind == JsonValueKind.Null)
             {
-                return AuthResult.Failure("Registration successful. Please check your email to confirm your account.");
+                return AuthResult.Failure("Registration successful! Please check your email to confirm your account.");
             }
 
             // Extract tokens from session
