@@ -1,0 +1,136 @@
+@page "/Transactions/Search"
+@model SauronSheet.Frontend.Pages.Transactions.SearchModel
+
+@{
+    ViewData["Title"] = "Search Transactions";
+}
+
+<div class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900">🔍 Search Transactions</h1>
+
+    <!-- Filter Panel -->
+    <form method="get" action="/Transactions/Search" class="bg-white rounded-lg shadow p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label for="Keyword" class="block text-sm font-medium text-gray-700 mb-1">🔍 Keyword</label>
+                <input type="text" name="Keyword" id="Keyword" value="@Model.Keyword"
+                       placeholder="Search descriptions..."
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" />
+            </div>
+            <div>
+                <label for="FromDate" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                <input type="date" name="FromDate" id="FromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" />
+            </div>
+            <div>
+                <label for="ToDate" class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                <input type="date" name="ToDate" id="ToDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" />
+            </div>
+            <div>
+                <label for="CategoryId" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select name="CategoryId" id="CategoryId"
+                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                    <option value="">All Categories</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        <option value="@cat.Id" selected="@(Model.CategoryId == cat.Id ? "selected" : null)">@cat.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="MinAmount" class="block text-sm font-medium text-gray-700 mb-1">Min Amount</label>
+                <input type="number" step="0.01" name="MinAmount" id="MinAmount" value="@Model.MinAmount"
+                       placeholder="€0.00"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" />
+            </div>
+            <div>
+                <label for="MaxAmount" class="block text-sm font-medium text-gray-700 mb-1">Max Amount</label>
+                <input type="number" step="0.01" name="MaxAmount" id="MaxAmount" value="@Model.MaxAmount"
+                       placeholder="€9999.99"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" />
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button type="submit"
+                    class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                Search
+            </button>
+            <a href="/Transactions/Search" class="text-sm text-gray-500 hover:text-gray-700">Clear all filters</a>
+        </div>
+    </form>
+
+    @if (Model.Results != null)
+    {
+        <!-- Results Summary -->
+        <div class="text-sm text-gray-600">
+            Showing @Model.Results.Items.Count of @Model.Results.TotalCount transactions
+            @if (!string.IsNullOrEmpty(Model.Keyword) || Model.FromDate.HasValue || Model.ToDate.HasValue || Model.CategoryId.HasValue || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
+            {
+                <span>matching filters</span>
+            }
+        </div>
+
+        @if (Model.Results.Items.Any())
+        {
+            <!-- Results Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach (var tx in Model.Results.Items)
+                            {
+                                <tr>
+                                    <td class="px-4 py-3 text-sm text-gray-600">@tx.Date.ToString("MMM dd, yyyy")</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">@tx.Description</td>
+                                    <td class="px-4 py-3 text-sm text-right font-medium @(tx.Amount >= 0 ? "text-green-600" : "text-red-600")">
+                                        €@tx.Amount.ToString("N2")
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-600">@(tx.CategoryName ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            @if (Model.Results.TotalPages > 1)
+            {
+                <div class="flex justify-between items-center bg-white rounded-lg shadow px-4 py-3">
+                    <div class="text-sm text-gray-700">
+                        Page @Model.Results.PageNumber of @Model.Results.TotalPages
+                    </div>
+                    <div class="flex gap-2">
+                        @if (Model.Results.PageNumber > 1)
+                        {
+                            <a href="/Transactions/Search?Page=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                               class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">← Previous</a>
+                        }
+                        @if (Model.Results.PageNumber < Model.Results.TotalPages)
+                        {
+                            <a href="/Transactions/Search?Page=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                               class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Next →</a>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- Empty State -->
+            <div class="bg-white rounded-lg shadow p-8 text-center">
+                <p class="text-gray-500 mb-2">No transactions match your filters.</p>
+                <p class="text-gray-400 text-sm">Try adjusting your search criteria or <a href="/Transactions/Search" class="text-blue-600 hover:underline">clear all filters</a>.</p>
+            </div>
+        }
+    }
+</div>
