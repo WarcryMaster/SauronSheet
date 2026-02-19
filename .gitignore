@@ -9,3 +9,13 @@ bin/
 obj/
 Debug/
 Release/
+
+# Speckit intermediate artifacts (auto-generated, not needed in repo)
+specs/**/research.md
+specs/**/data-model.md
+specs/**/quickstart.md
+specs/**/contracts/
+specs/master/
+
+# Speckit auto-generated agent file (root copilot-instructions.md is the single source)
+.github/agents/copilot-instructions.md
