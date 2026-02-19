@@ -37,32 +37,42 @@ public class SupabaseAuthService : IAuthService
                 "auth/v1/signup",
                 payload);
 
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                var jsonDoc = JsonDocument.Parse(errorContent);
-                var message = jsonDoc.RootElement.TryGetProperty("error_description", out var errorDesc)
-                    ? errorDesc.GetString() ?? "Registration failed"
-                    : jsonDoc.RootElement.TryGetProperty("msg", out var msg)
-                        ? msg.GetString() ?? "Registration failed"
-                        : "Registration failed";
-                return AuthResult.Failure(message);
+                return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Registration failed"));
             }
 
-            var jsonContent = await response.Content.ReadAsStringAsync();
             var doc = JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
 
-            var userId = root.GetProperty("user").GetProperty("id").GetString() ?? "";
+            // Extract user ID (required)
+            if (!root.TryGetProperty("user", out var userElement) ||
+                !userElement.TryGetProperty("id", out var idElement))
+            {
+                return AuthResult.Failure("Registration response missing user data. Raw: " + jsonContent);
+            }
+
+            var userId = idElement.GetString() ?? "";
+
             // Supabase may return null session if email confirmation is required
             if (!root.TryGetProperty("session", out var session) || session.ValueKind == JsonValueKind.Null)
             {
                 return AuthResult.Failure("Registration successful. Please check your email to confirm your account.");
             }
 
-            var accessToken = session.GetProperty("access_token").GetString() ?? "";
-            var refreshToken = session.GetProperty("refresh_token").GetString() ?? "";
-            var expiresIn = session.GetProperty("expires_in").GetInt32();
+            // Extract tokens from session
+            if (!session.TryGetProperty("access_token", out var atElement) ||
+                !session.TryGetProperty("refresh_token", out var rtElement) ||
+                !session.TryGetProperty("expires_in", out var exElement))
+            {
+                return AuthResult.Failure("Registration successful but session is incomplete.");
+            }
+
+            var accessToken = atElement.GetString() ?? "";
+            var refreshToken = rtElement.GetString() ?? "";
+            var expiresIn = exElement.GetInt32();
 
             return AuthResult.Success(
                 new UserId(userId),
@@ -72,7 +82,7 @@ public class SupabaseAuthService : IAuthService
         }
         catch (Exception ex)
         {
-            return AuthResult.Failure(ex.Message);
+            return AuthResult.Failure($"Registration error: {ex.Message}");
         }
     }
 
@@ -91,27 +101,34 @@ public class SupabaseAuthService : IAuthService
                 "auth/v1/token?grant_type=password",
                 payload);
 
-            if (!response.IsSuccessStatusCode)
-                return AuthResult.Failure("Invalid email or password.");
-
             var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+                return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Invalid email or password."));
+
             var doc = JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
 
-            var userId = root.GetProperty("user").GetProperty("id").GetString() ?? "";
-            var accessToken = root.GetProperty("access_token").GetString() ?? "";
-            var refreshToken = root.GetProperty("refresh_token").GetString() ?? "";
-            var expiresIn = root.GetProperty("expires_in").GetInt32();
+            if (!root.TryGetProperty("user", out var userEl) ||
+                !userEl.TryGetProperty("id", out var idEl))
+                return AuthResult.Failure("Login response missing user data.");
+
+            var userId = idEl.GetString() ?? "";
+
+            if (!root.TryGetProperty("access_token", out var atEl) ||
+                !root.TryGetProperty("refresh_token", out var rtEl) ||
+                !root.TryGetProperty("expires_in", out var exEl))
+                return AuthResult.Failure("Login response missing token data.");
 
             return AuthResult.Success(
                 new UserId(userId),
-                accessToken,
-                refreshToken,
-                DateTime.UtcNow.AddSeconds(expiresIn));
+                atEl.GetString() ?? "",
+                rtEl.GetString() ?? "",
+                DateTime.UtcNow.AddSeconds(exEl.GetInt32()));
         }
-        catch
+        catch (Exception ex)
         {
-            return AuthResult.Failure("Invalid email or password.");
+            return AuthResult.Failure($"Login error: {ex.Message}");
         }
     }
 
@@ -144,23 +161,28 @@ public class SupabaseAuthService : IAuthService
                 "auth/v1/token?grant_type=refresh_token",
                 payload);
 
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
             if (!response.IsSuccessStatusCode)
                 return AuthResult.Failure("Session expired.");
 
-            var jsonContent = await response.Content.ReadAsStringAsync();
             var doc = JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
 
-            var userId = root.GetProperty("user").GetProperty("id").GetString() ?? "";
-            var accessToken = root.GetProperty("access_token").GetString() ?? "";
-            var newRefreshToken = root.GetProperty("refresh_token").GetString() ?? "";
-            var expiresIn = root.GetProperty("expires_in").GetInt32();
+            if (!root.TryGetProperty("user", out var userEl) ||
+                !userEl.TryGetProperty("id", out var idEl))
+                return AuthResult.Failure("Refresh response missing user data.");
+
+            if (!root.TryGetProperty("access_token", out var atEl) ||
+                !root.TryGetProperty("refresh_token", out var rtEl) ||
+                !root.TryGetProperty("expires_in", out var exEl))
+                return AuthResult.Failure("Refresh response missing token data.");
 
             return AuthResult.Success(
-                new UserId(userId),
-                accessToken,
-                newRefreshToken,
-                DateTime.UtcNow.AddSeconds(expiresIn));
+                new UserId(idEl.GetString() ?? ""),
+                atEl.GetString() ?? "",
+                rtEl.GetString() ?? "",
+                DateTime.UtcNow.AddSeconds(exEl.GetInt32()));
         }
         catch
         {
@@ -180,8 +202,9 @@ public class SupabaseAuthService : IAuthService
             var doc = JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
 
-            var id = root.GetProperty("id").GetString() ?? "";
-            var email = root.GetProperty("email").GetString() ?? "";
+            if (!root.TryGetProperty("id", out var idEl) ||
+                !root.TryGetProperty("email", out var emailEl))
+                return null;
 
             string? displayName = null;
             if (root.TryGetProperty("user_metadata", out var metadata) &&
@@ -191,14 +214,41 @@ public class SupabaseAuthService : IAuthService
             }
 
             return new UserProfile(
-                new UserId(id),
-                email,
+                new UserId(idEl.GetString() ?? ""),
+                emailEl.GetString() ?? "",
                 displayName,
                 DateTime.UtcNow);
         }
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts a human-readable error message from a Supabase error JSON response.
+    /// </summary>
+    private static string ExtractErrorMessage(string jsonContent, string fallback)
+    {
+        try
+        {
+            var doc = JsonDocument.Parse(jsonContent);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("error_description", out var desc) && desc.ValueKind == JsonValueKind.String)
+                return desc.GetString() ?? fallback;
+            if (root.TryGetProperty("msg", out var msg) && msg.ValueKind == JsonValueKind.String)
+                return msg.GetString() ?? fallback;
+            if (root.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
+                return message.GetString() ?? fallback;
+            if (root.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.String)
+                return error.GetString() ?? fallback;
+
+            return fallback;
+        }
+        catch
+        {
+            return fallback;
         }
     }
 }
