@@ -29,17 +29,17 @@
 
 **Purpose**: Verify Phase 0–3 completion and Phase 4 readiness
 
-- [ ] T001 Verificar build limpio ejecutando `dotnet build` — exit code 0, cero warnings
-- [ ] T002 Verificar tests previos ejecutando `dotnet test` — ~154 tests pasan (Phase 0: 13 + Phase 1: 22 + Phase 2: 81 + Phase 3: 38)
-- [ ] T003 Verificar que Domain tiene CERO dependencias externas revisando `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
-- [ ] T004 Verificar que `TransactionByAmountRangeSpecification` existe y sus 6 tests pasan en `tests/SauronSheet.Domain.Tests/Specifications/`
-- [ ] T005 Verificar que existe `ISpecification<T>` con `BaseSpecification<T>` en `src/SauronSheet.Domain/Specifications/`
-- [ ] T006 [P] Crear directorio `tests/SauronSheet.Domain.Tests/Specifications/` si no existe
-- [ ] T007 [P] Crear directorio `src/SauronSheet.Application/Features/Analytics/DTOs/`
-- [ ] T008 [P] Crear directorio `src/SauronSheet.Application/Features/Analytics/Queries/`
-- [ ] T009 [P] Crear directorio `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/`
-- [ ] T010 [P] Crear directorio `src/SauronSheet.Frontend/Shared/Components/`
-- [ ] T011 [P] Crear directorio `src/SauronSheet.Frontend/wwwroot/js/`
+- [X] T001 Verificar build limpio ejecutando `dotnet build` — exit code 0, cero warnings
+- [X] T002 Verificar tests previos ejecutando `dotnet test` — ~154 tests pasan (Phase 0: 13 + Phase 1: 22 + Phase 2: 81 + Phase 3: 38)
+- [X] T003 Verificar que Domain tiene CERO dependencias externas revisando `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
+- [X] T004 Verificar que `TransactionByAmountRangeSpecification` existe y sus 6 tests pasan en `tests/SauronSheet.Domain.Tests/Specifications/`
+- [X] T005 Verificar que existe `ISpecification<T>` con `BaseSpecification<T>` en `src/SauronSheet.Domain/Specifications/`
+- [X] T006 [P] Crear directorio `tests/SauronSheet.Domain.Tests/Specifications/` si no existe
+- [X] T007 [P] Crear directorio `src/SauronSheet.Application/Features/Analytics/DTOs/`
+- [X] T008 [P] Crear directorio `src/SauronSheet.Application/Features/Analytics/Queries/`
+- [X] T009 [P] Crear directorio `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/`
+- [X] T010 [P] Crear directorio `src/SauronSheet.Frontend/Shared/Components/`
+- [X] T011 [P] Crear directorio `src/SauronSheet.Frontend/wwwroot/js/`
 
 **Checkpoint**: Build limpio, ~154 tests green, directorios creados → Proceder a Phase 2
 
@@ -53,7 +53,7 @@
 
 ### Tests Domain (RED Phase)
 
-- [ ] T012 [P] Crear test stubs para TransactionByDescriptionKeywordSpecification (4 tests RED) en `tests/SauronSheet.Domain.Tests/Specifications/TransactionByDescriptionKeywordSpecificationTests.cs`
+- [X] T012 [P] Crear test stubs para TransactionByDescriptionKeywordSpecification (4 tests RED) en `tests/SauronSheet.Domain.Tests/Specifications/TransactionByDescriptionKeywordSpecificationTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `TransactionByDescriptionKeywordSpecificationTests` con 4 métodos `[Fact]` y `[Trait("Category", "Domain")]` que contengan `Assert.True(false, "Implement ...")`:
     - `DescriptionKeywordSpec_MatchesPartialKeyword()` — Transaction desc="Morning Coffee at Starbucks", keyword="coffee" → true
@@ -63,7 +63,7 @@
   - **Dependencias**: T005 (BaseSpecification<T> exists)
   - **Validación**: Archivo compila, 4 tests descubiertos, todos FALLAN (RED)
 
-- [ ] T013 [P] Crear test stubs para CompositeSpecification<T> (3 tests RED) en `tests/SauronSheet.Domain.Tests/Specifications/CompositeSpecificationTests.cs`
+- [X] T013 [P] Crear test stubs para CompositeSpecification<T> (3 tests RED) en `tests/SauronSheet.Domain.Tests/Specifications/CompositeSpecificationTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `CompositeSpecificationTests` con 3 métodos `[Fact]` y `[Trait("Category", "Domain")]` con `Assert.True(false, "Implement ...")`:
     - `CompositeSpec_And_CombinesTwoSpecs()` — User + Category specs, matching transaction → true
@@ -72,12 +72,12 @@
   - **Dependencias**: T005 (BaseSpecification<T> exists)
   - **Validación**: Archivo compila, 3 tests descubiertos, todos FALLAN (RED)
 
-- [ ] T014 Ejecutar `dotnet test --filter Category=Domain` — verificar 7 tests nuevos FALLAN (RED), ~30 tests previos PASAN
+- [X] T014 Ejecutar `dotnet test --filter Category=Domain` — verificar 7 tests nuevos FALLAN (RED), ~30 tests previos PASAN
   - **Dependencias**: T012, T013
 
 ### Implementación Domain (GREEN Phase)
 
-- [ ] T015 Implementar TransactionByDescriptionKeywordSpecification en `src/SauronSheet.Domain/Specifications/TransactionByDescriptionKeywordSpecification.cs`
+- [X] T015 Implementar TransactionByDescriptionKeywordSpecification en `src/SauronSheet.Domain/Specifications/TransactionByDescriptionKeywordSpecification.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `TransactionByDescriptionKeywordSpecification` que hereda de `BaseSpecification<Transaction>`. Constructor recibe `string keyword`:
     - Validar que keyword no es null/empty/whitespace → lanzar `DomainException("Search keyword cannot be empty.")`
@@ -86,7 +86,7 @@
   - **Dependencias**: T012 (tests exist in RED)
   - **Validación**: `dotnet test --filter ClassName~TransactionByDescriptionKeyword` — 4 tests PASAN
 
-- [ ] T016 Implementar CompositeSpecification<T> en `src/SauronSheet.Domain/Specifications/CompositeSpecification.cs`
+- [X] T016 Implementar CompositeSpecification<T> en `src/SauronSheet.Domain/Specifications/CompositeSpecification.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `CompositeSpecification<T> : BaseSpecification<T> where T : class`. Constructor privado con `Expression<Func<T, bool>> criteria`. Método estático `And(ISpecification<T> left, ISpecification<T> right)`:
     - Crear `Expression.Parameter(typeof(T), "x")`
@@ -96,7 +96,7 @@
   - **Dependencias**: T013 (tests exist in RED)
   - **Validación**: `dotnet test --filter ClassName~CompositeSpecification` — 3 tests PASAN
 
-- [ ] T017 Ejecutar `dotnet test --filter Category=Domain` — ~37 tests PASAN (30 previos + 7 Phase 4)
+- [X] T017 Ejecutar `dotnet test --filter Category=Domain` — ~37 tests PASAN (30 previos + 7 Phase 4)
   - **Dependencias**: T015, T016
 
 **Checkpoint**: Domain complete — 7 tests nuevos GREEN, ~37 domain tests total → Proceder a user stories
@@ -111,7 +111,7 @@
 
 ### Tests (RED Phase)
 
-- [ ] T018 [US6] Crear test stubs para GetTransactionSummaryQuery (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetTransactionSummaryQueryTests.cs`
+- [X] T018 [US6] Crear test stubs para GetTransactionSummaryQuery (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetTransactionSummaryQueryTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `GetTransactionSummaryQueryTests` con mock de `ITransactionRepository`, `IUserContext`. 4 métodos `[Fact]` + `[Trait("Category", "Application")]`:
     - `GetTransactionSummary_CalculatesCorrectly()` — +€500, +€200 income, -€300, -€100, -€50 expenses → TotalIncome=700, TotalExpenses=450, NetAmount=250, Count=5
@@ -123,19 +123,19 @@
 
 ### Implementación (GREEN Phase)
 
-- [ ] T019 [P] [US6] Crear TransactionSummaryDto en `src/SauronSheet.Application/Features/Analytics/DTOs/TransactionSummaryDto.cs`
+- [X] T019 [P] [US6] Crear TransactionSummaryDto en `src/SauronSheet.Application/Features/Analytics/DTOs/TransactionSummaryDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record TransactionSummaryDto(decimal TotalIncome, decimal TotalExpenses, decimal NetAmount, int TransactionCount, string Currency, DateTime FromDate, DateTime ToDate);`
   - **Dependencias**: T007 (directorio Analytics/DTOs existe)
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T020 [US6] Crear GetTransactionSummaryQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetTransactionSummaryQuery.cs`
+- [X] T020 [US6] Crear GetTransactionSummaryQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetTransactionSummaryQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record GetTransactionSummaryQuery(DateTime FromDate, DateTime ToDate) : IRequest<TransactionSummaryDto>;`
   - **Dependencias**: T019
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T021 [US6] Crear GetTransactionSummaryQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetTransactionSummaryQueryHandler.cs`
+- [X] T021 [US6] Crear GetTransactionSummaryQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetTransactionSummaryQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Handler que implementa `IRequestHandler<GetTransactionSummaryQuery, TransactionSummaryDto>`. Inyectar `ITransactionRepository`, `IUserContext`. Flow:
     1. Obtener UserId de IUserContext
@@ -158,7 +158,7 @@
 
 ### Tests (RED Phase)
 
-- [ ] T022 [US2] Crear test stubs para GetSpendingByCategoryQuery (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetSpendingByCategoryQueryTests.cs`
+- [X] T022 [US2] Crear test stubs para GetSpendingByCategoryQuery (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetSpendingByCategoryQueryTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `GetSpendingByCategoryQueryTests` con mock de `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 4 métodos `[Fact]` + `[Trait("Category", "Application")]`:
     - `GetSpendingByCategory_WithTransactions_ReturnsGroupedData()` — 5 transacciones en 3 categorías → 3 entries con amounts y percentages correctos
@@ -170,19 +170,19 @@
 
 ### Implementación (GREEN Phase)
 
-- [ ] T023 [P] [US2] Crear CategorySpendingDto en `src/SauronSheet.Application/Features/Analytics/DTOs/CategorySpendingDto.cs`
+- [X] T023 [P] [US2] Crear CategorySpendingDto en `src/SauronSheet.Application/Features/Analytics/DTOs/CategorySpendingDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record CategorySpendingDto(Guid? CategoryId, string CategoryName, string? CategoryColor, decimal Amount, string Currency, decimal Percentage);`
   - **Dependencias**: T007 (directorio existe)
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T024 [US2] Crear GetSpendingByCategoryQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetSpendingByCategoryQuery.cs`
+- [X] T024 [US2] Crear GetSpendingByCategoryQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetSpendingByCategoryQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record GetSpendingByCategoryQuery(DateTime FromDate, DateTime ToDate) : IRequest<List<CategorySpendingDto>>;`
   - **Dependencias**: T023
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T025 [US2] Crear GetSpendingByCategoryQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetSpendingByCategoryQueryHandler.cs`
+- [X] T025 [US2] Crear GetSpendingByCategoryQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetSpendingByCategoryQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Handler `IRequestHandler<GetSpendingByCategoryQuery, List<CategorySpendingDto>>`. Inyectar `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. Flow:
     1. Componer specs: user + dateRange vía CompositeSpecification.And()
@@ -209,7 +209,7 @@
 
 ### Tests (RED Phase)
 
-- [ ] T026 [US3] Crear test stubs para GetMonthlyTrendsQuery (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetMonthlyTrendsQueryTests.cs`
+- [X] T026 [US3] Crear test stubs para GetMonthlyTrendsQuery (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetMonthlyTrendsQueryTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `GetMonthlyTrendsQueryTests` con mock de `ITransactionRepository`, `IUserContext`. 3 métodos `[Fact]` + `[Trait("Category", "Application")]`:
     - `GetMonthlyTrends_FullYear_Returns12Entries()` — Transacciones en Jan, Mar, Jun, Dec → 12 entries, meses sin datos = 0
@@ -220,19 +220,19 @@
 
 ### Implementación (GREEN Phase)
 
-- [ ] T027 [P] [US3] Crear MonthlyTrendDto en `src/SauronSheet.Application/Features/Analytics/DTOs/MonthlyTrendDto.cs`
+- [X] T027 [P] [US3] Crear MonthlyTrendDto en `src/SauronSheet.Application/Features/Analytics/DTOs/MonthlyTrendDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record MonthlyTrendDto(int Month, string MonthName, decimal TotalExpenses, decimal TotalIncome, decimal NetAmount, string Currency, int TransactionCount);`
   - **Dependencias**: T007
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T028 [US3] Crear GetMonthlyTrendsQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetMonthlyTrendsQuery.cs`
+- [X] T028 [US3] Crear GetMonthlyTrendsQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetMonthlyTrendsQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record GetMonthlyTrendsQuery(int Year) : IRequest<List<MonthlyTrendDto>>;`
   - **Dependencias**: T027
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T029 [US3] Crear GetMonthlyTrendsQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetMonthlyTrendsQueryHandler.cs`
+- [X] T029 [US3] Crear GetMonthlyTrendsQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetMonthlyTrendsQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Handler `IRequestHandler<GetMonthlyTrendsQuery, List<MonthlyTrendDto>>`. Inyectar `ITransactionRepository`, `IUserContext`. Flow:
     1. Componer specs: user + DateRange(Year/1/1 – Year/12/31) vía CompositeSpecification.And()
@@ -257,7 +257,7 @@
 
 ### Tests (RED Phase)
 
-- [ ] T030 [US4] Crear test stubs para GetYearlyComparisonQuery (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetYearlyComparisonQueryTests.cs`
+- [X] T030 [US4] Crear test stubs para GetYearlyComparisonQuery (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Analytics/Queries/GetYearlyComparisonQueryTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `GetYearlyComparisonQueryTests` con mock de `ITransactionRepository`, `IUserContext`. 3 métodos `[Fact]` + `[Trait("Category", "Application")]`:
     - `GetYearlyComparison_TwoYears_ReturnsMonthlyComparison()` — Year 2025: Jan €100, Feb €200; Year 2026: Jan €150, Feb €180 → 12 entries con diferencias
@@ -268,19 +268,19 @@
 
 ### Implementación (GREEN Phase)
 
-- [ ] T031 [P] [US4] Crear YearlyComparisonDto en `src/SauronSheet.Application/Features/Analytics/DTOs/YearlyComparisonDto.cs`
+- [X] T031 [P] [US4] Crear YearlyComparisonDto en `src/SauronSheet.Application/Features/Analytics/DTOs/YearlyComparisonDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record YearlyComparisonDto(int Month, string MonthName, decimal Year1Amount, decimal Year2Amount, decimal Difference, decimal? PercentageChange, string Currency);`
   - **Dependencias**: T007
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T032 [US4] Crear GetYearlyComparisonQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetYearlyComparisonQuery.cs`
+- [X] T032 [US4] Crear GetYearlyComparisonQuery en `src/SauronSheet.Application/Features/Analytics/Queries/GetYearlyComparisonQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record GetYearlyComparisonQuery(int Year1, int Year2) : IRequest<List<YearlyComparisonDto>>;`
   - **Dependencias**: T031
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T033 [US4] Crear GetYearlyComparisonQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetYearlyComparisonQueryHandler.cs`
+- [X] T033 [US4] Crear GetYearlyComparisonQueryHandler en `src/SauronSheet.Application/Features/Analytics/Queries/GetYearlyComparisonQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Handler `IRequestHandler<GetYearlyComparisonQuery, List<YearlyComparisonDto>>`. Inyectar `ITransactionRepository`, `IUserContext`. Flow:
     1. Cargar transacciones Year1 y Year2 (specs: user + dateRange de cada año) vía CompositeSpecification.And()
@@ -292,7 +292,7 @@
   - **Dependencias**: T030 (tests en RED), T032
   - **Validación**: `dotnet test --filter ClassName~GetYearlyComparisonQuery` — 3 tests PASAN
 
-- [ ] T034 Ejecutar checkpoint analytics: `dotnet test --filter Category=Application` — verificar 14 tests nuevos + tests previos PASAN
+- [X] T034 Ejecutar checkpoint analytics: `dotnet test --filter Category=Application` — verificar 14 tests nuevos + tests previos PASAN
   - **Dependencias**: T021, T025, T029, T033
 
 **Checkpoint**: Todos los analytics handlers complete — 14 tests nuevos GREEN
@@ -307,7 +307,7 @@
 
 ### Tests Recent Transactions (RED Phase)
 
-- [ ] T035 [US5] Crear test stubs para GetRecentTransactionsQuery (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Transactions/Queries/GetRecentTransactionsQueryTests.cs`
+- [X] T035 [US5] Crear test stubs para GetRecentTransactionsQuery (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Transactions/Queries/GetRecentTransactionsQueryTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `GetRecentTransactionsQueryTests` con mock de `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 3 métodos `[Fact]` + `[Trait("Category", "Application")]`:
     - `GetRecentTransactions_ReturnsLastN()` — 20 transacciones, count=10 → retorna 10 ordenadas por fecha desc
@@ -318,7 +318,7 @@
 
 ### Tests Search Transactions (RED Phase)
 
-- [ ] T036 [US5] Crear test stubs para SearchTransactionsQuery (8 tests RED) en `tests/SauronSheet.Application.Tests/Features/Transactions/Queries/SearchTransactionsQueryTests.cs`
+- [X] T036 [US5] Crear test stubs para SearchTransactionsQuery (8 tests RED) en `tests/SauronSheet.Application.Tests/Features/Transactions/Queries/SearchTransactionsQueryTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `SearchTransactionsQueryTests` con mock de `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 8 métodos `[Fact]` + `[Trait("Category", "Application")]`:
     - `SearchTransactions_ByKeyword_FiltersCorrectly()` — keyword="coffee" → 2 de 4 transacciones (case-insensitive)
@@ -334,13 +334,13 @@
 
 ### Implementación Recent Transactions (GREEN Phase)
 
-- [ ] T037 [US5] Crear GetRecentTransactionsQuery en `src/SauronSheet.Application/Features/Transactions/Queries/GetRecentTransactionsQuery.cs`
+- [X] T037 [US5] Crear GetRecentTransactionsQuery en `src/SauronSheet.Application/Features/Transactions/Queries/GetRecentTransactionsQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record GetRecentTransactionsQuery(int Count = 10) : IRequest<List<TransactionDto>>;`
   - **Dependencias**: T035 (tests en RED)
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T038 [US5] Crear GetRecentTransactionsQueryHandler en `src/SauronSheet.Application/Features/Transactions/Queries/GetRecentTransactionsQueryHandler.cs`
+- [X] T038 [US5] Crear GetRecentTransactionsQueryHandler en `src/SauronSheet.Application/Features/Transactions/Queries/GetRecentTransactionsQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Handler `IRequestHandler<GetRecentTransactionsQuery, List<TransactionDto>>`. Inyectar `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. Flow:
     1. Obtener UserId de IUserContext
@@ -354,13 +354,13 @@
 
 ### Implementación Search Transactions (GREEN Phase)
 
-- [ ] T039 [US5] Crear SearchTransactionsQuery en `src/SauronSheet.Application/Features/Transactions/Queries/SearchTransactionsQuery.cs`
+- [X] T039 [US5] Crear SearchTransactionsQuery en `src/SauronSheet.Application/Features/Transactions/Queries/SearchTransactionsQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: `public record SearchTransactionsQuery(string? Keyword = null, DateTime? FromDate = null, DateTime? ToDate = null, Guid? CategoryId = null, decimal? MinAmount = null, decimal? MaxAmount = null, int Page = 1, int PageSize = 50) : IRequest<PaginatedResultDto<TransactionDto>>;`
   - **Dependencias**: T036 (tests en RED)
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T040 [US5] Crear SearchTransactionsQueryHandler en `src/SauronSheet.Application/Features/Transactions/Queries/SearchTransactionsQueryHandler.cs`
+- [X] T040 [US5] Crear SearchTransactionsQueryHandler en `src/SauronSheet.Application/Features/Transactions/Queries/SearchTransactionsQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Handler `IRequestHandler<SearchTransactionsQuery, PaginatedResultDto<TransactionDto>>`. Inyectar `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. Flow:
     1. Comenzar con `TransactionByUserSpecification(userId)` como spec base
@@ -377,7 +377,7 @@
   - **Dependencias**: T039, T015 (keyword spec), T016 (composite spec)
   - **Validación**: `dotnet test --filter ClassName~SearchTransactionsQuery` — 8 tests PASAN
 
-- [ ] T041 [US5] Ejecutar checkpoint transaction queries: `dotnet test --filter Category=Application` — 25 tests nuevos + previos PASAN
+- [X] T041 [US5] Ejecutar checkpoint transaction queries: `dotnet test --filter Category=Application` — 25 tests nuevos + previos PASAN
   - **Dependencias**: T038, T040
 
 **Checkpoint**: US5 complete — Recent transactions + Search funcional, todos handlers Application finalizados
@@ -392,7 +392,7 @@
 
 ### Layout & Shared Components
 
-- [ ] T042 [US1] Modificar `src/SauronSheet.Frontend/Shared/_Layout.cshtml` — agregar Chart.js CDN
+- [X] T042 [US1] Modificar `src/SauronSheet.Frontend/Shared/_Layout.cshtml` — agregar Chart.js CDN
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar en la sección `<head>`:
     ```html
@@ -408,7 +408,7 @@
   - **Dependencias**: T041 (todos los handlers listos)
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T043 [P] [US1] Crear _DateRangeFilter partial en `src/SauronSheet.Frontend/Shared/Components/_DateRangeFilter.cshtml`
+- [X] T043 [P] [US1] Crear _DateRangeFilter partial en `src/SauronSheet.Frontend/Shared/Components/_DateRangeFilter.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Partial view reutilizable con Alpine.js. Componente `x-data="{ showCustom: false }"`:
     - Select con opciones: This Month, Last Month, Last 3 Months, This Year, Custom Range
@@ -419,7 +419,7 @@
   - **Dependencias**: T010 (directorio Components/ existe)
   - **Validación**: Archivo creado, sin errores de sintaxis
 
-- [ ] T044 [P] [US1] Crear charts.js en `src/SauronSheet.Frontend/wwwroot/js/charts.js`
+- [X] T044 [P] [US1] Crear charts.js en `src/SauronSheet.Frontend/wwwroot/js/charts.js`
   - **Acción**: Crear archivo
   - **Descripción**: JavaScript con 3 funciones de inicialización de Chart.js:
     - `initCategoryPieChart(canvasId, categoryData)` — Pie chart con colores default: ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#6B7280']. Tooltip: nombre, €amount, percentage%
@@ -431,7 +431,7 @@
 
 ### Dashboard Page
 
-- [ ] T045 [US1] Reescribir Dashboard PageModel en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml.cs`
+- [X] T045 [US1] Reescribir Dashboard PageModel en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml.cs`
   - **Acción**: Modificar archivo existente (reemplazo completo del stub Phase 1)
   - **Descripción**: Clase `DashboardModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties:
     - `TransactionSummaryDto Summary`
@@ -448,7 +448,7 @@
   - **Dependencias**: T042, T021, T025, T029, T033, T038
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T046 [US1] Reescribir Dashboard View en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml`
+- [X] T046 [US1] Reescribir Dashboard View en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml`
   - **Acción**: Modificar archivo existente (reemplazo completo del stub Phase 1)
   - **Descripción**: Razor view con secciones:
     1. **Date Range Filter** — Form con `_DateRangeFilter` partial, action="/Dashboard", method="get"
@@ -479,7 +479,7 @@
 **Independent Test**: Navegar a `/Transactions/Search` → filtros funcionan, paginación correcta  
 **Scenario**: 4.5
 
-- [ ] T047 [US5] Crear Search PageModel en `src/SauronSheet.Frontend/Pages/Transactions/Search.cshtml.cs`
+- [X] T047 [US5] Crear Search PageModel en `src/SauronSheet.Frontend/Pages/Transactions/Search.cshtml.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Clase `SearchModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties:
     - `PaginatedResultDto<TransactionDto> Results`
@@ -495,7 +495,7 @@
   - **Dependencias**: T040 (search handler), T042 (layout con nav)
   - **Validación**: `dotnet build` exit code 0
 
-- [ ] T048 [US5] Crear Search View en `src/SauronSheet.Frontend/Pages/Transactions/Search.cshtml`
+- [X] T048 [US5] Crear Search View en `src/SauronSheet.Frontend/Pages/Transactions/Search.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Razor view con:
     1. **Filter Panel** — Form con method="get":
@@ -521,7 +521,7 @@
 **Goal**: Agregar filtros a la página existente de Transaction list  
 **Scenario**: 4.5 (complemento)
 
-- [ ] T049 [US1] Modificar Transaction Index con filtros en `src/SauronSheet.Frontend/Pages/Transactions/Index.cshtml`
+- [X] T049 [US1] Modificar Transaction Index con filtros en `src/SauronSheet.Frontend/Pages/Transactions/Index.cshtml`
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar al tope de la página (antes de la tabla):
     - `_DateRangeFilter` partial view integrado en form
@@ -531,7 +531,7 @@
   - **Dependencias**: T043, T048
   - **Validación**: `/Transactions` muestra filtros funcionales
 
-- [ ] T050 [US1] Modificar Transaction Index PageModel en `src/SauronSheet.Frontend/Pages/Transactions/Index.cshtml.cs` si necesario para soportar query params de filtro
+- [X] T050 [US1] Modificar Transaction Index PageModel en `src/SauronSheet.Frontend/Pages/Transactions/Index.cshtml.cs` si necesario para soportar query params de filtro
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar propiedades `[BindProperty(SupportsGet=true)]` para DateFilter, CustomFromDate, CustomToDate, CategoryId. Pasar filtros al query existente
   - **Dependencias**: T049
@@ -545,34 +545,34 @@
 
 **Purpose**: Validación final, responsive design, test coverage
 
-- [ ] T051 Ejecutar build completo: `dotnet build` — zero errors, zero warnings
+- [X] T051 Ejecutar build completo: `dotnet build` — zero errors, zero warnings
   - **Dependencias**: T050
 
-- [ ] T052 Ejecutar test suite completa: `dotnet test` — ~186 tests PASAN (Phase 0:13 + Phase 1:22 + Phase 2:81 + Phase 3:38 + Phase 4:32)
+- [X] T052 Ejecutar test suite completa: `dotnet test` — ~186 tests PASAN (Phase 0:13 + Phase 1:22 + Phase 2:81 + Phase 3:38 + Phase 4:32)
   - **Dependencias**: T051
 
-- [ ] T053 Verificar cobertura Domain ≥ 80%: `dotnet test tests/SauronSheet.Domain.Tests/ --collect:"XPlat Code Coverage"`
+- [X] T053 Verificar cobertura Domain ≥ 80%: `dotnet test tests/SauronSheet.Domain.Tests/ --collect:"XPlat Code Coverage"`
   - **Dependencias**: T052
 
-- [ ] T054 Verificar cobertura Application ≥ 70%: `dotnet test tests/SauronSheet.Application.Tests/ --collect:"XPlat Code Coverage"`
+- [X] T054 Verificar cobertura Application ≥ 70%: `dotnet test tests/SauronSheet.Application.Tests/ --collect:"XPlat Code Coverage"`
   - **Dependencias**: T052
 
-- [ ] T055 Verificar dependency rules — Domain tiene 0 project references y 0 NuGet packages en `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
+- [X] T055 Verificar dependency rules — Domain tiene 0 project references y 0 NuGet packages en `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
   - **Dependencias**: T052
 
-- [ ] T056 Verificar dependency rules — Application solo referencia Domain en `src/SauronSheet.Application/SauronSheet.Application.csproj`
+- [X] T056 Verificar dependency rules — Application solo referencia Domain en `src/SauronSheet.Application/SauronSheet.Application.csproj`
   - **Dependencias**: T052
 
-- [ ] T057 Verificar responsive design: Dashboard en viewports 320px, 768px, 1024px+ — cards stack, charts stack, no horizontal scroll
+- [X] T057 Verificar responsive design: Dashboard en viewports 320px, 768px, 1024px+ — cards stack, charts stack, no horizontal scroll
   - **Dependencias**: T046
 
-- [ ] T058 Verificar no hay errores JavaScript en consola del browser en todas las páginas (Dashboard, Search, Transactions)
+- [X] T058 Verificar no hay errores JavaScript en consola del browser en todas las páginas (Dashboard, Search, Transactions)
   - **Dependencias**: T046, T048
 
-- [ ] T059 E2E MVP Workflow: Register → Login → Import PDF → View Dashboard → Change Date Filter → Search Transactions → Verify charts render
+- [X] T059 E2E MVP Workflow: Register → Login → Import PDF → View Dashboard → Change Date Filter → Search Transactions → Verify charts render
   - **Dependencias**: T052
 
-- [ ] T060 Verificar tenant isolation: dos usuarios distintos no ven datos del otro en analytics ni search
+- [X] T060 Verificar tenant isolation: dos usuarios distintos no ven datos del otro en analytics ni search
   - **Dependencias**: T059
 
 **Checkpoint Final**: ✅ MVP COMPLETE — All ~186 tests green, coverage meets thresholds, dependency rules clean, E2E workflow passes
