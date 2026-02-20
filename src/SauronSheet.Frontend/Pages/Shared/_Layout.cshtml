@@ -31,6 +31,7 @@
                         <a href="/Transactions/Search" class="text-gray-700 hover:text-blue-600">🔍 Search</a>
                         <a href="/Transactions/Upload" class="text-gray-700 hover:text-blue-600">📄 Upload PDF</a>
                         <a href="/Categories" class="text-gray-700 hover:text-blue-600">🏷️ Categories</a>
+                        <a href="/Budgets" class="text-gray-700 hover:text-blue-600">💰 Budgets</a>
                         <span class="text-sm text-gray-600">@User.FindFirst("email")?.Value</span>
                         <form method="post" asp-page="/Auth/Logout" style="display: inline;">
                             <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
@@ -56,7 +57,7 @@
 
     <footer class="bg-white border-t mt-12">
         <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-600">
-            <p>&copy; 2026 SauronSheet. Version 1.1.0 (Phase 4 — Analytics MVP)</p>
+            <p>&copy; 2026 SauronSheet. Version 1.2.0 (Phase 5 — Budget Management)</p>
         </div>
     </footer>
 </body>

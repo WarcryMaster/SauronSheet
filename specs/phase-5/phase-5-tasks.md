@@ -29,22 +29,22 @@
 
 **Purpose**: Verify Phase 0–4 completion and Phase 5 readiness
 
-- [ ] T001 Verificar build limpio ejecutando `dotnet build` — exit code 0, cero warnings
-- [ ] T002 Verificar tests previos ejecutando `dotnet test` — ~186 tests pasan (Phase 0: 13 + Phase 1: 22 + Phase 2: 81 + Phase 3: 38 + Phase 4: 32)
-- [ ] T003 Verificar que Domain tiene CERO dependencias externas revisando `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
-- [ ] T004 Verificar que `BudgetId` value object existe en `src/SauronSheet.Domain/ValueObjects/BudgetId.cs`
-- [ ] T005 Verificar que NO existe `Budget` entity en `src/SauronSheet.Domain/Entities/Budget.cs`
-- [ ] T006 Verificar que NO existe `IBudgetRepository` en `src/SauronSheet.Domain/Repositories/IBudgetRepository.cs`
-- [ ] T007 Verificar que NO existe `BudgetService` en `src/SauronSheet.Domain/Services/BudgetService.cs`
-- [ ] T008 Verificar que el Dashboard con Chart.js (Phase 4) es funcional accediendo a `/Dashboard`
-- [ ] T009 [P] Crear directorio `src/SauronSheet.Application/Features/Budgets/DTOs/`
-- [ ] T010 [P] Crear directorio `src/SauronSheet.Application/Features/Budgets/Commands/`
-- [ ] T011 [P] Crear directorio `src/SauronSheet.Application/Features/Budgets/Queries/`
-- [ ] T012 [P] Crear directorio `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/`
-- [ ] T013 [P] Crear directorio `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/`
-- [ ] T014 [P] Crear directorio `tests/SauronSheet.Domain.Tests/Services/`
-- [ ] T015 [P] Crear directorio `src/SauronSheet.Frontend/Pages/Budgets/`
-- [ ] T016 [P] Crear directorio `src/SauronSheet.Infrastructure/Persistence/Migrations/`
+- [X] T001 Verificar build limpio ejecutando `dotnet build` — exit code 0, cero warnings
+- [X] T002 Verificar tests previos ejecutando `dotnet test` — ~186 tests pasan (Phase 0: 13 + Phase 1: 22 + Phase 2: 81 + Phase 3: 38 + Phase 4: 32)
+- [X] T003 Verificar que Domain tiene CERO dependencias externas revisando `src/SauronSheet.Domain/SauronSheet.Domain.csproj`
+- [X] T004 Verificar que `BudgetId` value object existe en `src/SauronSheet.Domain/ValueObjects/BudgetId.cs`
+- [X] T005 Verificar que NO existe `Budget` entity en `src/SauronSheet.Domain/Entities/Budget.cs`
+- [X] T006 Verificar que NO existe `IBudgetRepository` en `src/SauronSheet.Domain/Repositories/IBudgetRepository.cs`
+- [X] T007 Verificar que NO existe `BudgetService` en `src/SauronSheet.Domain/Services/BudgetService.cs`
+- [X] T008 Verificar que el Dashboard con Chart.js (Phase 4) es funcional accediendo a `/Dashboard`
+- [X] T009 [P] Crear directorio `src/SauronSheet.Application/Features/Budgets/DTOs/`
+- [X] T010 [P] Crear directorio `src/SauronSheet.Application/Features/Budgets/Commands/`
+- [X] T011 [P] Crear directorio `src/SauronSheet.Application/Features/Budgets/Queries/`
+- [X] T012 [P] Crear directorio `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/`
+- [X] T013 [P] Crear directorio `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/`
+- [X] T014 [P] Crear directorio `tests/SauronSheet.Domain.Tests/Services/`
+- [X] T015 [P] Crear directorio `src/SauronSheet.Frontend/Pages/Budgets/`
+- [X] T016 [P] Crear directorio `src/SauronSheet.Infrastructure/Persistence/Migrations/`
 
 **Checkpoint**: Build limpio, ~186 tests green, directorios creados → Proceder a Phase 2
 
@@ -58,7 +58,7 @@
 
 ### 2A. BudgetStatusLevel Enum
 
-- [ ] T017 [P] Crear enum `BudgetStatusLevel` en `src/SauronSheet.Domain/ValueObjects/BudgetStatusLevel.cs`
+- [X] T017 [P] Crear enum `BudgetStatusLevel` en `src/SauronSheet.Domain/ValueObjects/BudgetStatusLevel.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear enum con 4 valores: `Green`, `Yellow`, `Red`, `Overage`. Incluir XML summary con umbrales: Green < 60%, Yellow 60–80%, Red 80–100%, Overage > 100%. Namespace: `SauronSheet.Domain.ValueObjects`.
   - **Dependencias**: Ninguna
@@ -66,7 +66,7 @@
 
 ### 2B. Budget Entity — Tests RED
 
-- [ ] T018 Crear test stubs para Budget entity (19 tests RED) en `tests/SauronSheet.Domain.Tests/Entities/BudgetTests.cs`
+- [X] T018 Crear test stubs para Budget entity (19 tests RED) en `tests/SauronSheet.Domain.Tests/Entities/BudgetTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `BudgetTests` con 19 métodos `[Fact]` y `[Trait("Category", "Domain")]` que contengan `Assert.True(false, "Implement ...")`:
     - **Construcción (7 tests)**:
@@ -99,17 +99,17 @@
 
 ### 2C. Budget Entity — GREEN
 
-- [ ] T019 Implementar Budget entity en `src/SauronSheet.Domain/Entities/Budget.cs`
+- [X] T019 Implementar Budget entity en `src/SauronSheet.Domain/Entities/Budget.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `Budget : AggregateRoot<BudgetId>` siguiendo el código exacto de `phase-5-plan.md` sección 1.3. Propiedades: `UserId`, `CategoryId`, `Period` (DateRange), `Limit` (Money). Constructor con validación: null guards (ArgumentNullException) + limit positivo (DomainException). Métodos: `IsOverBudget(Money)` con `EnsureSameCurrency`, `PercentageUsed(Money)` con `EnsureSameCurrency`, `RemainingAmount(Money)` delega a `Limit.Minus()`, `UpdateLimit(Money)` con validación + `UpdatedAt`. Método privado `EnsureSameCurrency(Money)` que lanza `InvalidOperationException` si moneda difiere. Namespace: `SauronSheet.Domain.Entities`.
   - **Dependencias**: T017, T018
   - **Validación**: `dotnet test --filter "ClassName~BudgetTests"` — 19 tests PASAN (GREEN)
 
-- [ ] T020 Verificar que tests previos no se rompieron ejecutando `dotnet test --filter Category=Domain` — ~56 tests pasan (37 previos + 19 nuevos)
+- [X] T020 Verificar que tests previos no se rompieron ejecutando `dotnet test --filter Category=Domain` — ~56 tests pasan (37 previos + 19 nuevos)
 
 ### 2D. IBudgetRepository Interface
 
-- [ ] T021 [P] Crear interfaz `IBudgetRepository` en `src/SauronSheet.Domain/Repositories/IBudgetRepository.cs`
+- [X] T021 [P] Crear interfaz `IBudgetRepository` en `src/SauronSheet.Domain/Repositories/IBudgetRepository.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear interfaz con 6 métodos asíncronos según `phase-5-plan.md` sección 2.1: `GetByIdAsync(BudgetId)`, `GetByUserIdAsync(UserId)`, `GetByUserAndCategoryAndMonthAsync(UserId, CategoryId, DateRange)`, `AddAsync(Budget)`, `UpdateAsync(Budget)`, `DeleteAsync(BudgetId)`. Namespace: `SauronSheet.Domain.Repositories`.
   - **Dependencias**: T019 (Budget entity)
@@ -117,7 +117,7 @@
 
 ### 2E. BudgetService — Tests RED
 
-- [ ] T022 Crear test stubs para BudgetService (10 tests RED) en `tests/SauronSheet.Domain.Tests/Services/BudgetServiceTests.cs`
+- [X] T022 Crear test stubs para BudgetService (10 tests RED) en `tests/SauronSheet.Domain.Tests/Services/BudgetServiceTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `BudgetServiceTests` con 10 métodos `[Fact]` y `[Trait("Category", "Domain")]` que contengan `Assert.True(false, "Implement ...")`:
     - **ValidateUniqueBudget (4 tests)**:
@@ -137,13 +137,13 @@
 
 ### 2F. BudgetService — GREEN
 
-- [ ] T023 Implementar BudgetService en `src/SauronSheet.Domain/Services/BudgetService.cs`
+- [X] T023 Implementar BudgetService en `src/SauronSheet.Domain/Services/BudgetService.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `BudgetService` siguiendo `phase-5-plan.md` sección 2.3. Constructor con `IBudgetRepository` (null guard). Método `ValidateUniqueBudget(UserId, CategoryId, DateRange)`: llama `GetByUserAndCategoryAndMonthAsync`, lanza `DomainException` si existe. Método estático `GetStatusLevel(decimal percentageUsed)`: switch expression con umbrales exclusivos `> 1.0m → Overage`, `> 0.8m → Red`, `> 0.6m → Yellow`, `_ → Green`. Namespace: `SauronSheet.Domain.Services`.
   - **Dependencias**: T021, T022
   - **Validación**: `dotnet test --filter "ClassName~BudgetServiceTests"` — 10 tests PASAN (GREEN)
 
-- [ ] T024 Verificar domain layer completo ejecutando `dotnet test --filter Category=Domain` — ~66 tests pasan (37 previos + 29 nuevos)
+- [X] T024 Verificar domain layer completo ejecutando `dotnet test --filter Category=Domain` — ~66 tests pasan (37 previos + 29 nuevos)
 
 **Checkpoint**: Domain layer complete — 19 Budget entity + 10 BudgetService tests GREEN → Proceder a Phase 3
 
@@ -153,31 +153,31 @@
 
 **Purpose**: Data transfer objects required by all commands and queries
 
-- [ ] T025 [P] Crear DTO `BudgetDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetDto.cs`
+- [X] T025 [P] Crear DTO `BudgetDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `BudgetDto` con propiedades: `Guid Id`, `Guid CategoryId`, `string CategoryName`, `string? CategoryColor`, `decimal LimitAmount`, `string Currency`, `DateTime PeriodStart`, `DateTime PeriodEnd`, `DateTime CreatedAt`, `DateTime? UpdatedAt`. Namespace: `SauronSheet.Application.Features.Budgets.DTOs`.
   - **Dependencias**: T009
   - **Validación**: `dotnet build --project src/SauronSheet.Application/` compila
 
-- [ ] T026 [P] Crear DTO `BudgetStatusDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetStatusDto.cs`
+- [X] T026 [P] Crear DTO `BudgetStatusDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetStatusDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `BudgetStatusDto` con propiedades: `Guid Id`, `Guid CategoryId`, `string CategoryName`, `string? CategoryColor`, `decimal LimitAmount`, `decimal CurrentSpend`, `decimal RemainingAmount`, `decimal PercentageUsed`, `string StatusLevel`, `string Currency`, `DateTime PeriodStart`, `DateTime PeriodEnd`. Namespace: `SauronSheet.Application.Features.Budgets.DTOs`.
   - **Dependencias**: T009
   - **Validación**: `dotnet build --project src/SauronSheet.Application/` compila
 
-- [ ] T027 [P] Crear DTO `BudgetVsActualDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetVsActualDto.cs`
+- [X] T027 [P] Crear DTO `BudgetVsActualDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetVsActualDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `BudgetVsActualDto` con propiedades: `Guid? CategoryId`, `string CategoryName`, `string? CategoryColor`, `decimal? BudgetLimit`, `decimal ActualSpend`, `decimal? Difference`, `decimal? PercentageUsed`, `string? StatusLevel`, `string Currency`. Namespace: `SauronSheet.Application.Features.Budgets.DTOs`.
   - **Dependencias**: T009
   - **Validación**: `dotnet build --project src/SauronSheet.Application/` compila
 
-- [ ] T028 [P] Crear DTO `BudgetDashboardSummaryDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetDashboardSummaryDto.cs`
+- [X] T028 [P] Crear DTO `BudgetDashboardSummaryDto` en `src/SauronSheet.Application/Features/Budgets/DTOs/BudgetDashboardSummaryDto.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `BudgetDashboardSummaryDto` con propiedades: `List<BudgetStatusDto> Budgets`, `int TotalBudgets`, `int OnTrackCount`, `int OverBudgetCount`. Namespace: `SauronSheet.Application.Features.Budgets.DTOs`.
   - **Dependencias**: T009, T026
   - **Validación**: `dotnet build --project src/SauronSheet.Application/` compila
 
-- [ ] T029 Verificar build completo ejecutando `dotnet build` — toda la solución compila sin errores
+- [X] T029 Verificar build completo ejecutando `dotnet build` — toda la solución compila sin errores
 
 **Checkpoint**: DTOs definidos → Proceder a user stories
 
@@ -191,7 +191,7 @@
 
 ### Tests Application — CreateBudget (RED)
 
-- [ ] T030 Crear test stubs para CreateBudgetCommandHandler (5 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/CreateBudgetCommandHandlerTests.cs`
+- [X] T030 Crear test stubs para CreateBudgetCommandHandler (5 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/CreateBudgetCommandHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `CreateBudgetCommandHandlerTests` con mocks de `IBudgetRepository`, `ICategoryRepository`, `BudgetService`, `IUserContext`. 5 métodos `[Fact]` y `[Trait("Category", "Application")]` con `Assert.True(false, ...)`:
     - `Handle_ValidInput_CreatesBudgetAndReturnsId()` — happy path: category exists, no duplicate, returns BudgetId
@@ -204,7 +204,7 @@
 
 ### Tests Application — GetBudgets (RED)
 
-- [ ] T031 Crear test stubs para GetBudgetsQueryHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetsQueryHandlerTests.cs`
+- [X] T031 Crear test stubs para GetBudgetsQueryHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetsQueryHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `GetBudgetsQueryHandlerTests` con mocks de `IBudgetRepository`, `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 4 métodos `[Fact]` y `[Trait("Category", "Application")]` con `Assert.True(false, ...)`:
     - `Handle_BudgetsExist_ReturnsBudgetStatusDtoList()` — 3 budgets con transacciones → 3 BudgetStatusDto con campos calculados
@@ -214,17 +214,17 @@
   - **Dependencias**: T013, T026
   - **Validación**: 4 tests descubiertos, todos FALLAN (RED)
 
-- [ ] T032 Ejecutar `dotnet test --filter Category=Application` — verificar 9 tests nuevos FALLAN (RED), ~74 tests previos PASAN
+- [X] T032 Ejecutar `dotnet test --filter Category=Application` — verificar 9 tests nuevos FALLAN (RED), ~74 tests previos PASAN
 
 ### Implementación — CreateBudgetCommand (GREEN)
 
-- [ ] T033 [P] [US1] Crear command `CreateBudgetCommand` en `src/SauronSheet.Application/Features/Budgets/Commands/CreateBudgetCommand.cs`
+- [X] T033 [P] [US1] Crear command `CreateBudgetCommand` en `src/SauronSheet.Application/Features/Budgets/Commands/CreateBudgetCommand.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `CreateBudgetCommand(Guid CategoryId, decimal LimitAmount, DateTime PeriodStart, DateTime PeriodEnd) : IRequest<Guid>`. Namespace: `SauronSheet.Application.Features.Budgets.Commands`.
   - **Dependencias**: T010
   - **Validación**: `dotnet build --project src/SauronSheet.Application/` compila
 
-- [ ] T034 [US1] Crear handler `CreateBudgetCommandHandler` en `src/SauronSheet.Application/Features/Budgets/Commands/CreateBudgetCommandHandler.cs`
+- [X] T034 [US1] Crear handler `CreateBudgetCommandHandler` en `src/SauronSheet.Application/Features/Budgets/Commands/CreateBudgetCommandHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<CreateBudgetCommand, Guid>` siguiendo `phase-5-plan.md` sección 4.2. Inyectar `IBudgetRepository`, `ICategoryRepository`, `BudgetService`, `IUserContext`. Flow: (1) extraer UserId de IUserContext, (2) validar categoría existe y pertenece al usuario, (3) construir DateRange, (4) construir Money, (5) validar unicidad via BudgetService, (6) crear Budget con new BudgetId(Guid.NewGuid()), (7) AddAsync, (8) retornar id.
   - **Dependencias**: T033, T019, T021, T023
@@ -232,13 +232,13 @@
 
 ### Implementación — GetBudgetsQuery (GREEN)
 
-- [ ] T035 [P] [US2] Crear query `GetBudgetsQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetsQuery.cs`
+- [X] T035 [P] [US2] Crear query `GetBudgetsQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetsQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `GetBudgetsQuery(int? Year = null, int? Month = null) : IRequest<List<BudgetStatusDto>>`. Retorna `BudgetStatusDto` (no `BudgetDto`) porque la lista necesita campos calculados (CurrentSpend, Remaining, PercentageUsed, StatusLevel) para progress bars y status indicators. Namespace: `SauronSheet.Application.Features.Budgets.Queries`.
   - **Dependencias**: T011, T026
   - **Validación**: `dotnet build --project src/SauronSheet.Application/` compila
 
-- [ ] T036 [US2] Crear handler `GetBudgetsQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetsQueryHandler.cs`
+- [X] T036 [US2] Crear handler `GetBudgetsQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetsQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<GetBudgetsQuery, List<BudgetStatusDto>>` siguiendo `phase-5-plan.md` sección 5.2 actualizada. Inyectar `IBudgetRepository`, `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. Flow: (1) cargar budgets del usuario, (2) filtrar por Year/Month si se proveen, (3) para cada budget: componer specification (User+DateRange+Category) → cargar transacciones → calcular currentSpend de gastos negativos → calcular PercentageUsed, RemainingAmount, StatusLevel, (4) mapear a BudgetStatusDto, (5) ordenar por CategoryName. Importar: `Domain.Services`, `Domain.Specifications`, `Domain.ValueObjects`.
   - **Dependencias**: T035, T019, T021, T023
@@ -246,31 +246,31 @@
 
 ### Frontend — Budget List + Create Pages
 
-- [ ] T037 [US2] Crear page model `IndexModel` en `src/SauronSheet.Frontend/Pages/Budgets/Index.cshtml.cs`
+- [X] T037 [US2] Crear page model `IndexModel` en `src/SauronSheet.Frontend/Pages/Budgets/Index.cshtml.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear `IndexModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties: `List<BudgetStatusDto> Budgets`, `[BindProperty(SupportsGet = true)] int? Year`, `[BindProperty(SupportsGet = true)] int? Month`. `OnGetAsync()`: enviar `GetBudgetsQuery(Year, Month)`. `OnPostDeleteAsync(Guid budgetId)`: enviar `DeleteBudgetCommand` y redirigir.
   - **Dependencias**: T036
   - **Validación**: `dotnet build --project src/SauronSheet.Frontend/` compila
 
-- [ ] T038 [US2] Crear vista `Index.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Index.cshtml`
+- [X] T038 [US2] Crear vista `Index.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Index.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Razor page con `@model IndexModel`. Month selector (Year/Month). Tabla de budgets: Category Name | Limit | Current Spend | Remaining | % Used | Status Badge | Edit/Delete actions. Status badges con colores (Green/Yellow/Red/Overage). Empty state: "No budgets set for {month}. Create one to start tracking." con link a `/Budgets/Create`. Botón "Create Budget" linking a `/Budgets/Create`. Usar Tailwind CSS para estilos.
   - **Dependencias**: T037
   - **Validación**: Página renderiza al navegar a `/Budgets`
 
-- [ ] T039 [US1] Crear page model `CreateModel` en `src/SauronSheet.Frontend/Pages/Budgets/Create.cshtml.cs`
+- [X] T039 [US1] Crear page model `CreateModel` en `src/SauronSheet.Frontend/Pages/Budgets/Create.cshtml.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear `CreateModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties: `List<CategoryDto> Categories`, `[BindProperty] Guid CategoryId`, `[BindProperty] decimal LimitAmount`, `[BindProperty] DateTime Month` (default: 1er día mes actual). `OnGetAsync()`: cargar categorías. `OnPostAsync()`: construir DateRange (1st to last day), enviar `CreateBudgetCommand`, redirect a `/Budgets` con success message. Catch DomainException → mostrar error, retener form values.
   - **Dependencias**: T034
   - **Validación**: `dotnet build --project src/SauronSheet.Frontend/` compila
 
-- [ ] T040 [US1] Crear vista `Create.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Create.cshtml`
+- [X] T040 [US1] Crear vista `Create.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Create.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Razor page con `@model CreateModel`. Formulario con: dropdown de categorías, month picker (default mes actual), input de monto límite (decimal positivo), label "EUR" (currency fija). Botones Submit/Cancel. Display de errores de validación. Tailwind CSS.
   - **Dependencias**: T039
   - **Validación**: Formulario renderiza al navegar a `/Budgets/Create`
 
-- [ ] T041 Verificar que CreateBudget + GetBudgets funciona end-to-end: crear budget → aparece en listado con status calculado
+- [X] T041 Verificar que CreateBudget + GetBudgets funciona end-to-end: crear budget → aparece en listado con status calculado
 
 **Checkpoint**: US1+US2 funcional — crear y listar budgets con status → Proceder a US3+US4
 
@@ -284,7 +284,7 @@
 
 ### Tests Application — UpdateBudget + DeleteBudget (RED)
 
-- [ ] T042 [P] Crear test stubs para UpdateBudgetCommandHandler (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/UpdateBudgetCommandHandlerTests.cs`
+- [X] T042 [P] Crear test stubs para UpdateBudgetCommandHandler (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/UpdateBudgetCommandHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `UpdateBudgetCommandHandlerTests` con mocks de `IBudgetRepository`, `IUserContext`. 3 métodos `[Fact]` y `[Trait("Category", "Application")]`:
     - `Handle_ValidUpdate_UpdatesBudgetLimit()` — happy path: budget exists, belongs to user, limit updated
@@ -293,7 +293,7 @@
   - **Dependencias**: T012
   - **Validación**: 3 tests descubiertos, todos FALLAN (RED)
 
-- [ ] T043 [P] Crear test stubs para DeleteBudgetCommandHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/DeleteBudgetCommandHandlerTests.cs`
+- [X] T043 [P] Crear test stubs para DeleteBudgetCommandHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/DeleteBudgetCommandHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `DeleteBudgetCommandHandlerTests` con mocks de `IBudgetRepository`, `IUserContext`. 4 métodos `[Fact]` y `[Trait("Category", "Application")]`:
     - `Handle_ValidDelete_DeletesBudget()` — happy path: budget exists, DeleteAsync called
@@ -305,25 +305,25 @@
 
 ### Implementación — UpdateBudget + DeleteBudget (GREEN)
 
-- [ ] T044 [P] [US3] Crear command `UpdateBudgetCommand` en `src/SauronSheet.Application/Features/Budgets/Commands/UpdateBudgetCommand.cs`
+- [X] T044 [P] [US3] Crear command `UpdateBudgetCommand` en `src/SauronSheet.Application/Features/Budgets/Commands/UpdateBudgetCommand.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `UpdateBudgetCommand(Guid BudgetId, decimal NewLimitAmount, string Currency = "EUR") : IRequest<Unit>`. Namespace: `SauronSheet.Application.Features.Budgets.Commands`.
   - **Dependencias**: T010
   - **Validación**: Compila
 
-- [ ] T045 [US3] Crear handler `UpdateBudgetCommandHandler` en `src/SauronSheet.Application/Features/Budgets/Commands/UpdateBudgetCommandHandler.cs`
+- [X] T045 [US3] Crear handler `UpdateBudgetCommandHandler` en `src/SauronSheet.Application/Features/Budgets/Commands/UpdateBudgetCommandHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<UpdateBudgetCommand, Unit>` siguiendo `phase-5-plan.md` sección 4.4. Flow: (1) cargar budget por Id, (2) verificar UserId == current user, (3) construir Money, (4) `budget.UpdateLimit(newLimit)`, (5) UpdateAsync.
   - **Dependencias**: T044, T019, T021
   - **Validación**: `dotnet test --filter "ClassName~UpdateBudgetCommandHandlerTests"` — 3 tests PASAN (GREEN)
 
-- [ ] T046 [P] [US4] Crear command `DeleteBudgetCommand` en `src/SauronSheet.Application/Features/Budgets/Commands/DeleteBudgetCommand.cs`
+- [X] T046 [P] [US4] Crear command `DeleteBudgetCommand` en `src/SauronSheet.Application/Features/Budgets/Commands/DeleteBudgetCommand.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `DeleteBudgetCommand(Guid BudgetId) : IRequest<Unit>`. Namespace: `SauronSheet.Application.Features.Budgets.Commands`.
   - **Dependencias**: T010
   - **Validación**: Compila
 
-- [ ] T047 [US4] Crear handler `DeleteBudgetCommandHandler` en `src/SauronSheet.Application/Features/Budgets/Commands/DeleteBudgetCommandHandler.cs`
+- [X] T047 [US4] Crear handler `DeleteBudgetCommandHandler` en `src/SauronSheet.Application/Features/Budgets/Commands/DeleteBudgetCommandHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<DeleteBudgetCommand, Unit>` siguiendo `phase-5-plan.md` sección 4.6. Flow: (1) cargar budget por Id, (2) verificar UserId == current user (else throw EntityNotFoundException), (3) DeleteAsync.
   - **Dependencias**: T046, T019, T021
@@ -331,13 +331,13 @@
 
 ### Frontend — Edit Page
 
-- [ ] T048 [US3] Crear page model `EditModel` en `src/SauronSheet.Frontend/Pages/Budgets/Edit.cshtml.cs`
+- [X] T048 [US3] Crear page model `EditModel` en `src/SauronSheet.Frontend/Pages/Budgets/Edit.cshtml.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear `EditModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties: `BudgetStatusDto Budget`, `[BindProperty] Guid BudgetId`, `[BindProperty] decimal NewLimitAmount`. `OnGetAsync(Guid id)`: cargar budget via `GetBudgetByIdQuery`. `OnPostAsync()`: enviar `UpdateBudgetCommand`, redirect a `/Budgets`.
   - **Dependencias**: T045, T060 (GetBudgetByIdQueryHandler — se puede implementar stub primero)
   - **Validación**: `dotnet build --project src/SauronSheet.Frontend/` compila
 
-- [ ] T049 [US3] Crear vista `Edit.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Edit.cshtml`
+- [X] T049 [US3] Crear vista `Edit.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Edit.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Razor page con `@model EditModel`. Display read-only: Category name, Month/Period. Input editable: monto límite. Display informativo: current spend y status. Botones Save/Cancel. Tailwind CSS.
   - **Dependencias**: T048
@@ -355,7 +355,7 @@
 
 ### Tests Application — GetBudgetSummaryForDashboard (RED)
 
-- [ ] T050 Crear test stubs para GetBudgetSummaryForDashboardQueryHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandlerTests.cs`
+- [X] T050 Crear test stubs para GetBudgetSummaryForDashboardQueryHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `GetBudgetSummaryForDashboardQueryHandlerTests` con mocks de `IBudgetRepository`, `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 4 métodos `[Fact]` y `[Trait("Category", "Application")]`:
     - `Handle_BudgetsExist_ReturnsAggregatedSummary()` — 3 budgets: 2 on-track, 1 over → TotalBudgets=3, OnTrackCount=2, OverBudgetCount=1
@@ -367,13 +367,13 @@
 
 ### Implementación — GetBudgetSummaryForDashboard (GREEN)
 
-- [ ] T051 [P] [US5] Crear query `GetBudgetSummaryForDashboardQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetSummaryForDashboardQuery.cs`
+- [X] T051 [P] [US5] Crear query `GetBudgetSummaryForDashboardQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetSummaryForDashboardQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `GetBudgetSummaryForDashboardQuery(int Year, int Month) : IRequest<BudgetDashboardSummaryDto>`. Handler construye DateRange internamente a partir de year+month. Namespace: `SauronSheet.Application.Features.Budgets.Queries`.
   - **Dependencias**: T011, T028
   - **Validación**: Compila
 
-- [ ] T052 [US5] Crear handler `GetBudgetSummaryForDashboardQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandler.cs`
+- [X] T052 [US5] Crear handler `GetBudgetSummaryForDashboardQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<GetBudgetSummaryForDashboardQuery, BudgetDashboardSummaryDto>` siguiendo `phase-5-plan.md` sección 5.8. Flow: (1) construir periodStart/periodEnd desde Year/Month, (2) cargar budgets del usuario filtrados por period, (3) si vacío → retornar empty summary, (4) cargar transacciones del periodo (batch), (5) agrupar gastos por categoría, (6) para cada budget: calcular spend/percentage/remaining/statusLevel, (7) contar overBudget, (8) retornar BudgetDashboardSummaryDto.
   - **Dependencias**: T051, T019, T021, T023
@@ -381,25 +381,25 @@
 
 ### Frontend — Dashboard Widget + Shared Components
 
-- [ ] T053 [P] [US5] Crear partial view `_BudgetProgressBar.cshtml` en `src/SauronSheet.Frontend/Shared/_BudgetProgressBar.cshtml`
+- [X] T053 [P] [US5] Crear partial view `_BudgetProgressBar.cshtml` en `src/SauronSheet.Frontend/Shared/_BudgetProgressBar.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Partial view con `@model BudgetStatusDto`. Barra de progreso con ancho % (capped a 100% visual). Color según StatusLevel: Green → bg-green-500, Yellow → bg-yellow-500, Red → bg-red-500, Overage → bg-red-700. Label de overflow si > 100%. Tailwind CSS.
   - **Dependencias**: T026
   - **Validación**: Compila sin errores
 
-- [ ] T054 [P] [US5] Crear partial view `_BudgetStatusBadge.cshtml` en `src/SauronSheet.Frontend/Shared/_BudgetStatusBadge.cshtml`
+- [X] T054 [P] [US5] Crear partial view `_BudgetStatusBadge.cshtml` en `src/SauronSheet.Frontend/Shared/_BudgetStatusBadge.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Partial view con `@model string` (StatusLevel). Badge con colores: Green → "On Track" (green-100/green-800), Yellow → "Warning" (yellow-100/yellow-800), Red → "Near Limit" (red-100/red-800), Overage → "Over Budget" (red-200/red-900). Tailwind rounded-full badge.
   - **Dependencias**: Ninguna
   - **Validación**: Compila sin errores
 
-- [ ] T055 [US5] Modificar page model `DashboardModel` en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml.cs`
+- [X] T055 [US5] Modificar page model `DashboardModel` en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml.cs`
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar property `BudgetDashboardSummaryDto? BudgetSummary`. En `OnGetAsync()`, agregar call: `BudgetSummary = await _mediator.Send(new GetBudgetSummaryForDashboardQuery(FromDate.Year, FromDate.Month));`. Importar namespaces de Budgets DTOs y Queries.
   - **Dependencias**: T052
   - **Validación**: `dotnet build --project src/SauronSheet.Frontend/` compila
 
-- [ ] T056 [US5] Modificar vista `Dashboard.cshtml` en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml`
+- [X] T056 [US5] Modificar vista `Dashboard.cshtml` en `src/SauronSheet.Frontend/Pages/Dashboard.cshtml`
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar sección "Budget Status" después de los charts de analytics. Si `BudgetSummary == null || TotalBudgets == 0` → empty state con link a `/Budgets/Create`. Si hay budgets → mostrar summary "X of Y budgets on track" + progress bars por budget usando `_BudgetProgressBar` partial. Links a `/Budgets/Detail/{id}`. Mostrar warning si OverBudgetCount > 0.
   - **Dependencias**: T055, T053, T054
@@ -417,7 +417,7 @@
 
 ### Tests Application — GetBudgetVsActual (RED)
 
-- [ ] T057 Crear test stubs para GetBudgetVsActualQueryHandler (5 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetVsActualQueryHandlerTests.cs`
+- [X] T057 Crear test stubs para GetBudgetVsActualQueryHandler (5 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetVsActualQueryHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `GetBudgetVsActualQueryHandlerTests` con mocks de `IBudgetRepository`, `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 5 métodos `[Fact]` y `[Trait("Category", "Application")]`:
     - `Handle_BudgetsAndTransactions_ReturnsComparison()` — 2 categorías con budgets y transacciones
@@ -430,13 +430,13 @@
 
 ### Implementación — GetBudgetVsActual (GREEN)
 
-- [ ] T058 [P] [US6] Crear query `GetBudgetVsActualQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetVsActualQuery.cs`
+- [X] T058 [P] [US6] Crear query `GetBudgetVsActualQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetVsActualQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `GetBudgetVsActualQuery(int Year, int Month) : IRequest<List<BudgetVsActualDto>>`. Handler construye DateRange internamente. Namespace: `SauronSheet.Application.Features.Budgets.Queries`.
   - **Dependencias**: T011, T027
   - **Validación**: Compila
 
-- [ ] T059 [US6] Crear handler `GetBudgetVsActualQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetVsActualQueryHandler.cs`
+- [X] T059 [US6] Crear handler `GetBudgetVsActualQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetVsActualQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<GetBudgetVsActualQuery, List<BudgetVsActualDto>>` siguiendo `phase-5-plan.md` sección 5.6. Flow: (1) construir periodStart/periodEnd desde Year/Month, (2) cargar budgets del periodo, (3) cargar transacciones (batch), (4) agrupar gastos por categoría, (5) para categorías con budget: calcular difference/percentage/statusLevel, (6) para categorías sin budget pero con gastos: incluir con BudgetLimit = null, (7) ordenar: over-budget primero → percentage desc.
   - **Dependencias**: T058, T019, T021, T023
@@ -444,13 +444,13 @@
 
 ### Frontend — Comparison Page
 
-- [ ] T060 [US6] Crear page model `ComparisonModel` en `src/SauronSheet.Frontend/Pages/Budgets/Comparison.cshtml.cs`
+- [X] T060 [US6] Crear page model `ComparisonModel` en `src/SauronSheet.Frontend/Pages/Budgets/Comparison.cshtml.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear `ComparisonModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties: `List<BudgetVsActualDto> Comparison`, `decimal TotalBudgeted`, `decimal TotalActual`, `decimal TotalDifference`, `[BindProperty(SupportsGet = true)] int? Year`, `[BindProperty(SupportsGet = true)] int? Month`. `OnGetAsync()`: default a year/month actual si no especificado, enviar `GetBudgetVsActualQuery(year, month)`, calcular totales.
   - **Dependencias**: T059
   - **Validación**: Compila
 
-- [ ] T061 [US6] Crear vista `Comparison.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Comparison.cshtml`
+- [X] T061 [US6] Crear vista `Comparison.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Comparison.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Razor page con `@model ComparisonModel`. Month selector. Tabla comparación: Category | Budget Limit | Actual | Difference | Status. Summary row con totales. Horizontal bar chart (Chart.js) budget vs actual por categoría. Categorías sin budget muestran "No budget". Ordenado: over-budget primero. Tailwind CSS.
   - **Dependencias**: T060
@@ -468,7 +468,7 @@
 
 ### Tests Application — GetBudgetById (RED)
 
-- [ ] T062 Crear test stubs para GetBudgetByIdQueryHandler (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetByIdQueryHandlerTests.cs`
+- [X] T062 Crear test stubs para GetBudgetByIdQueryHandler (3 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetByIdQueryHandlerTests.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear clase `GetBudgetByIdQueryHandlerTests` con mocks de `IBudgetRepository`, `ITransactionRepository`, `ICategoryRepository`, `IUserContext`. 3 métodos `[Fact]` y `[Trait("Category", "Application")]`:
     - `Handle_BudgetExists_ReturnsBudgetStatusDto()` — happy path con spend calculado
@@ -479,13 +479,13 @@
 
 ### Implementación — GetBudgetById (GREEN)
 
-- [ ] T063 [P] [US7] Crear query `GetBudgetByIdQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetByIdQuery.cs`
+- [X] T063 [P] [US7] Crear query `GetBudgetByIdQuery` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetByIdQuery.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear record `GetBudgetByIdQuery(Guid BudgetId) : IRequest<BudgetStatusDto>`. Namespace: `SauronSheet.Application.Features.Budgets.Queries`.
   - **Dependencias**: T011, T026
   - **Validación**: Compila
 
-- [ ] T064 [US7] Crear handler `GetBudgetByIdQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetByIdQueryHandler.cs`
+- [X] T064 [US7] Crear handler `GetBudgetByIdQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetByIdQueryHandler.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IRequestHandler<GetBudgetByIdQuery, BudgetStatusDto>` siguiendo `phase-5-plan.md` sección 5.4. Flow: (1) cargar budget por Id, (2) verificar UserId == current user, (3) componer specification (User+DateRange+Category), (4) cargar transacciones, (5) calcular currentSpend/percentage/remaining/statusLevel, (6) cargar categoría para nombre/color, (7) retornar BudgetStatusDto.
   - **Dependencias**: T063, T019, T021, T023
@@ -493,13 +493,13 @@
 
 ### Frontend — Detail Page
 
-- [ ] T065 [US7] Crear page model `DetailModel` en `src/SauronSheet.Frontend/Pages/Budgets/Detail.cshtml.cs`
+- [X] T065 [US7] Crear page model `DetailModel` en `src/SauronSheet.Frontend/Pages/Budgets/Detail.cshtml.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Crear `DetailModel : PageModel` con `[Authorize]`. Inyectar `IMediator`. Properties: `BudgetStatusDto Budget`, `List<TransactionDto> Transactions`. `OnGetAsync(Guid id)`: cargar budget via `GetBudgetByIdQuery`, cargar transacciones del periodo+categoría via `SearchTransactionsQuery` existente.
   - **Dependencias**: T064
   - **Validación**: Compila
 
-- [ ] T066 [US7] Crear vista `Detail.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Detail.cshtml`
+- [X] T066 [US7] Crear vista `Detail.cshtml` en `src/SauronSheet.Frontend/Pages/Budgets/Detail.cshtml`
   - **Acción**: Crear archivo
   - **Descripción**: Razor page con `@model DetailModel`. Header: Category name, Month, Limit. Progress bar grande usando `_BudgetProgressBar` partial. Status badge usando `_BudgetStatusBadge` partial. Resumen: Current Spend / Limit | Remaining | Percentage. Lista de transacciones del mes/categoría. Botón Edit, link "Back to budgets". Tailwind CSS.
   - **Dependencias**: T065, T053, T054
@@ -513,19 +513,19 @@
 
 **Purpose**: Persistencia en Supabase PostgreSQL
 
-- [ ] T067 Crear migración SQL `006_CreateBudgetsTable.sql` en `src/SauronSheet.Infrastructure/Persistence/Migrations/006_CreateBudgetsTable.sql`
+- [X] T067 Crear migración SQL `006_CreateBudgetsTable.sql` en `src/SauronSheet.Infrastructure/Persistence/Migrations/006_CreateBudgetsTable.sql`
   - **Acción**: Crear archivo
   - **Descripción**: Crear tabla `public.budgets` con columnas: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE`, `period_start TIMESTAMPTZ NOT NULL`, `period_end TIMESTAMPTZ NOT NULL`, `limit_amount DECIMAL(18,2) NOT NULL CHECK (limit_amount > 0)`, `currency VARCHAR(3) NOT NULL DEFAULT 'EUR'`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `updated_at TIMESTAMPTZ`. Constraint: `UNIQUE(user_id, category_id, period_start)`. Indexes: `idx_budgets_user`, `idx_budgets_user_period`, `idx_budgets_category`. RLS: 4 policies (SELECT, INSERT, UPDATE, DELETE) using `auth.uid() = user_id`.
   - **Dependencias**: Ninguna (puede ejecutarse en paralelo con desarrollo)
   - **Validación**: SQL ejecuta sin errores en Supabase SQL editor
 
-- [ ] T068 Crear `SupabaseBudgetRepository` en `src/SauronSheet.Infrastructure/Persistence/SupabaseBudgetRepository.cs`
+- [X] T068 Crear `SupabaseBudgetRepository` en `src/SauronSheet.Infrastructure/Persistence/SupabaseBudgetRepository.cs`
   - **Acción**: Crear archivo
   - **Descripción**: Implementar `IBudgetRepository` siguiendo `phase-5-plan.md` sección 6.2. Crear clase interna `BudgetRow : BaseModel` con atributos `[Table("budgets")]`, `[PrimaryKey]`, `[Column]` para cada campo. Métodos `ToDomain()` y `FromDomain(Budget)`. Implementar los 6 métodos del repositorio usando `Supabase.Client.From<BudgetRow>()` con filtros `.Where()`.
   - **Dependencias**: T021, T067
   - **Validación**: `dotnet build --project src/SauronSheet.Infrastructure/` compila
 
-- [ ] T069 Modificar `DependencyInjection.cs` en `src/SauronSheet.Infrastructure/DependencyInjection.cs`
+- [X] T069 Modificar `DependencyInjection.cs` en `src/SauronSheet.Infrastructure/DependencyInjection.cs`
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar registros DI: `services.AddScoped<IBudgetRepository, SupabaseBudgetRepository>()` y `services.AddScoped<BudgetService>()`. Importar namespaces necesarios.
   - **Dependencias**: T068, T023
@@ -539,7 +539,7 @@
 
 **Purpose**: Navegación, UI warning de category deletion, y validación final
 
-- [ ] T070 Modificar `_Layout.cshtml` en `src/SauronSheet.Frontend/Shared/_Layout.cshtml`
+- [X] T070 Modificar `_Layout.cshtml` en `src/SauronSheet.Frontend/Shared/_Layout.cshtml`
   - **Acción**: Modificar archivo existente
   - **Descripción**: Agregar link "Budgets" en la sección de navegación autenticada, después de los links existentes de Transactions/Dashboard. HTML: `<a href="/Budgets" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Budgets</a>`.
   - **Dependencias**: T038
@@ -551,19 +551,19 @@
   - **Dependencias**: T068
   - **Validación**: Al eliminar categoría con budget activo → aparece warning con conteo
 
-- [ ] T072 Verificar build completo ejecutando `dotnet build` — toda la solución compila sin errores ni warnings
+- [X] T072 Verificar build completo ejecutando `dotnet build` — toda la solución compila sin errores ni warnings
 
-- [ ] T073 Ejecutar `dotnet test --filter Category=Domain` — ~66 domain tests PASAN (37 previos + 29 Phase 5)
+- [X] T073 Ejecutar `dotnet test --filter Category=Domain` — ~66 domain tests PASAN (37 previos + 29 Phase 5)
 
-- [ ] T074 Ejecutar `dotnet test --filter Category=Application` — ~102 application tests PASAN (74 previos + 28 Phase 5)
+- [X] T074 Ejecutar `dotnet test --filter Category=Application` — ~102 application tests PASAN (74 previos + 28 Phase 5)
 
-- [ ] T075 Ejecutar `dotnet test` — ~243 total tests PASAN (186 Phase 0–4 + 57 Phase 5)
+- [X] T075 Ejecutar `dotnet test` — ~243 total tests PASAN (186 Phase 0–4 + 57 Phase 5)
 
-- [ ] T076 Verificar arquitectura: Domain.csproj CERO dependencias externas, Application.csproj → solo Domain, Infrastructure.csproj → solo Domain, Frontend.csproj → Application + Infrastructure
+- [X] T076 Verificar arquitectura: Domain.csproj CERO dependencias externas, Application.csproj → solo Domain, Infrastructure.csproj → solo Domain, Frontend.csproj → Application + Infrastructure
 
-- [ ] T077 Validar E2E budget workflow: (1) Login → (2) Crear budget Groceries €500 Feb 2026 → (3) Ver en lista con status → (4) Ver detalle con progress bar → (5) Editar límite a €600 → (6) Dashboard widget muestra progreso → (7) Comparison page muestra budget vs actual → (8) Eliminar budget → transacciones no afectadas → (9) Intentar crear duplicado → error mostrado
+- [X] T077 Validar E2E budget workflow: (1) Login → (2) Crear budget Groceries €500 Feb 2026 → (3) Ver en lista con status → (4) Ver detalle con progress bar → (5) Editar límite a €600 → (6) Dashboard widget muestra progreso → (7) Comparison page muestra budget vs actual → (8) Eliminar budget → transacciones no afectadas → (9) Intentar crear duplicado → error mostrado
 
-- [ ] T078 Verificar coverage: Domain ≥ 80%, Application ≥ 70%
+- [X] T078 Verificar coverage: Domain ≥ 80%, Application ≥ 70%
 
 ---
 

@@ -114,6 +114,46 @@
                 <p class="text-gray-400 text-center py-4">No recent transactions.</p>
             }
         </div>
+
+        <!-- Budget Status Widget (Phase 5) -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">💰 Budget Status</h3>
+                <a href="/Budgets" class="text-blue-600 hover:text-blue-800 text-sm">Manage budgets →</a>
+            </div>
+            @if (Model.BudgetSummary == null || Model.BudgetSummary.TotalBudgets == 0)
+            {
+                <p class="text-gray-500">No budgets set.
+                   <a href="/Budgets/Create" class="text-blue-600 hover:underline">
+                      Create budgets to track spending.
+                   </a>
+                </p>
+            }
+            else
+            {
+                <p class="text-sm text-gray-600 mb-3">
+                    @Model.BudgetSummary.OnTrackCount of @Model.BudgetSummary.TotalBudgets budgets on track
+                    @if (Model.BudgetSummary.OverBudgetCount > 0)
+                    {
+                        <span class="text-red-600 font-medium">
+                            — @Model.BudgetSummary.OverBudgetCount over limit
+                        </span>
+                    }
+                </p>
+                @foreach (var budget in Model.BudgetSummary.Budgets)
+                {
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm mb-1">
+                            <a href="/Budgets/Detail/@budget.Id" class="hover:underline">
+                                @budget.CategoryName
+                            </a>
+                            <span>€@budget.CurrentSpend.ToString("N2") / €@budget.LimitAmount.ToString("N2")</span>
+                        </div>
+                        <partial name="Shared/_BudgetProgressBar" model="budget" />
+                    </div>
+                }
+            }
+        </div>
     }
 </div>
 

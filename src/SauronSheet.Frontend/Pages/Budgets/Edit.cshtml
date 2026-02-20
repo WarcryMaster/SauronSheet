@@ -1,0 +1,92 @@
+@page "/Budgets/Edit/{id:guid}"
+@model SauronSheet.Frontend.Pages.Budgets.EditModel
+@{
+    ViewData["Title"] = "Edit Budget";
+}
+
+<div class="max-w-lg mx-auto space-y-6">
+    <div class="flex items-center gap-4">
+        <a href="/Budgets" class="text-gray-500 hover:text-gray-700">&larr; Back to Budgets</a>
+        <h2 class="text-2xl font-bold text-gray-900">Edit Budget</h2>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            @Model.ErrorMessage
+        </div>
+    }
+
+    @if (Model.Budget != null)
+    {
+        <div class="bg-white rounded-lg shadow p-6 space-y-4">
+            <!-- Read-only info -->
+            <div class="grid grid-cols-2 gap-4 pb-4 border-b">
+                <div>
+                    <p class="text-sm text-gray-500">Category</p>
+                    <p class="font-medium">
+                        @if (!string.IsNullOrEmpty(Model.Budget.CategoryColor))
+                        {
+                            <span class="inline-block w-3 h-3 rounded-full mr-2"
+                                  style="background-color: @Model.Budget.CategoryColor"></span>
+                        }
+                        @Model.Budget.CategoryName
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Period</p>
+                    <p class="font-medium">@Model.Budget.PeriodStart.ToString("MMMM yyyy")</p>
+                </div>
+            </div>
+
+            <!-- Current status display -->
+            <div class="grid grid-cols-3 gap-4 pb-4">
+                <div>
+                    <p class="text-sm text-gray-500">Current Spend</p>
+                    <p class="text-lg font-medium @(Model.Budget.CurrentSpend > Model.Budget.LimitAmount ? "text-red-600" : "text-gray-900")">
+                        €@Model.Budget.CurrentSpend.ToString("N2")
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Remaining</p>
+                    <p class="text-lg font-medium @(Model.Budget.RemainingAmount >= 0 ? "text-green-600" : "text-red-600")">
+                        €@Model.Budget.RemainingAmount.ToString("N2")
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Status</p>
+                    <partial name="Shared/_BudgetStatusBadge" model="Model.Budget.StatusLevel" />
+                </div>
+            </div>
+
+            <!-- Edit form -->
+            <form method="post">
+                <input type="hidden" asp-for="BudgetId" />
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Spending Limit</label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-500">€</span>
+                        <input type="number" asp-for="NewLimitAmount" step="0.01" min="0.01"
+                               class="w-full border rounded px-3 py-2" />
+                        <span class="text-sm text-gray-500">EUR</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4">
+                    <a href="/Budgets" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</a>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-lg shadow p-6 text-center">
+            <p class="text-gray-500">Budget not found.</p>
+            <a href="/Budgets" class="text-blue-600 hover:underline">Back to Budgets</a>
+        </div>
+    }
+</div>
