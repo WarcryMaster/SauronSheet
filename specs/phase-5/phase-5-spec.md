@@ -32,6 +32,18 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-02-20
+
+- Q: GetBudgetsQuery contract mismatch between spec and plan — spec uses `(int? Year, int? Month) → List<BudgetStatusDto>`, plan uses `(DateTime? MonthFilter) → List<BudgetDto>`. Which is authoritative? → A: Use spec contract `GetBudgetsQuery(int? Year, int? Month) : IRequest<List<BudgetStatusDto>>`. The budget list page requires spend calculations (CurrentSpend, RemainingAmount, PercentageUsed, StatusLevel) to render progress bars and status indicators per Scenario 5.2. Plan must be updated to match.
+- Q: `BudgetStatusLevel` file location — spec places it in `Domain/Services/`, plan places it in `Domain/ValueObjects/`. Which location? → A: `Domain/ValueObjects/BudgetStatusLevel.cs`. Enums representing domain value concepts belong alongside other value types (`BudgetId`, `Money`). Spec file structure updated to match plan.
+- Q: `Budget.PercentageUsed` and `IsOverBudget` do raw decimal division without currency validation, unlike `Money.Minus`/`Money.Plus` which throw on mismatch. Should currency be validated? → A: Yes. Add `EnsureSameCurrency` validation to `PercentageUsed`, `IsOverBudget`, and `RemainingAmount` for consistency with `Money` arithmetic. The `Limit.Amount == 0` guard in `PercentageUsed` is dead code (constructor rejects limit ≤ 0) but is retained as a defensive measure.
+- Q: Category deletion with active budgets — spec says `ON DELETE CASCADE` silently removes budgets, but user gets no warning. Should they be warned? → A: Keep DB cascade (`ON DELETE CASCADE` on `category_id` FK) but add a UI warning on the category deletion confirmation: "This category has X active budget(s). Deleting will also remove them." The delete handler queries `IBudgetRepository` for budget count before proceeding. No domain-level blocking (budgets are tracking overlays).
+- Q: `GetBudgetVsActualQuery` parameter type — spec uses `(int Year, int Month)`, plan uses `(DateTime PeriodStart, DateTime PeriodEnd)`. Which is correct? → A: Use spec contract `GetBudgetVsActualQuery(int Year, int Month)`. Handler constructs `DateRange` internally from year+month. Consistent with `GetBudgetsQuery(int?, int?)` and `GetBudgetSummaryForDashboardQuery(int, int)` signatures. Plan must be updated to match.
+
+---
+
 ## Executive Summary
 
 ### In Scope
@@ -197,12 +209,13 @@
 
 ### Edge Cases
 
-- What happens when a category with an active budget is deleted? → Budget is cascade-deleted at DB level (`ON DELETE CASCADE` on `category_id` FK). Application doesn't block category deletion for budgets.
+- What happens when a category with an active budget is deleted? → Budget is cascade-deleted at DB level (`ON DELETE CASCADE` on `category_id` FK). Application doesn't block category deletion for budgets, but the UI shows a warning: "This category has X active budget(s). Deleting will also remove them." The category delete handler queries `IBudgetRepository.GetByUserIdAsync` (filtered by category) to determine budget count for the warning message.
 - What happens when viewing a budget for a month with zero transactions? → Shows €0.00 current spend, 0% used, status Green.
 - What happens when a budget limit is very small (e.g., €0.01)? → Valid; small transactions will quickly trigger overage status.
 - What happens when the progress bar exceeds 100%? → CSS caps visual bar at 100% width; an overflow label shows actual percentage (e.g., "125%").
 - What happens when switching months and no budgets exist? → Empty state message with create link.
 - What happens when two users create budgets for the same category/month simultaneously? → DB unique constraint prevents duplicates; second user gets an error.
+- What happens when `currentSpend` has a different currency than `Limit`? → `IsOverBudget` and `PercentageUsed` throw `InvalidOperationException` (consistent with `Money.Minus`/`Money.Plus` currency validation). Single-currency system (EUR) makes this a defensive guard, not a UX concern.
 
 ---
 
@@ -243,20 +256,30 @@ public class Budget : AggregateRoot<BudgetId>
     public bool IsOverBudget(Money currentSpend)
     {
         if (currentSpend == null) throw new ArgumentNullException(nameof(currentSpend));
+        EnsureSameCurrency(currentSpend);
         return currentSpend.Amount > Limit.Amount;
     }
 
     public decimal PercentageUsed(Money currentSpend)
     {
         if (currentSpend == null) throw new ArgumentNullException(nameof(currentSpend));
-        if (Limit.Amount == 0) return 0;
+        EnsureSameCurrency(currentSpend);
+        if (Limit.Amount == 0) return 0; // Defensive: constructor prevents limit <= 0
         return currentSpend.Amount / Limit.Amount;
     }
 
     public Money RemainingAmount(Money currentSpend)
     {
         if (currentSpend == null) throw new ArgumentNullException(nameof(currentSpend));
+        // Currency validation delegated to Money.Minus (throws InvalidOperationException)
         return Limit.Minus(currentSpend);
+    }
+
+    private void EnsureSameCurrency(Money other)
+    {
+        if (Limit.Currency != other.Currency)
+            throw new InvalidOperationException(
+                $"Cannot compare budget in {Limit.Currency} with spending in {other.Currency}");
     }
 
     public void UpdateLimit(Money newLimit)
@@ -343,10 +366,10 @@ Domain/
 │   └── IBudgetRepository.cs            # NEW — Budget repository contract
 ├── Services/
 │   ├── (existing: CategoryService.cs, IAuthService.cs)
-│   ├── BudgetService.cs                # NEW — Budget domain service
-│   └── BudgetStatusLevel.cs            # NEW — Status level enum
+│   └── BudgetService.cs                # NEW — Budget domain service
 └── ValueObjects/
-    └── (existing: BudgetId.cs, Money.cs, DateRange.cs, etc.)
+    ├── (existing: BudgetId.cs, Money.cs, DateRange.cs, etc.)
+    └── BudgetStatusLevel.cs            # NEW — Status level enum
 ```
 
 ### FR-5.02: Application Layer — Budget Commands & Queries
@@ -1438,7 +1461,7 @@ Step 3: Write Domain.Tests for BudgetService (RED phase)
 
 Step 4: Implement BudgetService + BudgetStatusLevel (GREEN phase)
 └── Domain/Services/BudgetService.cs
-└── Domain/Services/BudgetStatusLevel.cs
+└── Domain/ValueObjects/BudgetStatusLevel.cs
 └── Verify: dotnet test --filter Category=Domain — all new tests GREEN
 
 Step 5: Write Application.Tests for Budget commands (RED phase)

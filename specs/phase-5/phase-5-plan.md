@@ -40,8 +40,8 @@ Phase 5 delivers **Budget Management & Alerts** on top of the MVP foundation (Ph
 - ✅ Dashboard budget status widget (green/yellow/red indicators)
 - ✅ Reusable components: `_BudgetProgressBar.cshtml`, `_BudgetStatusBadge.cshtml`
 - ✅ Updated `_Layout.cshtml` navigation with budget links
-- ✅ ≥55 passing tests (17 Domain Budget entity + 10 Domain BudgetService + 28 Application handler)
-- ✅ Cumulative ~241 tests all green (Phase 0–5)
+- ✅ ≥57 passing tests (19 Domain Budget entity + 10 Domain BudgetService + 28 Application handler)
+- ✅ Cumulative ~243 tests all green (Phase 0–5)
 
 **Key Constraint**: Current spend is calculated from transactions at query time (not denormalized). Budget status thresholds: Green < 60%, Yellow 60–80%, Red 80–100%, Overage > 100%. No new NuGet packages required.
 
@@ -81,7 +81,7 @@ Build Budget list, create, edit, delete pages at `/Budgets`. Build Budget detail
 Add budget status widget to Dashboard page. Create `_BudgetProgressBar.cshtml` and `_BudgetStatusBadge.cshtml` partials. Update `_Layout.cshtml` navigation.
 
 ### Phase 5I: Integration & Validation (Days 18–21)
-E2E testing, coverage reporting, all ~241 tests passing, budget workflow validation.
+E2E testing, coverage reporting, all ~243 tests passing, budget workflow validation.
 
 ---
 
@@ -162,7 +162,7 @@ dotnet build --project src/SauronSheet.Domain/
 
 #### 1.2: Write Domain.Tests for Budget Entity (RED Phase)
 
-**Task**: Create test stubs for `Budget` entity (17 tests)
+**Task**: Create test stubs for `Budget` entity (19 tests)
 
 **File**: `tests/SauronSheet.Domain.Tests/Entities/BudgetTests.cs`
 
@@ -363,6 +363,30 @@ public class BudgetTests
         // THEN throws DomainException("Budget limit must be positive.")
         Assert.True(false, "Implement UpdateLimit zero guard");
     }
+
+    // === Currency Validation Tests ===
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsOverBudget_CurrencyMismatch_ThrowsInvalidOperationException()
+    {
+        // GIVEN Budget with limit 500 EUR
+        // AND currentSpend = 300 USD (different currency)
+        // WHEN IsOverBudget is called
+        // THEN throws InvalidOperationException (EnsureSameCurrency)
+        Assert.True(false, "Implement IsOverBudget currency mismatch guard");
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void PercentageUsed_CurrencyMismatch_ThrowsInvalidOperationException()
+    {
+        // GIVEN Budget with limit 500 EUR
+        // AND currentSpend = 250 USD (different currency)
+        // WHEN PercentageUsed is called
+        // THEN throws InvalidOperationException (EnsureSameCurrency)
+        Assert.True(false, "Implement PercentageUsed currency mismatch guard");
+    }
 }
 ```
 
@@ -370,7 +394,7 @@ public class BudgetTests
 
 ```sh
 dotnet test --filter "ClassName~BudgetTests" --no-build
-# Expected: 17 new Domain tests FAIL (red) — Budget entity not yet implemented
+# Expected: 19 new Domain tests FAIL (red) — Budget entity not yet implemented
 # Expected: ~186 prior tests still PASS
 ```
 
@@ -428,6 +452,7 @@ public class Budget : AggregateRoot<BudgetId>
     public bool IsOverBudget(Money currentSpend)
     {
         if (currentSpend == null) throw new ArgumentNullException(nameof(currentSpend));
+        EnsureSameCurrency(currentSpend);
         return currentSpend.Amount > Limit.Amount;
     }
 
@@ -438,8 +463,9 @@ public class Budget : AggregateRoot<BudgetId>
     public decimal PercentageUsed(Money currentSpend)
     {
         if (currentSpend == null) throw new ArgumentNullException(nameof(currentSpend));
-        if (currentSpend.IsZero) return 0.0m;
-        return Math.Round(currentSpend.Amount / Limit.Amount, 4);
+        EnsureSameCurrency(currentSpend);
+        if (Limit.Amount == 0) return 0; // Defensive: constructor prevents limit <= 0
+        return currentSpend.Amount / Limit.Amount;
     }
 
     /// <summary>
@@ -449,7 +475,15 @@ public class Budget : AggregateRoot<BudgetId>
     public Money RemainingAmount(Money currentSpend)
     {
         if (currentSpend == null) throw new ArgumentNullException(nameof(currentSpend));
+        // Currency validation delegated to Money.Minus (throws InvalidOperationException)
         return Limit.Minus(currentSpend);
+    }
+
+    private void EnsureSameCurrency(Money other)
+    {
+        if (Limit.Currency != other.Currency)
+            throw new InvalidOperationException(
+                $"Cannot compare budget in {Limit.Currency} with spending in {other.Currency}");
     }
 
     /// <summary>
@@ -472,7 +506,7 @@ public class Budget : AggregateRoot<BudgetId>
 
 ```sh
 dotnet test --filter "ClassName~BudgetTests" --no-build
-# Expected: 17 Budget entity tests PASS (green)
+# Expected: 19 Budget entity tests PASS (green)
 ```
 
 ---
@@ -603,12 +637,12 @@ public class BudgetServiceTests
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void GetStatusLevel_At60Percent_ReturnsYellow()
+    public void GetStatusLevel_At60Percent_ReturnsGreen()
     {
         // GIVEN percentage = 0.60 (60%)
         // WHEN GetStatusLevel(percentage) is called
-        // THEN returns BudgetStatusLevel.Yellow
-        Assert.True(false, "Implement GetStatusLevel Yellow at boundary");
+        // THEN returns BudgetStatusLevel.Green (threshold is > 0.6, not >=)
+        Assert.True(false, "Implement GetStatusLevel Green at 60% boundary");
     }
 
     [Fact]
@@ -623,12 +657,12 @@ public class BudgetServiceTests
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void GetStatusLevel_At80Percent_ReturnsRed()
+    public void GetStatusLevel_At80Percent_ReturnsYellow()
     {
         // GIVEN percentage = 0.80 (80%)
         // WHEN GetStatusLevel(percentage) is called
-        // THEN returns BudgetStatusLevel.Red
-        Assert.True(false, "Implement GetStatusLevel Red at boundary");
+        // THEN returns BudgetStatusLevel.Yellow (threshold is > 0.8, not >=)
+        Assert.True(false, "Implement GetStatusLevel Yellow at 80% boundary");
     }
 
     [Fact]
@@ -713,8 +747,8 @@ public class BudgetService
         return percentageUsed switch
         {
             > 1.0m => BudgetStatusLevel.Overage,
-            >= 0.80m => BudgetStatusLevel.Red,
-            >= 0.60m => BudgetStatusLevel.Yellow,
+            > 0.8m => BudgetStatusLevel.Red,
+            > 0.6m => BudgetStatusLevel.Yellow,
             _ => BudgetStatusLevel.Green
         };
     }
@@ -734,7 +768,7 @@ dotnet test --filter "ClassName~BudgetServiceTests" --no-build
 
 ```sh
 dotnet test --filter Category=Domain --no-build
-# Expected: ~64 domain tests PASS (37 Phase 0–4 + 17 Budget entity + 10 BudgetService)
+# Expected: ~66 domain tests PASS (37 Phase 0–4 + 19 Budget entity + 10 BudgetService)
 ```
 
 **Status**: All domain tests passing → Proceed to Phase 5C (Application DTOs)
@@ -1302,17 +1336,19 @@ namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 public class GetBudgetsQueryHandlerTests
 {
     private readonly Mock<IBudgetRepository> _budgetRepoMock = new();
+    private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly Mock<ICategoryRepository> _categoryRepoMock = new();
     private readonly Mock<IUserContext> _userContextMock = new();
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task Handle_BudgetsExist_ReturnsBudgetDtoList()
+    public async Task Handle_BudgetsExist_ReturnsBudgetStatusDtoList()
     {
-        // GIVEN user has 3 budgets
+        // GIVEN user has 3 budgets with transactions in their categories
         // WHEN GetBudgetsQuery is handled
-        // THEN returns list of 3 BudgetDto sorted alphabetically by category name
-        Assert.True(false, "Implement GetBudgets happy path");
+        // THEN returns list of 3 BudgetStatusDto sorted alphabetically by category name
+        //      each with CurrentSpend, RemainingAmount, PercentageUsed, StatusLevel calculated
+        Assert.True(false, "Implement GetBudgets happy path with status");
     }
 
     [Fact]
@@ -1327,12 +1363,12 @@ public class GetBudgetsQueryHandlerTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task Handle_WithMonthFilter_FiltersCorrectly()
+    public async Task Handle_WithYearMonthFilter_FiltersCorrectly()
     {
         // GIVEN user has budgets for Feb and Mar
-        // WHEN GetBudgetsQuery with monthFilter = February is handled
-        // THEN returns only Feb budgets
-        Assert.True(false, "Implement GetBudgets month filter");
+        // WHEN GetBudgetsQuery with Year=2026, Month=2 is handled
+        // THEN returns only Feb budgets with status
+        Assert.True(false, "Implement GetBudgets year/month filter");
     }
 
     [Fact]
@@ -1360,10 +1396,11 @@ using DTOs;
 using MediatR;
 
 /// <summary>
-/// Query to get all budgets for the current user, with optional month filter.
+/// Query to get all budgets for the current user, with optional year/month filter.
+/// Returns BudgetStatusDto with spend calculations for progress bars and status indicators.
 /// Phase 5 (Scenario 5.2).
 /// </summary>
-public record GetBudgetsQuery(DateTime? MonthFilter = null) : IRequest<List<BudgetDto>>;
+public record GetBudgetsQuery(int? Year = null, int? Month = null) : IRequest<List<BudgetStatusDto>>;
 ```
 
 **File**: `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetsQueryHandler.cs`
@@ -1378,42 +1415,53 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Domain.Repositories;
+using Domain.Services;
+using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
 
 /// <summary>
 /// Handler for GetBudgetsQuery.
-/// Returns budget list with category info, optional month filtering, sorted alphabetically.
+/// Returns budget list with status (CurrentSpend, Remaining, PercentageUsed, StatusLevel).
+/// Optional year/month filtering, sorted alphabetically by category name.
 /// </summary>
-public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<BudgetDto>>
+public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<BudgetStatusDto>>
 {
     private readonly IBudgetRepository _budgetRepo;
+    private readonly ITransactionRepository _transactionRepo;
     private readonly ICategoryRepository _categoryRepo;
     private readonly IUserContext _userContext;
 
     public GetBudgetsQueryHandler(
         IBudgetRepository budgetRepo,
+        ITransactionRepository transactionRepo,
         ICategoryRepository categoryRepo,
         IUserContext userContext)
     {
         _budgetRepo = budgetRepo;
+        _transactionRepo = transactionRepo;
         _categoryRepo = categoryRepo;
         _userContext = userContext;
     }
 
-    public async Task<List<BudgetDto>> Handle(GetBudgetsQuery request, CancellationToken cancellationToken)
+    public async Task<List<BudgetStatusDto>> Handle(GetBudgetsQuery request, CancellationToken cancellationToken)
     {
         var userId = new UserId(_userContext.UserId);
         var budgets = await _budgetRepo.GetByUserIdAsync(userId);
 
-        // Optional month filter
-        if (request.MonthFilter.HasValue)
+        // Optional year/month filter
+        if (request.Year.HasValue && request.Month.HasValue)
         {
-            var filterMonth = request.MonthFilter.Value;
             budgets = budgets
-                .Where(b => b.Period.StartDate.Year == filterMonth.Year
-                         && b.Period.StartDate.Month == filterMonth.Month)
+                .Where(b => b.Period.StartDate.Year == request.Year.Value
+                         && b.Period.StartDate.Month == request.Month.Value)
+                .ToList();
+        }
+        else if (request.Year.HasValue)
+        {
+            budgets = budgets
+                .Where(b => b.Period.StartDate.Year == request.Year.Value)
                 .ToList();
         }
 
@@ -1421,29 +1469,52 @@ public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<Budg
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
         var categoryLookup = categories.ToDictionary(c => c.Id, c => c);
 
-        return budgets
-            .Select(b =>
-            {
-                var catName = "Unknown";
-                string? catColor = null;
-                if (categoryLookup.TryGetValue(b.CategoryId, out var cat))
-                {
-                    catName = cat.Name;
-                    catColor = cat.Color;
-                }
+        // Load all transactions for spend calculation across all budget periods
+        var results = new List<BudgetStatusDto>();
+        foreach (var budget in budgets)
+        {
+            // Calculate current spend from transactions in this category and period
+            var userSpec = new TransactionByUserSpecification(userId);
+            var dateSpec = new TransactionByDateRangeSpecification(budget.Period.StartDate, budget.Period.EndDate);
+            var categorySpec = new TransactionByCategorySpecification(budget.CategoryId);
+            var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(
+                CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec),
+                categorySpec);
 
-                return new BudgetDto(
-                    b.Id.Value,
-                    b.CategoryId.Value,
-                    catName,
-                    catColor,
-                    b.Limit.Amount,
-                    b.Limit.Currency,
-                    b.Period.StartDate,
-                    b.Period.EndDate,
-                    b.CreatedAt,
-                    b.UpdatedAt);
-            })
+            var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
+            var currentSpendAmount = transactions
+                .Where(t => t.Amount.IsNegative)
+                .Sum(t => Math.Abs(t.Amount.Amount));
+
+            var currentSpend = new Money(currentSpendAmount);
+            var percentageUsed = budget.PercentageUsed(currentSpend);
+            var remaining = budget.RemainingAmount(currentSpend);
+            var statusLevel = BudgetService.GetStatusLevel(percentageUsed);
+
+            var catName = "Unknown";
+            string? catColor = null;
+            if (categoryLookup.TryGetValue(budget.CategoryId, out var cat))
+            {
+                catName = cat.Name;
+                catColor = cat.Color;
+            }
+
+            results.Add(new BudgetStatusDto(
+                budget.Id.Value,
+                budget.CategoryId.Value,
+                catName,
+                catColor,
+                budget.Limit.Amount,
+                currentSpendAmount,
+                remaining.Amount,
+                percentageUsed,
+                statusLevel.ToString(),
+                budget.Limit.Currency,
+                budget.Period.StartDate,
+                budget.Period.EndDate));
+        }
+
+        return results
             .OrderBy(b => b.CategoryName)
             .ToList();
     }
@@ -1713,7 +1784,7 @@ using MediatR;
 /// Query to get budget vs. actual spending comparison for a given month.
 /// Phase 5 (Scenario 5.6).
 /// </summary>
-public record GetBudgetVsActualQuery(DateTime PeriodStart, DateTime PeriodEnd) : IRequest<List<BudgetVsActualDto>>;
+public record GetBudgetVsActualQuery(int Year, int Month) : IRequest<List<BudgetVsActualDto>>;
 ```
 
 **File**: `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetVsActualQueryHandler.cs`
@@ -1765,16 +1836,21 @@ public class GetBudgetVsActualQueryHandler : IRequestHandler<GetBudgetVsActualQu
     {
         var userId = new UserId(_userContext.UserId);
 
+        // Construct DateRange from year + month
+        var periodStart = new DateTime(request.Year, request.Month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+        var period = new DateRange(periodStart, periodEnd);
+
         // Load all user budgets for the period
         var allBudgets = await _budgetRepo.GetByUserIdAsync(userId);
         var periodBudgets = allBudgets
-            .Where(b => b.Period.StartDate.Year == request.PeriodStart.Year
-                     && b.Period.StartDate.Month == request.PeriodStart.Month)
+            .Where(b => b.Period.StartDate.Year == request.Year
+                     && b.Period.StartDate.Month == request.Month)
             .ToList();
 
         // Load all transactions for the period
         var userSpec = new TransactionByUserSpecification(userId);
-        var dateSpec = new TransactionByDateRangeSpecification(request.PeriodStart, request.PeriodEnd);
+        var dateSpec = new TransactionByDateRangeSpecification(periodStart, periodEnd);
         var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec);
         var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
 
@@ -1942,7 +2018,7 @@ using MediatR;
 /// Query to get aggregated budget health summary for the dashboard widget.
 /// Phase 5 (Scenario 5.5).
 /// </summary>
-public record GetBudgetSummaryForDashboardQuery(DateTime PeriodStart, DateTime PeriodEnd)
+public record GetBudgetSummaryForDashboardQuery(int Year, int Month)
     : IRequest<BudgetDashboardSummaryDto>;
 ```
 
@@ -1995,11 +2071,15 @@ public class GetBudgetSummaryForDashboardQueryHandler
     {
         var userId = new UserId(_userContext.UserId);
 
+        // Construct DateRange from year + month
+        var periodStart = new DateTime(request.Year, request.Month, 1);
+        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
         // Load budgets for the period
         var allBudgets = await _budgetRepo.GetByUserIdAsync(userId);
         var periodBudgets = allBudgets
-            .Where(b => b.Period.StartDate.Year == request.PeriodStart.Year
-                     && b.Period.StartDate.Month == request.PeriodStart.Month)
+            .Where(b => b.Period.StartDate.Year == request.Year
+                     && b.Period.StartDate.Month == request.Month)
             .ToList();
 
         if (!periodBudgets.Any())
@@ -2010,7 +2090,7 @@ public class GetBudgetSummaryForDashboardQueryHandler
 
         // Load all transactions for the period (single query, then filter in-memory)
         var userSpec = new TransactionByUserSpecification(userId);
-        var dateSpec = new TransactionByDateRangeSpecification(request.PeriodStart, request.PeriodEnd);
+        var dateSpec = new TransactionByDateRangeSpecification(periodStart, periodEnd);
         var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec);
         var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
 
@@ -2345,13 +2425,16 @@ public class IndexModel : PageModel
     public List<BudgetStatusDto> Budgets { get; set; } = new();
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? MonthFilter { get; set; }
+    public int? Year { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? Month { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
         // Resolve budget list with status for current month
-        // Uses GetBudgetSummaryForDashboardQuery (reuses spend calculation)
-        // Or GetBudgetsQuery for basic list + per-item status computation
+        // Uses GetBudgetsQuery(Year, Month) → List<BudgetStatusDto>
+        // Each BudgetStatusDto includes CurrentSpend, Remaining, PercentageUsed, StatusLevel
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid budgetId)
@@ -2527,12 +2610,17 @@ public class ComparisonModel : PageModel
     public decimal TotalDifference { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? Month { get; set; }
+    public int? Year { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? Month { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
-        // Build DateRange from Month (1st to last day)
-        // Send GetBudgetVsActualQuery
+        // Default to current year/month if not specified
+        var year = Year ?? DateTime.UtcNow.Year;
+        var month = Month ?? DateTime.UtcNow.Month;
+        // Send GetBudgetVsActualQuery(year, month)
         // Calculate totals
     }
 }
@@ -2626,7 +2714,7 @@ Add to `OnGetAsync()`:
 ```csharp
 // Phase 5: Budget status widget
 BudgetSummary = await _mediator.Send(
-    new GetBudgetSummaryForDashboardQuery(FromDate, ToDate));
+    new GetBudgetSummaryForDashboardQuery(FromDate.Year, FromDate.Month));
 ```
 
 **Modification**: `src/SauronSheet.Frontend/Pages/Dashboard.cshtml`
@@ -2690,6 +2778,25 @@ Add to the authenticated nav items section (after existing Transactions / Dashbo
 
 ---
 
+#### 7.9: Add Category Deletion Budget Warning
+
+**Task**: Update category delete confirmation to warn about associated budgets
+
+**Modification**: Category delete handler (existing) and category management page
+
+When a user deletes a category that has active budgets:
+1. The delete handler queries `IBudgetRepository.GetByUserIdAsync(userId)` and filters by `CategoryId` to count associated budgets.
+2. If `budgetCount > 0`, the confirmation dialog shows: **"This category has X active budget(s). Deleting will also remove them."**
+3. The delete still proceeds via DB `ON DELETE CASCADE` on `category_id` FK — no domain-level blocking.
+4. Budgets are tracking overlays; they should not prevent category deletion.
+
+**Frontend implementation note**: The category management page (existing from Phase 3) must be updated to:
+- Query budget count for the category before showing the delete confirmation
+- Display the warning message in the Alpine.js confirmation modal
+- No backend change needed beyond passing the budget count to the view
+
+---
+
 #### Checkpoint 6: Frontend Complete ✓
 
 ```sh
@@ -2707,7 +2814,7 @@ dotnet run --project src/SauronSheet.Frontend/
 
 ```sh
 dotnet test
-# Expected: ~241 tests total (~186 Phase 0–4 + ~55 Phase 5)
+# Expected: ~243 tests total (~186 Phase 0–4 + ~57 Phase 5)
 # Expected: ALL tests PASS (green)
 ```
 
@@ -2716,7 +2823,7 @@ dotnet test
 ```sh
 dotnet test --filter Category=Domain --collect:"XPlat Code Coverage"
 # Expected: Domain layer ≥ 80% (Constitution minimum)
-# Phase 5 additions: 27 Domain tests (17 Budget entity + 10 BudgetService)
+# Phase 5 additions: 29 Domain tests (19 Budget entity + 10 BudgetService)
 
 dotnet test --filter Category=Application --collect:"XPlat Code Coverage"
 # Expected: Application layer ≥ 70% (Constitution minimum)
@@ -2779,14 +2886,14 @@ The TDD workflow for each component follows this pattern:
 
 | Step | Action | Phase | Example |
 |------|--------|-------|---------|
-| 1 | Write failing test stubs | RED | `BudgetTests.cs` — 17 tests fail |
-| 2 | Implement minimum code to pass | GREEN | `Budget.cs` — all 17 tests pass |
+| 1 | Write failing test stubs | RED | `BudgetTests.cs` — 19 tests fail |
+| 2 | Implement minimum code to pass | GREEN | `Budget.cs` — all 19 tests pass |
 | 3 | Refactor for clarity and DRY | REFACTOR | Extract shared test helpers |
 | 4 | Verify no regressions | VERIFY | `dotnet test` — all prior tests still pass |
 
 **Applied to Phase 5:**
-- **Domain RED**: Write 27 test stubs (17 Budget entity + 10 BudgetService) → all fail
-- **Domain GREEN**: Implement Budget entity, IBudgetRepository, BudgetService → 27 tests pass
+- **Domain RED**: Write 29 test stubs (19 Budget entity + 10 BudgetService) → all fail
+- **Domain GREEN**: Implement Budget entity, IBudgetRepository, BudgetService → 29 tests pass
 - **Application RED**: Write 28 test stubs for handlers → all fail
 - **Application GREEN**: Implement 7 handlers with DTOs → 28 tests pass
 - **Refactor**: Extract shared test helpers, ensure consistent patterns
@@ -2797,13 +2904,13 @@ The TDD workflow for each component follows this pattern:
 
 | Checkpoint | Gate | Expected |
 |------------|------|----------|
-| CP-1 | Budget entity tests green | 17 Domain tests pass |
-| CP-2 | Domain layer complete | ~64 Domain tests pass (37 prior + 27 new) |
+| CP-1 | Budget entity tests green | 19 Domain tests pass |
+| CP-2 | Domain layer complete | ~66 Domain tests pass (37 prior + 29 new) |
 | CP-3 | Command handlers complete | 12 Application tests pass |
 | CP-4 | All Application tests complete | 28 budget Application tests pass |
 | CP-5 | Infrastructure complete | Solution builds, DI registers all services |
 | CP-6 | Frontend complete | All pages render, budget CRUD working |
-| CP-7 | Full integration | ~241 total tests pass, E2E workflow validated |
+| CP-7 | Full integration | ~243 total tests pass, E2E workflow validated |
 
 ---
 
@@ -2815,7 +2922,8 @@ The TDD workflow for each component follows this pattern:
 | Current spend calculation performance | N+1 queries per budget in dashboard | Batch load transactions for the period, then filter in-memory per category |
 | BudgetId value object uses `ArgumentException` not `DomainException` | Inconsistency with other VOs | Assess during implementation; existing code uses `ArgumentException` so maintain consistency |
 | Chart.js horizontal bar chart for comparison | New chart type not in Phase 4 | Horizontal bar is standard Chart.js type; same CDN already loaded |
-| Category deletion cascading to budget | DB `ON DELETE CASCADE` on `category_id` FK | Documented in spec (CD-5.10 edge case); handler doesn't block it |
+| Category deletion cascading to budget | DB `ON DELETE CASCADE` on `category_id` FK | Documented in spec (CD-5.10 edge case); UI shows warning: "This category has X active budget(s). Deleting will also remove them." Delete handler queries `IBudgetRepository` for budget count before proceeding. No domain-level blocking (budgets are tracking overlays). |
+| Currency mismatch in budget calculations | Budget limit in EUR compared with spending in different currency | `EnsureSameCurrency` validation added to `IsOverBudget` and `PercentageUsed`; `RemainingAmount` delegates to `Money.Minus` which already validates. Throws `InvalidOperationException` on mismatch. |
 | DateRange matching for budget lookup | PeriodStart must match exactly | Use first-day-of-month normalization in commands; `period_start` column indexed |
 | Dashboard query performance with budget widget | Additional query per dashboard load | Single batch query for all budgets; spend calculated from already-loaded transactions |
 
@@ -2858,7 +2966,7 @@ The TDD workflow for each component follows this pattern:
 | Frontend | `src/SauronSheet.Frontend/Pages/Budgets/Comparison.cshtml` + `.cs` | Budget vs. actual page |
 | Frontend | `src/SauronSheet.Frontend/Shared/_BudgetProgressBar.cshtml` | Reusable progress bar |
 | Frontend | `src/SauronSheet.Frontend/Shared/_BudgetStatusBadge.cshtml` | Reusable status badge |
-| Tests | `tests/SauronSheet.Domain.Tests/Entities/BudgetTests.cs` | 17 Budget entity tests |
+| Tests | `tests/SauronSheet.Domain.Tests/Entities/BudgetTests.cs` | 19 Budget entity tests |
 | Tests | `tests/SauronSheet.Domain.Tests/Services/BudgetServiceTests.cs` | 10 BudgetService tests |
 | Tests | `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/CreateBudgetCommandHandlerTests.cs` | 5 tests |
 | Tests | `tests/SauronSheet.Application.Tests/Features/Budgets/Commands/UpdateBudgetCommandHandlerTests.cs` | 3 tests |
