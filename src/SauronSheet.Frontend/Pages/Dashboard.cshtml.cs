@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
 using SauronSheet.Application.Features.Analytics.DTOs;
 using SauronSheet.Application.Features.Analytics.Queries;
+using SauronSheet.Application.Features.Budgets.DTOs;
+using SauronSheet.Application.Features.Budgets.Queries;
 using SauronSheet.Application.Features.Transactions.DTOs;
 using SauronSheet.Application.Features.Transactions.Queries;
 
@@ -23,6 +25,7 @@ public class DashboardModel : PageModel
     public List<MonthlyTrendDto> MonthlyTrends { get; set; } = new();
     public List<YearlyComparisonDto> YearlyComparison { get; set; } = new();
     public List<TransactionDto> RecentTransactions { get; set; } = new();
+    public BudgetDashboardSummaryDto? BudgetSummary { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public string DateFilter { get; set; } = "this-month";
@@ -52,6 +55,9 @@ public class DashboardModel : PageModel
             MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(DateTime.UtcNow.Year));
             YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(DateTime.UtcNow.Year - 1, DateTime.UtcNow.Year));
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
+
+            // Phase 5: Budget status widget
+            BudgetSummary = await _mediator.Send(new GetBudgetSummaryForDashboardQuery(FromDate.Year, FromDate.Month));
 
             return Page();
         }

@@ -1,0 +1,27 @@
+@* Budget progress bar partial view.
+   Model: expects BudgetStatusDto with PercentageUsed and StatusLevel. *@
+@model SauronSheet.Application.Features.Budgets.DTOs.BudgetStatusDto
+
+@{
+    var percentage = Math.Min(Model.PercentageUsed * 100, 100);
+    var actualPercentage = Model.PercentageUsed * 100;
+    var colorClass = Model.StatusLevel switch
+    {
+        "Green" => "bg-green-500",
+        "Yellow" => "bg-yellow-500",
+        "Red" => "bg-red-500",
+        "Overage" => "bg-red-700",
+        _ => "bg-gray-400"
+    };
+}
+
+<div class="w-full bg-gray-200 rounded-full h-4 relative">
+    <div class="@colorClass h-4 rounded-full transition-all duration-300"
+         style="width: @(percentage)%"></div>
+    @if (actualPercentage > 100)
+    {
+        <span class="absolute right-0 top-0 text-xs text-red-700 font-bold pr-1">
+            @(Math.Round(actualPercentage, 0))%
+        </span>
+    }
+</div>
