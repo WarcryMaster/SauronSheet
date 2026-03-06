@@ -20,7 +20,7 @@
 |---|---|---|---|
 | CD-6.1 | Tailwind CSS build pipeline via Tailwind CLI (standalone) | No Node.js dependency required; standalone binary purges unused classes and minifies output | 2026-02-15 |
 | CD-6.2 | Alpine.js pinned version via CDN with SRI hash | Security best practice; integrity verified on load | 2026-02-15 |
-| CD-6.3 | Vercel for hosting (.NET via Docker container) | Free tier, CI/CD integration, auto-deploy on push to main. **Pre-implementation verification:** Confirm Vercel .NET 10 support on free tier Week 22; pivot to Railway/Render if unsupported | 2026-02-15 |
+| CD-6.3 | Vercel for hosting (.NET via Docker container) | Free tier, CI/CD integration, auto-deploy on push to main. **Pre-implementation verification (CRITICAL PATH, Week 22 Day 1):** Contact Vercel support; confirm Docker .NET 10 support on free tier. If YES → proceed with Vercel config. If NO/unsupported → immediately pivot to Railway.app or Render.com (same Dockerfile works; both free tier support Docker). Platform decision must be locked in before Step 1 begins to eliminate Risk R-6.1 and prevent wasted effort. | 2026-02-15 |
 | CD-6.4 | Sentry for error monitoring (.NET + JavaScript) | Industry standard; free tier sufficient for MVP; captures both server and client errors | 2026-02-15 |
 | CD-6.5 | WCAG 2.1 AA as accessibility baseline | Legal compliance in many jurisdictions; good UX practice | 2026-02-15 |
 | CD-6.6 | Password reset flow via Supabase Auth built-in | No custom implementation needed; Supabase handles email sending | 2026-02-15 |
@@ -992,6 +992,45 @@ text
 
 ---
 
+## Test Execution Roadmap
+
+### Test Timing & Per-Step Validation Strategy
+
+All 27 tests are executed using **Continuous Test-Driven Development (Continuous TDD)** approach: tests are written immediately after each implementation step completes, validated before moving to the next step. This ensures every deliverable is spec-compliant and regression-free.
+
+| Step # | Implementation Step | Related Tests | Timing | Validation Gate | Notes |
+|--------|-------------------|---------------|--------|-----------------|-------|
+| Step 1 | Tailwind CSS build pipeline | T-6.14 (size < 50KB) | Week 22 Day 2: After Step 1 completes | Measure site.css file size; verify < 50KB | Prerequisite for all other CSS-dependent tests |
+| Step 2 | Alpine.js + Chart.js SRI pinning | T-6.17 (static asset hashing) | Week 22 Day 3: After Step 2 completes | Verify SRI hashes in HTML; no version drift | Must complete before proceeding to Step 3 |
+| Step 3 | UI polish pass (all pages) | T-6.01 (consistent styling) | Week 22 Day 4: After Step 3 completes | Visual inspection + CSS audit; no overrides | Gate: All components use Tailwind classes from config |
+| Step 4 | Responsive design audit | T-6.02, T-6.03, T-6.04 | Week 22 Day 4-5: After Step 4 completes | Manual browser testing at 320px, 768px, 1024px+ | All three viewport sizes must pass |  |
+| Step 5 | Loading states component | T-6.05 | Week 23 Day 1: After Step 5 completes | Simulate slow network; verify spinners render | Gate: Proceed to next step only if loading state visible |
+| Step 5 Cont. | Error states component | T-6.06 | Week 23 Day 1: After error component | Trigger API error; verify user-friendly message (no stack trace) | Gate: No implementation details leaked |
+| Step 5 Cont. | Empty states + messages | T-6.07 | Week 23 Day 1: After empty states | Verify all data pages show appropriate empty message + action link | Gate: All 6 pages (per Scenario 6.2 table) covered |
+| Step 5 Cont. | Toast notification component | T-6.08 | Week 23 Day 1: After toast completes | Trigger success/error actions; verify toast appears, auto-dismisses | Gate: All toast types (success/error/warning/info) working |
+| Step 6 | Accessibility audit + remediation | T-6.09, T-6.10, T-6.11, T-6.12, T-6.13 | Week 23 Day 2-3: After Step 6 completes | Run Lighthouse audit (≥90 accessibility score); axe-core scan; manual screen reader test | Gate: Lighthouse ≥90; zero critical axe-core violations |
+| Step 7 | Password reset flow | T-6.25, T-6.26, T-6.27 | Week 23 Day 3: After password reset implemented | End-to-end email send + reset link → new password login | Gate: Test T-6.25–T-6.27 all pass |
+| Step 8 | Security headers middleware | T-6.18, T-6.19 | Week 23 Day 4: After middleware registration | Verify all security headers present; CSP blocks inline scripts | Gate: CSP validated; no 'unsafe-inline' |
+| Step 9 | Performance optimization (compression + caching) | T-6.15, T-6.16, T-6.17 | Week 23 Day 4-5: After compression + caching configured | TTI < 3s (Lighthouse Slow 4G); response compression active; cache headers set | Gate: TTI test passes; Lighthouse Performance ≥80 |
+| Step 10 | 404 page + favicon + print stylesheet | (Visual inspection) | Week 23 Day 5: After polishing | Manual browser verification; print test via browser | No formal test; visual acceptance sufficient |
+| Step 11 | Sentry error monitoring setup | T-6.24 | Week 24 Day 1-2: After Sentry SDK configured (post-deploy) | Deploy to prod; trigger test exception in Sentry; verify capture | Gate: Error visible in Sentry dashboard within 10s |
+| Step 12 | Security headers finalization | (Part of Step 8) | Pre-deployment verification | Audit response headers; verify all 5 security headers present | Gate: Security team sign-off |
+| Step 13 | Vercel deployment + Docker build | T-6.20, T-6.21, T-6.22, T-6.23 | Week 24 Day 2-3: After deployment configured | Build Docker image; deploy to Vercel/Railway; verify HTTPS redirect + health check | Gate: Public URL accessible; health check returns 200 |
+
+### Phase-Wide Test Gates
+
+**After Phase 2 (Week 23 Day 4):**
+- All Phase 2 tests (T-6.01–T-6.17) **must be green**
+- Phase 0–5 regression test suite (`dotnet test`) **must be green** (zero regressions)
+- Proceeding to Phase 3 depends on both gates passing
+
+**After Phase 3 (Week 24 Day 3):**
+- All Phase 3 tests (T-6.18–T-6.24) **must be green**
+- All Phase 0–6 tests (complete test suite) **must be green**
+- Deployment smoke tests on production URL **must pass**
+
+---
+
 ## Test Specifications
 
 ### UI Polish Tests
@@ -1321,6 +1360,78 @@ AND IAuthService.RequestPasswordResetAsync is NOT called
 | R-6.7 | Password reset email delivery issues (Supabase SMTP)                    | Medium | Low         | Test with real email; Supabase uses built-in email service; custom SMTP configurable if needed    |
 | R-6.8 | Docker image size too large for free tier hosting                        | Medium | Medium      | Multi-stage build (already in Dockerfile); use `aspnet` runtime image (not SDK); target < 200MB  |
 | R-6.9 | Performance benchmarks not met (TTI > 3s)                               | Medium | Medium      | Identify bottleneck (CSS size? API latency? JS bundle?); optimize specific area                  |
+
+---
+
+## Pre-Implementation: Critical Path Verification (Week 22, Day 1)
+
+### VERIFY DEPLOYMENT PLATFORM — BLOCKING GATE FOR ALL IMPLEMENTATION
+
+**Objective:** Eliminate platform selection uncertainty before Phase 1 begins. Cannot proceed to Phase 1 Step 1 until platform decision is locked.
+
+**Timeline:** Week 22, Day 1, Morning (before any development work starts)
+
+**Verification Protocol:**
+
+1. **Send formal inquiry to Vercel support**
+   - Question: "Does Vercel free tier support persistent Docker containers running .NET 10 full-stack Razor Pages applications?"
+   - Provide details:
+     - SDK: mcr.microsoft.com/dotnet/sdk:10.0
+     - Runtime: mcr.microsoft.com/dotnet/aspnet:10.0
+     - Multi-stage Dockerfile (reference FR-6.09)
+     - Expected runtime image size: ~150-200MB
+     - Workload: Razor Pages + SQLite/Supabase API calls + background health checks
+   - Decision deadline: Week 22 Day 1 — EOD (5 PM)
+
+2. **Decision Tree (Apply at EOD Day 1):**
+
+   ```
+   ├─ YES (Vercel confirms free tier support)
+   │  ├─ Action: Proceed with Vercel (FR-6.09 unchanged)
+   │  ├─ Record: Vercel support ticket # + confirmation email
+   │  ├─ Lock: Platform = Vercel; no mid-phase changes
+   │  └─ → Proceed to Phase 1 Step 1
+   │
+   ├─ NO (Vercel explicitly does NOT support)
+   │  ├─ Action: PIVOT TO RAILWAY.APP IMMEDIATELY
+   │  ├─ Changes: Use same Dockerfile; update deployment config for Railway CLI
+   │  ├─ Record: Vercel rejection reason + Railway pivot decision date
+   │  ├─ Lock: Platform = Railway; notify stakeholders
+   │  └─ → Proceed to Phase 1 Step 1
+   │
+   └─ NO RESPONSE (≥48h elapsed, no response)
+      ├─ Action: Assume unsupported → PIVOT TO RAILWAY.APP
+      ├─ Reason: Cannot risk running out of time; Railway confirmed to work
+      ├─ Changes: Same as NO path (Dockerfile + Railway CLI)
+      ├─ Record: "No timely response from Vercel; selected Railway for schedule certainty"
+      └─ → Proceed to Phase 1 Step 1
+   ```
+
+3. **Fallback Deployment Paths (Both Use Same Dockerfile):**
+
+   **If Vercel (YES):**
+   ```bash
+   vercel login
+   vercel deploy --prod --build-env ASPNETCORE_ENVIRONMENT=Production
+   ```
+
+   **If Railway (NO/Uncertain):**
+   ```bash
+   railway login
+   railway link              # Link to Railway project
+   railway up --detach        # Deploy
+   ```
+   Both platforms use identical Dockerfile; only deployment commands differ.
+
+4. **Lock-In Confirmation (Required Before Step 1 Begins):**
+   - Document decision in spec notes or GitHub issue
+   - Notify team: "Platform is [VERCEL/RAILWAY]; no further changes permitted"
+   - Update FR-6.09 if Railway selected (minor config changes only)
+
+**Why This Gate Exists:**
+- **Risk R-6.1 mitigation**: Eliminates platform support uncertainty
+- **Schedule protection**: If Vercel says NO on Week 23 (mid-Phase), loss = 2-3 days
+- **Team clarity**: Single platform decision prevents wasted effort
 
 ---
 
