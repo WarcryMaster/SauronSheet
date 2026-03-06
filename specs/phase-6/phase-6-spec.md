@@ -20,7 +20,7 @@
 |---|---|---|---|
 | CD-6.1 | Tailwind CSS build pipeline via Tailwind CLI (standalone) | No Node.js dependency required; standalone binary purges unused classes and minifies output | 2026-02-15 |
 | CD-6.2 | Alpine.js pinned version via CDN with SRI hash | Security best practice; integrity verified on load | 2026-02-15 |
-| CD-6.3 | Vercel for hosting (.NET via Docker container) | Free tier, CI/CD integration, auto-deploy on push to main. **Pre-implementation verification (CRITICAL PATH, Week 22 Day 1):** Contact Vercel support; confirm Docker .NET 10 support on free tier. If YES → proceed with Vercel config. If NO/unsupported → immediately pivot to Railway.app or Render.com (same Dockerfile works; both free tier support Docker). Platform decision must be locked in before Step 1 begins to eliminate Risk R-6.1 and prevent wasted effort. | 2026-02-15 |
+| CD-6.3 | Vercel for hosting (.NET via Docker container) | Free tier, CI/CD integration, auto-deploy on push to main. **Pre-implementation verification (CRITICAL PATH, Week 22 Day 1):** Contact Vercel support; confirm Docker .NET 10 support on free tier. If YES → proceed with Vercel config. If NO/unsupported → immediately pivot to Railway.app or Render.com (same Dockerfile works; both free tier support Docker). **Dockerfile Strategy:** Single Dockerfile with environment variable substitution (`$ASPNETCORE_URLS` defaults to `http://+:5000`) ensures compatibility across all three platforms. Platform decision must be locked in before Step 1 begins to eliminate Risk R-6.1 and prevent wasted effort. | 2026-02-15 |
 | CD-6.4 | Sentry for error monitoring (.NET + JavaScript) | Industry standard; free tier sufficient for MVP; captures both server and client errors | 2026-02-15 |
 | CD-6.5 | WCAG 2.1 AA as accessibility baseline | Legal compliance in many jurisdictions; good UX practice | 2026-02-15 |
 | CD-6.6 | Password reset flow via Supabase Auth built-in | No custom implementation needed; Supabase handles email sending | 2026-02-15 |
@@ -61,6 +61,12 @@
   - If unsupported: immediately pivot to Railway.app or Render.com (both support Docker free tier with same Dockerfile)
   - If supported: proceed with FR-6.09 Dockerfile as-is
   - Risk R-6.1 mitigated; deployment platform locked in before Step 1
+
+- **Q6:** Railway/Render Dockerfile Portability — Platform-Agnostic Strategy → **A (Single Dockerfile + Environment Variables)**
+  - Use ONE Dockerfile with environment variable substitution (e.g., `$ASPNETCORE_URLS` defaults to `http://+:5000`)
+  - Compatible with Vercel, Railway, and Render (all follow Docker conventions)
+  - Reduces maintenance burden; no platform-specific variants needed
+  - Validation required during Week 22 platform verification to confirm port exposure and env var handling
 
 ---
 

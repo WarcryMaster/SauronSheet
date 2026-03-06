@@ -48,6 +48,12 @@ La Fase 6 entrega el pulido final de la interfaz, optimización de rendimiento, 
 
 **Resultado:** Todas las puertas pasan. Sin violaciones constitucionales.
 
+### Clarifications Session 2026-03-06 (Exhaustive Review II)
+- **Q6:** Railway/Render Dockerfile Portability → **A (Single Dockerfile + Environment Variables)**
+  - Decisión: UN Dockerfile con variables de entorno (`$ASPNETCORE_URLS=http://+:5000`)
+  - Compatible con Vercel, Railway, Render
+  - Validación requerida Week 22 para port exposure y manejo de env vars
+
 ## Estructura del Proyecto
 
 ### Documentación (esta fase)
