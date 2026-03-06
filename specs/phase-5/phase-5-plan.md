@@ -43,14 +43,23 @@ Phase 5 delivers **Budget Management & Alerts** on top of the MVP foundation (Ph
 - ✅ ≥57 passing tests (19 Domain Budget entity + 10 Domain BudgetService + 28 Application handler)
 - ✅ Cumulative ~243 tests all green (Phase 0–5)
 
-**Key Constraint**: Current spend is calculated from transactions at query time (not denormalized). Budget status thresholds: Green < 60%, Yellow 60–80%, Red 80–100%, Overage > 100%. No new NuGet packages required.
 
-**Constitutional Compliance:**
-- ✅ Clean Architecture: Domain = 0 dependencies; Application → Domain only; Infrastructure → Domain only
-- ✅ CQRS: 3 Commands + 4 Queries routed through MediatR pipeline
-- ✅ DDD: Budget aggregate root with invariants; BudgetService for cross-entity logic; strong-typed IDs; repository interfaces
-- ✅ Test-First: ≥55 tests written before code (Red-Green-Refactor); 27 Domain + 28 Application
-- ✅ Spec-Driven: Single phase spec; layer boundaries respected (all layers in scope)
+**Restricciones clave:**
+- El gasto actual se calcula a partir de transacciones en tiempo real (no desnormalizado).
+- Umbrales de estado: Verde < 60%, Amarillo 60–80%, Rojo 80–100%, Exceso > 100%.
+- No se requieren nuevos paquetes NuGet.
+
+**Cumplimiento Constitucional:**
+- ✅ Arquitectura limpia: Domain = 0 dependencias externas (validar tras cada cambio relevante; ver tareas y criterios de aceptación).
+- ✅ CQRS: 3 Commands + 4 Queries por MediatR.
+- ✅ DDD: Aggregate root, invariantes, servicios de dominio, IDs tipados, interfaces de repositorio.
+- ✅ Test-First: TODOS los tests (incluyendo DTOs, queries, handlers, UI) deben escribirse ANTES de la implementación correspondiente. (Ver orden y tareas)
+- ✅ Spec-Driven: Un solo spec por fase; límites de capa respetados.
+
+**Validación/Acceptance Criteria generales:**
+- Todos los tests deben existir y fallar (RED) antes de implementar código (GREEN) para cada funcionalidad.
+- Tras cada cambio relevante en Domain, validar que no existen dependencias externas (ver tarea dedicada).
+- Deben existir tareas y validaciones explícitas para “budget-vs-actual”, “dashboard widget”, accesibilidad y NFRs.
 
 ---
 
@@ -2900,18 +2909,15 @@ The TDD workflow for each component follows this pattern:
 
 ---
 
-## Validation Checkpoints
+## Checkpoints y orden de implementación
 
-| Checkpoint | Gate | Expected |
-|------------|------|----------|
-| CP-1 | Budget entity tests green | 19 Domain tests pass |
-| CP-2 | Domain layer complete | ~66 Domain tests pass (37 prior + 29 new) |
-| CP-3 | Command handlers complete | 12 Application tests pass |
-| CP-4 | All Application tests complete | 28 budget Application tests pass |
-| CP-5 | Infrastructure complete | Solution builds, DI registers all services |
-| CP-6 | Frontend complete | All pages render, budget CRUD working |
-| CP-7 | Full integration | ~243 total tests pass, E2E workflow validated |
-
+1. Setup y validación previa (T001–T016)
+2. Para cada funcionalidad:
+    - Escribir tests RED (unitarios, integración, UI) para entidades, servicios, DTOs, handlers, queries, widgets, etc.
+    - Implementar código (GREEN) solo después de que los tests existan y fallen.
+    - Validar que Domain no tiene dependencias externas tras cada cambio relevante.
+    - Validar NFRs y accesibilidad tras cada bloque funcional.
+3. Validar cobertura y criterios de aceptación al final de cada fase.
 ---
 
 ## Risk Mitigation

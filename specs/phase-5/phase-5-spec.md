@@ -1,3 +1,4 @@
+| What happens if the dashboard widget or comparison page is accessed with a screen reader or keyboard only? → All interactive elements are accessible, labeled, and navigable; progress bars and charts have ARIA labels and text alternatives. |
 # Phase 5: Budget Management & Alerts
 
 ## Quick Reference
@@ -66,8 +67,8 @@
 | Infrastructure | Database migration: `006_CreateBudgetsTable.sql` — budgets table with indexes, unique constraint, and RLS |
 | Frontend | Budget management page (`/Budgets`) — create, edit, delete |
 | Frontend | Budget detail page (`/Budgets/{id}`) — single budget with spend progress |
-| Frontend | Budget vs. actual page (`/Budgets/Comparison`) — all budgets for a month |
-| Frontend | Dashboard budget status widget (green/yellow/red indicators) |
+| Frontend | Budget vs. actual comparison page (`/Budgets/Comparison`) — all budgets for a month, accessible table and chart, keyboard and screen reader support |
+| Frontend | Dashboard budget status widget (green/yellow/red indicators, accessible, ARIA labels, color contrast compliant) |
 | Frontend | Updated `_Layout.cshtml` navigation with budget links |
 | Frontend | Reusable components: `_BudgetProgressBar.cshtml`, `_BudgetStatusBadge.cshtml` |
 | Tests | ≥55 tests (28 Application handler tests + 10 Domain BudgetService tests + 17 Domain Budget entity tests) |
@@ -167,12 +168,13 @@
 **Independent Test**: Navigate to the dashboard and verify the budget widget shows correct status for current month budgets.
 
 **Acceptance Criteria:**
-1. **Given** budgets exist for the current month, **When** visiting the dashboard, **Then** a "Budget Status" widget shows mini progress bars for each budget.
-2. **Given** each progress bar, **When** viewing, **Then** it shows category name, spent/limit label, and a colored bar (Green < 60%, Yellow 60–80%, Red 80–100%, Overage > 100%).
+1. **Given** budgets exist for the current month, **When** visiting the dashboard, **Then** a "Budget Status" widget shows mini progress bars for each budget, with accessible ARIA labels and keyboard navigation.
+2. **Given** each progress bar, **When** viewing, **Then** it shows category name, spent/limit label, and a colored bar (Green < 60%, Yellow 60–80%, Red 80–100%, Overage > 100%), with color contrast meeting WCAG AA.
 3. **Given** the widget, **When** viewing, **Then** a summary line shows "X of Y budgets on track" or "Z budgets over limit".
 4. **Given** no budgets, **When** viewing the dashboard, **Then** the widget shows "No budgets set. Create budgets to track spending." with a link to /Budgets/Create.
-5. **Given** a budget in the widget, **When** clicking on it, **Then** the user is navigated to the budget detail page.
+5. **Given** a budget in the widget, **When** clicking or pressing Enter/Space on it, **Then** the user is navigated to the budget detail page.
 6. **Given** the dashboard date range filter, **When** the user changes the month, **Then** the budget widget updates accordingly.
+7. **Given** a screen reader user, **When** focusing the widget, **Then** all budget status and progress information is announced clearly.
 
 ### Scenario 5.6: View Budget vs. Actual Comparison (Priority: P2)
 
@@ -185,11 +187,12 @@
 **Independent Test**: Navigate to /Budgets/Comparison, select a month, and verify the table and chart show correct budget-vs-actual data.
 
 **Acceptance Criteria:**
-1. **Given** budgets and transactions for a month, **When** visiting /Budgets/Comparison, **Then** a table shows per-category comparison: category name, budget limit, actual spending, difference, status indicator.
+1. **Given** budgets and transactions for a month, **When** visiting /Budgets/Comparison, **Then** a table shows per-category comparison: category name, budget limit, actual spending, difference, status indicator, with accessible headers and keyboard navigation.
 2. **Given** categories with spending but no budget, **When** viewing, **Then** they appear with "No budget" in the limit column.
 3. **Given** the comparison data, **When** viewing, **Then** a summary row at the bottom shows total budgeted, total actual, total difference.
-4. **Given** the comparison page, **When** viewing, **Then** a horizontal bar chart (Chart.js) shows budget limit vs. actual per category.
+4. **Given** the comparison page, **When** viewing, **Then** a horizontal bar chart (Chart.js) shows budget limit vs. actual per category, with ARIA labels and color contrast compliant with WCAG AA.
 5. **Given** the data, **When** sorting, **Then** categories are sorted by over budget first, then by percentage used descending.
+6. **Given** a screen reader user, **When** focusing the table or chart, **Then** all comparison data is announced clearly.
 
 ### Scenario 5.7: View Budget Detail (Priority: P3)
 
@@ -220,6 +223,15 @@
 ---
 
 ## Functional Requirements
+### FR-5.08: Non-Functional & Accessibility Requirements
+
+1. All new UI components (dashboard widget, budget-vs-actual table/chart, progress bars, badges) must be accessible via keyboard and screen reader (WCAG 2.1 AA).
+2. Color contrast for all status indicators and progress bars must meet WCAG AA.
+3. All interactive elements must have ARIA labels and roles as appropriate.
+4. All pages must load in <2s for 95% of users (measured in devtools, throttled 3G).
+5. All new code must be covered by tests as per phase coverage requirements.
+6. All domain/application dependencies must be validated for correct layer boundaries (no forbidden references).
+7. All new features must be test-first: tests written before implementation, proven by commit history.
 
 ### FR-5.01: Domain Layer — Budget Entity, Repository Interface, Domain Service
 
@@ -1364,8 +1376,11 @@ THEN returns BudgetStatusLevel.Green
 | D-5.15 | Budget list page (`/Budgets`) | Frontend | Lists budgets with status, edit/delete actions |
 | D-5.16 | Create budget page (`/Budgets/Create`) | Frontend | Form → validation → redirect |
 | D-5.17 | Budget detail page (`/Budgets/{id}`) | Frontend | Progress bar + transactions in category |
-| D-5.18 | Budget vs. actual comparison page (`/Budgets/Comparison`) | Frontend | Table + bar chart + month selector |
-| D-5.19 | Dashboard budget status widget | Frontend | Mini progress bars + summary line on dashboard |
+| D-5.18 | Budget vs. actual comparison page (`/Budgets/Comparison`) | Frontend | Table + bar chart + month selector, accessible, ARIA labels, color contrast |
+| D-5.19 | Dashboard budget status widget | Frontend | Mini progress bars + summary line on dashboard, accessible, ARIA labels, color contrast |
+| D-5.27 | Accessibility and NFR validation | All | All new UI and backend features meet accessibility and NFRs |
+| D-5.28 | Dependency validation | All | No forbidden layer references; all dependencies validated |
+| D-5.29 | Test-first enforcement | All | Commit history and implementation order show tests precede code |
 | D-5.20 | `_BudgetProgressBar.cshtml` reusable component | Frontend | Color-coded progress bar used across pages |
 | D-5.21 | `_BudgetStatusBadge.cshtml` reusable component | Frontend | Status badge (Green/Yellow/Red/Overage) used across pages |
 | D-5.22 | Updated `_Layout.cshtml` navigation | Frontend | Budgets + Comparison links added |
@@ -1385,8 +1400,10 @@ THEN returns BudgetStatusLevel.Green
 | SC-5.3 | User can update a budget's spending limit | Edit limit → save → new limit shown in list |
 | SC-5.4 | User can delete a budget | Delete → confirm → removed from list; transactions unaffected |
 | SC-5.5 | Budget list shows correct current spend and status | Import transactions → budget list reflects actual spending |
-| SC-5.6 | Dashboard budget widget shows color-coded status indicators | Green/Yellow/Red/Overage badges correctly reflect spending vs. limit |
-| SC-5.7 | Budget vs. actual comparison page shows all categories | Categories with and without budgets both visible |
+| SC-5.6 | Dashboard budget widget shows color-coded status indicators, accessible, ARIA labels, color contrast | Green/Yellow/Red/Overage badges correctly reflect spending vs. limit; widget is accessible and meets NFRs |
+| SC-5.7 | Budget vs. actual comparison page shows all categories, accessible, ARIA labels, color contrast | Categories with and without budgets both visible; table and chart are accessible |
+| SC-5.20 | All new UI and backend features meet accessibility and NFRs | Manual and automated accessibility checks pass; performance and dependency validation complete |
+| SC-5.21 | Test-first and dependency validation enforced | Commit history and implementation order show tests precede code; no forbidden references |
 | SC-5.8 | Budget detail page shows transactions in that category for the month | Click budget → see progress bar + transaction list |
 | SC-5.9 | Over-budget state is visually distinct | Overage styling (red with warning icon) clearly visible |
 | SC-5.10 | Status thresholds are correct (green < 60%, yellow 60-80%, red 80-100%, overage > 100%) | Verified via domain service tests T-5.48–T-5.55 |

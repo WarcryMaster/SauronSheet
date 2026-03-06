@@ -145,7 +145,8 @@
 
 - [X] T024 Verificar domain layer completo ejecutando `dotnet test --filter Category=Domain` — ~66 tests pasan (37 previos + 29 nuevos)
 
-**Checkpoint**: Domain layer complete — 19 Budget entity + 10 BudgetService tests GREEN → Proceder a Phase 3
+
+**Checkpoint**: Capa de dominio completa — 19 tests Budget entity + 10 BudgetService en VERDE. Validar dependencias externas = 0. Proceder a DTOs solo si todo está en verde.
 
 ---
 
@@ -179,7 +180,8 @@
 
 - [X] T029 Verificar build completo ejecutando `dotnet build` — toda la solución compila sin errores
 
-**Checkpoint**: DTOs definidos → Proceder a user stories
+
+**Checkpoint**: DTOs definidos y validados por tests (test-first). Proceder a user stories.
 
 ---
 
@@ -272,7 +274,8 @@
 
 - [X] T041 Verificar que CreateBudget + GetBudgets funciona end-to-end: crear budget → aparece en listado con status calculado
 
-**Checkpoint**: US1+US2 funcional — crear y listar budgets con status → Proceder a US3+US4
+
+**Checkpoint**: US1+US2 funcional — crear y listar budgets con status (tests y validaciones incluidas). Proceder a US3+US4.
 
 ---
 
@@ -343,7 +346,35 @@
   - **Dependencias**: T048
   - **Validación**: Página renderiza al navegar a `/Budgets/Edit/{id}`
 
-**Checkpoint**: US3+US4 funcional — editar y eliminar budgets → Proceder a US5+US6
+
+**Checkpoint**: US3+US4 funcional — editar y eliminar budgets (tests y validaciones incluidas). Proceder a US5+US6.
+# Fase extra: Widget de Dashboard y Accesibilidad
+
+### Tests Application — GetBudgetSummaryForDashboard (RED)
+- [ ] T050 Crear test stubs para GetBudgetSummaryForDashboardQueryHandler (4 tests RED) en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandlerTests.cs`
+  - **Acción**: Crear archivo
+  - **Descripción**: Tests para widget de dashboard: resumen, on-track, over-budget, tenant isolation.
+  - **Validación**: 4 tests descubiertos, todos FALLAN (RED)
+
+### Implementación — GetBudgetSummaryForDashboard (GREEN)
+- [ ] T051 [P] Crear query y handler `GetBudgetSummaryForDashboardQuery` y `GetBudgetSummaryForDashboardQueryHandler` en `src/SauronSheet.Application/Features/Budgets/Queries/`
+  - **Acción**: Crear archivos
+  - **Descripción**: Implementar lógica y handler para widget de dashboard.
+  - **Validación**: Tests pasan (GREEN)
+
+### Frontend — Widget Dashboard
+- [ ] T052 [P] Crear partials `_BudgetProgressBar.cshtml` y `_BudgetStatusBadge.cshtml` en `src/SauronSheet.Frontend/Shared/`
+  - **Acción**: Crear archivos
+  - **Descripción**: Barra de progreso y badge de estado para widget de dashboard.
+  - **Validación**: Compila y renderiza correctamente
+
+### Accesibilidad y NFRs
+- [ ] T053 Revisar accesibilidad en páginas de presupuesto y dashboard (contraste, navegación por teclado, ARIA)
+  - **Acción**: Revisión manual y con herramientas automáticas
+  - **Validación**: No hay errores críticos de accesibilidad
+- [ ] T054 Validar requisitos no funcionales: performance (tiempos de carga), seguridad (aislamiento multiusuario, validación de input)
+  - **Acción**: Revisar métricas y pruebas de seguridad
+  - **Validación**: Cumple criterios definidos en el plan
 
 ---
 
@@ -405,7 +436,8 @@
   - **Dependencias**: T055, T053, T054
   - **Validación**: Dashboard muestra widget de budget status
 
-**Checkpoint**: US5 funcional — Dashboard muestra widget de presupuestos → Proceder a US6
+
+**Checkpoint**: US5 funcional — Dashboard muestra widget de presupuestos (tests y validaciones incluidas). Proceder a US6.
 
 ---
 
