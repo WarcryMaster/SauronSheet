@@ -20,7 +20,7 @@
 |---|---|---|---|
 | CD-6.1 | Tailwind CSS build pipeline via Tailwind CLI (standalone) | No Node.js dependency required; standalone binary purges unused classes and minifies output | 2026-02-15 |
 | CD-6.2 | Alpine.js pinned version via CDN with SRI hash | Security best practice; integrity verified on load | 2026-02-15 |
-| CD-6.3 | Vercel for hosting (.NET via Docker container) | Free tier, CI/CD integration, auto-deploy on push to main | 2026-02-15 |
+| CD-6.3 | Vercel for hosting (.NET via Docker container) | Free tier, CI/CD integration, auto-deploy on push to main. **Pre-implementation verification:** Confirm Vercel .NET 10 support on free tier Week 22; pivot to Railway/Render if unsupported | 2026-02-15 |
 | CD-6.4 | Sentry for error monitoring (.NET + JavaScript) | Industry standard; free tier sufficient for MVP; captures both server and client errors | 2026-02-15 |
 | CD-6.5 | WCAG 2.1 AA as accessibility baseline | Legal compliance in many jurisdictions; good UX practice | 2026-02-15 |
 | CD-6.6 | Password reset flow via Supabase Auth built-in | No custom implementation needed; Supabase handles email sending | 2026-02-15 |
@@ -28,6 +28,39 @@
 | CD-6.8 | Response caching for static assets (1 year) + no-cache for pages | Standard web performance practice; pages always fresh, assets cached | 2026-02-15 |
 | CD-6.9 | Database indexes audit — no new indexes unless performance requires | Phase 3 indexes cover all current query patterns; avoid premature optimization | 2026-02-15 |
 | CD-6.10 | No new features — bugfixes and UX improvements only | Constitution: Polish phase scope boundaries; new features deferred to post-production | 2026-02-15 |
+
+---
+
+## Clarifications
+
+### Session 2026-03-06
+- **Q1:** CSP Security Posture for Launch → **A (Strict by Default)**
+  - CSP must NOT include `'unsafe-inline'` at launch
+  - All inline styles refactored to Tailwind classes before production deploy
+  - CSP: `default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://js.sentry-cdn.com; style-src 'self'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://*.sentry.io; frame-ancestors 'none'`
+  - Acceptance: SC-6.8 explicitly requires strict CSP with no 'unsafe-inline' exceptions
+
+- **Q2:** TTI Performance Target — 3G Profile Definition → **A (Lighthouse "Slow 4G")**
+  - Network profile: 1.6 Mbps down, 750 Kbps up, 150ms latency
+  - Measured via Lighthouse throttle profile (industry standard, reproducible)
+  - Scenario 6.5 & Test T-6.15 updated
+
+- **Q3:** "Consistent UI" Design System → **A (Tailwind Config-Based ONLY)**
+  - Leverage `tailwind.config.js` theme; no additional component library
+  - Test T-6.01 validates via HTML audit + visual inspection
+  - FR-6.01 CSS layers sufficient
+
+- **Q4:** Sentry "PII" Scope — Financial Data Handling → **B (Financial PII Excluded)**
+  - Exclude: User ID, email, transaction amounts, budget values, category names, date ranges
+  - Include: Error type, stack trace, request path, HTTP method (non-sensitive context only)
+  - FR-6.08 implements BeforeSend hook to filter sensitive fields
+  - Scenario 6.7 updated; privacy compliance enforced
+
+- **Q5:** Vercel .NET Deployment — Contingency Activation Rule → **A (Pre-Implementation Verification)**
+  - **Action (Week 22 start):** Contact Vercel support; confirm Docker .NET 10 support on free tier
+  - If unsupported: immediately pivot to Railway.app or Render.com (both support Docker free tier with same Dockerfile)
+  - If supported: proceed with FR-6.09 Dockerfile as-is
+  - Risk R-6.1 mitigated; deployment platform locked in before Step 1
 
 ---
 
@@ -92,12 +125,13 @@
 **So that** I have a professional and enjoyable user experience
 
 **Acceptance Criteria:**
-- Consistent padding, margins, font sizes, and color scheme across all pages
-- All interactive elements have hover/focus states
-- Form inputs have consistent styling (borders, focus rings, error states)
-- Buttons have consistent sizing and color scheme (primary, secondary, danger)
+- Consistent styling across all pages via `tailwind.config.js` theme (colors, spacing, typography)
+- All interactive elements use Tailwind classes from theme (no hardcoded hex values or pixel sizes)
+- All form inputs use consistent styling (borders, focus rings, error states — per FR-6.01 config)
+- Buttons use consistent sizing and color scheme (primary, secondary, danger — per FR-6.01 CSS layers)
 - Icons are consistent (same icon library or style throughout)
-- No console errors or warnings in any browser (Chrome, Firefox, Edge)
+- No Tailwind class conflicts or CSS overrides visible
+- All pages render correctly with compiled CSS from `site.css`
 - Responsive design: all pages usable on 320px (mobile), 768px (tablet), 1024px+ (desktop)
 - No horizontal scroll on any viewport width ≥ 320px
 - Smooth transitions for interactive elements (dropdowns, modals, accordions)
@@ -176,8 +210,8 @@
 **So that** I can use it efficiently without frustration
 
 **Acceptance Criteria:**
-- Time to Interactive (TTI) under 3 seconds on mobile 3G simulation
-- First Contentful Paint (FCP) under 1.5 seconds on desktop
+- Time to Interactive (TTI) under 3 seconds on Lighthouse "Slow 4G" profile (1.6 Mbps, 750 Kbps, 150ms latency)
+- First Contentful Paint (FCP) under 1.5 seconds on desktop (unthrottled)
 - Tailwind CSS file size < 50KB after purge and minification (vs. ~3MB CDN)
 - Static assets cached for 1 year (cache-busting via file hash)
 - HTML responses use gzip/brotli compression
@@ -222,6 +256,8 @@
 - Rate limiting on auth endpoints (Supabase built-in)
 - Error messages don't leak implementation details in production
 - `X-Powered-By` header removed
+- **Financial data NOT sent to Sentry:** User ID, email, transaction amounts, budget values, category names
+- **Only logged to Sentry:** Error type, stack trace, request path/method (anonymized context)
 
 ---
 
@@ -541,11 +577,11 @@ public class SecurityHeadersMiddleware
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
         headers.Remove("X-Powered-By");
 
-        // CSP: allow self, Supabase, CDN resources
+        // CSP: Strict by default (no unsafe-inline; all inline styles refactored to Tailwind)
         headers["Content-Security-Policy"] = string.Join("; ",
             "default-src 'self'",
-            "script-src 'self' https://cdn.jsdelivr.net https://js.sentry-cdn.com 'unsafe-inline'",
-            "style-src 'self' 'unsafe-inline'",
+            "script-src 'self' https://cdn.jsdelivr.net https://js.sentry-cdn.com",
+            "style-src 'self'",
             "img-src 'self' data: https:",
             "font-src 'self' https://fonts.gstatic.com",
             "connect-src 'self' https://*.supabase.co https://*.sentry.io",
@@ -614,6 +650,43 @@ builder.WebHost.UseSentry(options =>
     options.Environment = builder.Environment.EnvironmentName;
     options.TracesSampleRate = builder.Environment.IsProduction() ? 0.1 : 1.0;
     options.SendDefaultPii = false; // Don't send personal data
+    
+    // Custom BeforeSend hook to filter financial PII
+    options.BeforeSend = (transaction, hint) =>
+    {
+        // Remove sensitive contexts
+        if (transaction.Contexts.ContainsKey("transaction"))
+        {
+            transaction.Contexts.Remove("transaction");
+        }
+        
+        // Filter request data: remove cookies, body (may contain transaction data)
+        if (transaction.Request != null)
+        {
+            transaction.Request.Cookies = null;
+            transaction.Request.Data = null; // POST body
+        }
+        
+        // Filter extra context for financial PII
+        if (transaction.Extra != null)
+        {
+            var keysToRemove = transaction.Extra.Keys
+                .Where(k => k.Contains("transaction", StringComparison.OrdinalIgnoreCase) ||
+                           k.Contains("amount", StringComparison.OrdinalIgnoreCase) ||
+                           k.Contains("budget", StringComparison.OrdinalIgnoreCase) ||
+                           k.Contains("category", StringComparison.OrdinalIgnoreCase) ||
+                           k.Contains("email", StringComparison.OrdinalIgnoreCase) ||
+                           k.Contains("user", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            
+            foreach (var key in keysToRemove)
+            {
+                transaction.Extra.Remove(key);
+            }
+        }
+        
+        return transaction;
+    };
 });
 
 // After app.Build()
@@ -923,12 +996,14 @@ text
 
 ### UI Polish Tests
 TEST T-6.01: UI_ConsistentStyling_AllPages
-GIVEN the application is running
+GIVEN the application is running with compiled Tailwind CSS (site.css from tailwind.config.js theme)
 WHEN each page is loaded (Dashboard, Transactions, Categories, Budgets, Search, Upload)
-THEN all pages use consistent button styles (primary, secondary, danger)
-AND all form inputs use consistent styling
-AND all cards have consistent padding and shadow
-AND no CSS class conflicts or overrides visible
+THEN all pages use button classes from tailwind.config.js (@layer components: .btn-primary, .btn-secondary, .btn-danger)
+AND all form inputs use .input-field and .input-error classes
+AND all cards use .card class
+AND no inline styles or hardcoded colors override Tailwind theme
+AND visual inspection confirms consistent spacing (via margin/padding Tailwind scale)
+AND no CSS class conflicts or overrides in DevTools Styles panel
 
 TEST T-6.02: UI_ResponsiveDesign_Mobile320
 GIVEN the application is loaded in a 320px viewport
@@ -1023,10 +1098,10 @@ WHEN the output CSS file size is measured
 THEN site.css is less than 50KB (vs ~3MB CDN version)
 
 TEST T-6.15: Perf_TTI_Under3Seconds
-GIVEN a mobile 3G network simulation
+GIVEN a mobile network simulation (Lighthouse "Slow 4G": 1.6 Mbps, 750 Kbps, 150ms)
 WHEN the dashboard page is loaded
 THEN Time to Interactive (TTI) is under 3 seconds
-(Measured via Lighthouse or WebPageTest)
+(Measured via Lighthouse throttle profile; WebPageTest also acceptable if Slow 4G used)
 
 TEST T-6.16: Perf_ResponseCompression_Active
 GIVEN a request to any page
@@ -1204,7 +1279,7 @@ AND IAuthService.RequestPasswordResetAsync is NOT called
 | SC-6.5 | Password reset flow works end-to-end                                               | Forgot password → email → reset → login with new password                |
 | SC-6.6 | TTI under 3 seconds on mobile 3G                                                  | Test T-6.15 passes; Lighthouse performance score ≥ 80                    |
 | SC-6.7 | Response compression active (Brotli/Gzip)                                          | Test T-6.16 passes                                                       |
-| SC-6.8 | Security headers present on all responses                                          | Test T-6.18 passes                                                       |
+| SC-6.8 | Security headers present and strict (no unsafe-inline in CSP)                      | Test T-6.18 passes; CSP blocks inline scripts/styles  |
 | SC-6.9 | Sentry error monitoring active in production                                       | Test T-6.24 passes; test error visible in Sentry dashboard               |
 | SC-6.10| Health check endpoint returns 200 OK                                               | Test T-6.20 passes                                                       |
 | SC-6.11| Production deployment successful on Vercel (or alternative host)                   | Application accessible via public URL                                    |
@@ -1237,10 +1312,10 @@ AND IAuthService.RequestPasswordResetAsync is NOT called
 
 | ID    | Risk                                                                     | Impact | Probability | Mitigation                                                                                       |
 |-------|--------------------------------------------------------------------------|--------|-------------|--------------------------------------------------------------------------------------------------|
-| R-6.1 | Vercel does not support .NET Docker containers on free tier              | High   | Medium      | Alternative: Railway.app or Render.com (both support Docker free tier); Dockerfile works anywhere |
+| R-6.1 | Vercel does not support .NET Docker containers on free tier              | High   | Medium      | **Pre-implementation (Week 22 start):** Contact Vercel support; confirm Docker .NET 10 support. If unsupported, pivot to Railway.app/Render.com immediately (same Dockerfile works). |
 | R-6.2 | Tailwind CSS purge removes classes used by Alpine.js dynamic bindings   | Medium | Medium      | Safelist dynamic classes in tailwind.config.js; test all interactive components after purge       |
 | R-6.3 | SRI hash mismatch on CDN resource update                                | Low    | Low         | Pin exact versions (e.g., `alpinejs@3.14.0`); SRI hash matches specific version                 |
-| R-6.4 | CSP blocks legitimate inline scripts/styles                             | Medium | Medium      | Use `'unsafe-inline'` for styles initially; refactor to nonce-based CSP post-launch              |
+| R-6.4 | Refactoring inline styles creates schedule pressure                        | Low    | Low         | Refactor all inline styles to Tailwind classes during UI polish pass (Step 3); verify no 'unsafe-inline' needed |
 | R-6.5 | Sentry free tier event limit exceeded                                   | Low    | Low         | Set `TracesSampleRate` to 0.1 in production; upgrade plan if needed                              |
 | R-6.6 | Accessibility audit reveals extensive remediation needed                 | Medium | Medium      | Prioritize by impact (keyboard nav > contrast > ARIA); fix critical issues, document remaining   |
 | R-6.7 | Password reset email delivery issues (Supabase SMTP)                    | Medium | Low         | Test with real email; Supabase uses built-in email service; custom SMTP configurable if needed    |
@@ -1252,6 +1327,17 @@ AND IAuthService.RequestPasswordResetAsync is NOT called
 ## Implementation Notes
 
 ### Recommended Implementation Order
+**Pre-implementation Task (Week 22, Day 1) — CRITICAL PATH ITEM:**
+
+**VERIFY DEPLOYMENT PLATFORM** ↑ **DO THIS FIRST — De-Risk Schedule**
+└── Contact Vercel support: confirm Docker .NET 10 support on free tier
+└── Provide: .NET 10, multi-stage Dockerfile, ~200MB final image size
+└── **If supported:** Continue with Vercel config (FR-6.09 as-is)
+└── **If NOT supported:** Pivot to Railway.app or Render.com immediately (same Dockerfile works)
+└── Both platforms support Docker free tier; only deployment config differs
+└── **Outcome:** Lock deployment platform decision BEFORE Step 1 begins
+└── This removes Risk R-6.1; prevents wasted effort on unsupported platform
+
 Step 1: Tailwind CSS build pipeline
 └── Install Tailwind CLI (standalone binary)
 └── Create tailwind.config.js + tailwind-input.css
