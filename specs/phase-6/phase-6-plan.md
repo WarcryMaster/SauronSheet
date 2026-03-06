@@ -1,23 +1,99 @@
-# Implementation Plan: Phase 6 – UI Polish, Performance & Production Deployment
+## Escenarios de Usuario
 
-**Branch**: `phase-6-ui-polish` | **Date**: 2026-03-06 | **Spec**: [specs/phase-6/phase-6-spec.md](specs/phase-6/phase-6-spec.md)
-**Input**: Feature specification from `/specs/phase-6/phase-6-spec.md`
+Los siguientes escenarios de usuario guían la validación y el enfoque de implementación de la Fase 6. Para el detalle completo, ver la sección correspondiente en la especificación: [Escenarios de Usuario y Testing](phase-6-spec.md#user-scenarios--testing).
 
-## Summary
+| Escenario | Descripción breve |
+|-----------|-------------------|
+| 6.1 | Experiencia UI pulida, consistente y responsiva |
+| 6.2 | Estados claros de carga, error y vacío |
+| 6.3 | Cumplimiento de accesibilidad (WCAG 2.1 AA) |
+| 6.4 | Flujo de recuperación de contraseña vía email |
+| 6.5 | Optimización de rendimiento (TTI, FCP, CSS) |
+| 6.6 | Despliegue producción en Vercel, CI/CD |
+| 6.7 | Endurecimiento de seguridad y privacidad |
 
-Phase 6 delivers the final polish, performance, accessibility, and production deployment for SauronSheet. The focus is on UI consistency, accessibility (WCAG 2.1 AA), Tailwind CSS build pipeline, error and loading states, Sentry error monitoring, security hardening, and Vercel deployment. No new features or domain logic are introduced; only Frontend and Infrastructure layers are in scope. All prior phases must be complete and stable before starting.
+Cada uno de estos escenarios tiene criterios de aceptación y pruebas asociadas en la especificación. El plan de implementación asegura que la secuencia y paralelización de tareas cubran todos los flujos críticos de usuario, validando los entregables contra estos escenarios.
 
-## Technical Context
+# Plan de Implementación: Fase 6 – Pulido UI, Rendimiento y Despliegue Producción
 
-**Language/Version**: C# 10, .NET 10, JavaScript (ES2020+), Tailwind CSS 3.x  
-**Primary Dependencies**: Tailwind CSS (standalone CLI), Alpine.js (CDN, pinned), Chart.js (CDN, pinned), Sentry.AspNetCore, Microsoft.AspNetCore.ResponseCompression  
-**Storage**: Supabase PostgreSQL (no schema changes)  
-**Testing**: xUnit, Moq, Lighthouse, axe-core, manual browser/assistive tech tests  
-**Target Platform**: Vercel (Docker container, .NET 10), fallback: Railway/Render  
-**Project Type**: Web (Razor Pages, Clean Architecture)  
-**Performance Goals**: TTI < 3s (Lighthouse Slow 4G), FCP < 1.5s desktop, site.css < 50KB  
-**Constraints**: No new domain logic; strict CSP (no 'unsafe-inline'); Sentry must not capture financial PII; all UI via Tailwind config; accessibility ≥ 90 (Lighthouse)  
-**Scale/Scope**: Single-tenant per user, 1–10k users, 10+ screens, 27 new tests
+**Rama**: `phase-6-ui-polish` | **Fecha**: 2026-03-06 | **Especificación**: [specs/phase-6/phase-6-spec.md](specs/phase-6/phase-6-spec.md)
+**Entrada**: Especificación funcional de `/specs/phase-6/phase-6-spec.md`
+
+## Resumen Ejecutivo
+
+La Fase 6 entrega el pulido final de la interfaz, optimización de rendimiento, accesibilidad, y el despliegue a producción de SauronSheet. El foco está en la consistencia visual, cumplimiento WCAG 2.1 AA, pipeline de Tailwind CSS, estados de error/carga, monitorización Sentry, endurecimiento de seguridad y despliegue en Vercel. No se introducen nuevas funcionalidades ni lógica de dominio; solo están en alcance las capas Frontend e Infraestructura. Todas las fases previas deben estar completas y estables antes de iniciar.
+
+## Contexto Técnico
+
+**Lenguaje/Versión**: C# 10, .NET 10, JavaScript (ES2020+), Tailwind CSS 3.x  
+**Dependencias Principales**: Tailwind CSS (CLI standalone), Alpine.js (CDN, versión fijada), Chart.js (CDN, versión fijada), Sentry.AspNetCore, Microsoft.AspNetCore.ResponseCompression  
+**Almacenamiento**: Supabase PostgreSQL (sin cambios de esquema)  
+**Testing**: xUnit, Moq, Lighthouse, axe-core, pruebas manuales navegador/tecnología asistiva  
+**Plataforma Objetivo**: Vercel (contenedor Docker, .NET 10), alternativo: Railway/Render  
+**Tipo de Proyecto**: Web (Razor Pages, Clean Architecture)  
+**Objetivos de Rendimiento**: TTI < 3s (Lighthouse Slow 4G), FCP < 1.5s escritorio, site.css < 50KB  
+**Restricciones**: Sin nueva lógica de dominio; CSP estricta (sin 'unsafe-inline'); Sentry no captura PII financiera; toda la UI vía Tailwind config; accesibilidad ≥ 90 (Lighthouse)  
+**Escala/Alcance**: Un usuario por tenant, 1–10k usuarios, 10+ pantallas, 27 tests nuevos
+
+## Chequeo Constitucional
+
+*PUERTA: Debe pasar antes de investigación. Revisión tras diseño.*
+
+- Clean Architecture: Sin referencias ascendentes; solo Frontend/Infraestructura en alcance (fase Polish)
+- CQRS/MediatR: Sin nuevos comandos/queries salvo RequestPasswordResetCommand (solo auth)
+- DDD: Sin nuevas entidades/VOs; solo interfaz para password reset
+- Test-First: 27 tests nuevos especificados; todos deben pasar antes de release
+- Spec-Driven: Un solo archivo de especificación; todos los requisitos, tests y entregables en phase-6-spec.md
+- Ningún entregable cruza límites de alcance
+
+**Resultado:** Todas las puertas pasan. Sin violaciones constitucionales.
+
+## Estructura del Proyecto
+
+### Documentación (esta fase)
+
+```text
+specs/phase-6/
+├── phase-6-plan.md         # Este archivo (salida de /speckit.plan)
+├── phase-6-spec.md         # Especificación funcional
+└── phase-6-tasks.md        # Salida de /speckit.tasks
+```
+
+### Código Fuente (raíz del repositorio)
+
+```text
+src/
+├── SauronSheet.Frontend/
+│   ├── Dockerfile
+│   ├── vercel.json
+│   ├── .vercelignore
+│   ├── tailwind.config.js
+│   ├── tailwind-input.css
+│   ├── Pages/
+│   │   ├── Auth/
+│   │   │   ├── ForgotPassword.cshtml
+│   │   │   ├── ForgotPassword.cshtml.cs
+│   │   │   └── Login.cshtml
+│   │   ├── NotFound.cshtml
+│   │   ├── NotFound.cshtml.cs
+│   ├── Shared/
+│   │   ├── _Layout.cshtml
+│   │   └── Components/
+│   │       ├── _Toast.cshtml
+│   │       └── _SkipToContent.cshtml
+│   ├── wwwroot/
+│   │   ├── css/site.css
+│   │   ├── js/charts.js
+│   │   ├── favicon.svg
+│   │   └── images/og-image.png
+│   └── Program.cs
+├── SauronSheet.Infrastructure/
+│   ├── Monitoring/SentryConfiguration.cs
+│   ├── Auth/SupabaseAuthService.cs
+│   └── Middleware/SecurityHeadersMiddleware.cs
+```
+
+**Decisión de estructura**: Aplicación web, Clean Architecture, frontend Razor Pages, infraestructura para despliegue/monitorización.
 
 ## Constitution Check
 
@@ -358,6 +434,89 @@ Implement each step group in order per the spec's step sequence, but organize te
 ## Phase 6 Platform Verification — Decision Record
 
 **Date**: 2026-03-[day]
+**Verified by**: [Name/Engineer]
+**Support Channel**: [Vercel email / Discord / other]
+**Support Ticket/Reference**: [ID if applicable]
+
+### Question
+Can Vercel free tier support .NET 10 persistent Docker containers (~150-200MB runtime)?
+
+### Response
+[Insert Vercel support response verbatim]
+
+### Decision
+- ☑ YES → Use Vercel (FR-6.09 unchanged)
+- ☐ NO → Pivot to Railway (update Dockerfile + config)
+- ☐ NO RESPONSE (48h+ elapsed) → Pivot to Railway (schedule certainty)
+
+### Lock-In Confirmation
+Platform locked to: **[VERCEL / RAILWAY]**
+No further platform changes are permitted; implementation proceeds with selected platform only.
+```
+
+---
+
+## Dark Mode Scope: Time-Permitting Enhancement (NOT Launch Blocker)
+
+### Decision: Option A — Dark Mode Optional
+
+**Status**: NICE-TO-HAVE, low priority, not on critical path.
+
+**Rationale:**
+- 27 core tests (T-6.01 through T-6.27) do not include dark mode tests
+- Success criteria (SC-6.1 through SC-6.18) do not require dark mode
+- All 14 deliverables (D-6.01 through D-6.28) are achievable without dark mode
+- Production release can proceed without dark mode
+
+**Implementation Decision:**
+
+| Scenario | Action |
+|----------|--------|
+| Phase 2 finishes Week 23 **Day 3 or earlier** (2+ days ahead of schedule) | **Implement dark mode** in remaining time; run new dark mode tests (visual inspection) |
+| Phase 2 finishes Week 23 **Day 4 (on-schedule)** | **Skip dark mode**; use remaining time for UI polish refinements, performance tuning, or buffer |
+| Phase 2 finishes Week 23 **Day 5 or later** (behind schedule) | **Skip dark mode**; focus on Phase 3 deployment readiness |
+
+**If Dark Mode is Implemented (Time-Permitting):**
+
+Follow the "Dark Mode Implementation" section in [phase-6-spec.md § Implementation Notes](phase-6-spec.md#dark-mode-implementation-optional):
+```javascript
+// tailwind.config.js: darkMode: 'class' already enabled
+// Steps:
+// 1. Add Toggle component to _Layout.cshtml (Alpine.js toggle logic)
+// 2. Add dark: variants to all components (10-15 component classes)
+// 3. Test with browser DevTools dark mode toggle
+// 4. Manual luminance/contrast verification (maintain WCAG AA in dark mode)
+// 5. Time estimate: 2-3 days
+```
+
+**If Dark Mode is NOT Implemented (Most Likely):**
+- Tailwind config remains with `darkMode: 'class'` (no removal needed; just unused)
+- No toggle UI shown to users
+- Post-MVP backlog: "Dark Mode Support — Phase 7 (Enhancement Roadmap)"
+- Users have option to use OS-level dark mode (CSS media query `prefers-color-scheme`), which Tailwind respects automatically
+
+**Post-Launch Consideration:**
+- Gather user feedback: if demand is high, implement in Phase 7
+- Low effort to retrofit (toggle + dark: classes already configured)
+
+---
+
+## Recommendations for Next Steps
+
+1. **Immediate (Today)**:
+   - Review updated plan; confirm three-phase + testing + platform verification strategies align with team expectations
+   - Assign platform verification task to engineer/architect for Week 22 Day 1
+
+2. **This Week**:
+   - Run `/speckit.tasks` to generate actionable, dependency-ordered task list with time estimates
+   - Add tasks to GitHub or project management tool (GitHub Projects, Jira, etc.)
+   - Schedule team kickoff for Phase 6 (reaffirm sequencing, testing gates, risk mitigation)
+
+3. **Week 22, Day 1 Morning (CRITICAL)**:
+   - Complete Vercel platform verification (decision lock-in within 24 hours)
+   - Begin Phase 1 (Setup) if platform is confirmed
+
+---
 **Verified by**: [Name/Engineer]
 **Support Channel**: [Vercel email / Discord / other]
 **Support Ticket/Reference**: [ID if applicable]
