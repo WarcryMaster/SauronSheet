@@ -1,5 +1,7 @@
 # SauronSheet - AI Coding Instructions
 
+> **IMPORTANTE:** Toda la documentación y las especificaciones del proyecto (incluyendo archivos en `specs/`, planes, requisitos, criterios de aceptación, y comentarios de especificación) deben estar redactadas en español. Todo el resto del contenido (código fuente, nombres de archivos, identificadores, comentarios de implementación, mensajes de commit, etc.) debe estar en inglés.
+
 ## 🔗 Quick Links to Planning Documents
 * 📋 **Constitution**: See `.specify/memory/constitution.md` for 5 core principles & governance (v1.1.0).
 
