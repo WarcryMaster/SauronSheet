@@ -1,4 +1,3 @@
-````markdown
 # Phase 5 Implementation Plan
 
 **Version**: 1.0.0  
@@ -84,10 +83,10 @@ Implement `GetBudgetsQuery`, `GetBudgetByIdQuery`, `GetBudgetVsActualQuery`, `Ge
 Apply `006_CreateBudgetsTable.sql` migration with indexes, unique constraint (`user_id, category_id, period_start`), and RLS. Implement `SupabaseBudgetRepository`.
 
 ### Phase 5G: Frontend — Budget Management Pages (Days 13–16)
-Build Budget list, create, edit, delete pages at `/Budgets`. Build Budget detail page at `/Budgets/{id}`. Build Budget vs. actual comparison page at `/Budgets/Comparison`.
+Build Budget List Page at `/Budgets` (not "budget list page"). Build Budget Create Page at `/Budgets/Create`. Build Budget Edit Page at `/Budgets/Edit/{id}`. Build Budget Detail Page at `/Budgets/Detail/{id}`. Build Budget vs. actual Comparison Page at `/Budgets/Comparison`.
 
-### Phase 5H: Frontend — Dashboard Widget & Shared Components (Days 16–18)
-Add budget status widget to Dashboard page. Create `_BudgetProgressBar.cshtml` and `_BudgetStatusBadge.cshtml` partials. Update `_Layout.cshtml` navigation.
+### Phase 5H: Frontend — Budget Status Widget & Shared Components (Days 16–18)
+Add Budget Status Widget to Dashboard page (not "dashboard budget status widget"). Create `_BudgetProgressBar.cshtml` and `_BudgetStatusBadge.cshtml` partials. Update `_Layout.cshtml` navigation.
 
 ### Phase 5I: Integration & Validation (Days 18–21)
 E2E testing, coverage reporting, all ~243 tests passing, budget workflow validation.
@@ -1818,7 +1817,7 @@ using MediatR;
 /// Handler for GetBudgetVsActualQuery.
 /// Compares budgets vs. actual spending per category.
 /// Includes categories with spending but no budget.
-/// Sorted by over-budget first, then percentage descending.
+/// Sorted by over-budget first, then by percentage descending.
 /// </summary>
 public class GetBudgetVsActualQueryHandler : IRequestHandler<GetBudgetVsActualQuery, List<BudgetVsActualDto>>
 {
@@ -2991,4 +2990,4 @@ The TDD workflow for each component follows this pattern:
 | `src/SauronSheet.Frontend/Pages/Dashboard.cshtml` | Add budget status widget section |
 | `src/SauronSheet.Frontend/Shared/_Layout.cshtml` | Add "Budgets" nav link |
 
-````
+```
