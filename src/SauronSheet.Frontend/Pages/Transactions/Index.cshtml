@@ -40,11 +40,13 @@
 
     @if (Model.Transactions.Items.Count == 0)
     {
-        <div class="text-center py-12 bg-white rounded-lg shadow">
-            <p class="text-gray-500 mb-4">No transactions yet.</p>
-            <a href="/Transactions/Upload" class="text-blue-600 hover:text-blue-700">Import a PDF</a>
-            <span class="text-gray-500"> or </span>
-            <a href="/Transactions/Add" class="text-blue-600 hover:text-blue-700">add one manually</a>
+        <div class="bg-white rounded-lg shadow p-8 text-center" role="status" aria-live="polite">
+            <p class="text-xl text-gray-500 mb-4">No transactions yet.</p>
+            <p class="text-gray-400 mb-6">Import a PDF or add a transaction to get started.</p>
+            <div class="flex justify-center gap-4">
+                <a href="/Transactions/Upload" class="btn-primary">📄 Import PDF</a>
+                <a href="/Transactions/Add" class="btn-success">➕ Add Transaction</a>
+            </div>
         </div>
     }
     else

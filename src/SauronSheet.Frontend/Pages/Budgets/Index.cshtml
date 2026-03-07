@@ -10,7 +10,7 @@
 <div class="space-y-6">
     <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold text-gray-900">💰 Budgets</h2>
-        <a href="/Budgets/Create" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        <a href="/Budgets/Create" class="btn-primary">
             + Create Budget
         </a>
     </div>
@@ -24,7 +24,7 @@
                    value="@($"{currentYear:D4}-{currentMonth:D2}")"
                    class="border rounded px-3 py-2 text-sm"
                    id="monthPicker" />
-            <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm">
+            <button type="submit" class="btn-secondary text-sm">
                 Filter
             </button>
         </div>
@@ -104,12 +104,10 @@
     }
     else
     {
-        <div class="bg-white rounded-lg shadow p-8 text-center">
+        <div class="bg-white rounded-lg shadow p-8 text-center" role="status" aria-live="polite">
             <p class="text-xl text-gray-500 mb-4">No budgets set for @monthName.</p>
             <p class="text-gray-400 mb-6">Create one to start tracking your spending.</p>
-            <a href="/Budgets/Create" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                + Create Budget
-            </a>
+            <a href="/Budgets/Create" class="btn-primary">+ Create Budget</a>
         </div>
     }
 </div>
