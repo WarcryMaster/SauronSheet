@@ -1,6 +1,4 @@
-## Escenarios de Usuario
-
-Los siguientes escenarios de usuario guían la validación y el enfoque de implementación de la Fase 6. Para el detalle completo, ver la sección correspondiente en la especificación: [Escenarios de Usuario y Testing](phase-6-spec.md#user-scenarios--testing).
+# Escenarios de Usuario
 
 | Escenario | Descripción breve |
 |-----------|-------------------|
@@ -13,6 +11,25 @@ Los siguientes escenarios de usuario guían la validación y el enfoque de imple
 | 6.7 | Endurecimiento de seguridad y privacidad |
 
 Cada uno de estos escenarios tiene criterios de aceptación y pruebas asociadas en la especificación. El plan de implementación asegura que la secuencia y paralelización de tareas cubran todos los flujos críticos de usuario, validando los entregables contra estos escenarios.
+
+
+# Plan de Implementación: Fase 6 – Pulido UI, Rendimiento y Despliegue Producción
+
+> **Este documento forma parte del trío de referencia de la Fase 6 junto con:**
+> - `phase-6-spec.md` (especificación funcional y criterios de aceptación)
+> - `phase-6-tasks.md` (especificación de tareas y checklist)
+
+## Resumen Ejecutivo
+
+- **Estado**: Borrador
+- **Alcance de capas**: Frontend + Infraestructura (Polish)
+- **Tipo de fase**: Polish
+- **Duración**: Semanas 22–24
+- **Objetivo**: Pulido de UI, pipeline Tailwind, accesibilidad, optimización de rendimiento, despliegue Vercel, monitorización de errores, endurecimiento de seguridad
+- **Depende de**: Fases 0–5 (todas completas y estables)
+- **Desbloquea**: 🚀 **Release a producción**
+
+---
 
 # Plan de Implementación: Fase 6 – Pulido UI, Rendimiento y Despliegue Producción
 
