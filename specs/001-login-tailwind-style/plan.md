@@ -207,36 +207,40 @@ No violations to justify. Feature is straightforward frontend styling with no ar
 
 **Category C: Validation & Form Behavior**
 - T17: Ensure HTML5 validation enabled (type="email" required on email, required on password)
-- T18: Verify server-side validation on POST (PageModel responsibility, no HTML changes needed)
-- T19: Implement error display + focus return to email field on login failure (JavaScript or Alpine.js @watch on form state)
+- T18: **Set focus to email field on page load** (use HTML5 `autofocus="true"` OR Alpine.js `@init="$focus()"` directive)
+- T19: Verify server-side validation on POST (PageModel responsibility, no HTML changes needed)
+- T20: **Implement Enter key behavior on password field** (pressing Enter in password field triggers form submit, same as clicking "Sign in" button; use form onsubmit or Alpine.js @keydown.enter)
+- T21: Implement error display + focus return to email field on login failure (JavaScript or Alpine.js @watch on form state)
 
 **Category D: Accessibility Compliance**
-- T20: Verify WCAG 2.1 AA color contrast (4.5:1 for text, 3:1 for UI components)
-- T21: Ensure all form inputs have associated <label> elements with proper for="" attributes
-- T22: Verify password toggle icon is keyboard accessible (Tab to reach, Enter/Space to activate, aria-pressed, aria-label="Show/Hide Password")
-- T23: Configure keyboard navigation Tab order (email → password (+ toggle icon) → submit → signup) with Tab key testing
-- T24: Test with screen reader (NVDA or JAWS) to verify label announcements, toggle state, error messages
-- T25: Add aria-live="polite" and role="alert" to error message container
-- T26: Verify focus management: focus returns to email field after error display
+- T22: Verify WCAG 2.1 AA color contrast (4.5:1 for text, 3:1 for UI components)
+- T23: Ensure all form inputs have associated <label> elements with proper for="" attributes
+- T24: Verify password toggle icon is keyboard accessible (Tab to reach, Enter/Space to activate, aria-pressed, aria-label="Show/Hide Password")
+- T25: Configure keyboard navigation Tab order (email → password (+ toggle icon) → submit → signup) with Tab key testing
+- T26: Test with screen reader (NVDA or JAWS) to verify label announcements, toggle state, error messages
+- T27: Add aria-live="polite" and role="alert" to error message container
+- T28: Verify focus management: focus returns to email field after error display
 
 **Category E: Interactive States & Polish**
-- T27: Add 0.3s transition classes (transition duration-300) to button, inputs, toggle icon
-- T28: Implement button hover state (bg-blue-700)
-- T29: Implement input focus state (ring-2 ring-blue-500 border-blue-500)
-- T30: Add error state styling for inputs (border-red-500, ring-red-500, focus ring-red-500)
-- T31: **REQUIRED**: Implement loading spinner during form submission (Alpine.js x-show, spinner inside button)
-- T32: **REQUIRED**: Implement button disabled state during submission (disabled=true, opacity-50, cursor-not-allowed to prevent duplicate submissions)
-- T33: Implement password toggle icon state (aria-pressed true/false, icon SVG changes eye→eye-off, smooth transition 300ms)
+- T29: Add 0.3s transition classes (transition duration-300) to button, inputs, toggle icon
+- T30: Implement button hover state (bg-blue-700)
+- T31: Implement input focus state (ring-2 ring-blue-500 border-blue-500)
+- T32: Add error state styling for inputs (border-red-500, ring-red-500, focus ring-red-500)
+- T33: **REQUIRED**: Implement loading spinner during form submission (Alpine.js x-show, spinner inside button)
+- T34: **REQUIRED**: Implement inputs disabled state during form submission (both email & password: `disabled="true"` + `opacity-50` + toggle icon disabled; prevents multiple submissions and user edits during loading)
+- T35: **REQUIRED**: Implement button disabled state during submission (`disabled="true"` + `opacity-50` + `cursor-not-allowed`; screen readers announce "button disabled")
+- T36: Implement password toggle icon state (aria-pressed true/false, icon SVG changes eye→eye-off, smooth transition 300ms)
 
 **Category F: Quality Assurance & Testing**
-- T34: E2E visual regression test (Playwright or Cypress screenshot baseline)
-- T35: Lighthouse accessibility audit (target ≥ 90 score)
-- T36: Manual keyboard navigation test (Tab through all controls including toggle, no focus traps)
-- T37: Manual password toggle test (click/tap eye icon, type changes password ↔ text, no data loss)
-- T38: Manual focus management test (trigger error via invalid login, verify focus returns to email automatically)
-- T39: Manual loading state test (submit form, verify spinner visible + button disabled, re-enable on response)
-- T40: Manual cross-browser test (Chrome, Firefox, Safari, Edge latest 2 versions)
-- T41: Manual responsive test on real mobile devices (iPhone 12/14, Android, verify 44×44px toggle hit target)
+- T37: E2E visual regression test (Playwright or Cypress screenshot baseline)
+- T38: Lighthouse accessibility audit (target ≥ 90 score)
+- T39: Manual keyboard navigation test (Tab through all controls including toggle, no focus traps, Enter on password field submits)
+- T40: Manual page load test (verify email field has focus automatically on page load)
+- T41: Manual password toggle test (click/tap eye icon, type changes password ↔ text, no data loss)
+- T42: Manual focus management test (trigger error via invalid login, verify focus returns to email automatically)
+- T43: Manual loading state test (submit form, verify spinner visible + button & inputs disabled, re-enable on response, Enter key blocked during loading)
+- T44: Manual cross-browser test (Chrome, Firefox, Safari, Edge latest 2 versions)
+- T45: Manual responsive test on real mobile devices (iPhone 12/14, Android, verify 44×44px toggle hit target, landscape orientation)
 
 **Phase 2 Deliverable**: `tasks.md` with prioritized, dependency-ordered task list (generated by speckit.tasks command)
 
