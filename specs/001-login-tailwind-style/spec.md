@@ -3,7 +3,7 @@
 
 **Rama de Feature**: `001-login-tailwind-style`
 **Creado**: 2026-03-07
-**Estado**: Borrador
+**Estado**: Ready for Planning ✓
 **Input**: Añadir un aspecto visual atractivo usando Tailwind para la página de login en src/SauronSheet.Frontend/Pages/Auth
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
@@ -160,32 +160,48 @@ Centrado: vertical y horizontal
 
 ### Componentes Específicos
 
-**Título:**
+**Logo (Nuevo - Ronda 3):**
+- Tamaño: 32x32px
+- Ubicación: Centrado en la parte superior del formulario
+- Margen inferior: `mb-4`
+- Fuente: Archivo logo existente en `wwwroot/img/`
+
+**Contenedor Principal (Ronda 3):**
+- Padding: `p-4` en móvil, `p-8` en desktop (adaptativo)
+- Espaciado entre campos: `space-y-6` (generoso, visual clarity)
+- Ancho: 400px fijo (desktop/tablet), 90% (móvil)
+
+**Título (Ronda 3 - Tipografía):**
 - `ViewData["Title"] = "Sign In"`
 - Texto: "Sign in to your account"
 - Clase: `text-center text-3xl font-extrabold text-gray-900 mt-6 mb-8`
+- Peso: extrabold (jerarquía visual clara)
 
 **Campos de Input:**
 - Email: `type="email"`, `required`, placeholder "Enter your email"
 - Password: `type="password"`, `required`, placeholder "Enter your password"
-- Ambos: `border border-gray-300`, `focus:ring-2 focus:ring-blue-500 focus:border-blue-500`
+- Ambos: `border border-gray-300`, `rounded-md`, `px-3 py-2`, `focus:ring-2 focus:ring-blue-500 focus:border-blue-500`
+- Labels: `text-xs font-medium text-gray-700 mb-1` (Ronda 3)
 - Transición: `transition duration-300`
 
-**Botón Submit:**
+**Botón Submit (Ronda 3 - Tipografía):**
 - Texto: "Sign in"
-- Clase: `btn-primary` (o `bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4`)
+- Clase: `bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md`
+- Tipografía: `text-base font-medium` (legible, moderno)
 - Con spinner durante POST (mostrar spinner inline al hacer click)
+- Ancho completo: `w-full`
 
 **Link Sign Up:**
 - Texto: "Don't have an account? <a>Sign up</a>"
-- Clase: `text-center text-sm text-gray-600`, link `text-blue-600 hover:text-blue-500`
-- Ubicación: Debajo del botón con margin-top
+- Clase: `text-center text-xs font-medium text-gray-600` (Ronda 3), link `text-blue-600 hover:text-blue-500`
+- Ubicación: Debajo del botón con `mt-4`
 
-**Mensaje de Error:**
+**Mensaje de Error (Ronda 3 - Icono):**
 - Muestra si hay ErrorMessage
-- Clase: `rounded-md bg-red-50 p-4 mb-6`
-- Icono + texto rojo
-- Accesible: `role="alert"`
+- Clase: `rounded-md bg-red-50 p-4 mb-6 flex items-center gap-3`
+- Icono: X circle (SVG o Heroicons, color rojo-700)
+- Texto: `text-red-700 text-sm`
+- Accesible: `role="alert"`, aria-live="polite"`
 
 - Ninguna dependencia externa crítica. El trabajo es local a la página de login.
 - Tailwind CSS ya está integrado en el proyecto (Project Phase 6).
@@ -207,6 +223,14 @@ Centrado: vertical y horizontal
 - Q: ¿Ancho máximo del formulario? → A: 400px fijo con padding adaptativo en móvil (90% en mobile)
 - Q: ¿Ubicación del link "Sign up"? → A: Debajo del botón como texto pequeño ("Don't have account? Sign up")
 - Q: ¿Título de la página (tab)? → A: "Sign In - SauronSheet"
+
+### Session 2026-03-07 (Ronda 3)
+
+- Q: ¿Logo de SauronSheet en el formulario? → A: Sí, logo pequeño (32x32px) centrado en la parte superior
+- Q: ¿Padding del contenedor? → A: Adaptativo (p-4 en móvil, p-8 en desktop)
+- Q: ¿Espaciado entre campos? → A: space-y-6 (espaciado generoso entre email, password, botón)
+- Q: ¿Tipo de icono para mensaje de error? → A: X circle (icono de X dentro de círculo rojo)
+- Q: ¿Tamaños y pesos de tipografía? → A: Título text-3xl extrabold, botón text-base medium, helper text-xs medium (jerarquía visual clara)
 
 **Why this priority**: [Explain the value and why it has this priority level]
 
