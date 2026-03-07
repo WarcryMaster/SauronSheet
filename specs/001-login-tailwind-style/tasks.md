@@ -1,7 +1,7 @@
 # Tareas de Implementación: Estilizado Visual Atractivo para Login con Tailwind
 
 **Feature**: `001-login-tailwind-style` | **Rama**: `001-login-tailwind-style` | **Fecha**: 2026-03-07
-**Total de Tareas**: 45 | **Plazo Estimado**: 4-6 horas | **Esfuerzo**: Bajo-Medio
+**Total de Tareas**: 48 (Setup: 3 + Implementation: 42 + QA: 3) | **Plazo Estimado**: 4-6 horas | **Esfuerzo**: Bajo-Medio
 
 ---
 
@@ -153,7 +153,7 @@
 **Dependency**: All implementation phases (T001-T039) complete
 
 - [ ] T040 [P] E2E visual regression baseline (Playwright/Cypress: take screenshot of /Auth/Login at 1920×1080, baseline for future regressions)
-- [ ] T041 [P] Lighthouse accessibility audit (open DevTools, run Lighthouse audit, target score ≥ 90/100, record baseline)
+- [ ] T041 [P] Accessibility compliance verification (PRIMARY: Manual WCAG 2.1 AA validation using color contrast checker + axe DevTools + keyboard nav testing; SECONDARY: Lighthouse accessibility score ≥ 90/100 as supporting metric — note: Lighthouse heuristics may vary, WCAG compliance is deterministic success criterion)
 - [ ] T042 [P] Manual keyboard navigation test (Tab through all controls: email → password → password toggle → submit → signup, Shift+Tab reverse, Enter submits, Space activates button, no Tab traps)
 - [ ] T043 [P] Manual page load test (navigate to /Auth/Login, verify email field is auto-focused immediately, cursor in email input, no other focus issues)
 - [ ] T044 [P] Manual password toggle test (click eye icon, type changes from password ↔ text, click again hides, no data loss, icon rotates smoothly)
@@ -164,7 +164,8 @@
 
 **Acceptance Criteria**:
 - [ ] E2E screenshot baseline created (no regression)
-- [ ] Lighthouse accessibility ≥ 90/100
+- [ ] WCAG 2.1 AA compliance verified (color contrast ≥ 4.5:1, manual keyboard nav test, screen reader compatibility confirmed)
+- [ ] Lighthouse accessibility score ≥ 90/100 (supporting metric)
 - [ ] Tab navigation flawless, no focus traps
 - [ ] Email focused on page load
 - [ ] Password toggle works: click to show/hide

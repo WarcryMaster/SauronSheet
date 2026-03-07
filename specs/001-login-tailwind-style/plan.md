@@ -40,7 +40,7 @@ Enhance the login page (/Auth/Login) with modern, attractive visual styling usin
 **Storage**: N/A (no data persistence changes)
 
 **Testing**: 
-- E2E browser testing: Visual regression, accessibility (Lighthouse, axe DevTools)
+- E2E browser testing: Visual regression, WCAG 2.1 AA compliance verification (axe DevTools, color contrast checker, keyboard navigation), Lighthouse accessibility ≥ 90 (supporting metric)
 - Manual testing: Keyboard navigation (Tab order), screen reader (NVDA/JAWS), responsive breakpoints
 - No unit tests required (visual-only, no business logic)
 
@@ -51,7 +51,7 @@ Enhance the login page (/Auth/Login) with modern, attractive visual styling usin
 **Performance Goals**: 
 - Page load: ≤ 2s (visual milestone paint)
 - Form interaction: ≤ 100ms (user input → visual feedback)
-- Accessibility: WCAG 2.1 AA compliance (scoring ≥ 90 in Lighthouse)
+- Accessibility: WCAG 2.1 AA compliance (PRIMARY: manual verification via color contrast checker, axe DevTools, keyboard nav testing; SECONDARY: Lighthouse accessibility score ≥ 90 as supporting metric)
 
 **Constraints**: 
 - No breaking changes to existing authentication backend

@@ -50,7 +50,7 @@ para poder iniciar sesión sin barreras.
 
 **Por qué esta prioridad**: La accesibilidad es un requisito legal y de calidad para todos los usuarios.
 
-**Prueba independiente**: Puede probarse usando solo teclado y herramientas de accesibilidad (como Lighthouse o axe).
+**Prueba independiente**: Puede probarse usando solo teclado y herramientas de accesibilidad (WCAG 2.1 AA compliance verification via axe DevTools, Lighthouse, color contrast checker).
 
 **Escenarios de aceptación:**
 
