@@ -43,11 +43,11 @@
 
                     <!-- Email input (MDB style) -->
                     <div data-mdb-input-init class="form-outline mb-4">
-                        <input type="email"
+                           <input type="email"
                                id="loginEmail"
                                name="Input.Email"
                                class="form-control"
-                               value="@Model.Input.Email"
+                               value="@(Model.Input.Email ?? "")"
                                required
                                autofocus
                                tabindex="1" />
@@ -56,10 +56,11 @@
 
                     <!-- Password input (MDB style) -->
                     <div data-mdb-input-init class="form-outline mb-3">
-                        <input type="password"
+                           <input type="password"
                                id="loginPassword"
                                name="Input.Password"
                                class="form-control"
+                               value="@(Model.Input.Password ?? "")"
                                required
                                autocomplete="current-password"
                                tabindex="2" />
@@ -170,6 +171,12 @@
 
         document.querySelectorAll('[data-mdb-input-init]').forEach(function (el) {
             new mdb.Input(el);
+            // Forzar label flotante si el input tiene valor
+            const input = el.querySelector('input');
+            const label = el.querySelector('label');
+            if (input && label && input.value) {
+                label.classList.add('active');
+            }
         });
     });
 </script>
