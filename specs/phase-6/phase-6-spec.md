@@ -68,6 +68,26 @@
   - Reduces maintenance burden; no platform-specific variants needed
   - Validation required during Week 22 platform verification to confirm port exposure and env var handling
 
+- **Q7:** Health Check Endpoint — Sentry Tracing & Free Tier Quota → **A (EXCLUDE from Sentry)**
+  - `/health` endpoint excluded from Sentry tracing via `TracesToIgnore` pattern
+  - Rationale: Health checks are operational noise (100s-1000s/day); only application errors + transactions reported
+  - Protects free tier quota (5,000 events/month); prevents health check pings from consuming quota
+  - Implementation: Sentry `TracesToIgnore = [ "/health" ]` in Program.cs configuration
+
+- **Q8:** Security CSP Test Validation — Automated vs Manual Verification → **A (Automated CSP Reporting)**
+  - T-6.19 validated via automated CSP violation logging, not manual browser testing
+  - If CSP header is correct (verified in T-6.18) + real injection triggers CSP violation, test passes
+  - CSP violations logged to Sentry or server logs (automated signal)
+  - Manual DevTools testing optional (not required for release gate)
+  - Keeps testing automated; reduces manual test burden
+
+- **Q9:** Icon Consistency Verification — Acceptance Criteria Coverage → **B (Manual Visual Inspection)**
+  - Icon library uniformity verified during UI polish pass (Week 23 Day 5), not via automated test
+  - T-6.01 focuses on CSS consistency (classes, spacing, no conflicts); icon library is separate concern
+  - Visual inspection confirms icons use consistent library (e.g., Font Awesome, SVG, or inline) throughout all pages
+  - Verification: During Step 3 UI polish and visual acceptance; documented in implementation notes
+  - Scenario 6.1 AC remains informational guidance; not formally test-gated
+
 ---
 
 ## Executive Summary
@@ -657,6 +677,9 @@ builder.WebHost.UseSentry(options =>
     options.TracesSampleRate = builder.Environment.IsProduction() ? 0.1 : 1.0;
     options.SendDefaultPii = false; // Don't send personal data
     
+    // EXCLUDE /health endpoint from tracing (operational noise, prevents quota exhaustion)
+    options.TracesToIgnore.Add("/health");
+    
     // Custom BeforeSend hook to filter financial PII
     options.BeforeSend = (transaction, hint) =>
     {
@@ -1049,6 +1072,7 @@ AND all cards use .card class
 AND no inline styles or hardcoded colors override Tailwind theme
 AND visual inspection confirms consistent spacing (via margin/padding Tailwind scale)
 AND no CSS class conflicts or overrides in DevTools Styles panel
+(Note: Icon library consistency verified via manual visual inspection during UI polish pass, not via automated test)
 
 TEST T-6.02: UI_ResponsiveDesign_Mobile320
 GIVEN the application is loaded in a 320px viewport
@@ -1171,10 +1195,10 @@ AND Content-Security-Policy is set
 AND X-Powered-By header is NOT present
 
 TEST T-6.19: Security_CSP_BlocksInlineScript
-GIVEN the Content-Security-Policy header is set
-WHEN an inline script injection is attempted
-THEN the browser blocks the script execution
-(Verified via CSP reporting or manual test)
+GIVEN the Content-Security-Policy header is set (verified in T-6.18)
+WHEN an inline script injection is attempted (simulated or real)
+THEN the browser blocks the script execution AND CSP violation is logged
+(Verified via automated CSP violation logging: Sentry, server logs, or browser console reporting. Manual DevTools test is optional.)
 
 ### Deployment Tests
 TEST T-6.20: Deploy_HealthCheck_Returns200
