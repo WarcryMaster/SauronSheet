@@ -10,74 +10,79 @@
 
     <!-- Chart.js 4.4.0 for analytics charts via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="/css/site.css" />
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
 
     <!-- Skip to content link (accessibility) -->
-    <a href="#main-content" class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-sm btn-light shadow-sm">Saltar al contenido principal</a>
+    <a href="#main-content"
+           class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-sm btn-light shadow-sm">Saltar al
+        contenido principal</a>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow" role="navigation" aria-label="Main navigation">
-        <div class="container-xl px-3">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-                <img src="/img/sauron-sheet-logo-32x32.png" alt="SauronSheet logo" height="32" />
-                <span class="fw-bold">SauronSheet</span>
-            </a>
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow" role="navigation" aria-label="Main navigation">
+            <div class="container-xl px-3">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                    <img src="/img/sauron-sheet-logo-32x32.png" alt="SauronSheet logo" height="32" />
+                    <span class="fw-bold">SauronSheet</span>
+                </a>
 
-            <button class="navbar-toggler" type="button"
-                    data-mdb-toggle="collapse" data-mdb-target="#navMain"
-                    aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
-                <i class="navbar-toggler-icon"></i>
-            </button>
+                <button class="navbar-toggler" type="button"   data-mdb-toggle="collapse" data-mdb-target="#navMain"
+                        aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="navbar-toggler-icon"></i>
+                </button>
 
-            <div class="collapse navbar-collapse" id="navMain">
-                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
-                    @if (User?.Identity?.IsAuthenticated == true)
-                    {
-                        <li class="nav-item"><a class="nav-link" href="/Dashboard">📊 Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/Transactions">💳 Transactions</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/Transactions/Search">🔍 Search</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/Transactions/Upload">📄 Upload</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/Categories">🏷️ Categories</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/Budgets">💰 Budgets</a></li>
-                        <li class="nav-item d-none d-lg-flex align-items-center border-start border-secondary ps-3 ms-1">
-                            <small class="text-secondary text-truncate" style="max-width:140px">@User.FindFirst("email")?.Value</small>
-                        </li>
-                        <li class="nav-item">
-                            <form method="post" asp-page="/Auth/Logout" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-light ms-lg-1">Logout</button>
-                            </form>
-                        </li>
-                    }
-                    else
-                    {
-                        <li class="nav-item"><a class="nav-link" href="/Auth/Login">Sign In</a></li>
-                        <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/Auth/Register">Get Started</a></li>
-                    }
-                </ul>
+                <div class="collapse navbar-collapse" id="navMain">
+                    <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                        @if (User?.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item"><a class="nav-link" href="/Dashboard">📊 Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Transactions">💳 Transactions</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Transactions/Search">🔍 Search</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Transactions/Upload">📄 Upload</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Categories">🏷️ Categories</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Budgets">💰 Budgets</a></li>
+                            <li class="nav-item d-none d-lg-flex align-items-center border-start border-secondary ps-3 ms-1">
+                                <small class="text-secondary text-truncate"
+                                       style="max-width:140px">@User.FindFirst("email")?.Value</small>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Auth/Logout" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-light ms-lg-1">Logout</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link" href="/Auth/Login">Sign In</a></li>
+                            <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/Auth/Register">Get Started</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
-    <main id="main-content" class="flex-grow-1 container-xl px-3 py-4">
-        @RenderBody()
-    </main>
+        <main id="main-content" class="flex-grow-1 container-xl px-3 py-4">
+            @RenderBody()
+        </main>
 
-    @await Html.PartialAsync("~/Pages/Shared/Components/_Toast.cshtml")
+        @await Html.PartialAsync("~/Pages/Shared/Components/_Toast.cshtml")
 
-    <footer class="bg-dark border-top border-secondary mt-auto py-3">
-        <div class="container-xl px-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <img src="/img/sauron-sheet-logo-16x16.png" alt="" height="16" class="opacity-50" />
-                <small class="text-muted">&copy; 2026 SauronSheet</small>
+        <footer class="bg-dark border-top border-secondary mt-auto py-3">
+            <div class="container-xl px-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="/img/sauron-sheet-logo-16x16.png" alt="" height="16" class="opacity-50" />
+                    <small class="text-muted">&copy; 2026 SauronSheet</small>
+                </div>
+                <small class="text-secondary">v1.2.0 — Phase 6 Polish &amp; Release</small>
             </div>
-            <small class="text-secondary">v1.2.0 — Phase 6 Polish &amp; Release</small>
-        </div>
-    </footer>
+        </footer>
 
-    <!-- MDBootstrap JS via CDN -->
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.umd.min.js"></script>
-</body>
+        <!-- MDBootstrap JS via CDN -->
+        <script type="text/javascript"
+                src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.umd.min.js"></script>
+    </body>
+
 </html>

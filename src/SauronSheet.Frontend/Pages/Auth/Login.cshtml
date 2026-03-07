@@ -12,26 +12,27 @@
         <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
 
             <!-- Decorative top strip -->
-            <div style="height: 5px; background: linear-gradient(90deg, var(--brand-light), var(--brand), var(--brand-dark));"></div>
+            <div style="height: 5px; background: linear-gradient(90deg, var(--brand-light, #7c4dff), var(--brand, #651fff), var(--brand-dark, #4a148c));"></div>
 
             <div class="card-body px-4 px-sm-5 pt-4 pb-5">
 
                 <!-- Logo + Title -->
                 <div class="text-center mb-4">
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-brand-light mb-4" style="width:64px; height:64px;">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-3 mb-3"
+                         style="width:64px; height:64px; background-color: rgba(101,31,255,0.1);">
                         <img src="/img/sauron-sheet-logo-64x64.png" alt="SauronSheet" width="40" height="40" />
                     </div>
-                    <h1 class="h3 fw-bold text-dark">Welcome back</h1>
-                    <p class="text-muted small">Sign in to continue to your dashboard</p>
+                    <h1 class="h4 fw-bold text-dark mb-1">Welcome back</h1>
+                    <p class="text-muted small mb-0">Sign in to continue to your dashboard</p>
                 </div>
 
                 <!-- Error alert -->
                 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                 {
-                    <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3" role="alert" aria-live="polite">
-                        <span class="fw-bold">!</span>
+                    <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3 py-2 px-3" role="alert" aria-live="polite">
+                        <i class="fas fa-exclamation-circle mt-1"></i>
                         <div>
-                            <p class="mb-0 fw-semibold">Authentication failed</p>
+                            <p class="mb-0 fw-semibold small">Authentication failed</p>
                             <p class="mb-0 small">@Model.ErrorMessage</p>
                         </div>
                     </div>
@@ -40,50 +41,75 @@
                 <!-- Form -->
                 <form method="post" autocomplete="off" id="loginForm">
 
-                    <!-- Email -->
-                    <div class="mb-3">
-                        <label for="email" class="form-label small fw-semibold text-uppercase text-muted">Email address</label>
-                        <input id="email" name="Input.Email" type="email" required autofocus tabindex="1"
-                               value="@Model.Input.Email" placeholder="you@example.com"
-                               class="form-control rounded-3" />
+                    <!-- Email input (MDB style) -->
+                    <div data-mdb-input-init class="form-outline mb-4">
+                        <input type="email"
+                               id="loginEmail"
+                               name="Input.Email"
+                               class="form-control"
+                               value="@Model.Input.Email"
+                               required
+                               autofocus
+                               tabindex="1" />
+                        <label class="form-label" for="loginEmail">Email address</label>
                     </div>
 
-                    <!-- Password -->
-                    <div class="mb-4">
-                        <label for="password" class="form-label small fw-semibold text-uppercase text-muted">Password</label>
-                        <div class="input-group">
-                            <input type="password" id="password" name="Input.Password" required tabindex="2"
-                                   autocomplete="current-password" placeholder="••••••••"
-                                   class="form-control rounded-start-3" />
-                            <button type="button" class="btn btn-outline-secondary rounded-end-3"
-                                    onclick="togglePassword()" aria-label="Toggle password visibility" tabindex="3">
-                                <span id="eyeIcon">👁</span>
-                            </button>
+                    <!-- Password input (MDB style) -->
+                    <div data-mdb-input-init class="form-outline mb-3">
+                        <input type="password"
+                               id="loginPassword"
+                               name="Input.Password"
+                               class="form-control"
+                               required
+                               autocomplete="current-password"
+                               tabindex="2" />
+                        <label class="form-label" for="loginPassword">Password</label>
+                    </div>
+
+                    <!-- Remember me + Toggle password row -->
+                    <div class="row mb-4">
+                        <div class="col d-flex justify-content-start">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="rememberMe"
+                                       name="Input.RememberMe"
+                                       tabindex="3" />
+                                <label class="form-check-label small" for="rememberMe">Remember me</label>
+                            </div>
+                        </div>
+                        <div class="col text-end">
+                            <a href="#" class="small"
+                               onclick="togglePassword(event)"
+                               tabindex="4"
+                               id="togglePwdLink">
+                                <span id="eyeIcon">👁</span> Show password
+                            </a>
                         </div>
                     </div>
 
-                    <!-- Submit -->
-                    <button type="submit" tabindex="4" id="loginBtn"
-                            class="btn btn-brand w-100 rounded-3 fw-bold text-uppercase">
+                    <!-- Submit button (MDB style) -->
+                    <button type="submit"
+                            data-mdb-button-init
+                            data-mdb-ripple-init
+                            class="btn btn-primary btn-block mb-4 text-uppercase fw-bold"
+                            id="loginBtn"
+                            tabindex="5">
                         <span id="loginBtnText">Sign in</span>
-                        <span id="loginSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                        <span id="loginSpinner"
+                              class="spinner-border spinner-border-sm ms-2 d-none"
+                              role="status"
+                              aria-hidden="true"></span>
                     </button>
                 </form>
 
                 <!-- Divider -->
-                <div class="d-flex align-items-center my-4">
-                    <hr class="flex-grow-1" />
-                    <span class="px-3 small text-muted text-uppercase">or</span>
-                    <hr class="flex-grow-1" />
+                <div class="text-center">
+                    <p class="text-muted small mb-3">Not a member?
+                        <a href="/Auth/Register" class="fw-semibold">Create a free account</a>
+                    </p>
                 </div>
 
-                <!-- Register link -->
-                <div class="text-center">
-                    <p class="text-muted small mb-2">Don't have an account yet?</p>
-                    <a href="/Auth/Register" class="btn btn-outline-secondary rounded-3 px-4">
-                        Create a free account
-                    </a>
-                </div>
             </div>
         </div>
 
@@ -94,24 +120,33 @@
 </div>
 
 <script>
-    function togglePassword() {
-        var input = document.getElementById('password');
-        var icon = document.getElementById('eyeIcon');
+    function togglePassword(e) {
+        if (e) e.preventDefault();
+        const input = document.getElementById('loginPassword');
+        const icon = document.getElementById('eyeIcon');
+        const link = document.getElementById('togglePwdLink');
         if (input.type === 'password') {
             input.type = 'text';
-            icon.textContent = '🙈';
+            link.innerHTML = '<span id="eyeIcon">🙈</span> Hide password';
         } else {
             input.type = 'password';
-            icon.textContent = '👁';
+            link.innerHTML = '<span id="eyeIcon">👁</span> Show password';
         }
     }
 
     document.getElementById('loginForm').addEventListener('submit', function () {
-        var btn = document.getElementById('loginBtn');
-        var text = document.getElementById('loginBtnText');
-        var spinner = document.getElementById('loginSpinner');
+        const btn = document.getElementById('loginBtn');
+        const text = document.getElementById('loginBtnText');
+        const spinner = document.getElementById('loginSpinner');
         btn.disabled = true;
         text.textContent = 'Signing in…';
         spinner.classList.remove('d-none');
+    });
+
+    // Re-initialize MDB inputs (needed when value is pre-filled by server)
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-mdb-input-init]').forEach(function (el) {
+            new mdb.Input(el);
+        });
     });
 </script>
