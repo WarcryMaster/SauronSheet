@@ -2,52 +2,85 @@
 @model LoginModel
 
 @{
-    ViewData["Title"] = "Sign In";
+    ViewData["Title"] = "Sign In - SauronSheet";
 }
 
+<!-- Alpine.js loader (Phase 1) -->
+<script src="/js/alpine-loader.js"></script>
+
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Sign in to your account
-            </h2>
+    <div class="w-full max-w-sm sm:max-w-md md:max-w-md lg:max-w-md bg-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg p-4 sm:p-6 lg:p-8">
+        <!-- Logo -->
+        <div class="flex justify-center">
+            <img src="/img/sauron-sheet-logo-32x32.png" alt="SauronSheet" class="h-8 w-8 mx-auto mb-4" />
+        </div>
+        <!-- Title -->
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 mb-8">
+            Sign in to your account
+        </h2>
+
+        <!-- Error Message Placeholder (Phase 2, Alpine.js x-show) -->
+        <div x-data="{ show: @(!string.IsNullOrEmpty(Model.ErrorMessage)).ToString().ToLower() }" x-show="show" role="alert" aria-live="polite" class="rounded-md bg-red-50 p-4 mb-6 flex items-start" style="display: none;">
+            <!-- SVG X-circle icon -->
+            <svg class="h-5 w-5 text-red-400 mr-3 mt-1 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20" stroke="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-sm text-red-700">@Model.ErrorMessage</p>
         </div>
 
-        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-        {
-            <div class="rounded-md bg-red-50 p-4">
-                <p class="text-sm text-red-700">@Model.ErrorMessage</p>
-            </div>
-        }
-
-        <form method="post" class="mt-8 space-y-6">
+        <form method="post" class="space-y-6" autocomplete="off" x-data="{ showPassword: false, isSubmitting: false, errorMessage: null }" x-on:submit="isSubmitting = true" x-on:keydown.enter="if($event.target.id === 'password'){ $el.submit(); }">
+            <!-- Email Input -->
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">
-                    Email address
-                </label>
-                <input id="email" name="Input.Email" type="email" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    value="@Model.Input.Email" />
+                <label for="email" class="block text-xs font-medium text-gray-700 mb-1 sm:text-xs" id="email-label">Email address</label>
+                <input id="email" name="Input.Email" type="email" required autofocus aria-required="true" aria-labelledby="email-label"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md sm:rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base transition duration-300"
+                    :class="errorMessage ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-red-50' : ''"
+                    :disabled="isSubmitting"
+                    value="@Model.Input.Email" aria-label="Email address" tabindex="1" />
             </div>
-
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">
-                    Password
-                </label>
-                <input id="password" name="Input.Password" type="password" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+            <!-- Password Input with Toggle -->
+            <div class="relative">
+                <label for="password" class="block text-xs font-medium text-gray-700 mb-1 sm:text-xs" id="password-label">Password</label>
+                <input :type="showPassword ? 'text' : 'password'" id="password" name="Input.Password" required aria-required="true" aria-labelledby="password-label"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md sm:rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base pr-12 transition duration-300"
+                    :class="errorMessage ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-red-50' : ''"
+                    :disabled="isSubmitting"
+                    aria-label="Password" autocomplete="current-password" tabindex="2"
+                    x-on:keydown.enter.prevent="$el.form.submit()"
+                />
+                <!-- Toggle Button -->
+                <button type="button" tabindex="3" x-on:click="showPassword = !showPassword" :aria-pressed="showPassword.toString()" aria-label="Show or hide password"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition duration-300"
+                    :disabled="isSubmitting"
+                >
+                    <template x-if="!showPassword">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-transform duration-300" :class="{'rotate-0': !showPassword, 'rotate-90': showPassword}" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path d="M10 3C5 3 1.73 7.11 1.05 10.29a1 1 0 000 .42C1.73 12.89 5 17 10 17s8.27-4.11 8.95-7.29a1 1 0 000-.42C18.27 7.11 15 3 10 3zm0 12c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/><circle cx="10" cy="10" r="3"/></svg>
+                    </template>
+                    <template x-if="showPassword">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-transform duration-300 rotate-90" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path d="M13.875 12.025A3.001 3.001 0 0110 13c-1.657 0-3-1.343-3-3 0-.512.13-.995.354-1.414M6.125 7.975A3.001 3.001 0 0110 7c1.657 0 3 1.343 3 3 0 .512-.13.995-.354 1.414M4.293 4.293l11.414 11.414" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/><path d="M9.293 9.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414l-6-6a1 1 0 010-1.414z"/></svg>
+                    </template>
+                </button>
             </div>
-
-            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                Sign in
+            <!-- Submit Button -->
+            <button type="submit" class="w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300"
+                aria-label="Sign in" tabindex="4"
+                :disabled="isSubmitting"
+                :class="isSubmitting ? 'opacity-50 cursor-not-allowed' : ''"
+            >
+                <span x-show="!isSubmitting">Sign in</span>
+                <span x-show="isSubmitting">
+                    <svg class="animate-spin h-5 w-5 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    Signing in...
+                </span>
             </button>
         </form>
-
-        <p class="text-center text-sm text-gray-600">
+        <!-- Sign Up Link -->
+        <p class="text-center text-xs font-medium text-gray-600 mt-4">
             Don't have an account?
-            <a href="/Auth/Register" class="font-medium text-blue-600 hover:text-blue-500">
-                Sign up
-            </a>
+            <a href="/Auth/Register" class="text-blue-600 hover:text-blue-500" tabindex="5">Sign up</a>
         </p>
     </div>
 </div>
