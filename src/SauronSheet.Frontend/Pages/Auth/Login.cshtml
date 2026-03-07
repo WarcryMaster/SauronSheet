@@ -5,147 +5,191 @@
     ViewData["Title"] = "Sign In - SauronSheet";
 }
 
-<div class="min-h-[70vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="w-full max-w-md">
-        <!-- Card -->
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-            <!-- Logo & Title -->
-            <div class="text-center mb-8">
-                <img src="/img/sauron-sheet-logo-64x64.png" alt="SauronSheet" class="mx-auto h-14 w-14 mb-4" />
-                <h2 class="text-2xl font-bold text-gray-900">Welcome back</h2>
-                <p class="text-sm text-gray-500 mt-1">Sign in to your SauronSheet account</p>
-            </div>
+<div class="flex items-center justify-center min-h-[75vh] px-4 py-12 sm:px-6 lg:px-8">
+    <div class="w-full max-w-sm sm:max-w-md">
 
-            <!-- Error alert -->
-            <div x-data="{ show: @(!string.IsNullOrEmpty(Model.ErrorMessage)).ToString().ToLower() }" x-show="show" role="alert" aria-live="polite" class="rounded-lg bg-red-50 border border-red-200 p-4 mb-6 flex items-start gap-3" style="display: none;">
-                <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z" clip-rule="evenodd"/></svg>
-                <p class="text-sm text-red-700">@Model.ErrorMessage</p>
-            </div>
+        <!-- Card principal -->
+        <div class="relative overflow-hidden bg-white border border-gray-200 shadow-xl rounded-3xl">
 
-            <form method="post" class="space-y-5" autocomplete="off"
-                  x-data="{ showPassword: false, isSubmitting: false }"
-                  x-on:submit="isSubmitting = true">
+            <!-- Franja decorativa superior -->
+            <div class="h-1.5 bg-gradient-to-r from-brand-400 via-brand-600 to-brand-800"></div>
 
-                <!-- Email -->
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                    <input id="email" name="Input.Email" type="email" required autofocus
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition duration-200"
-                           value="@Model.Input.Email" tabindex="1" />
+            <div class="px-6 pt-8 pb-10 sm:px-10">
+
+                <!-- Logo + Título -->
+                <div class="text-center mb-10">
+                    <div class="flex items-center justify-center w-16 h-16 mx-auto mb-5 rounded-2xl bg-brand-50 ring-1 ring-brand-200 shadow-sm">
+                        <img src="/img/sauron-sheet-logo-64x64.png"
+                             alt="SauronSheet"
+                             class="w-10 h-10" />
+                    </div>
+                    <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
+                        Welcome back
+                    </h1>
+                    <p class="mt-2 text-sm leading-relaxed text-gray-500">
+                        Sign in to continue to your dashboard
+                    </p>
                 </div>
 
-                <!-- Password -->
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <div class="relative">
-                        <input :type="showPassword ? 'text' : 'password'" id="password" name="Input.Password" required
-                               class="w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm text-gray-900 text-sm pr-11 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition duration-200"
-                               autocomplete="current-password" tabindex="2" />
-                        <button type="button" tabindex="3" x-on:click="showPassword = !showPassword"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                :aria-label="showPassword ? 'Hide password' : 'Show password'">
-                            <svg x-show="!showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                            <svg x-show="showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                <!-- Alerta de error -->
+                <div x-data="{ show: @((!string.IsNullOrEmpty(Model.ErrorMessage)).ToString().ToLower()) }"
+                     x-show="show"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 -translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 -translate-y-2"
+                     role="alert"
+                     aria-live="polite"
+                     class="flex items-start gap-3 p-4 mb-8 border rounded-xl bg-red-50 border-red-200"
+                     style="display:none">
+                    <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 mt-0.5 rounded-full bg-red-100">
+                        <svg class="w-4 h-4 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z"
+                                  clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-red-800">Authentication failed</p>
+                        <p class="mt-0.5 text-sm text-red-600">@Model.ErrorMessage</p>
+                    </div>
+                    <button type="button" x-on:click="show = false"
+                            class="ml-auto -mr-1 -mt-1 p-1 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                  clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Formulario -->
+                <form method="post"
+                      class="space-y-6"
+                      autocomplete="off"
+                      x-data="{ showPassword: false, isSubmitting: false }"
+                      x-on:submit="isSubmitting = true">
+
+                    <!-- Campo Email -->
+                    <div class="space-y-1.5">
+                        <label for="email"
+                               class="block text-xs font-semibold tracking-wide text-gray-600 uppercase">
+                            Email address
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <input id="email"
+                                   name="Input.Email"
+                                   type="email"
+                                   required
+                                   autofocus
+                                   tabindex="1"
+                                   value="@Model.Input.Email"
+                                   placeholder="you@example.com"
+                                   :disabled="isSubmitting"
+                                   class="block w-full py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200" />
+                        </div>
+                    </div>
+
+                    <!-- Campo Password -->
+                    <div class="space-y-1.5">
+                        <label for="password"
+                               class="block text-xs font-semibold tracking-wide text-gray-600 uppercase">
+                            Password
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <input :type="showPassword ? 'text' : 'password'"
+                                   id="password"
+                                   name="Input.Password"
+                                   required
+                                   tabindex="2"
+                                   autocomplete="current-password"
+                                   placeholder="••••••••"
+                                   :disabled="isSubmitting"
+                                   class="block w-full py-3 pl-10 pr-12 text-sm text-gray-900 placeholder-gray-400 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200" />
+                            <button type="button"
+                                    tabindex="3"
+                                    x-on:click="showPassword = !showPassword"
+                                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                                    class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-brand-600 focus:outline-none transition-colors duration-200">
+                                <!-- Ojo abierto -->
+                                <svg x-show="!showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                <!-- Ojo cerrado -->
+                                <svg x-show="showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="display:none">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Separador visual -->
+                    <div class="pt-1">
+                        <!-- Botón Submit -->
+                        <button type="submit"
+                                tabindex="4"
+                                :disabled="isSubmitting"
+                                :class="isSubmitting ? 'opacity-70 cursor-not-allowed scale-[0.98]' : 'hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-500/25 active:scale-[0.98]'"
+                                class="relative flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-bold tracking-wide text-white uppercase rounded-xl bg-brand-600 shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-all duration-200">
+                            <!-- Spinner -->
+                            <svg x-show="isSubmitting"
+                                 class="w-5 h-5 animate-spin"
+                                 viewBox="0 0 24 24"
+                                 fill="none"
+                                 style="display:none">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                            <span x-show="!isSubmitting">Sign in</span>
+                            <span x-show="isSubmitting" style="display:none">Signing in…</span>
                         </button>
                     </div>
+                </form>
+
+                <!-- Divider -->
+                <div class="flex items-center my-8">
+                    <div class="flex-1 border-t border-gray-200"></div>
+                    <span class="px-4 text-xs font-medium text-gray-400 uppercase">or</span>
+                    <div class="flex-1 border-t border-gray-200"></div>
                 </div>
 
-                <!-- Submit -->
-                <button type="submit" tabindex="4"
-                        class="w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition duration-200 shadow-sm"
-                        :class="isSubmitting ? 'opacity-75 cursor-not-allowed' : ''"
-                        :disabled="isSubmitting">
-                    <svg x-show="isSubmitting" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" style="display:none">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-                    <span x-show="!isSubmitting">Sign in</span>
-                    <span x-show="isSubmitting" style="display:none">Signing in...</span>
-                </button>
-            </form>
-
-            <!-- Footer link -->
-            <p class="text-center text-sm text-gray-500 mt-6">
-                Don't have an account?
-                <a href="/Auth/Register" class="font-medium text-brand-600 hover:text-brand-700">Create one free</a>
-            </p>
-        </div>
-    </div>
-</div>
-
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="w-full max-w-sm sm:max-w-md md:max-w-md lg:max-w-md bg-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg p-4 sm:p-6 lg:p-8">
-        <!-- Logo -->
-        <div class="flex justify-center">
-            <img src="/img/sauron-sheet-logo-32x32.png" alt="SauronSheet" class="h-8 w-8 mx-auto mb-4" />
-        </div>
-        <!-- Title -->
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 mb-8">
-            Sign in to your account
-        </h2>
-
-        <!-- Error Message Placeholder (Phase 2, Alpine.js x-show) -->
-        <div x-data="{ show: @(!string.IsNullOrEmpty(Model.ErrorMessage)).ToString().ToLower() }" x-show="show" role="alert" aria-live="polite" class="rounded-md bg-red-50 p-4 mb-6 flex items-start" style="display: none;">
-            <!-- SVG X-circle icon -->
-            <svg class="h-5 w-5 text-red-400 mr-3 mt-1 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20" stroke="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z" clip-rule="evenodd" />
-            </svg>
-            <p class="text-sm text-red-700">@Model.ErrorMessage</p>
-        </div>
-
-        <form method="post" class="space-y-6" autocomplete="off" x-data="{ showPassword: false, isSubmitting: false, errorMessage: null }" x-on:submit="isSubmitting = true" x-on:keydown.enter="if($event.target.id === 'password'){ $el.submit(); }">
-            <!-- Email Input -->
-            <div>
-                <label for="email" class="block text-xs font-medium text-gray-700 mb-1 sm:text-xs" id="email-label">Email address</label>
-                <input id="email" name="Input.Email" type="email" required autofocus aria-required="true" aria-labelledby="email-label"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md sm:rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base transition duration-300"
-                    :class="errorMessage ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-red-50' : ''"
-                    :disabled="isSubmitting"
-                    value="@Model.Input.Email" aria-label="Email address" tabindex="1" />
+                <!-- Link registro -->
+                <div class="text-center">
+                    <p class="text-sm text-gray-500">
+                        Don't have an account yet?
+                    </p>
+                    <a href="/Auth/Register"
+                       class="inline-flex items-center gap-1.5 mt-3 px-5 py-2.5 text-sm font-semibold text-brand-700 bg-brand-50 border border-brand-200 rounded-xl hover:bg-brand-100 hover:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-all duration-200">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        Create a free account
+                    </a>
+                </div>
             </div>
-            <!-- Password Input with Toggle -->
-            <div class="relative">
-                <label for="password" class="block text-xs font-medium text-gray-700 mb-1 sm:text-xs" id="password-label">Password</label>
-                <input :type="showPassword ? 'text' : 'password'" id="password" name="Input.Password" required aria-required="true" aria-labelledby="password-label"
-                    class="block w-full px-3 py-2 border border-gray-300 rounded-md sm:rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base pr-12 transition duration-300"
-                    :class="errorMessage ? 'border-red-500 focus:ring-red-500 focus:border-red-500 text-red-700 bg-red-50' : ''"
-                    :disabled="isSubmitting"
-                    aria-label="Password" autocomplete="current-password" tabindex="2"
-                    x-on:keydown.enter.prevent="$el.form.submit()"
-                />
-                <!-- Toggle Button -->
-                <button type="button" tabindex="3" x-on:click="showPassword = !showPassword" :aria-pressed="showPassword.toString()" aria-label="Show or hide password"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition duration-300"
-                    :disabled="isSubmitting"
-                >
-                    <template x-if="!showPassword">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-transform duration-300" :class="{'rotate-0': !showPassword, 'rotate-90': showPassword}" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path d="M10 3C5 3 1.73 7.11 1.05 10.29a1 1 0 000 .42C1.73 12.89 5 17 10 17s8.27-4.11 8.95-7.29a1 1 0 000-.42C18.27 7.11 15 3 10 3zm0 12c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/><circle cx="10" cy="10" r="3"/></svg>
-                    </template>
-                    <template x-if="showPassword">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-transform duration-300 rotate-90" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path d="M13.875 12.025A3.001 3.001 0 0110 13c-1.657 0-3-1.343-3-3 0-.512.13-.995.354-1.414M6.125 7.975A3.001 3.001 0 0110 7c1.657 0 3 1.343 3 3 0 .512-.13.995-.354 1.414M4.293 4.293l11.414 11.414" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/><path d="M9.293 9.293a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414l-6-6a1 1 0 010-1.414z"/></svg>
-                    </template>
-                </button>
-            </div>
-            <!-- Submit Button -->
-            <button type="submit" class="w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300"
-                aria-label="Sign in" tabindex="4"
-                :disabled="isSubmitting"
-                :class="isSubmitting ? 'opacity-50 cursor-not-allowed' : ''"
-            >
-                <span x-show="!isSubmitting">Sign in</span>
-                <span x-show="isSubmitting">
-                    <svg class="animate-spin h-5 w-5 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-                    Signing in...
-                </span>
-            </button>
-        </form>
-        <!-- Sign Up Link -->
-        <p class="text-center text-xs font-medium text-gray-600 mt-4">
-            Don't have an account?
-            <a href="/Auth/Register" class="text-blue-600 hover:text-blue-500" tabindex="5">Sign up</a>
+        </div>
+
+        <!-- Texto inferior fuera del card -->
+        <p class="mt-6 text-xs text-center text-gray-400">
+            Protected with secure authentication · SauronSheet &copy; 2026
         </p>
     </div>
 </div>
