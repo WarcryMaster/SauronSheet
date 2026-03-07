@@ -14,7 +14,7 @@
 
 ---
 
-## Clarifications Session (March 7, 2026)
+## Clarifications Session (March 7–12, 2026)
 
 ### Resolved Design Decisions
 
@@ -25,6 +25,11 @@
 | **Delete Guard Logic** | B+C Hybrid | Application handler executes EXISTS query (efficient), passes boolean to Domain Service CanDeleteCategory(). Maintains invariants in Domain. |
 | **Seeding 24 Categories** | A - SQL Migration | File-based SQL migration with 24 INSERT statements. Supabase migration in source control per Constitution. |
 | **Color Hex Validation** | C - Defense-in-Depth | Frontend HTML5 color picker (UX) + Domain ValueObject ColorHex regex validation (invariant enforcement). Both layers validate. |
+| **IconName Validation** | B - Application Handler | IconName remains simple string in Domain entity. Validation happens in Application handler against hardcoded AllowedBootstrapIcons constant. Decouples Domain from Bootstrap semantics. |
+| **Concurrency Strategy** | E - Name Uniqueness + LWW | Database UNIQUE(UserId, Name) constraint prevents concurrent name conflicts. Update handler uses Last-Write-Wins for other properties (color, icon). No optimistic locking for MVP; revisit in Phase 3 if needed. |
+| **Accessibility Scope** | A - WCAG 2.1 AA Compliance | Full accessibility required: ARIA labels, semantic HTML, keyboard navigation, screen reader support, 4.5:1 color contrast. Phase 2 includes A11y acceptance tests + Lighthouse audits. |
+| **Bootstrap Icons Version** | A - Icons 5.x from CDN | Bootstrap Icons 5.x (~120 icons) loaded from CDN (jsDelivr). AllowedBootstrapIcons constant mirrors stable 5.x icon list. Accept that 6.x upgrade would require spec update. |
+| **Delete Strategy** | A - Hard Delete | DELETE operation immediately removes category row from database. No soft delete or audit log. Simple MVP approach; defer soft delete/audit trail to Phase 3+ if compliance required. |
 
 ---
 
@@ -58,6 +63,14 @@
    - Cannot delete category with active transactions
    - Category colors stored as hex format (e.g., #FF5733)
    - Icons referenced by icon library name (e.g., "credit-card", "home", "shopping-cart")
+
+5. **Web Accessibility (WCAG 2.1 AA)**
+   - Full keyboard navigation for all UI interactivity (no mouse required)
+   - ARIA labels for form inputs, buttons, icons, dynamic content
+   - Semantic HTML (proper heading hierarchy, form structure)
+   - Screen reader support for category lists, forms, error messages
+   - Color contrast ≥4.5:1 for all text; icons paired with labels
+   - Tested via Lighthouse audits + axe accessibility scanner
 
 ### Deferred to Future Phases
 
@@ -122,9 +135,9 @@
 
 **Commands (State-Changing):**
 - `CreateCategoryCommand(string Name, string Type, string Color, string IconName): IRequest<CategoryId>`
-  - Handler: `CreateCategoryCommandHandler` — Validates via CategoryService, creates entity, persists
+  - Handler: `CreateCategoryCommandHandler` — Validates Name via CategoryService, validates IconName against AllowedBootstrapIcons constant, creates entity, persists
 - `UpdateCategoryCommand(CategoryId Id, string Name, string Color, string IconName): IRequest<Unit>`
-  - Handler: `UpdateCategoryCommandHandler` — Prevents Type/IsSystemDefault changes; validates via CategoryService
+  - Handler: `UpdateCategoryCommandHandler` — Prevents Type/IsSystemDefault changes; validates Name uniqueness via CategoryService; validates IconName against AllowedBootstrapIcons constant
 - `DeleteCategoryCommand(CategoryId Id): IRequest<Unit>`
   - Handler: `DeleteCategoryCommandHandler` — Queries transaction count, calls CategoryService.CanDeleteCategory(), deletes or throws
 
@@ -137,6 +150,14 @@
 **DTOs (Data Transfer Objects):**
 - `CategoryDto` — For API/Frontend: Id, Name, Type, Color, IconName, IsSystemDefault, CreatedAt, UpdatedAt
 - Used in query responses; never expose raw entities to Frontend
+
+**Icon Validation (Application Layer Constant):**
+- `AllowedBootstrapIcons` — Hardcoded constant in Application/Common/ with list of ~120 valid Bootstrap Icons 5.x names (e.g., "shopping-cart", "home", "credit-card", "coffee", etc.)
+- All Create/Update handlers validate IconName against this list; throw ValidationException if not found
+- Defense-in-depth: Frontend icon picker (prevents invalid selections) + Application validation (enforces at boundary)
+- Bootstrap Icons 5.x CDN reference: `https://cdn.jsdelivr.net/npm/bootstrap-icons@5.3.0/font/bootstrap-icons.css` (pinned to 5.3.0 for stability)
+- Contains examples: shopping-cart, home, credit-card, building-dollar, trending-up, gift, star, lightbulb, shield, repeat, book, scissors, wrench, paw, utensils, shopping-bags, plane, heart, piggy-bank, hands-helping, exclamation-circle, coffee, question-circle (and ~90 more per Bootstrap Icons 5.x library)
+- **Version Strategy** (per Clarification #9): Pinned to 5.x stable release; AllowedBootstrapIcons constant must match 5.x icon names exactly. Upgrade to 6.x (if/when released) requires spec + constant update; no rolling updates to avoid breaking changes.
 
 **Pipeline Behaviors:**
 - Tenant scoping already handles UserId extraction from JWT
@@ -170,10 +191,16 @@
 
 **UI Components:**
 - Color picker (HTML5 `<input type="color">`) — Frontend validation; sends hex to backend
-- Icon selector (Bootstrap icon list dropdown or search)
+- Icon selector (Bootstrap Icons 5.x dropdown or search; loads ~120 icon names from AllowedBootstrapIcons; icon glyphs rendered via Bootstrap Icons CDN CSS class)
 - Form validation feedback (error messages aligned with DomainException messages)
 - System vs. Custom badges using `IsSystemDefault` flag
 - Disabled Edit/Delete buttons for system categories
+
+**External Dependencies (CDN):**
+- **Bootstrap Icons 5.x CSS** — Declared in `_Layout.cshtml` as: `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@5.3.0/font/bootstrap-icons.css" />`
+- Icon glyphs rendered via CSS classes (e.g., `<i class="bi bi-shopping-cart"></i>` for shopping-cart icon)
+- CDN ensures consistent icon appearance across all environments (dev/staging/prod)
+- Per Clarification #9: Pinned to 5.3.0; future upgrades to 6.x require spec + AllowedBootstrapIcons constant update
 
 **Validation (Frontend):**
 - Required field indicators for Name, Type, Color
@@ -187,9 +214,13 @@
 - "System categories cannot be modified" → Disable buttons
 - Network errors → Graceful error message
 
----
-
-## User Scenarios & Testing
+**Accessibility (WCAG 2.1 AA):**
+- **Keyboard Navigation**: All UI interactions accessible via Tab, Enter, Escape keys; modals focusable with clear focus management
+- **ARIA Labels**: Form inputs labeled with `<label>` elements or `aria-label` attributes; buttons describe action (e.g., "Edit Coffee Subscriptions category"); icons paired with screen-reader text
+- **Semantic HTML**: Proper heading hierarchy (`<h1>`, `<h2>`, etc.), `<form>` elements for forms, `<button>` for buttons, `<fieldset>` for grouped form controls
+- **Screen Reader Support**: Category list announced as table with columns (Name, Type, Color, Actions); edit/delete buttons marked with `aria-label="Edit [CategoryName] category"`; error messages associated with form fields via `aria-describedby`
+- **Color Contrast**: Text ≥4.5:1 against background; category color badges paired with text label (not color-only indicators)
+- **Testing**: Lighthouse A11y audit ≥90 score; axe-core automated tests in CI; manual keyboard/screen reader validation
 
 ### User Story 1 - View All Categories (Priority: P1)
 
@@ -479,6 +510,14 @@ Can be fully tested by: entering search term → filtering results → verifying
 
 - **FR-018**: System MUST reject invalid icon names (if icon doesn't exist in available library) with error: "Icon '[name]' is not available. Choose from available icons."
 
+**Accessibility (WCAG 2.1 AA):**
+
+- **FR-019**: UI MUST be fully keyboard-accessible: all form fields, buttons, modals, dropdowns navigable via Tab/Shift+Tab, passable via Enter/Space, closeable via Escape. Focus management preserved through modal open/close cycles.
+
+- **FR-020**: UI MUST include semantic HTML, ARIA labels for interactive elements, and descriptive button text. Form errors associated with fields via `aria-describedby`. Category lists announced as structured data with column headers.
+
+- **FR-021**: UI MUST maintain ≥4.5:1 color contrast for all text. Category color badges paired with text labels (not color-only). Tested via Lighthouse A11y audit (target ≥90) and axe-core automated scans.
+
 ---
 
 ### Business Rules & Constraints
@@ -495,6 +534,8 @@ Can be fully tested by: entering search term → filtering results → verifying
 | R-008 | Type cannot be changed after creation | Application: omit Type from update handler |
 | R-009 | Categories scoped to UserId | Infrastructure: all queries filtered by UserId |
 | R-010 | CreatedDate/UpdatedDate auto-managed | Infrastructure: set by repository on create/update |
+| R-011 | Concurrent updates use Last-Write-Wins (LWW) | Infrastructure: UNIQUE(UserId, Name) prevents name conflicts; color/icon updates resolve via DB row timestamp |
+| R-012 | WCAG 2.1 AA Compliance Required | Frontend: keyboard nav, semantic HTML, ARIA labels, ≥4.5:1 color contrast, Lighthouse ≥90 |
 
 ---
 
@@ -529,7 +570,7 @@ Income   (0) - Revenue sources
 Expense  (1) - Money outflows
 ```
 
-**Validation ValueObjects** (Per Clarification #5: Defense-in-Depth Color Validation)
+**Validation ValueObjects** (Per Clarification #5: Defense-in-Depth Color Validation; Clarification #6: IconName Application Validation)
 
 ```
 CategoryName (ValueObject)
@@ -543,10 +584,12 @@ ColorHex (ValueObject)
   - Validation: Domain layer regex enforcement + Frontend HTML5 color picker (defense-in-depth per Clarification #5)
   - Examples: #F39C12, #E74C3C, #27AE60
 
-IconName (String, validated in Application)
-  - Value: string (Bootstrap icon identifier)
-  - Constraints: Must exist in AllowedIcons list (e.g., "shopping-cart", "home", etc.)
-  - Note: Not a ValueObject in MVP; validation delegated to Application handler against hardcoded allowed icon list
+IconName (String, validated in Application layer)
+  - Value: string (Bootstrap icon identifier, e.g., "shopping-cart", "home", "credit-card")
+  - Constraints: Must exist in AllowedBootstrapIcons constant (~100+ valid Bootstrap icon names)
+  - Validation: Application handler validates against AllowedBootstrapIcons at command time (per Clarification #6)
+  - Note: NOT a ValueObject; kept as simple string in Domain to decouple Domain from Bootstrap library semantics
+  - Defense-in-depth: Frontend icon picker dropdown (prevents invalid selections) + Application handler validation (enforces at entry point)
 ```
 
 ---
@@ -589,6 +632,20 @@ IconName (String, validated in Application)
 
 - **SC-014**: Icon picker displays available icons with visual preview and allows selection in under 10 clicks.
 
+**Accessibility (WCAG 2.1 AA):**
+
+- **SC-021**: All UI elements (forms, buttons, dropdowns, modals) are fully keyboard-navigable without mouse; Tab/Shift+Tab moves focus correctly; Enter/Space activates buttons; Escape closes modals.
+
+- **SC-022**: All form inputs have associated labels or `aria-label` attributes; edit/delete buttons labeled with category names (e.g., "Edit Coffee Subscriptions category").
+
+- **SC-023**: Category list displayed as semantic HTML `<table>` with `<th>` headers (Name, Type, Color, Actions); screen reader announces structure correctly.
+
+- **SC-024**: Form error messages associated with fields via `aria-describedby`; screen reader announces which field has error.
+
+- **SC-025**: All text has ≥4.5:1 color contrast ratio against background; category color badges paired with text (not color-only).
+
+- **SC-026**: Lighthouse A11y audit score ≥90; axe-core automated tests pass with zero violations; manual screen reader testing (NVDA/JAWS) confirms usability.
+
 **Test Coverage:**
 
 - **SC-015**: Domain layer (Category entity, ValueObjects) has 100% unit test coverage.
@@ -613,7 +670,7 @@ IconName (String, validated in Application)
 
 - **A-001**: System categories are global and not user-specific (all users see the same 24 default categories). Custom categories are user-scoped.
 - **A-002**: Color hex values stored as uppercase strings (e.g., #F39C12, not #f39c12) for consistency.
-- **A-003**: Bootstrap icon library is integrated in Frontend (via CDN or bundled) and available for selection.
+- **A-003**: Bootstrap Icons 5.x library is integrated in Frontend via CDN (jsDelivr) at pinned version 5.3.0: `https://cdn.jsdelivr.net/npm/bootstrap-icons@5.3.0/font/bootstrap-icons.css`. AllowedBootstrapIcons constant mirrors 5.x icon list (~120 icons). Upgrade to 6.x requires spec + constant update.
 - **A-004**: Database connection to Supabase is already configured in Infrastructure layer.
 - **A-005**: User authentication is already implemented (Phase 1) and UserId/token available in PageModel.
 - **A-006**: MediatR pipeline for commands/queries is already configured in Application layer.
@@ -631,11 +688,11 @@ IconName (String, validated in Application)
 - Category analytics/reporting
 - Export/import categories
 - Multi-language support (descriptions in other languages)
-- Category tagging or soft deletes
+- **Soft deletes & audit trails** — Phase 2 uses hard delete (immediate permanent removal). Soft delete, audit logs, and deletion recovery deferred to Phase 3+ when compliance/audit requirements are clarified (per Clarification #10).
 - Subcategories or hierarchies
 - Real-time sync across devices
 - Batch operations (update/delete multiple at once)
 
 ---
 
-_Last Updated: March 7, 2026 | Phase: 002-category-management | Status: Ready for Clarification Review_
+_Last Updated: March 12, 2026 | Phase: 002-category-management | Status: Ready for Clarification Review_
