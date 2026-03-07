@@ -74,6 +74,24 @@ internal class CategoryRow : BaseModel
             UpdatedAt = c.UpdatedAt
         };
     }
+
+    /// <summary>
+    /// Converts category to insert-safe DTO (excludes server-managed timestamps).
+    /// Timestamps are assigned by database triggers, not by client.
+    /// </summary>
+    public static CategoryRow FromDomainForInsert(Category c)
+    {
+        return new CategoryRow
+        {
+            Id = c.Id.Value.ToString(),
+            UserId = c.UserId.Value,
+            Name = c.Name,
+            Color = c.Color,
+            Icon = c.Icon,
+            IsSystemDefault = c.IsSystemDefault
+            // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
+        };
+    }
 }
 
 /// <summary>
@@ -90,8 +108,9 @@ public class SupabaseCategoryRepository : ICategoryRepository
 
     public async Task<Category?> GetByIdAsync(CategoryId id)
     {
+        var idString = id.Value.ToString();
         var response = await _client.From<CategoryRow>()
-            .Where(x => x.Id == id.Value.ToString())
+            .Where(x => x.Id == idString)
             .Get();
 
         var row = response.Models.FirstOrDefault();
@@ -132,22 +151,23 @@ public class SupabaseCategoryRepository : ICategoryRepository
 
     public async Task AddAsync(Category category)
     {
-        var row = CategoryRow.FromDomain(category);
+        var row = CategoryRow.FromDomainForInsert(category);
         await _client.From<CategoryRow>().Insert(row);
     }
 
     public async Task UpdateAsync(Category category)
     {
-        var row = CategoryRow.FromDomain(category);
+        var idString = category.Id.Value.ToString();
         await _client.From<CategoryRow>()
-            .Where(x => x.Id == category.Id.Value.ToString())
-            .Update(row);
+            .Where(x => x.Id == idString)
+            .Update(CategoryRow.FromDomain(category));
     }
 
     public async Task DeleteAsync(CategoryId id)
     {
+        var idString = id.Value.ToString();
         await _client.From<CategoryRow>()
-            .Where(x => x.Id == id.Value.ToString())
+            .Where(x => x.Id == idString)
             .Delete();
     }
 

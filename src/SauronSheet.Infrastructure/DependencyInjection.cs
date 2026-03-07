@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using MediatR;
 using SauronSheet.Infrastructure.Auth;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.Repositories;
@@ -10,6 +11,7 @@ using SauronSheet.Application.Interfaces;
 using SauronSheet.Infrastructure.Persistence;
 using SauronSheet.Infrastructure.PDF;
 using SauronSheet.Infrastructure.PDF.Parsers;
+using SauronSheet.Infrastructure.Monitoring;
 
 namespace SauronSheet.Infrastructure;
 
@@ -90,6 +92,8 @@ public static class DependencyInjection
         services.AddScoped<IBudgetRepository, SupabaseBudgetRepository>();
         services.AddScoped<BudgetService>();
 
+        // Register Sentry pipeline behavior for MediatR tracing (Phase 6)
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(SentryTracingBehavior<,>));
 
         return services;
     }

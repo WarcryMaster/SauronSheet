@@ -78,6 +78,27 @@ internal class TransactionRow : BaseModel
             UpdatedAt = t.UpdatedAt
         };
     }
+
+    /// <summary>
+    /// Converts transaction to insert-safe DTO (excludes server-managed timestamps).
+    /// Timestamps are assigned by database triggers, not by client.
+    /// </summary>
+    public static TransactionRow FromDomainForInsert(Transaction t)
+    {
+        var row = new TransactionRow
+        {
+            Id = t.Id.Value.ToString(),
+            UserId = t.UserId.Value,
+            Amount = t.Amount.Amount,
+            Currency = t.Amount.Currency,
+            Date = t.Date,
+            Description = t.Description,
+            CategoryId = t.CategoryId?.Value.ToString(),
+            ImportedFrom = t.ImportedFrom
+            // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
+        };
+        return row;
+    }
 }
 
 /// <summary>
@@ -131,7 +152,7 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task AddAsync(Transaction transaction)
     {
-        var row = TransactionRow.FromDomain(transaction);
+        var row = TransactionRow.FromDomainForInsert(transaction);
         await _client.From<TransactionRow>().Insert(row);
     }
 
