@@ -1,6 +1,11 @@
-# Tasks: Fase 6 - Pulido UI, Rendimiento y Despliegue Produccion
 
-**Input**: Documentos de diseno en `specs/phase-6/`
+# Tareas: Fase 6 – Pulido UI, Rendimiento y Despliegue Producción
+
+> **Este documento forma parte del trío de referencia de la Fase 6 junto con:**
+> - `phase-6-spec.md` (especificación funcional y criterios de aceptación)
+> - `phase-6-plan.md` (plan de implementación y dependencias)
+
+**Input**: Documentos de diseño en `specs/phase-6/`
 **Prerequisitos**: `phase-6-plan.md` (requerido), `phase-6-spec.md` (requerido)
 
 ## Formato: `[ID] [P?] [Story] Descripcion`
@@ -8,6 +13,21 @@
 - `[P]`: tarea paralelizable (archivos distintos, sin dependencia directa)
 - `[Story]`: historia de usuario (`[US1]` a `[US7]`)
 - Todas las tareas incluyen ruta de archivo explicita
+
+
+## Escenarios de Usuario
+
+| Escenario | Descripción breve |
+|-----------|-------------------|
+| 6.1 | Experiencia UI pulida, consistente y responsiva |
+| 6.2 | Estados claros de carga, error y vacío |
+| 6.3 | Cumplimiento de accesibilidad (WCAG 2.1 AA) |
+| 6.4 | Flujo de recuperación de contraseña vía email |
+| 6.5 | Optimización de rendimiento (TTI, FCP, CSS) |
+| 6.6 | Despliegue producción en Vercel, CI/CD |
+| 6.7 | Endurecimiento de seguridad y privacidad |
+
+Cada uno de estos escenarios tiene criterios de aceptación y pruebas asociadas en la especificación. El plan de implementación asegura que la secuencia y paralelización de tareas cubran todos los flujos críticos de usuario, validando los entregables contra estos escenarios.
 
 ## Phase 1: Setup (Infraestructura Compartida)
 

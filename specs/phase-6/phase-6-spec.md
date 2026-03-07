@@ -1,16 +1,35 @@
-# Phase 6: UI Polish, Performance & Production Deployment
+# Escenarios de Usuario
 
-## Quick Reference
+| Escenario | Descripción breve |
+|-----------|-------------------|
+| 6.1 | Experiencia UI pulida, consistente y responsiva |
+| 6.2 | Estados claros de carga, error y vacío |
+| 6.3 | Cumplimiento de accesibilidad (WCAG 2.1 AA) |
+| 6.4 | Flujo de recuperación de contraseña vía email |
+| 6.5 | Optimización de rendimiento (TTI, FCP, CSS) |
+| 6.6 | Despliegue producción en Vercel, CI/CD |
+| 6.7 | Endurecimiento de seguridad y privacidad |
 
-- **Status**: Draft
-- **Layer Scope**: Frontend + Infrastructure (Polish)
-- **Phase Type**: Polish
-- **Duration**: Weeks 22–24
-- **Goal**: UI refinements, Tailwind build pipeline, accessibility, performance optimization, Vercel deployment, error monitoring, security hardening
-- **Depends On**: Phase 0–5 (all prior phases — complete feature set)
-- **Unlocks**: 🚀 **Production Release**
+Cada uno de estos escenarios tiene criterios de aceptación y pruebas asociadas en la especificación. El plan de implementación asegura que la secuencia y paralelización de tareas cubran todos los flujos críticos de usuario, validando los entregables contra estos escenarios.
 
-> ⚠️ **POLISH PHASE**: Only Frontend and Infrastructure layers in scope. **No new domain entities, application commands/queries, or business logic.** Existing behavior is preserved; only presentation, performance, and deployment concerns are addressed.
+
+# Fase 6: Pulido UI, Rendimiento y Despliegue Producción
+
+> **Este documento forma parte del trío de referencia de la Fase 6 junto con:**
+> - `phase-6-plan.md` (plan de implementación y dependencias)
+> - `phase-6-tasks.md` (especificación de tareas y checklist)
+
+## Resumen Ejecutivo
+
+- **Estado**: Borrador
+- **Alcance de capas**: Frontend + Infraestructura (Polish)
+- **Tipo de fase**: Polish
+- **Duración**: Semanas 22–24
+- **Objetivo**: Pulido de UI, pipeline Tailwind, accesibilidad, optimización de rendimiento, despliegue Vercel, monitorización de errores, endurecimiento de seguridad
+- **Depende de**: Fases 0–5 (todas completas y estables)
+- **Desbloquea**: 🚀 **Release a producción**
+
+> ⚠️ **FASE POLISH**: Solo Frontend e Infraestructura en alcance. **No se permiten nuevas entidades de dominio, comandos/queries de aplicación ni lógica de negocio.** Solo se abordan presentación, rendimiento y despliegue.
 
 ---
 
