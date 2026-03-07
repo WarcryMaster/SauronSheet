@@ -54,6 +54,23 @@ La Fase 6 entrega el pulido final de la interfaz, optimización de rendimiento, 
   - Compatible con Vercel, Railway, Render
   - Validación requerida Week 22 para port exposure y manejo de env vars
 
+- **Q7:** Health Check Endpoint — Sentry Tracing & Free Tier Quota → **A (EXCLUDE from Sentry)**
+  - Decisión: `/health` excluded from Sentry tracing via `TracesToIgnore` pattern
+  - Rationale: Health checks are operational noise; protects free tier quota
+  - Implementation: Sentry configuration includes `TracesToIgnore.Add("/health")`
+
+- **Q8:** Security CSP Test Validation — Automated vs Manual → **A (Automated CSP Reporting)**
+  - Decisión: T-6.19 validated via automated CSP violation logging (Sentry/server logs)
+  - Rationale: CSP header correct (T-6.18) + injection triggers violation logging = test passes
+  - Manual DevTools testing is optional (not required for release gate)
+  - Keeps testing automated; reduces manual burden
+
+- **Q9:** Icon Consistency Verification — Manual vs Automated → **B (Manual Visual Inspection)**
+  - Decisión: Icon library uniformity verified via visual inspection during UI polish (Week 23 Day 5)
+  - Rationale: Icon consistency is style/UX concern best verified by eye, not automated test
+  - T-6.01 focuses on CSS consistency; icon library uniformity is separate concern
+  - Scenario 6.1 AC remains informational guidance (not test-gated)
+
 ## Estructura del Proyecto
 
 ### Documentación (esta fase)
