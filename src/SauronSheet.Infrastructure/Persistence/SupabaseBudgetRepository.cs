@@ -70,6 +70,25 @@ internal class BudgetRow : BaseModel
             UpdatedAt = b.UpdatedAt
         };
     }
+
+    /// <summary>
+    /// Converts budget to insert-safe DTO (excludes server-managed timestamps).
+    /// Timestamps are assigned by database triggers, not by client.
+    /// </summary>
+    public static BudgetRow FromDomainForInsert(Budget b)
+    {
+        return new BudgetRow
+        {
+            Id = b.Id.Value.ToString(),
+            UserId = b.UserId.Value,
+            CategoryId = b.CategoryId.Value.ToString(),
+            PeriodStart = b.Period.StartDate,
+            PeriodEnd = b.Period.EndDate,
+            LimitAmount = b.Limit.Amount,
+            Currency = b.Limit.Currency
+            // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
+        };
+    }
 }
 
 /// <summary>
@@ -116,7 +135,7 @@ public class SupabaseBudgetRepository : IBudgetRepository
 
     public async Task AddAsync(Budget budget)
     {
-        var row = BudgetRow.FromDomain(budget);
+        var row = BudgetRow.FromDomainForInsert(budget);
         await _client.From<BudgetRow>().Insert(row);
     }
 
