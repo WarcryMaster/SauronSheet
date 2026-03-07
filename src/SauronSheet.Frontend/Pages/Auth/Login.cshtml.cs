@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
@@ -11,6 +12,7 @@ namespace SauronSheet.Frontend.Pages.Auth;
 /// Handles user login via MediatR LoginUserCommand.
 /// Sets JWT cookies on successful login.
 /// </summary>
+[AllowAnonymous]
 public class LoginModel : PageModel
 {
     private readonly IMediator _mediator;

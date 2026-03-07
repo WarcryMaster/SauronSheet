@@ -1,16 +1,26 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace SauronSheet.Frontend.Pages;
 
 /// <summary>
-/// Health check page model for Phase 0.
-/// Demonstrates that Razor Pages pipeline is working.
-/// No MediatR calls or authentication required in Phase 0.
+/// Index page model.
+/// Redirects unauthenticated users to /Auth/Login and authenticated users to /Dashboard.
+/// Acts as the entry point for the application.
 /// </summary>
+[AllowAnonymous]
 public class IndexModel : PageModel
 {
-    public void OnGet()
+    public IActionResult OnGet()
     {
-        // No MediatR calls in Phase 0 — health check only
+        // If user is authenticated, go to Dashboard
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return RedirectToPage("/Dashboard");
+        }
+
+        // If not authenticated, go to Login
+        return RedirectToPage("/Auth/Login");
     }
 }

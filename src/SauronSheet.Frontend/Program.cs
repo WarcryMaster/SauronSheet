@@ -2,6 +2,7 @@
 using SauronSheet.Application;
 using SauronSheet.Infrastructure;
 using SauronSheet.Infrastructure.Auth;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,8 +17,19 @@ Sentry.SentrySdk.CaptureMessage("Hello Sentry");
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// Add Razor Pages
-builder.Services.AddRazorPages();
+// Add Razor Pages with authorization policy
+builder.Services.AddRazorPages()
+    .AddRazorPagesOptions(options =>
+    {
+        // Require authorization for all pages by default
+        options.Conventions.AuthorizeFolder("/");
+        // Allow anonymous access to Auth pages
+        options.Conventions.AllowAnonymousToFolder("/Auth");
+        // Allow anonymous access to Index page (redirects to login/dashboard)
+        options.Conventions.AllowAnonymousToPage("/Index");
+        // Allow anonymous access to Error page
+        options.Conventions.AllowAnonymousToPage("/Error");
+    });
 
 // Add response compression (Brotli/Gzip)
 builder.Services.AddResponseCompression(options =>
