@@ -278,11 +278,17 @@ public bool IsSystemDefault { get; private set; }
 
 ---
 
-## Frontend (Razor Pages)
+
 - Each page has a PageModel handling GET/POST.
 - MediatR calls in PageModel `OnGetAsync` / `OnPostAsync`.
 - Pass data to views as Model.
 - Use Alpine.js for interactivity; Tailwind for styling.
+
+### 📦 Política de librerías externas (CDN)
+- **Obligatorio:** Todas las librerías externas de CSS/JS (Tailwind, Alpine.js, Chart.js, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
+- **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
+- **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
+- Si agregas una nueva librería externa, **debes** usar la versión oficial por CDN y declararla en _Layout.cshtml.
 
 ```csharp
 // Example PageModel pattern
