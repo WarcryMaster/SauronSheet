@@ -145,11 +145,16 @@ Development lifecycle follows a strict sequence for every feature:
 
 - **Runtime:** .NET Core 10+ (LTS versions only)
 - **Architecture:** MediatR 12+ for CQRS; Clean Architecture with explicit layer separation
-- **Frontend:** Razor Pages + Vanilla JavaScript + Tailwind CSS (utility-first styling only)
+- **Frontend:** Razor Pages + Vanilla JavaScript + Material Design (CDN components only)
 - **Database:** Supabase PostgreSQL with infrastructure-layer repository pattern
 - **Authentication:** Supabase Auth (JWT tokens); multi-tenancy enforced at query level
 - **Testing:** xUnit for unit tests; Moq for mocking; in-memory databases for integration tests
 - **Code Style:** C# nullable reference types enabled; enforce StyleCop rules; LINQ preferred over loops
+
+
+### UI & Librerías Externas
+
+- **MDBootstrap (Material Design for Bootstrap, CDN):** Todos los componentes y estilos de la interfaz deben implementarse usando MDBootstrap (Material Design for Bootstrap) por CDN. No se permite Tailwind, Alpine.js, Chart.js ni librerías locales o por npm. La política de CDN es obligatoria y debe reflejarse en _Layout.cshtml y la documentación.
 
 ### Domain Patterns Reference
 
