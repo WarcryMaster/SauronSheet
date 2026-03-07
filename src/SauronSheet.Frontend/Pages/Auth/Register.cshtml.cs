@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
@@ -11,6 +12,7 @@ namespace SauronSheet.Frontend.Pages.Auth;
 /// Handles new user registration via MediatR RegisterUserCommand.
 /// Auto-logs in user after successful registration.
 /// </summary>
+[AllowAnonymous]
 public class RegisterModel : PageModel
 {
     private readonly IMediator _mediator;
