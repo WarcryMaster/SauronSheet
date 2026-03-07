@@ -488,7 +488,7 @@ No further platform changes are permitted; implementation proceeds with selected
 **Rationale:**
 - 27 core tests (T-6.01 through T-6.27) do not include dark mode tests
 - Success criteria (SC-6.1 through SC-6.18) do not require dark mode
-- All 14 deliverables (D-6.01 through D-6.28) are achievable without dark mode
+- All 28 deliverables (D-6.01 through D-6.28) are achievable without dark mode
 - Production release can proceed without dark mode
 
 **Implementation Decision:**
@@ -559,51 +559,6 @@ Can Vercel free tier support .NET 10 persistent Docker containers (~150-200MB ru
 Platform locked to: **[VERCEL / RAILWAY]**
 No further platform changes are permitted; implementation proceeds with selected platform only.
 ```
-
----
-
-## Dark Mode Scope: Time-Permitting Enhancement (NOT Launch Blocker)
-
-### Decision: Option A — Dark Mode Optional
-
-**Status**: NICE-TO-HAVE, low priority, not on critical path.
-
-**Rationale:**
-- 27 core tests (T-6.01 through T-6.27) do not include dark mode tests
-- Success criteria (SC-6.1 through SC-6.18) do not require dark mode
-- All 14 deliverables (D-6.01 through D-6.28) are achievable without dark mode
-- Production release can proceed without dark mode
-
-**Implementation Decision:**
-
-| Scenario | Action |
-|----------|--------|
-| Phase 2 finishes Week 23 **Day 3 or earlier** (2+ days ahead of schedule) | **Implement dark mode** in remaining time; run new dark mode tests (visual inspection) |
-| Phase 2 finishes Week 23 **Day 4 (on-schedule)** | **Skip dark mode**; use remaining time for UI polish refinements, performance tuning, or buffer |
-| Phase 2 finishes Week 23 **Day 5 or later** (behind schedule) | **Skip dark mode**; focus on Phase 3 deployment readiness |
-
-**If Dark Mode is Implemented (Time-Permitting):**
-
-Follow the "Dark Mode Implementation" section in [phase-6-spec.md § Implementation Notes](phase-6-spec.md#dark-mode-implementation-optional):
-```javascript
-// tailwind.config.js: darkMode: 'class' already enabled
-// Steps:
-// 1. Add Toggle component to _Layout.cshtml (Alpine.js toggle logic)
-// 2. Add dark: variants to all components (10-15 component classes)
-// 3. Test with browser DevTools dark mode toggle
-// 4. Manual luminance/contrast verification (maintain WCAG AA in dark mode)
-// 5. Time estimate: 2-3 days
-```
-
-**If Dark Mode is NOT Implemented (Most Likely):**
-- Tailwind config remains with `darkMode: 'class'` (no removal needed; just unused)
-- No toggle UI shown to users
-- Post-MVP backlog: "Dark Mode Support — Phase 7 (Enhancement Roadmap)"
-- Users have option to use OS-level dark mode (CSS media query `prefers-color-scheme`), which Tailwind respects automatically
-
-**Post-Launch Consideration:**
-- Gather user feedback: if demand is high, implement in Phase 7
-- Low effort to retrofit (toggle + dark: classes already configured)
 
 ---
 
