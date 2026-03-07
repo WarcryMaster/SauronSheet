@@ -17,29 +17,23 @@
     <form method="post" class="space-y-6 bg-white shadow sm:rounded-lg p-6">
         <div>
             <label for="Date" class="block text-sm font-medium text-gray-700">Date</label>
-            <input type="date" id="Date" name="Input.Date" asp-for="Input.Date" 
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+            <input type="date" id="Date" name="Input.Date" asp-for="Input.Date" class="input-base mt-1 block w-full" required aria-required="true" />
         </div>
 
         <div>
             <label for="Description" class="block text-sm font-medium text-gray-700">Description</label>
-            <input type="text" id="Description" name="Input.Description" asp-for="Input.Description" 
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" 
-                placeholder="e.g., Coffee at Starbucks" required />
+            <input type="text" id="Description" name="Input.Description" asp-for="Input.Description" class="input-base mt-1 block w-full" placeholder="e.g., Coffee at Starbucks" required aria-required="true" />
         </div>
 
         <div>
             <label for="Amount" class="block text-sm font-medium text-gray-700">Amount</label>
-            <input type="number" id="Amount" name="Input.Amount" asp-for="Input.Amount" step="0.01"
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" 
-                placeholder="0.00" required />
+            <input type="number" id="Amount" name="Input.Amount" asp-for="Input.Amount" step="0.01" class="input-base mt-1 block w-full" placeholder="0.00" required aria-required="true" />
             <p class="mt-1 text-sm text-gray-500">Use negative values for expenses, positive for income</p>
         </div>
 
         <div>
             <label for="Currency" class="block text-sm font-medium text-gray-700">Currency</label>
-            <select id="Currency" name="Input.Currency" asp-for="Input.Currency"
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+            <select id="Currency" name="Input.Currency" asp-for="Input.Currency" class="input-base mt-1 block w-full">
                 <option value="EUR">EUR (€)</option>
                 <option value="USD">USD ($)</option>
                 <option value="GBP">GBP (£)</option>
@@ -48,8 +42,7 @@
 
         <div>
             <label for="CategoryId" class="block text-sm font-medium text-gray-700">Category (optional)</label>
-            <select id="CategoryId" name="Input.CategoryId" asp-for="Input.CategoryId"
-                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+            <select id="CategoryId" name="Input.CategoryId" asp-for="Input.CategoryId" class="input-base mt-1 block w-full">
                 <option value="">-- Uncategorized --</option>
                 @foreach (var category in Model.Categories)
                 {

@@ -127,10 +127,10 @@
         else
         {
             <!-- Empty State -->
-            <div class="bg-white rounded-lg shadow p-8 text-center">
-                <p class="text-gray-500 mb-2">No transactions match your filters.</p>
-                <p class="text-gray-400 text-sm">Try adjusting your search criteria or <a href="/Transactions/Search" class="text-blue-600 hover:underline">clear all filters</a>.</p>
-            </div>
+                <div class="bg-white rounded-lg shadow p-8 text-center" role="status" aria-live="polite">
+                    <p class="text-xl text-gray-500 mb-4">No results found.</p>
+                    <p class="text-gray-400 mb-6">Try adjusting your filters or search terms.</p>
+                </div>
         }
     }
 </div>

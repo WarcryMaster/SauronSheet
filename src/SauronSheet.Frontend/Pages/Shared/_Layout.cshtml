@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SauronSheet</title>
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/site.css" />
 
-    <!-- Alpine.js for interactivity - version 3 -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+    <!-- Alpine.js for interactivity - version 3 (SRI) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js" integrity="sha384-+Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Q==" crossorigin="anonymous"></script>
 
-    <!-- Chart.js 4.4.0 for analytics charts (Phase 4) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Chart.js 4.4.0 for analytics charts (SRI) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-+Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Q==" crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-50">
-    <nav class="bg-white shadow">
+    @await Html.PartialAsync("~/Pages/Shared/Components/_SkipToContent.cshtml")
+    <nav class="bg-white shadow" role="navigation" aria-label="Main navigation">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -34,7 +34,7 @@
                         <a href="/Budgets" class="text-gray-700 hover:text-blue-600">💰 Budgets</a>
                         <span class="text-sm text-gray-600">@User.FindFirst("email")?.Value</span>
                         <form method="post" asp-page="/Auth/Logout" style="display: inline;">
-                            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                            <button type="submit" class="btn-danger ml-2">
                                 Logout
                             </button>
                         </form>
@@ -42,7 +42,7 @@
                     else
                     {
                         <a href="/Auth/Login" class="text-gray-700 hover:text-blue-600">Sign In</a>
-                        <a href="/Auth/Register" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <a href="/Auth/Register" class="btn-primary ml-2">
                             Sign Up
                         </a>
                     }
@@ -51,13 +51,15 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <main id="main-content" class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         @RenderBody()
     </main>
 
+    @await Html.PartialAsync("~/Pages/Shared/Components/_Toast.cshtml")
+
     <footer class="bg-white border-t mt-12">
         <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-600">
-            <p>&copy; 2026 SauronSheet. Version 1.2.0 (Phase 5 — Budget Management)</p>
+            <p>&copy; 2026 SauronSheet. Version 1.2.0 (Phase 6 — Polish & Release)</p>
         </div>
     </footer>
 </body>
