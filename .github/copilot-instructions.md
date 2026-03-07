@@ -48,8 +48,7 @@ SauronSheet is a multi-user expense tracking web application that imports bank t
 ### Active Technologies
 - .NET 10 + Razor Pages + MediatR 12+ CQRS
 - Supabase PostgreSQL (Persistence + Auth)
-- Tailwind CSS CDN + Alpine.js (Frontend interactivity)
-- Chart.js 4.4.0 CDN (Phase 4 analytics charts)
+- MDBootstrap (Material Design for Bootstrap, CDN components only)
 - xUnit + Moq (Testing)
 
 ### Recent Changes (Phase 4)
@@ -282,10 +281,12 @@ public bool IsSystemDefault { get; private set; }
 - Each page has a PageModel handling GET/POST.
 - MediatR calls in PageModel `OnGetAsync` / `OnPostAsync`.
 - Pass data to views as Model.
-- Use Alpine.js for interactivity; Tailwind for styling.
+- Usa solo componentes y estilos de MDBootstrap (Material Design for Bootstrap, por CDN) para toda la interfaz. No se permite Tailwind, Alpine.js ni Chart.js.
+
+
 
 ### 📦 Política de librerías externas (CDN)
-- **Obligatorio:** Todas las librerías externas de CSS/JS (Tailwind, Alpine.js, Chart.js, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
+- **Obligatorio:** Todas las librerías externas de CSS/JS (MDBootstrap, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
 - **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
 - **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
 - Si agregas una nueva librería externa, **debes** usar la versión oficial por CDN y declararla en _Layout.cshtml.
