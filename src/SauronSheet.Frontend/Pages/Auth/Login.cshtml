@@ -134,6 +134,15 @@
         }
     }
 
+    function resetLoginButton() {
+        const btn = document.getElementById('loginBtn');
+        const text = document.getElementById('loginBtnText');
+        const spinner = document.getElementById('loginSpinner');
+        btn.disabled = false;
+        text.textContent = 'Sign in';
+        spinner.classList.add('d-none');
+    }
+
     document.getElementById('loginForm').addEventListener('submit', function () {
         const btn = document.getElementById('loginBtn');
         const text = document.getElementById('loginBtnText');
@@ -141,10 +150,24 @@
         btn.disabled = true;
         text.textContent = 'Signing in…';
         spinner.classList.remove('d-none');
+
+        // Set a timeout to re-enable the button after 10 seconds
+        // in case the server hangs or doesn't respond
+        setTimeout(() => {
+            if (btn.disabled) {
+                console.warn('Login button still disabled after 10 seconds, resetting...');
+                resetLoginButton();
+            }
+        }, 10000);
     });
 
-    // Re-initialize MDB inputs (needed when value is pre-filled by server)
+    // If there's an error message, reset the button
     document.addEventListener('DOMContentLoaded', function () {
+        const errorAlert = document.querySelector('.alert-danger');
+        if (errorAlert) {
+            resetLoginButton();
+        }
+
         document.querySelectorAll('[data-mdb-input-init]').forEach(function (el) {
             new mdb.Input(el);
         });
