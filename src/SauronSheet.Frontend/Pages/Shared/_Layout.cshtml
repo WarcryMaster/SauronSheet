@@ -7,61 +7,127 @@
 
     <!-- Tailwind CSS via CDN (always use CDN for external libraries) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50:  '#f4f7ee',
+                            100: '#e5eccc',
+                            200: '#ccd9a1',
+                            300: '#a8c06c',
+                            400: '#87a741',
+                            500: '#6d8b2a',
+                            600: '#556B2F',
+                            700: '#435425',
+                            800: '#343f1d',
+                            900: '#252d14',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="/css/site.css" />
 
-    <!-- Alpine.js for interactivity - version 3 (SRI) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js" integrity="sha384-+Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Q==" crossorigin="anonymous"></script>
+    <!-- Alpine.js for interactivity - version 3 via CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js"></script>
 
-    <!-- Chart.js 4.4.0 for analytics charts (SRI) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-+Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Qn6Qw6Q==" crossorigin="anonymous"></script>
+    <!-- Chart.js 4.4.0 for analytics charts via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 min-h-screen flex flex-col">
     @await Html.PartialAsync("~/Pages/Shared/Components/_SkipToContent.cshtml")
-    <nav class="bg-white shadow" role="navigation" aria-label="Main navigation">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-900 shadow-lg" role="navigation" aria-label="Main navigation" x-data="{ open: false }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
+                <!-- Brand -->
                 <div class="flex items-center">
-                    <a href="/" class="flex items-center">
-                        <h1 class="text-2xl font-bold text-blue-600">SauronSheet</h1>
+                    <a href="/" class="flex items-center gap-3 group">
+                        <img src="/img/sauron-sheet-logo-32x32.png" alt="SauronSheet logo" class="h-8 w-8" />
+                        <span class="text-xl font-bold text-white group-hover:text-brand-400 transition-colors duration-200">SauronSheet</span>
                     </a>
                 </div>
-                <div class="flex items-center space-x-4">
+
+                <!-- Desktop nav -->
+                <div class="hidden md:flex items-center space-x-1">
                     @if (User?.Identity?.IsAuthenticated == true)
                     {
-                        <a href="/Dashboard" class="text-gray-700 hover:text-blue-600">📊 Dashboard</a>
-                        <a href="/Transactions" class="text-gray-700 hover:text-blue-600">💳 Transactions</a>
-                        <a href="/Transactions/Search" class="text-gray-700 hover:text-blue-600">🔍 Search</a>
-                        <a href="/Transactions/Upload" class="text-gray-700 hover:text-blue-600">📄 Upload PDF</a>
-                        <a href="/Categories" class="text-gray-700 hover:text-blue-600">🏷️ Categories</a>
-                        <a href="/Budgets" class="text-gray-700 hover:text-blue-600">💰 Budgets</a>
-                        <span class="text-sm text-gray-600">@User.FindFirst("email")?.Value</span>
-                        <form method="post" asp-page="/Auth/Logout" style="display: inline;">
-                            <button type="submit" class="btn-danger ml-2">
-                                Logout
-                            </button>
-                        </form>
+                        <a href="/Dashboard" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">📊 Dashboard</a>
+                        <a href="/Transactions" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">💳 Transactions</a>
+                        <a href="/Transactions/Search" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">🔍 Search</a>
+                        <a href="/Transactions/Upload" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">📄 Upload</a>
+                        <a href="/Categories" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">🏷️ Categories</a>
+                        <a href="/Budgets" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">💰 Budgets</a>
+                        <div class="flex items-center pl-3 ml-2 border-l border-gray-700 gap-3">
+                            <span class="text-xs text-gray-400 max-w-[140px] truncate">@User.FindFirst("email")?.Value</span>
+                            <form method="post" asp-page="/Auth/Logout">
+                                <button type="submit" class="px-3 py-1.5 text-sm text-gray-300 border border-gray-600 rounded-md hover:bg-red-700 hover:text-white hover:border-red-700 transition-all duration-200">
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
                     }
                     else
                     {
-                        <a href="/Auth/Login" class="text-gray-700 hover:text-blue-600">Sign In</a>
-                        <a href="/Auth/Register" class="btn-primary ml-2">
-                            Sign Up
+                        <a href="/Auth/Login" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-800 transition-all duration-200">Sign In</a>
+                        <a href="/Auth/Register" class="ml-2 px-4 py-2 rounded-md text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 transition-colors duration-200 shadow-sm">
+                            Get Started
                         </a>
                     }
                 </div>
+
+                <!-- Mobile hamburger -->
+                <div class="md:hidden flex items-center">
+                    <button @@click="open = !open" type="button" class="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500" aria-label="Toggle menu">
+                        <svg x-show="!open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <svg x-show="open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
             </div>
+        </div>
+
+        <!-- Mobile menu -->
+        <div x-show="open" class="md:hidden bg-gray-800 border-t border-gray-700 px-2 pt-2 pb-4 space-y-1" style="display:none">
+            @if (User?.Identity?.IsAuthenticated == true)
+            {
+                <a href="/Dashboard" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">📊 Dashboard</a>
+                <a href="/Transactions" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">💳 Transactions</a>
+                <a href="/Transactions/Search" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">🔍 Search</a>
+                <a href="/Transactions/Upload" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">📄 Upload PDF</a>
+                <a href="/Categories" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">🏷️ Categories</a>
+                <a href="/Budgets" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">💰 Budgets</a>
+                <div class="pt-2 mt-2 border-t border-gray-700">
+                    <p class="px-3 text-xs text-gray-400 mb-2">@User.FindFirst("email")?.Value</p>
+                    <form method="post" asp-page="/Auth/Logout">
+                        <button type="submit" class="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-red-400 hover:text-white hover:bg-red-700">Logout</button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <a href="/Auth/Login" class="block px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-brand-400 hover:bg-gray-700">Sign In</a>
+                <a href="/Auth/Register" class="block px-3 py-2 rounded-md text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700">Get Started</a>
+            }
         </div>
     </nav>
 
-    <main id="main-content" class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <main id="main-content" class="flex-1 max-w-7xl w-full mx-auto py-8 px-4 sm:px-6 lg:px-8">
         @RenderBody()
     </main>
 
     @await Html.PartialAsync("~/Pages/Shared/Components/_Toast.cshtml")
 
-    <footer class="bg-white border-t mt-12">
-        <div class="max-w-7xl mx-auto px-4 py-4 text-center text-gray-600">
-            <p>&copy; 2026 SauronSheet. Version 1.2.0 (Phase 6 — Polish & Release)</p>
+    <footer class="bg-gray-900 border-t border-gray-800 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-5 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-2">
+                <img src="/img/sauron-sheet-logo-16x16.png" alt="" class="h-4 w-4 opacity-70" />
+                <span class="text-sm text-gray-400">&copy; 2026 SauronSheet</span>
+            </div>
+            <span class="text-xs text-gray-600">v1.2.0 — Phase 6 Polish &amp; Release</span>
         </div>
     </footer>
 </body>

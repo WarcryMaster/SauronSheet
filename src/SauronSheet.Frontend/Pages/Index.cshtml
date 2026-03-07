@@ -1,22 +1,53 @@
 @page
 @model SauronSheet.Frontend.Pages.IndexModel
 @{
-    ViewData["Title"] = "System Status";
+    ViewData["Title"] = "Home";
 }
 
-<div class="flex flex-col items-center justify-center min-h-screen">
-    <div class="text-center">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">SauronSheet</h1>
-        
-        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
-            <p class="text-lg font-semibold">System OK</p>
-            <p class="text-sm">Foundation Phase 0 is running successfully</p>
+<div class="flex flex-col items-center justify-center min-h-[70vh] py-12 px-4">
+    <!-- Hero -->
+    <div class="text-center max-w-3xl mx-auto">
+        <img src="/img/sauron-sheet-logo-64x64.png" alt="SauronSheet" class="mx-auto mb-6 h-20 w-20 drop-shadow-lg" />
+        <h1 class="text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+            Take Control of Your <span class="text-brand-600">Finances</span>
+        </h1>
+        <p class="text-lg text-gray-500 mb-10 max-w-xl mx-auto">
+            Import bank statements, track spending by category, set budgets, and get smart analytics — all in one place.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/Auth/Register" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-md transition-colors duration-200">
+                Get Started Free
+            </a>
+            <a href="/Auth/Login" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors duration-200">
+                Sign In
+            </a>
         </div>
+    </div>
 
-        <div class="bg-blue-50 rounded-lg p-6 max-w-md">
-            <p class="text-gray-600">
-                Current Date/Time: <span class="font-mono text-sm">@DateTime.UtcNow:yyyy-MM-dd HH:mm:ss UTC</span>
-            </p>
+    <!-- Feature highlights -->
+    <div class="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl w-full">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+            <div class="text-4xl mb-3">📄</div>
+            <h3 class="text-base font-semibold text-gray-900 mb-1">PDF Import</h3>
+            <p class="text-sm text-gray-500">Upload bank statements and let SauronSheet parse your transactions automatically.</p>
         </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+            <div class="text-4xl mb-3">📊</div>
+            <h3 class="text-base font-semibold text-gray-900 mb-1">Smart Analytics</h3>
+            <p class="text-sm text-gray-500">Visualise spending trends, category breakdowns, and yearly comparisons with charts.</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+            <div class="text-4xl mb-3">💰</div>
+            <h3 class="text-base font-semibold text-gray-900 mb-1">Budget Tracking</h3>
+            <p class="text-sm text-gray-500">Set monthly budgets per category and get alerts when you're approaching the limit.</p>
+        </div>
+    </div>
+
+    <!-- System status badge -->
+    <div class="mt-12">
+        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-xs text-brand-700">
+            <span class="inline-block w-2 h-2 rounded-full bg-brand-500"></span>
+            System OK — @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC
+        </span>
     </div>
 </div>
