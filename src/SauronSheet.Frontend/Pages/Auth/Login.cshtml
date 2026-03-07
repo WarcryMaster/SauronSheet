@@ -41,9 +41,10 @@
                 <!-- Form -->
                 <form method="post" autocomplete="off" id="loginForm">
 
-                    <!-- Email input (MDB style) -->
-                    <div data-mdb-input-init class="form-outline mb-4">
-                           <input type="email"
+                    <!-- Email input (label always above) -->
+                    <div class="mb-4">
+                        <label for="loginEmail" class="form-label mb-1">Email address</label>
+                        <input type="email"
                                id="loginEmail"
                                name="Input.Email"
                                class="form-control"
@@ -51,12 +52,12 @@
                                required
                                autofocus
                                tabindex="1" />
-                        <label class="form-label" for="loginEmail">Email address</label>
                     </div>
 
-                    <!-- Password input (MDB style) -->
-                    <div data-mdb-input-init class="form-outline mb-3">
-                           <input type="password"
+                    <!-- Password input (label always above) -->
+                    <div class="mb-3">
+                        <label for="loginPassword" class="form-label mb-1">Password</label>
+                        <input type="password"
                                id="loginPassword"
                                name="Input.Password"
                                class="form-control"
@@ -64,7 +65,6 @@
                                required
                                autocomplete="current-password"
                                tabindex="2" />
-                        <label class="form-label" for="loginPassword">Password</label>
                     </div>
 
                     <!-- Remember me + Toggle password row -->
@@ -124,7 +124,6 @@
     function togglePassword(e) {
         if (e) e.preventDefault();
         const input = document.getElementById('loginPassword');
-        const icon = document.getElementById('eyeIcon');
         const link = document.getElementById('togglePwdLink');
         if (input.type === 'password') {
             input.type = 'text';
@@ -152,17 +151,13 @@
         text.textContent = 'Signing in…';
         spinner.classList.remove('d-none');
 
-        // Set a timeout to re-enable the button after 10 seconds
-        // in case the server hangs or doesn't respond
         setTimeout(() => {
             if (btn.disabled) {
-                console.warn('Login button still disabled after 10 seconds, resetting...');
                 resetLoginButton();
             }
         }, 10000);
     });
 
-    // If there's an error message, reset the button
     document.addEventListener('DOMContentLoaded', function () {
         const errorAlert = document.querySelector('.alert-danger');
         if (errorAlert) {
@@ -171,12 +166,25 @@
 
         document.querySelectorAll('[data-mdb-input-init]').forEach(function (el) {
             new mdb.Input(el);
-            // Forzar label flotante si el input tiene valor
+
             const input = el.querySelector('input');
             const label = el.querySelector('label');
-            if (input && label && input.value) {
-                label.classList.add('active');
+            if (!input || !label) return;
+
+            function updateLabel() {
+                if (input.value && input.value.length > 0) {
+                    label.classList.add('active');
+                }
             }
+
+            updateLabel();
+            input.addEventListener('input', updateLabel);
+            input.addEventListener('blur', function () {
+                setTimeout(updateLabel, 50);
+            });
+            input.addEventListener('focus', function () {
+                label.classList.add('active');
+            });
         });
     });
 </script>
