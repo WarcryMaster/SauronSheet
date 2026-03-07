@@ -12,7 +12,7 @@
         </div>
         @if (Model.Budget != null)
         {
-            <a href="/Budgets/Edit/@Model.Budget.Id" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            <a href="/Budgets/Edit/@Model.Budget.Id" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">
                 Edit Budget
             </a>
         }
@@ -21,10 +21,10 @@
     @if (Model.Budget != null)
     {
         <!-- Budget Header Card -->
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h3 class="text-xl font-bold">
+                    <h3 class="text-xl font-bold text-gray-900">
                         @if (!string.IsNullOrEmpty(Model.Budget.CategoryColor))
                         {
                             <span class="inline-block w-4 h-4 rounded-full mr-2"
@@ -44,39 +44,39 @@
 
             <!-- Summary Stats -->
             <div class="grid grid-cols-4 gap-4 text-center">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Budget Limit</p>
-                    <p class="text-xl font-bold">€@Model.Budget.LimitAmount.ToString("N2")</p>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Budget Limit</p>
+                    <p class="text-xl font-bold text-gray-900">&euro;@Model.Budget.LimitAmount.ToString("N2")</p>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Current Spend</p>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Current Spend</p>
                     <p class="text-xl font-bold @(Model.Budget.CurrentSpend > Model.Budget.LimitAmount ? "text-red-600" : "text-gray-900")">
-                        €@Model.Budget.CurrentSpend.ToString("N2")
+                        &euro;@Model.Budget.CurrentSpend.ToString("N2")
                     </p>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Remaining</p>
-                    <p class="text-xl font-bold @(Model.Budget.RemainingAmount >= 0 ? "text-green-600" : "text-red-600")">
-                        €@Model.Budget.RemainingAmount.ToString("N2")
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Remaining</p>
+                    <p class="text-xl font-bold @(Model.Budget.RemainingAmount >= 0 ? "text-brand-600" : "text-red-600")">
+                        &euro;@Model.Budget.RemainingAmount.ToString("N2")
                     </p>
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Usage</p>
-                    <p class="text-xl font-bold">@((Model.Budget.PercentageUsed * 100).ToString("N0"))%</p>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Usage</p>
+                    <p class="text-xl font-bold text-gray-900">@((Model.Budget.PercentageUsed * 100).ToString("N0"))%</p>
                 </div>
             </div>
         </div>
 
         <!-- Transactions List -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-base font-semibold text-gray-900 mb-4">
                 Transactions (@Model.Transactions.Count)
             </h3>
 
             @if (Model.Transactions.Any())
             {
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-100">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -84,14 +84,14 @@
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="bg-white divide-y divide-gray-100">
                             @foreach (var tx in Model.Transactions.OrderByDescending(t => t.Date))
                             {
-                                <tr>
+                                <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-4 py-3 text-sm text-gray-600">@tx.Date.ToString("MMM dd, yyyy")</td>
                                     <td class="px-4 py-3 text-sm text-gray-900">@tx.Description</td>
-                                    <td class="px-4 py-3 text-sm text-right font-medium @(tx.Amount >= 0 ? "text-green-600" : "text-red-600")">
-                                        €@tx.Amount.ToString("N2")
+                                    <td class="px-4 py-3 text-sm text-right font-medium @(tx.Amount >= 0 ? "text-brand-600" : "text-red-500")">
+                                        &euro;@tx.Amount.ToString("N2")
                                     </td>
                                 </tr>
                             }

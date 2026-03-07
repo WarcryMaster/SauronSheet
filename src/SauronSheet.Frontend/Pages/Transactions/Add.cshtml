@@ -4,45 +4,58 @@
     ViewData["Title"] = "Add Transaction";
 }
 
-<div class="max-w-2xl mx-auto">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">Add Transaction</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center gap-3">
+        <a href="/Transactions" class="text-sm text-gray-400 hover:text-gray-600">&larr; Back</a>
+        <h1 class="text-2xl font-bold text-gray-900">Add Transaction</h1>
+    </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="rounded-md bg-red-50 p-4 mb-6">
+        <div class="rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
+            <svg class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z" clip-rule="evenodd"/></svg>
             <p class="text-sm text-red-700">@Model.ErrorMessage</p>
         </div>
     }
 
-    <form method="post" class="space-y-6 bg-white shadow sm:rounded-lg p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <form method="post" class="space-y-5">
         <div>
             <label for="Date" class="block text-sm font-medium text-gray-700">Date</label>
-            <input type="date" id="Date" name="Input.Date" asp-for="Input.Date" class="input-base mt-1 block w-full" required aria-required="true" />
+            <input type="date" id="Date" name="Input.Date" asp-for="Input.Date"
+                   class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                   required aria-required="true" />
         </div>
 
         <div>
             <label for="Description" class="block text-sm font-medium text-gray-700">Description</label>
-            <input type="text" id="Description" name="Input.Description" asp-for="Input.Description" class="input-base mt-1 block w-full" placeholder="e.g., Coffee at Starbucks" required aria-required="true" />
+            <input type="text" id="Description" name="Input.Description" asp-for="Input.Description"
+                   class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                   placeholder="e.g., Coffee at Starbucks" required aria-required="true" />
         </div>
 
         <div>
             <label for="Amount" class="block text-sm font-medium text-gray-700">Amount</label>
-            <input type="number" id="Amount" name="Input.Amount" asp-for="Input.Amount" step="0.01" class="input-base mt-1 block w-full" placeholder="0.00" required aria-required="true" />
-            <p class="mt-1 text-sm text-gray-500">Use negative values for expenses, positive for income</p>
+            <input type="number" id="Amount" name="Input.Amount" asp-for="Input.Amount" step="0.01"
+                   class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                   placeholder="0.00" required aria-required="true" />
+            <p class="mt-1 text-xs text-gray-500">Use negative values for expenses, positive for income</p>
         </div>
 
         <div>
             <label for="Currency" class="block text-sm font-medium text-gray-700">Currency</label>
-            <select id="Currency" name="Input.Currency" asp-for="Input.Currency" class="input-base mt-1 block w-full">
-                <option value="EUR">EUR (€)</option>
+            <select id="Currency" name="Input.Currency" asp-for="Input.Currency"
+                    class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                <option value="EUR">EUR (&euro;)</option>
                 <option value="USD">USD ($)</option>
-                <option value="GBP">GBP (£)</option>
+                <option value="GBP">GBP (&pound;)</option>
             </select>
         </div>
 
         <div>
-            <label for="CategoryId" class="block text-sm font-medium text-gray-700">Category (optional)</label>
-            <select id="CategoryId" name="Input.CategoryId" asp-for="Input.CategoryId" class="input-base mt-1 block w-full">
+            <label for="CategoryId" class="block text-sm font-medium text-gray-700">Category <span class="text-gray-400">(optional)</span></label>
+            <select id="CategoryId" name="Input.CategoryId" asp-for="Input.CategoryId"
+                    class="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                 <option value="">-- Uncategorized --</option>
                 @foreach (var category in Model.Categories)
                 {
@@ -53,14 +66,15 @@
             </select>
         </div>
 
-        <div class="flex justify-end space-x-3">
-            <a href="/Transactions" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+        <div class="flex justify-end gap-3 pt-2">
+            <a href="/Transactions" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                 Cancel
             </a>
-            <button type="submit" 
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+            <button type="submit"
+                    class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors shadow-sm">
                 Add Transaction
             </button>
         </div>
     </form>
+    </div>
 </div>
