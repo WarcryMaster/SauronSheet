@@ -5,32 +5,31 @@
     ViewData["Title"] = "Search Transactions";
 }
 
-<div class="space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">🔍 Search Transactions</h1>
+<div class="d-flex flex-column gap-4">
+    <h1 class="h3 fw-bold mb-0">🔍 Search Transactions</h1>
 
     <!-- Filter Panel -->
-    <form method="get" action="/Transactions/Search" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-            <div>
-                <label for="Keyword" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Keyword</label>
+    <form method="get" action="/Transactions/Search" class="card border-0 shadow-sm p-4">
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label for="Keyword" class="form-label small fw-semibold text-muted text-uppercase">Keyword</label>
                 <input type="text" name="Keyword" id="Keyword" value="@Model.Keyword"
                        placeholder="Search descriptions..."
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm px-3 py-2 border" />
+                       class="form-control form-control-sm" />
             </div>
-            <div>
-                <label for="FromDate" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">From Date</label>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label for="FromDate" class="form-label small fw-semibold text-muted text-uppercase">From Date</label>
                 <input type="date" name="FromDate" id="FromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm px-3 py-2 border" />
+                       class="form-control form-control-sm" />
             </div>
-            <div>
-                <label for="ToDate" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">To Date</label>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label for="ToDate" class="form-label small fw-semibold text-muted text-uppercase">To Date</label>
                 <input type="date" name="ToDate" id="ToDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm px-3 py-2 border" />
+                       class="form-control form-control-sm" />
             </div>
-            <div>
-                <label for="CategoryId" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
-                <select name="CategoryId" id="CategoryId"
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm px-3 py-2 border">
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label for="CategoryId" class="form-label small fw-semibold text-muted text-uppercase">Category</label>
+                <select name="CategoryId" id="CategoryId" class="form-select form-select-sm">
                     <option value="">All Categories</option>
                     @foreach (var cat in Model.Categories)
                     {
@@ -38,98 +37,92 @@
                     }
                 </select>
             </div>
-            <div>
-                <label for="MinAmount" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Min Amount</label>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label for="MinAmount" class="form-label small fw-semibold text-muted text-uppercase">Min Amount</label>
                 <input type="number" step="0.01" name="MinAmount" id="MinAmount" value="@Model.MinAmount"
-                       placeholder="€0.00"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm px-3 py-2 border" />
+                       placeholder="€0.00" class="form-control form-control-sm" />
             </div>
-            <div>
-                <label for="MaxAmount" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Max Amount</label>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <label for="MaxAmount" class="form-label small fw-semibold text-muted text-uppercase">Max Amount</label>
                 <input type="number" step="0.01" name="MaxAmount" id="MaxAmount" value="@Model.MaxAmount"
-                       placeholder="€9999.99"
-                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm px-3 py-2 border" />
+                       placeholder="€9999.99" class="form-control form-control-sm" />
             </div>
         </div>
-        <div class="flex items-center gap-4">
-            <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors duration-200">
-                Search
-            </button>
-            <a href="/Transactions/Search" class="text-sm text-gray-400 hover:text-gray-600">Clear all filters</a>
+        <div class="d-flex align-items-center gap-3">
+            <button type="submit" class="btn btn-brand btn-sm">Search</button>
+            <a href="/Transactions/Search" class="btn btn-link btn-sm text-muted text-decoration-none">Clear all filters</a>
         </div>
     </form>
 
     @if (Model.Results != null)
     {
         <!-- Results Summary -->
-        <div class="text-sm text-gray-600">
+        <p class="small text-muted">
             Showing @Model.Results.Items.Count of @Model.Results.TotalCount transactions
             @if (!string.IsNullOrEmpty(Model.Keyword) || Model.FromDate.HasValue || Model.ToDate.HasValue || Model.CategoryId.HasValue || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
             {
                 <span>matching filters</span>
             }
-        </div>
+        </p>
 
         @if (Model.Results.Items.Any())
         {
             <!-- Results Table -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                                <th class="text-uppercase small fw-semibold text-muted">Date</th>
+                                <th class="text-uppercase small fw-semibold text-muted">Description</th>
+                                <th class="text-uppercase small fw-semibold text-muted text-end">Amount</th>
+                                <th class="text-uppercase small fw-semibold text-muted">Category</th>
                             </tr>
                         </thead>
-                <tbody class="bg-white divide-y divide-gray-100">
+                        <tbody>
                             @foreach (var tx in Model.Results.Items)
                             {
-                                <tr class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-gray-600">@tx.Date.ToString("MMM dd, yyyy")</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">@tx.Description</td>
-                                    <td class="px-4 py-3 text-sm text-right font-medium @(tx.Amount >= 0 ? "text-brand-600" : "text-red-500")">
+                                <tr>
+                                    <td class="small text-muted">@tx.Date.ToString("MMM dd, yyyy")</td>
+                                    <td class="small">@tx.Description</td>
+                                    <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-brand" : "text-danger")">
                                         &euro;@tx.Amount.ToString("N2")
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">@(tx.CategoryName ?? "&mdash;")</td>
+                                    <td class="small text-muted">@(tx.CategoryName ?? "&mdash;")</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
-            </div>
 
-            <!-- Pagination -->
-            @if (Model.Results.TotalPages > 1)
-            {
-                <div class="flex justify-between items-center bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3">
-                    <div class="text-sm text-gray-500">
-                        Page @Model.Results.PageNumber of @Model.Results.TotalPages
+                <!-- Pagination -->
+                @if (Model.Results.TotalPages > 1)
+                {
+                    <div class="card-footer bg-transparent d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                        <span class="small text-muted">Page @Model.Results.PageNumber of @Model.Results.TotalPages</span>
+                        <div class="d-flex gap-2">
+                            @if (Model.Results.PageNumber > 1)
+                            {
+                                <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                                   class="btn btn-outline-secondary btn-sm">&larr; Previous</a>
+                            }
+                            @if (Model.Results.PageNumber < Model.Results.TotalPages)
+                            {
+                                <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                                   class="btn btn-brand btn-sm">Next &rarr;</a>
+                            }
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        @if (Model.Results.PageNumber > 1)
-                        {
-                            <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
-                               class="px-3 py-1.5 text-sm font-medium bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">&larr; Previous</a>
-                        }
-                        @if (Model.Results.PageNumber < Model.Results.TotalPages)
-                        {
-                            <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
-                               class="px-3 py-1.5 text-sm font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700">Next &rarr;</a>
-                        }
-                    </div>
-                </div>
-            }
+                }
+            </div>
         }
         else
         {
             <!-- Empty State -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center" role="status" aria-live="polite">
-                <div class="text-5xl mb-4">🔍</div>
-                <p class="text-lg font-semibold text-gray-700 mb-2">No results found</p>
-                <p class="text-gray-400">Try adjusting your filters or search terms.</p>
+            <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
+                <div class="fs-1 mb-3">🔍</div>
+                <p class="h5 fw-semibold mb-2">No results found</p>
+                <p class="text-muted">Try adjusting your filters or search terms.</p>
             </div>
         }
     }

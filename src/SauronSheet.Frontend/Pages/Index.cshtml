@@ -4,50 +4,55 @@
     ViewData["Title"] = "Home";
 }
 
-<div class="flex flex-col items-center justify-center min-h-[70vh] py-12 px-4">
+<div class="d-flex flex-column align-items-center justify-content-center py-5">
     <!-- Hero -->
-    <div class="text-center max-w-3xl mx-auto">
-        <img src="/img/sauron-sheet-logo-64x64.png" alt="SauronSheet" class="mx-auto mb-6 h-20 w-20 drop-shadow-lg" />
-        <h1 class="text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
-            Take Control of Your <span class="text-brand-600">Finances</span>
+    <div class="text-center" style="max-width: 680px;">
+        <img src="/img/sauron-sheet-logo-64x64.png" alt="SauronSheet" class="mb-4" height="80" />
+        <h1 class="display-5 fw-bold text-dark mb-3">
+            Take Control of Your <span class="text-brand">Finances</span>
         </h1>
-        <p class="text-lg text-gray-500 mb-10 max-w-xl mx-auto">
+        <p class="lead text-muted mb-5">
             Import bank statements, track spending by category, set budgets, and get smart analytics — all in one place.
         </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/Auth/Register" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-md transition-colors duration-200">
+        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+            <a href="/Auth/Register" class="btn btn-brand btn-lg px-5">
                 Get Started Free
             </a>
-            <a href="/Auth/Login" class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg shadow-sm transition-colors duration-200">
+            <a href="/Auth/Login" class="btn btn-outline-secondary btn-lg px-5">
                 Sign In
             </a>
         </div>
     </div>
 
     <!-- Feature highlights -->
-    <div class="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl w-full">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-            <div class="text-4xl mb-3">📄</div>
-            <h3 class="text-base font-semibold text-gray-900 mb-1">PDF Import</h3>
-            <p class="text-sm text-gray-500">Upload bank statements and let SauronSheet parse your transactions automatically.</p>
+    <div class="row row-cols-1 row-cols-sm-3 g-4 mt-5" style="max-width: 900px; width: 100%;">
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="fs-1 mb-3">📄</div>
+                <h5 class="fw-semibold mb-2">PDF Import</h5>
+                <p class="text-muted small mb-0">Upload bank statements and let SauronSheet parse your transactions automatically.</p>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-            <div class="text-4xl mb-3">📊</div>
-            <h3 class="text-base font-semibold text-gray-900 mb-1">Smart Analytics</h3>
-            <p class="text-sm text-gray-500">Visualise spending trends, category breakdowns, and yearly comparisons with charts.</p>
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="fs-1 mb-3">📊</div>
+                <h5 class="fw-semibold mb-2">Smart Analytics</h5>
+                <p class="text-muted small mb-0">Visualise spending trends, category breakdowns, and yearly comparisons with charts.</p>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-            <div class="text-4xl mb-3">💰</div>
-            <h3 class="text-base font-semibold text-gray-900 mb-1">Budget Tracking</h3>
-            <p class="text-sm text-gray-500">Set monthly budgets per category and get alerts when you're approaching the limit.</p>
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="fs-1 mb-3">💰</div>
+                <h5 class="fw-semibold mb-2">Budget Tracking</h5>
+                <p class="text-muted small mb-0">Set monthly budgets per category and get alerts when you're approaching the limit.</p>
+            </div>
         </div>
     </div>
 
     <!-- System status badge -->
-    <div class="mt-12">
-        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-xs text-brand-700">
-            <span class="inline-block w-2 h-2 rounded-full bg-brand-500"></span>
-            System OK — @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC
+    <div class="mt-5">
+        <span class="badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2">
+            <span class="me-1">&#9679;</span> System OK — @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC
         </span>
     </div>
 </div>

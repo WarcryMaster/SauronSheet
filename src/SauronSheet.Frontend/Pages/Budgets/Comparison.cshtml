@@ -1,4 +1,4 @@
-@page "/Budgets/Comparison"
+﻿@page "/Budgets/Comparison"
 @model SauronSheet.Frontend.Pages.Budgets.ComparisonModel
 @using System.Text.Json
 @{
@@ -8,143 +8,135 @@
     var monthName = new DateTime(currentYear, currentMonth, 1).ToString("MMMM yyyy");
 }
 
-<div class="space-y-6">
-    <div class="flex justify-between items-center">
-        <h2 class="text-2xl font-bold text-gray-900">📊 Budget vs Actual</h2>
-        <a href="/Budgets" class="text-sm text-brand-600 hover:text-brand-700">&larr; Back to Budgets</a>
+<div class="d-flex flex-column gap-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="h3 fw-bold mb-0">📊 Budget vs Actual</h2>
+        <a href="/Budgets" class="small text-brand text-decoration-none">&larr; Back to Budgets</a>
     </div>
 
     <!-- Month Filter -->
-    <form method="get" action="/Budgets/Comparison" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div class="flex flex-wrap items-center gap-4">
-            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Month:</label>
-            <input type="month"
-                   name="month"
+    <form method="get" action="/Budgets/Comparison" class="card border-0 shadow-sm p-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <label class="small fw-semibold text-muted text-uppercase mb-0">Month:</label>
+            <input type="month" name="month" id="monthPicker"
                    value="@($"{currentYear:D4}-{currentMonth:D2}")"
-                   class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                   id="monthPicker" />
-            <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors">
-                Filter
-            </button>
+                   class="form-control form-control-sm" style="width:auto" />
+            <button type="submit" class="btn btn-brand btn-sm">Filter</button>
         </div>
     </form>
 
     @if (Model.Comparison.Any())
     {
         <!-- Summary Cards -->
-        <div class="grid grid-cols-3 gap-4">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total Budgeted</p>
-                <p class="text-2xl font-bold text-brand-600">&euro;@Model.TotalBudgeted.ToString("N2")</p>
+        <div class="row g-3">
+            <div class="col-12 col-sm-4">
+                <div class="card border-0 shadow-sm p-4 text-center">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Total Budgeted</p>
+                    <p class="h4 fw-bold text-brand mb-0">&euro;@Model.TotalBudgeted.ToString("N2")</p>
+                </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total Actual</p>
-                <p class="text-2xl font-bold text-gray-900">&euro;@Model.TotalActual.ToString("N2")</p>
+            <div class="col-12 col-sm-4">
+                <div class="card border-0 shadow-sm p-4 text-center">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Total Actual</p>
+                    <p class="h4 fw-bold mb-0">&euro;@Model.TotalActual.ToString("N2")</p>
+                </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Difference</p>
-                <p class="text-2xl font-bold @(Model.TotalDifference >= 0 ? "text-brand-600" : "text-red-500")">
-                    &euro;@Model.TotalDifference.ToString("N2")
-                </p>
+            <div class="col-12 col-sm-4">
+                <div class="card border-0 shadow-sm p-4 text-center">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Difference</p>
+                    <p class="h4 fw-bold mb-0 @(Model.TotalDifference >= 0 ? "text-brand" : "text-danger")">&euro;@Model.TotalDifference.ToString("N2")</p>
+                </div>
             </div>
         </div>
 
         <!-- Horizontal Bar Chart -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-base font-semibold text-gray-900 mb-4">Budget vs Actual by Category</h3>
+        <div class="card border-0 shadow-sm p-4">
+            <h3 class="h6 fw-semibold mb-3">Budget vs Actual by Category</h3>
             <canvas id="comparisonChart" style="height: 300px;"></canvas>
         </div>
 
         <!-- Comparison Table -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-100">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Budget</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actual</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Difference</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-100">
-                    @foreach (var item in Model.Comparison)
-                    {
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @if (!string.IsNullOrEmpty(item.CategoryColor))
-                                {
-                                    <span class="inline-block w-3 h-3 rounded-full mr-2"
-                                          style="background-color: @item.CategoryColor"></span>
-                                }
-                                @item.CategoryName
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                @if (item.BudgetLimit.HasValue)
-                                {
-                                    <span>€@item.BudgetLimit.Value.ToString("N2")</span>
-                                }
-                                else
-                                {
-                                    <span class="text-gray-400">No budget</span>
-                                }
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                €@item.ActualSpend.ToString("N2")
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                @if (item.Difference.HasValue)
-                                {
-                                    <span class="@(item.Difference.Value >= 0 ? "text-green-600" : "text-red-600") font-medium">
-                                        €@item.Difference.Value.ToString("N2")
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="text-gray-400">—</span>
-                                }
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                @if (!string.IsNullOrEmpty(item.StatusLevel))
-                                {
-                                    <partial name="Shared/_BudgetStatusBadge" model="item.StatusLevel" />
-                                }
-                                else
-                                {
-                                    <span class="text-gray-400 text-xs">—</span>
-                                }
-                            </td>
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-uppercase small fw-semibold text-muted">Category</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">Budget</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">Actual</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">Difference</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-center">Status</th>
                         </tr>
-                    }
-                </tbody>
-                <tfoot class="bg-gray-50 font-bold">
-                    <tr>
-                        <td class="px-6 py-4">Total</td>
-                        <td class="px-6 py-4 text-right">€@Model.TotalBudgeted.ToString("N2")</td>
-                        <td class="px-6 py-4 text-right">€@Model.TotalActual.ToString("N2")</td>
-                        <td class="px-6 py-4 text-right @(Model.TotalDifference >= 0 ? "text-green-600" : "text-red-600")">
-                            €@Model.TotalDifference.ToString("N2")
-                        </td>
-                        <td class="px-6 py-4 text-center">—</td>
-                    </tr>
-                </tfoot>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Comparison)
+                        {
+                            <tr>
+                                <td class="small">
+                                    @if (!string.IsNullOrEmpty(item.CategoryColor))
+                                    {
+                                        <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background-color:@item.CategoryColor"></span>
+                                    }
+                                    @item.CategoryName
+                                </td>
+                                <td class="text-end small fw-medium">
+                                    @if (item.BudgetLimit.HasValue)
+                                    {
+                                        <span>&euro;@item.BudgetLimit.Value.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No budget</span>
+                                    }
+                                </td>
+                                <td class="text-end small fw-medium">&euro;@item.ActualSpend.ToString("N2")</td>
+                                <td class="text-end small">
+                                    @if (item.Difference.HasValue)
+                                    {
+                                        <span class="fw-medium @(item.Difference.Value >= 0 ? "text-success" : "text-danger")">&euro;@item.Difference.Value.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">&mdash;</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(item.StatusLevel))
+                                    {
+                                        <partial name="Shared/_BudgetStatusBadge" model="item.StatusLevel" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">&mdash;</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td class="small">Total</td>
+                            <td class="text-end small">&euro;@Model.TotalBudgeted.ToString("N2")</td>
+                            <td class="text-end small">&euro;@Model.TotalActual.ToString("N2")</td>
+                            <td class="text-end small @(Model.TotalDifference >= 0 ? "text-success" : "text-danger")">&euro;@Model.TotalDifference.ToString("N2")</td>
+                            <td class="text-center small">&mdash;</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     }
     else
     {
-        <div class="bg-white rounded-lg shadow p-8 text-center">
-            <p class="text-xl text-gray-500 mb-4">No budget data for @monthName.</p>
-            <p class="text-gray-400 mb-6">Create budgets to compare them against actual spending.</p>
-            <a href="/Budgets/Create" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                + Create Budget
-            </a>
+        <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
+            <p class="h5 text-muted mb-3">No budget data for @monthName.</p>
+            <p class="text-muted mb-4">Create budgets to compare them against actual spending.</p>
+            <div><a href="/Budgets/Create" class="btn btn-brand">+ Create Budget</a></div>
         </div>
     }
 </div>
 
 <script>
-    // Parse month picker value into Year/Month query params
     document.getElementById('monthPicker')?.closest('form')?.addEventListener('submit', function(e) {
         e.preventDefault();
         var val = document.getElementById('monthPicker').value;
@@ -156,7 +148,6 @@
         }
     });
 
-    // Chart.js horizontal bar chart
     document.addEventListener('DOMContentLoaded', function() {
         var chartData = @Html.Raw(Json.Serialize(Model.Comparison));
         var ctx = document.getElementById('comparisonChart');
@@ -186,17 +177,11 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    },
+                    plugins: { legend: { position: 'top' } },
                     scales: {
                         x: {
                             beginAtZero: true,
-                            ticks: {
-                                callback: function(value) { return '€' + value; }
-                            }
+                            ticks: { callback: function(value) { return '\u20AC' + value; } }
                         }
                     }
                 }

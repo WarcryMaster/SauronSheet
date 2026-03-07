@@ -1,18 +1,16 @@
-@* Budget status badge partial view.
+﻿@* Budget status badge partial view.
    Model: string StatusLevel (Green, Yellow, Red, Overage). *@
 @model string
 
 @{
-    var (bgColor, textColor, label) = Model switch
+    var (badgeClass, label) = Model switch
     {
-        "Green" => ("bg-green-100", "text-green-800", "On Track"),
-        "Yellow" => ("bg-yellow-100", "text-yellow-800", "Warning"),
-        "Red" => ("bg-red-100", "text-red-800", "Near Limit"),
-        "Overage" => ("bg-red-200", "text-red-900", "Over Budget"),
-        _ => ("bg-gray-100", "text-gray-800", "Unknown")
+        "Green"   => ("badge bg-success", "On Track"),
+        "Yellow"  => ("badge bg-warning text-dark", "Warning"),
+        "Red"     => ("badge bg-danger", "Near Limit"),
+        "Overage" => ("badge bg-danger", "Over Budget"),
+        _         => ("badge bg-secondary", "Unknown")
     };
 }
 
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium @bgColor @textColor border border-current" role="status" aria-label="@label">
-    @label
-</span>
+<span class="@badgeClass" role="status" aria-label="@label">@label</span>

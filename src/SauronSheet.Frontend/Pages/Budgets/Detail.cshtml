@@ -1,98 +1,95 @@
-@page "/Budgets/Detail/{id:guid}"
+﻿@page "/Budgets/Detail/{id:guid}"
 @model SauronSheet.Frontend.Pages.Budgets.DetailModel
 @{
     ViewData["Title"] = "Budget Detail";
 }
 
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-            <a href="/Budgets" class="text-gray-500 hover:text-gray-700">&larr; Back to Budgets</a>
-            <h2 class="text-2xl font-bold text-gray-900">Budget Detail</h2>
+<div class="d-flex flex-column gap-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/Budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
+            <h2 class="h4 fw-bold mb-0">Budget Detail</h2>
         </div>
         @if (Model.Budget != null)
         {
-            <a href="/Budgets/Edit/@Model.Budget.Id" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors shadow-sm">
-                Edit Budget
-            </a>
+            <a href="/Budgets/Edit/@Model.Budget.Id" class="btn btn-brand btn-sm">Edit Budget</a>
         }
     </div>
 
     @if (Model.Budget != null)
     {
         <!-- Budget Header Card -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center justify-between mb-4">
+        <div class="card border-0 shadow-sm p-4">
+            <div class="d-flex align-items-start justify-content-between mb-3">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-900">
+                    <h3 class="h5 fw-bold mb-1">
                         @if (!string.IsNullOrEmpty(Model.Budget.CategoryColor))
                         {
-                            <span class="inline-block w-4 h-4 rounded-full mr-2"
-                                  style="background-color: @Model.Budget.CategoryColor"></span>
+                            <span class="d-inline-block rounded-circle me-2" style="width:16px;height:16px;background-color:@Model.Budget.CategoryColor"></span>
                         }
                         @Model.Budget.CategoryName
                     </h3>
-                    <p class="text-gray-500">@Model.Budget.PeriodStart.ToString("MMMM yyyy")</p>
+                    <p class="text-muted small mb-0">@Model.Budget.PeriodStart.ToString("MMMM yyyy")</p>
                 </div>
                 <partial name="Shared/_BudgetStatusBadge" model="Model.Budget.StatusLevel" />
             </div>
 
-            <!-- Large Progress Bar -->
-            <div class="mb-6">
+            <!-- Progress Bar -->
+            <div class="mb-4">
                 <partial name="Shared/_BudgetProgressBar" model="Model.Budget" />
             </div>
 
             <!-- Summary Stats -->
-            <div class="grid grid-cols-4 gap-4 text-center">
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Budget Limit</p>
-                    <p class="text-xl font-bold text-gray-900">&euro;@Model.Budget.LimitAmount.ToString("N2")</p>
+            <div class="row g-3 text-center">
+                <div class="col-6 col-sm-3">
+                    <div class="bg-light rounded-3 p-3">
+                        <p class="small fw-semibold text-muted text-uppercase mb-1">Budget Limit</p>
+                        <p class="h5 fw-bold mb-0">&euro;@Model.Budget.LimitAmount.ToString("N2")</p>
+                    </div>
                 </div>
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Current Spend</p>
-                    <p class="text-xl font-bold @(Model.Budget.CurrentSpend > Model.Budget.LimitAmount ? "text-red-600" : "text-gray-900")">
-                        &euro;@Model.Budget.CurrentSpend.ToString("N2")
-                    </p>
+                <div class="col-6 col-sm-3">
+                    <div class="bg-light rounded-3 p-3">
+                        <p class="small fw-semibold text-muted text-uppercase mb-1">Current Spend</p>
+                        <p class="h5 fw-bold mb-0 @(Model.Budget.CurrentSpend > Model.Budget.LimitAmount ? "text-danger" : "")">&euro;@Model.Budget.CurrentSpend.ToString("N2")</p>
+                    </div>
                 </div>
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Remaining</p>
-                    <p class="text-xl font-bold @(Model.Budget.RemainingAmount >= 0 ? "text-brand-600" : "text-red-600")">
-                        &euro;@Model.Budget.RemainingAmount.ToString("N2")
-                    </p>
+                <div class="col-6 col-sm-3">
+                    <div class="bg-light rounded-3 p-3">
+                        <p class="small fw-semibold text-muted text-uppercase mb-1">Remaining</p>
+                        <p class="h5 fw-bold mb-0 @(Model.Budget.RemainingAmount >= 0 ? "text-brand" : "text-danger")">&euro;@Model.Budget.RemainingAmount.ToString("N2")</p>
+                    </div>
                 </div>
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Usage</p>
-                    <p class="text-xl font-bold text-gray-900">@((Model.Budget.PercentageUsed * 100).ToString("N0"))%</p>
+                <div class="col-6 col-sm-3">
+                    <div class="bg-light rounded-3 p-3">
+                        <p class="small fw-semibold text-muted text-uppercase mb-1">Usage</p>
+                        <p class="h5 fw-bold mb-0">@((Model.Budget.PercentageUsed * 100).ToString("N0"))%</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Transactions List -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-base font-semibold text-gray-900 mb-4">
-                Transactions (@Model.Transactions.Count)
-            </h3>
+        <div class="card border-0 shadow-sm p-4">
+            <h3 class="h6 fw-semibold mb-3">Transactions (@Model.Transactions.Count)</h3>
 
             @if (Model.Transactions.Any())
             {
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100">
-                        <thead class="bg-gray-50">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                <th class="text-uppercase small fw-semibold text-muted">Date</th>
+                                <th class="text-uppercase small fw-semibold text-muted">Description</th>
+                                <th class="text-uppercase small fw-semibold text-muted text-end">Amount</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-100">
+                        <tbody>
                             @foreach (var tx in Model.Transactions.OrderByDescending(t => t.Date))
                             {
-                                <tr class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-gray-600">@tx.Date.ToString("MMM dd, yyyy")</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">@tx.Description</td>
-                                    <td class="px-4 py-3 text-sm text-right font-medium @(tx.Amount >= 0 ? "text-brand-600" : "text-red-500")">
-                                        &euro;@tx.Amount.ToString("N2")
-                                    </td>
+                                <tr>
+                                    <td class="small text-muted">@tx.Date.ToString("MMM dd, yyyy")</td>
+                                    <td class="small">@tx.Description</td>
+                                    <td class="small text-end fw-medium @(tx.Amount >= 0 ? "text-brand" : "text-danger")">&euro;@tx.Amount.ToString("N2")</td>
                                 </tr>
                             }
                         </tbody>
@@ -101,15 +98,15 @@
             }
             else
             {
-                <p class="text-gray-400 text-center py-4">No transactions for this category in the selected period.</p>
+                <p class="text-muted text-center py-3">No transactions for this category in the selected period.</p>
             }
         </div>
     }
     else
     {
-        <div class="bg-white rounded-lg shadow p-6 text-center">
-            <p class="text-gray-500">Budget not found.</p>
-            <a href="/Budgets" class="text-blue-600 hover:underline">Back to Budgets</a>
+        <div class="card border-0 shadow-sm p-5 text-center">
+            <p class="text-muted mb-3">Budget not found.</p>
+            <a href="/Budgets" class="btn btn-outline-secondary btn-sm">Back to Budgets</a>
         </div>
     }
 </div>
