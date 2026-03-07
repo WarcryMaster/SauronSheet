@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 using SauronSheet.Infrastructure.Auth;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.Repositories;
@@ -91,5 +92,22 @@ public static class DependencyInjection
 
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers Sentry monitoring (Phase 6 - Polish & Infrastructure).
+    /// Configures error tracking with DSN from configuration.
+    /// Should be called on WebHostBuilder before building the application.
+    /// </summary>
+    public static IWebHostBuilder AddSentryMonitoring(
+        this IWebHostBuilder webBuilder,
+        IConfiguration configuration)
+    {
+        return webBuilder.UseSentry(o =>
+        {
+            o.Dsn = configuration["Sentry:Dsn"];
+            o.Debug = true;
+            o.TracesSampleRate = 1.0;
+        });
     }
 }
