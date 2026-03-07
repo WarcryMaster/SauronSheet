@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using SauronSheet.Application.Features.Auth.Commands;
 using SauronSheet.Application.Features.Auth.DTOs;
+using SauronSheet.Domain.Exceptions;
 
 namespace SauronSheet.Frontend.Pages.Auth;
 
@@ -16,6 +18,7 @@ namespace SauronSheet.Frontend.Pages.Auth;
 public class LoginModel : PageModel
 {
     private readonly IMediator _mediator;
+    private readonly ILogger<LoginModel> _logger;
 
     [BindProperty]
     public LoginInputModel Input { get; set; } = new();
@@ -23,9 +26,10 @@ public class LoginModel : PageModel
     public string? ErrorMessage { get; set; }
     public string? ReturnUrl { get; set; }
 
-    public LoginModel(IMediator mediator)
+    public LoginModel(IMediator mediator, ILogger<LoginModel> logger)
     {
         _mediator = mediator;
+        _logger = logger;
     }
 
     public void OnGet(string? returnUrl = null)
@@ -38,10 +42,15 @@ public class LoginModel : PageModel
         ReturnUrl = returnUrl ?? "/Dashboard";
 
         if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Login: ModelState is invalid");
             return Page();
+        }
 
         try
         {
+            _logger.LogInformation("Login attempt for email: {Email}", Input.Email);
+
             var result = await _mediator.Send(
                 new LoginUserCommand(Input.Email, Input.Password));
 
@@ -71,11 +80,25 @@ public class LoginModel : PageModel
                     Expires = DateTimeOffset.UtcNow.AddDays(7)
                 });
 
+            _logger.LogInformation("Login successful for email: {Email}", Input.Email);
             return LocalRedirect(ReturnUrl);
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
+            _logger.LogWarning("Login failed for email {Email}: Unauthorized - {Message}", Input.Email, ex.Message);
             ErrorMessage = "Invalid email or password.";
+            return Page();
+        }
+        catch (DomainException ex)
+        {
+            _logger.LogWarning("Login failed for email {Email}: Domain error - {Message}", Input.Email, ex.Message);
+            ErrorMessage = ex.Message;
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Login failed for email {Email}: Unexpected error", Input.Email);
+            ErrorMessage = "An error occurred during login. Please try again later.";
             return Page();
         }
     }
