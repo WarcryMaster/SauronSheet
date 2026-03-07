@@ -15,4 +15,8 @@
     <ProjectReference Include="..\SauronSheet.Infrastructure\SauronSheet.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Sentry.AspNetCore" Version="4.5.0" />
+  </ItemGroup>
+
 </Project>

@@ -1,9 +1,18 @@
+
 using SauronSheet.Application;
 using SauronSheet.Infrastructure;
 using SauronSheet.Infrastructure.Auth;
 
-
 var builder = WebApplication.CreateBuilder(args);
+
+// Add Sentry monitoring (Phase 6)
+builder.WebHost.UseSentry(options =>
+{
+    options.Dsn = builder.Configuration["Sentry:Dsn"];
+    options.TracesSampleRate = 1.0;
+    // options.BeforeSend is not available in SentryAspNetCoreOptions (only in SentryOptions for SDK)
+    // options.TracesToIgnore is not available in SentryAspNetCoreOptions
+});
 
 // Register application and infrastructure services
 builder.Services.AddApplicationServices();

@@ -89,8 +89,6 @@ public static class DependencyInjection
         services.AddScoped<IBudgetRepository, SupabaseBudgetRepository>();
         services.AddScoped<BudgetService>();
 
-        // Sentry monitoring (Phase 6)
-        SauronSheet.Infrastructure.Monitoring.SentryConfiguration.AddSauronSheetSentry(services, configuration);
 
         return services;
     }
