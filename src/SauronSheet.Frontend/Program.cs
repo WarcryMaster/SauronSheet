@@ -50,9 +50,6 @@ app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Security headers middleware
-app.UseMiddleware<SauronSheet.Infrastructure.Middleware.SecurityHeadersMiddleware>();
-
 // Auth middleware pipeline (Phase 1)
 app.UseMiddleware<JwtCookieMiddleware>();
 app.UseAuthentication();
