@@ -66,13 +66,15 @@ para poder iniciar sesión sin barreras.
 - **Fondo**: Blanco sólido (`bg-white` en Tailwind); sin gradientes ni patrones.
 - **Scope: Frontend-only** - Solo cambios en Razor Pages y Tailwind CSS. Sin modificaciones en Application, Domain, o Infrastructure.
 - Debe usarse Tailwind CSS para todos los estilos visuales (colores, tipografía, espaciado, botones, inputs, fondo).
+- **Alpine.js**: Usar para interactividad mínima (toggle mostrar/ocultar contraseña con icono eye/eye-off integrado en campo password).
 - **Paleta de Marca**: Usar exactamente los mismos colores y estilos del Dashboard (azul primario, grises, Tailwind defaults).
 - El diseño debe ser responsivo usando breakpoints Tailwind estándar: mobile (< 640px), tablet (640-1024px), desktop (≥ 1024px).
-- **Validación**: Solo al hacer submit (sin validación en tiempo real mientras escribe).
-- **Estados visuales completos**: Base, hover, focus, error + transiciones suaves (0.3s) en elementos interactivos + spinner/loading state durante validación.
+- **Validación**: HTML5 nativa (type="email" required) proporciona feedback inmediato del navegador; validación server-side ocurre en POST para seguridad (sin validación visual en tiempo real mientras el usuario escribe).
+- **Estados visuales completos**: Base, hover, focus, error + transiciones suaves (0.3s) en elementos interactivos + **spinner/loading state durante POST** (spinner visible en botón + botón deshabilitado con opacity-50 para prevenir múltiples submissions).
 - Los mensajes de error deben mostrarse de forma visualmente clara y accesible.
 - Los botones y campos deben tener outline focus visible y contraste mínimo 4.5:1 (WCAG 2.1 AA).
 - **Link Sign Up**: Ubicado debajo del botón "Sign in" como texto pequeño (patrón: "Don't have an account? Sign up").
+- **Link Forgot Password**: OUT-OF-SCOPE para esta fase (requiere nueva página /Auth/ForgotPassword; deferred a feature futura).
 - **Título de página (ViewData)**: "Sign In - SauronSheet" en la pestaña del navegador.
 - El formulario debe ser accesible por teclado, compatible con lectores de pantalla, y cumplir WCAG 2.1 AA.
 
@@ -88,8 +90,7 @@ para poder iniciar sesión sin barreras.
 - **Link "Sign Up"**: Ubicado debajo del botón con texto pequeño y hover visible (color azul).
 - **Título del navegador**: Muestra "Sign In - SauronSheet" en la pestaña.
 - Los usuarios reportan una experiencia positiva en pruebas de usabilidad.
-- Todos los elementos interactivos tienen hover y focus states visibles.
-- Mensajes de error se muestran con color rojo, icono de alerta, y están accesibles para lectores de pantalla.
+- Todos los elementos interactivos tienen hover y focus states visibles.- **Toggle password funcional**: Icono eye/eye-off visible en campo password; click alterna entre type="password" y type="text"; accesible por keyboard (Tab + Enter/Space).- Mensajes de error se muestran con color rojo, icono de alerta, y están accesibles para lectores de pantalla.
 
 ## Entidades Clave
 
@@ -111,7 +112,9 @@ para poder iniciar sesión sin barreras.
 - **Estado de error persistente**: Si el login falla, el mensaje permanece hasta que el usuario intente de nuevo.
 - **Ambos campos vacíos al cargar**: Mostrar placeholders descriptivos y focus en campo email al cargar.
 - **Pega de contraseña**: Debe funcionar correctamente; no debe revelar la contraseña en el campo.
-- **Tab order**: Tab debe seguir orden lógico: email → password → login button → "Sign up".
+- **Tab order**: Tab debe seguir orden lógico: email → password (+ toggle icon) → login button → "Sign up".
+- **Gestión del Foco en Errores**: Cuando la autenticación falla y se muestra el mensaje de error, el foco del teclado debe regresar automáticamente al campo Email para permitir corrección rápida; el mensaje de error usa `aria-live="polite"` para anunciar a lectores de pantalla.
+- **Toggle password en dispositivos táctiles**: Icono eye/eye-off debe ser suficientemente grande (≥44×44px hit target) para ser fácilmente clickeable en móvil sin errores.
 
 ## Especificación de Detalle
 
@@ -179,8 +182,9 @@ Centrado: vertical y horizontal
 
 **Campos de Input:**
 - Email: `type="email"`, `required`, placeholder "Enter your email"
-- Password: `type="password"`, `required`, placeholder "Enter your password"
+- Password: `type="password"`, `required`, placeholder "Enter your password", **con icono eye/eye-off toggle (Alpine.js)** para mostrar contraseña
 - Ambos: `border border-gray-300`, `rounded-md`, `px-3 py-2`, `focus:ring-2 focus:ring-blue-500 focus:border-blue-500`
+- Password wrapper: Usar `<div class="relative">` para posicionar el icono toggle; icono clickeable, cambiar type dinámicamente con Alpine
 - Labels: `text-xs font-medium text-gray-700 mb-1` (Ronda 3)
 - Transición: `transition duration-300`
 
@@ -231,6 +235,14 @@ Centrado: vertical y horizontal
 - Q: ¿Espaciado entre campos? → A: space-y-6 (espaciado generoso entre email, password, botón)
 - Q: ¿Tipo de icono para mensaje de error? → A: X circle (icono de X dentro de círculo rojo)
 - Q: ¿Tamaños y pesos de tipografía? → A: Título text-3xl extrabold, botón text-base medium, helper text-xs medium (jerarquía visual clara)
+
+### Session 2026-03-07 (Ronda 4)
+
+- Q: ¿Dónde debe ir el foco después de mostrar error de autenticación? → A: El foco regresa al campo Email (permite corrección rápida y es patrón UX estándar en formularios modernos)
+- Q: ¿Validación client-side vs. server-side? → A: HTML5 nativo (type="email" required) + validación server en POST (feedback inmediato del navegador + seguridad backend)
+- Q: ¿Comportamiento del loading spinner durante POST? → A: Spinner visible dentro del botón + botón deshabilitado (opacity-50, cursor-not-allowed) + inputs bloqueados para prevenir múltiples submissions
+- Q: ¿Incluir link "Forgot Password"? → A: No en esta fase; deferred a feature futura (está ligado a nueva página /Auth/ForgotPassword que excede scope Frontend-only)
+- Q: ¿Toggle mostrar/ocultar contraseña? → A: Sí, incluir icono ojo (eye/eye-off) con Alpine.js para alternar type="password" ↔ type="text"
 
 **Why this priority**: [Explain the value and why it has this priority level]
 

@@ -16,6 +16,10 @@ Enhance the login page (/Auth/Login) with modern, attractive visual styling usin
 - Error messages with X-circle icon, WCAG 2.1 AA contrast (4.5:1), keyboard navigation, screen reader compatible
 - Font hierarchy: Title text-3xl extrabold, button text-base medium, labels text-xs medium
 - Brand color palette consistency (blue-600 primary, grays, Dashboard alignment)
+- **HTML5 validation**: type="email" required + server-side validation on POST
+- **Loading state**: Spinner visible in button + button disabled (opacity-50, cursor-not-allowed) to prevent multiple submissions
+- **Password toggle**: Eye/eye-off icon with Alpine.js to toggle type="password" ↔ type="text" (44×44px hit target for mobile)
+- **Focus management**: After error, focus returns to Email field automatically; error message announces via aria-live="polite"
 
 **Scope**: Frontend Layer ONLY
 - In Scope: Razor Pages .cshtml markup, Tailwind CSS classes, Alpine.js (if interactivity needed), SVG/icon assets
@@ -29,8 +33,8 @@ Enhance the login page (/Auth/Login) with modern, attractive visual styling usin
 
 **Primary Dependencies**: 
 - Tailwind CSS 3.4+ (CDN-based, already integrated in Frontend/Program.cs)
-- Alpine.js 3.x (for optional spinner/loading state interactivity)
-- Heroicons or custom SVG (for X-circle error icon)
+- **Alpine.js 3.x** (REQUIRED for password visibility toggle + loading spinner state management)
+- Heroicons or custom SVG (for X-circle error icon and eye/eye-off password toggle)
 - Existing logo assets in `wwwroot/img/` folder
 
 **Storage**: N/A (no data persistence changes)
@@ -160,10 +164,11 @@ No violations to justify. Feature is straightforward frontend styling with no ar
 | **Task D1**: Create responsive layout spec | Define exact pixel dimensions for desktop (400px), tablet (640-1024px), mobile (< 640px); document vertical/horizontal centering approach | `data-model.md`: "Layout Specification" section with ASCII diagrams | R5 |
 | **Task D2**: Map Tailwind color palette | Document exact Tailwind classes for brand colors (primary blue, error red, text gray, focus ring); reference Dashboard for consistency | `data-model.md`: "Color Palette Mapping" section | R3 |
 | **Task D3**: Design component hierarchy | Specify each form component (logo, title, label, input, button, error message, signup link) with exact Tailwind classes and responsive variants | `data-model.md`: "Component Specifications" section | D1 |
-| **Task D4**: Define keyboard navigation & focus order | Document Tab key flow (email → password → submit → signup link); specify focus ring styling (ring-blue-500, ring-2) | `data-model.md`: "Keyboard Navigation & Accessibility" section | D3 |
-| **Task D5**: Create error state specification | Define error message HTML structure (icon + text), Tailwind classes for error styling, X-circle icon implementation (SVG or Heroicons) | `data-model.md`: "Error Message Component" section | D3 |
+| **Task D4**: Define keyboard navigation & focus order | Document Tab key flow (email → password (+ eye toggle) → submit → signup link); specify focus ring styling (ring-blue-500, ring-2); document focus return to email on error | `data-model.md`: "Keyboard Navigation & Focus Management" section | D3 |
+| **Task D5**: Create error state specification | Define error message HTML structure (icon + text), Tailwind classes for error styling, X-circle icon implementation (SVG or Heroicons), focus return to email on error display | `data-model.md`: "Error Message Component & Focus Management" section | D3 |
 | **Task D6**: Specify transition & animation timing | Document 0.3s transition class usage (transition duration-300) for all hover/focus/active states | `data-model.md`: "Interactive States & Transitions" section | D3 |
-| **Task D7**: Generate API contracts | Create structured JSON/YAML specifications for component contracts (input attributes, expected CSS output, accessibility attributes) | `contracts/login-form-contract.md` | D1-D6 |
+| **Task D7**: Design password toggle component | Specify eye/eye-off icon (20px, 44×44px touch target), Alpine.js directives (@click, x-show), type toggle behavior, accessibility attributes (aria-pressed, aria-label) | `data-model.md`: "Password Toggle Component" section | D3 |
+| **Task D8**: Generate API contracts | Create structured JSON/YAML specifications for all components including password toggle (input attributes, Alpine directives, CSS output, accessibility attributes) | `contracts/login-form-contract.md` + optional `contracts/password-toggle-contract.md` | D1-D7 |
 
 **Phase 1 Deliverables**: 
 - `data-model.md` (comprehensive visual & layout specifications)
@@ -184,40 +189,122 @@ No violations to justify. Feature is straightforward frontend styling with no ar
 - T1: Update Login.cshtml with centered container wrapper + responsive width
 - T2: Add SauronSheet logo image element (32×32px, centered, mb-4)
 - T3: Style form title ("Sign in to your account") with text-3xl font-extrabold classes
-- T4: Refactor email input with Tailwind classes (border, rounded, focus ring, placeholder, label)
-- T5: Refactor password input with Tailwind classes (same as T4)
-- T6: Style submit button with bg-blue-600, hover/focus states, full width, loading spinner placeholder
-- T7: Add error message container with X-circle icon (SVG), role="alert" accessibility
-- T8: Add "Sign up" link below submit button with hover color change
+- T4: Refactor email input with Tailwind classes (border, rounded, focus ring, placeholder, label, HTML5 type=email required)
+- T5: Refactor password input wrapper with Tailwind classes + password toggle component container (relative positioning for icon overlay)
+- T6: Implement password toggle icon (eye/eye-off SVG, 20px, 44×44px hit target in wrapper, Alpine.js @click directive to toggle type)
+- T7: Style submit button with bg-blue-600, hover/focus states, full width, **disabled state (opacity-50, cursor-not-allowed)**
+- T8: Add loading spinner inside button (Alpine.js x-show conditional, spinner visible during submission)
+- T9: Add error message container with X-circle icon (SVG), role="alert" accessibility, Alpine.js x-show conditional
+- T10: Implement focus return to email field on error display (via Alpine.js or middleware script)
+- T11: Add "Sign up" link below submit button with hover color change
 
 **Category B: Responsive Design Implementation**
-- T9: Implement mobile breakpoint adjustments (padding p-4, container 90% width, font sizes scale down)
-- T10: Implement tablet breakpoint (640px: padding-6, container 400px)
-- T11: Implement desktop breakpoint (1024px+: padding-8, container 400px, full vertical centering)
-- T12: Test responsive behavior across all breakpoints in browser DevTools
+- T12: Implement mobile breakpoint adjustments (padding p-4, container 90% width, font sizes scale down)
+- T13: Implement tablet breakpoint (640px: padding-6, container 400px)
+- T14: Implement desktop breakpoint (1024px+: padding-8, container 400px, full vertical centering)
+- T15: Ensure password toggle eye icon is 44×44px minimum (touch target) on all breakpoints
+- T16: Test responsive behavior across all breakpoints in browser DevTools
 
-**Category C: Accessibility Compliance**
-- T13: Verify WCAG 2.1 AA color contrast (4.5:1 for text, 3:1 for UI components)
-- T14: Ensure all form inputs have associated <label> elements with proper for="" attributes
-- T15: Configure keyboard navigation Tab order (email → password → submit → signup)
-- T16: Test with screen reader (NVDA or JAWS) to verify label announcements
-- T17: Add aria-live="polite" and role="alert" to error message container
+**Category C: Validation & Form Behavior**
+- T17: Ensure HTML5 validation enabled (type="email" required on email, required on password)
+- T18: Verify server-side validation on POST (PageModel responsibility, no HTML changes needed)
+- T19: Implement error display + focus return to email field on login failure (JavaScript or Alpine.js @watch on form state)
 
-**Category D: Interactive States & Polish**
-- T18: Add 0.3s transition classes (transition duration-300) to button, inputs
-- T19: Implement button hover state (bg-blue-700)
-- T20: Implement input focus state (ring-2 ring-blue-500 border-blue-500)
-- T21: Add error state styling for inputs (border-red-500, ring-red-500)
-- T22: Optional: Add loading spinner during form submission (Alpine.js inline directive)
+**Category D: Accessibility Compliance**
+- T20: Verify WCAG 2.1 AA color contrast (4.5:1 for text, 3:1 for UI components)
+- T21: Ensure all form inputs have associated <label> elements with proper for="" attributes
+- T22: Verify password toggle icon is keyboard accessible (Tab to reach, Enter/Space to activate, aria-pressed, aria-label="Show/Hide Password")
+- T23: Configure keyboard navigation Tab order (email → password (+ toggle icon) → submit → signup) with Tab key testing
+- T24: Test with screen reader (NVDA or JAWS) to verify label announcements, toggle state, error messages
+- T25: Add aria-live="polite" and role="alert" to error message container
+- T26: Verify focus management: focus returns to email field after error display
 
-**Category E: Quality Assurance & Testing**
-- T23: E2E visual regression test (Playwright or Cypress screenshot baseline)
-- T24: Lighthouse accessibility audit (target ≥ 90 score)
-- T25: Manual keyboard navigation test (all controls reachable, no focus traps)
-- T26: Manual cross-browser test (Chrome, Firefox, Safari, Edge)
-- T27: Manual responsive test on real mobile devices (iPhone, Android)
+**Category E: Interactive States & Polish**
+- T27: Add 0.3s transition classes (transition duration-300) to button, inputs, toggle icon
+- T28: Implement button hover state (bg-blue-700)
+- T29: Implement input focus state (ring-2 ring-blue-500 border-blue-500)
+- T30: Add error state styling for inputs (border-red-500, ring-red-500, focus ring-red-500)
+- T31: **REQUIRED**: Implement loading spinner during form submission (Alpine.js x-show, spinner inside button)
+- T32: **REQUIRED**: Implement button disabled state during submission (disabled=true, opacity-50, cursor-not-allowed to prevent duplicate submissions)
+- T33: Implement password toggle icon state (aria-pressed true/false, icon SVG changes eye→eye-off, smooth transition 300ms)
+
+**Category F: Quality Assurance & Testing**
+- T34: E2E visual regression test (Playwright or Cypress screenshot baseline)
+- T35: Lighthouse accessibility audit (target ≥ 90 score)
+- T36: Manual keyboard navigation test (Tab through all controls including toggle, no focus traps)
+- T37: Manual password toggle test (click/tap eye icon, type changes password ↔ text, no data loss)
+- T38: Manual focus management test (trigger error via invalid login, verify focus returns to email automatically)
+- T39: Manual loading state test (submit form, verify spinner visible + button disabled, re-enable on response)
+- T40: Manual cross-browser test (Chrome, Firefox, Safari, Edge latest 2 versions)
+- T41: Manual responsive test on real mobile devices (iPhone 12/14, Android, verify 44×44px toggle hit target)
 
 **Phase 2 Deliverable**: `tasks.md` with prioritized, dependency-ordered task list (generated by speckit.tasks command)
+
+---
+
+## Password Toggle Component Specification (NEW - Ronda 4)
+
+**Component**: Eye/Eye-Off Icon Toggle for Password Visibility
+
+**Purpose**: Allow users to toggle password visibility (show/hide) for better UX and accessibility on password field
+
+**HTML Structure**:
+```html
+<div class="relative">
+  <input 
+    type="password" 
+    id="password" 
+    name="password" 
+    placeholder="Enter your password"
+    x-model="passwordType"
+    :type="showPassword ? 'text' : 'password'"
+    class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm 
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+           transition duration-300"
+    required
+    aria-label="Password"
+  />
+  <button 
+    type="button" 
+    @click="showPassword = !showPassword"
+    :aria-pressed="showPassword"
+    aria-label="Show/Hide password"
+    class="absolute right-3 top-1/2 transform -translate-y-1/2 h-11 w-11 flex items-center justify-center 
+           text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 
+           transition duration-300"
+    tabindex="0"
+  >
+    <!-- Eye icon (closed) -->
+    <svg x-show="!showPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-4.803m5.596-3.856a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+    <!-- Eye-off icon (open) -->
+    <svg x-show="showPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+    </svg>
+  </button>
+</div>
+```
+
+**Alpine.js Data** (in component initialization):
+```javascript
+{
+  showPassword: false  // Toggle state
+}
+```
+
+**Accessibility**:
+- `aria-pressed`: Reflects toggle state (true = showing password)
+- `aria-label`: "Show/Hide password" 
+- `type="button"` on toggle button (not submit)
+- 44×44px minimum touch target (h-11 w-11 = 44px in Tailwind)
+- Focus ring 2px blue visible on toggle button
+- Keyboard accessible: Tab to reach, Enter/Space to toggle
+
+**Responsive Considerations**:
+- Icon size: h-5 w-5 (20px) on all breakpoints
+- Button wrapper: 44×44px on mobile, desktop (consistent hit target)
+- Right padding on input adjusted (pr-10) to accommodate toggle icon
 
 ---
 
