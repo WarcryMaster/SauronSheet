@@ -1,1 +1,29 @@
-/* Compiled Tailwind CSS will be output here by build script */
+/* SauronSheet — Brand styles and MDBootstrap overrides */
+
+:root {
+    --brand: #556B2F;
+    --brand-dark: #435425;
+    --brand-light: #f4f7ee;
+}
+
+/* Brand button */
+.btn-brand {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+}
+.btn-brand:hover,
+.btn-brand:active,
+.btn-brand:focus {
+    background-color: var(--brand-dark);
+    border-color: var(--brand-dark);
+    color: #fff;
+}
+
+/* Brand text & background helpers */
+.text-brand { color: var(--brand) !important; }
+.bg-brand-light { background-color: var(--brand-light) !important; }
+.border-brand { border-color: var(--brand) !important; }
+
+/* Progress bar brand color */
+.progress-bar-brand { background-color: var(--brand); }

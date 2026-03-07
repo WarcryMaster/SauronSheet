@@ -1,26 +1,24 @@
-@page "/Budgets/Create"
+﻿@page "/Budgets/Create"
 @model SauronSheet.Frontend.Pages.Budgets.CreateModel
 @{
     ViewData["Title"] = "Create Budget";
 }
 
-<div class="max-w-lg mx-auto space-y-6">
-    <div class="flex items-center gap-4">
-        <a href="/Budgets" class="text-gray-500 hover:text-gray-700">&larr; Back to Budgets</a>
-        <h2 class="text-2xl font-bold text-gray-900">Create Budget</h2>
+<div class="mx-auto d-flex flex-column gap-4" style="max-width:520px">
+    <div class="d-flex align-items-center gap-3">
+        <a href="/Budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
+        <h2 class="h4 fw-bold mb-0">Create Budget</h2>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="rounded-xl bg-red-50 border border-red-200 p-4">
-            <p class="text-sm text-red-700">@Model.ErrorMessage</p>
-        </div>
+        <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
     }
 
-    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+    <form method="post" class="card border-0 shadow-sm p-4 d-flex flex-column gap-4">
         <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
-            <select asp-for="CategoryId" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <label class="form-label small fw-semibold text-muted text-uppercase">Category</label>
+            <select asp-for="CategoryId" class="form-select form-select-sm">
                 <option value="">-- Select Category --</option>
                 @foreach (var cat in Model.Categories)
                 {
@@ -30,26 +28,23 @@
         </div>
 
         <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Month</label>
-            <input type="month" asp-for="Month" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            <label class="form-label small fw-semibold text-muted text-uppercase">Month</label>
+            <input type="month" asp-for="Month" class="form-control form-control-sm" />
         </div>
 
         <div>
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Spending Limit</label>
-            <div class="flex items-center gap-2">
-                <span class="text-gray-500">&euro;</span>
+            <label class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">&euro;</span>
                 <input type="number" asp-for="LimitAmount" step="0.01" min="0.01"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                       placeholder="500.00" />
-                <span class="text-sm text-gray-500">EUR</span>
+                       class="form-control" placeholder="500.00" />
+                <span class="input-group-text">EUR</span>
             </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
-            <a href="/Budgets" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</a>
-            <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-lg hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors shadow-sm">
-                Create Budget
-            </button>
+        <div class="d-flex justify-content-end gap-3">
+            <a href="/Budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
+            <button type="submit" class="btn btn-brand btn-sm">Create Budget</button>
         </div>
     </form>
 </div>
