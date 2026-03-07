@@ -19,12 +19,22 @@ A modern, multi-user expense tracking application that imports bank transactions
 - **MediatR** — CQRS pattern with mediator for request handling.
 - **Clean Architecture** — Layered application with strict dependency rules.
 
+
 ### Frontend
 
 - **Razor Pages** — Server-side template rendering.
-- **Tailwind CSS** — Utility-first styling framework.
-- **Alpine.js** — Lightweight interactive components.
+- **Tailwind CSS** — Utility-first styling framework (**CDN only, always**)
+- **Alpine.js** — Lightweight interactive components (**CDN only, always**)
+- **Chart.js** — Analytics charts (**CDN only, always**)
 - **Vanilla JavaScript** — Additional interactivity where needed.
+
+#### Política de librerías externas (CDN)
+
+- **Obligatorio:** Todas las librerías externas de CSS/JS (Tailwind, Alpine.js, Chart.js, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
+- **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
+- **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
+
+Si agregas una nueva librería externa, **debes** usar la versión oficial por CDN y declararla en _Layout.cshtml.
 
 ### Database & Auth
 
