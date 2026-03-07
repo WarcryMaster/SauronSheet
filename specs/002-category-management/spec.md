@@ -14,6 +14,20 @@
 
 ---
 
+## Clarifications Session (March 7, 2026)
+
+### Resolved Design Decisions
+
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| **Validation Architecture** | D - Hybrid Pattern | Domain ValueObjects (CategoryName, ColorHex) + Domain Service (CategoryService) + Application Handlers. DDD-compliant. |
+| **CQRS Handlers** | B - 5 Handlers | GetAllCategoriesQuery, SearchCategoriesQuery, CreateCategoryCommand, UpdateCategoryCommand, DeleteCategoryCommand. Covers all stories. |
+| **Delete Guard Logic** | B+C Hybrid | Application handler executes EXISTS query (efficient), passes boolean to Domain Service CanDeleteCategory(). Maintains invariants in Domain. |
+| **Seeding 24 Categories** | A - SQL Migration | File-based SQL migration with 24 INSERT statements. Supabase migration in source control per Constitution. |
+| **Color Hex Validation** | C - Defense-in-Depth | Frontend HTML5 color picker (UX) + Domain ValueObject ColorHex regex validation (invariant enforcement). Both layers validate. |
+
+---
+
 ## Executive Summary (In Scope / Deferred)
 
 ### In Scope
@@ -65,11 +79,113 @@
 
 3. **User Isolation (Tenant)** — Every category is scoped to a UserId. User A cannot view or modify User B's custom categories. System categories are global but filtered per user in UI.
 
-4. **Color & Icon Flexibility** — Colors are hex strings (#RGB format) stored in database. Icons are names of Bootstrap icons (e.g., "bootstrap-icon-name") defined in frontend. This allows UI to render icons from any icon library without backend changes.
+4. **Color & Icon with Validation** — Colors are hex strings (#RRGGBB format) validated by Domain ValueObject `ColorHex` (regex `#[0-9A-F]{6}`). Frontend HTML5 color picker provides UX. Icons are Bootstrap icon names (e.g., "credit-card", "home"). Defense-in-depth: Frontend picker + Domain validation.
 
-5. **No Partial Deletes** — If a category has even one transaction, it cannot be deleted. This prevents orphaned transaction records and data integrity issues. Users must reassign or hide transactions first.
+5. **Delete Guard: Domain Service Pattern** — Deletion guarded by Domain Service `CategoryService.CanDeleteCategory(category, hasTransactions)`. Application handler queries transaction count (EXISTS query), passes boolean to service. Prevents orphaned records.
 
-6. **Name Uniqueness Per User** — Within a user's account, category names (across all types) must be unique. So no duplicates in either Income or Expense categories.
+6. **Name Uniqueness Enforced in Domain** — Within a user's account, category names must be unique per user (no duplicates in Income or Expense). Validated by Domain Service `CategoryService.ValidateUniqueName(userId, name)` to enforce cross-entity invariant.
+
+7. **Hybrid Validation Architecture** — Format/simple validations in Domain ValueObjects (CategoryName.Create(name), CategoryNameMaxLength). Cross-entity validations in Domain Service (ValidateUniqueName, CanDelete). Application handlers orchestrate. Frontend provides immediate UX feedback.
+
+---
+
+## Architecture & Implementation Details
+
+### Domain Layer (Clean Architecture)
+
+**Entities (Aggregate Roots):**
+- `Category` — Entity with CategoryId, UserId, Name, Type (Income/Expense), Color, IconName, IsSystemDefault, CreatedAt, UpdatedAt
+- Parameterized constructor enforcing invariants
+- Methods: `CanDelete(bool hasTransactions): bool` — Guard method returning true if category can be deleted
+
+**Value Objects:**
+- `CategoryId(Guid value)` — Strong-typed ID preventing ID mixing at compile time; required per Constitution
+- `CategoryName(string value)` — Validates 1-50 chars, non-empty after trim, encapsulates name validation logic
+- `ColorHex(string value)` — Validates regex `#[0-9A-F]{6}`, immutable color representation
+- `UserId` — Ensures user isolation
+
+**Domain Service (Cross-Entity Logic):**
+- `CategoryService.ValidateUniqueName(UserId userId, string name)` — Queries repository; throws DomainException if duplicate exists
+- `CategoryService.CanDeleteCategory(Category category, bool hasTransactions): bool` — Returns false if IsSystemDefault=true or hasTransactions=true; true otherwise
+- `CategoryService.GetSystemDefaults(): IReadOnlyList<Category>` — Returns immutable list of 24 system categories
+- Depends only on `ICategoryRepository` interface (Domain layer)
+
+**Repository Interface (Domain):**
+- `ICategoryRepository` — Contracts for CRUD; implementation in Infrastructure: `SupabaseCategoryRepository`
+- Methods: `GetByIdAsync(CategoryId)`, `GetByUserIdAsync(UserId)`, `FindByNameAndUserAsync(UserId, string name)`, `AddAsync(Category)`, `UpdateAsync(Category)`, `DeleteAsync(CategoryId)`, `GetCountAsync(CategoryId)` — for transaction count check
+
+**Exceptions:**
+- `DomainException` — Thrown on invariant violation (name exists, cannot delete if IsSystemDefault)
+- `EntityNotFoundException` — Thrown if category not found on update/delete
+
+### Application Layer (CQRS via MediatR)
+
+**Commands (State-Changing):**
+- `CreateCategoryCommand(string Name, string Type, string Color, string IconName): IRequest<CategoryId>`
+  - Handler: `CreateCategoryCommandHandler` — Validates via CategoryService, creates entity, persists
+- `UpdateCategoryCommand(CategoryId Id, string Name, string Color, string IconName): IRequest<Unit>`
+  - Handler: `UpdateCategoryCommandHandler` — Prevents Type/IsSystemDefault changes; validates via CategoryService
+- `DeleteCategoryCommand(CategoryId Id): IRequest<Unit>`
+  - Handler: `DeleteCategoryCommandHandler` — Queries transaction count, calls CategoryService.CanDeleteCategory(), deletes or throws
+
+**Queries (Read-Only):**
+- `GetAllCategoriesQuery(UserId userId): IRequest<List<CategoryDto>>`
+  - Handler: `GetAllCategoriesQueryHandler` — Returns system + user-custom categories grouped by Type
+- `SearchCategoriesQuery(UserId userId, string searchTerm): IRequest<List<CategoryDto>>`
+  - Handler: `SearchCategoriesQueryHandler` — Filters categories by name containing searchTerm (case-insensitive)
+
+**DTOs (Data Transfer Objects):**
+- `CategoryDto` — For API/Frontend: Id, Name, Type, Color, IconName, IsSystemDefault, CreatedAt, UpdatedAt
+- Used in query responses; never expose raw entities to Frontend
+
+**Pipeline Behaviors:**
+- Tenant scoping already handles UserId extraction from JWT
+- New validation behavior (if needed) for common Command validation rules
+
+### Infrastructure Layer (Supabase/PostgreSQL)
+
+**Persistence:**
+- `SupabaseCategoryRepository : ICategoryRepository` — Implements all repository methods using Postgrest client
+- Maps `CategoryRow` (Postgrest DTO) ↔ `Category` (Domain entity) via `ToDomain()` / `FromDomainForInsert()`
+- Uses `FromDomainForInsert()` to exclude CreatedAt/UpdatedAt (database triggers manage timestamps)
+
+**Database Migration:**
+- File: `Infrastructure/Persistence/Migrations/xyz_SeedSystemDefaultCategories.sql`
+- Contains: CREATE TABLE categories (if not exists) + 24 INSERT statements for system defaults
+- Executed once on deployment; idempotent
+
+**Seeding:**
+- SQL migration creates 24 rows with IsSystemDefault=true for each system category
+- No Application-level seed command needed; database handles initialization
+
+### Frontend Layer (Razor Pages)
+
+**Pages:**
+- Route: `/Categories`
+- Handler (`CategoriesModel.cshtml.cs`):
+  - `OnGetAsync()` — Calls `GetAllCategoriesQuery` via MediatR; passes list to view
+  - `OnPostCreateAsync()` — Binds form, validates, sends `CreateCategoryCommand`; handles DomainException errors
+  - `OnPostUpdateAsync()` — Sends `UpdateCategoryCommand`; validates edit form
+  - `OnPostDeleteAsync()` — Sends `DeleteCategoryCommand`; handles "has transactions" error gracefully
+
+**UI Components:**
+- Color picker (HTML5 `<input type="color">`) — Frontend validation; sends hex to backend
+- Icon selector (Bootstrap icon list dropdown or search)
+- Form validation feedback (error messages aligned with DomainException messages)
+- System vs. Custom badges using `IsSystemDefault` flag
+- Disabled Edit/Delete buttons for system categories
+
+**Validation (Frontend):**
+- Required field indicators for Name, Type, Color
+- Max 50 char limit on name input
+- Color picker automatically provides valid hex format
+- Icon dropdown prevents invalid icon selection
+
+**Error Handling:**
+- "Name already exists" → Form error message
+- "Cannot delete category with [N] transactions" → Modal alert
+- "System categories cannot be modified" → Disable buttons
+- Network errors → Graceful error message
 
 ---
 
@@ -413,20 +529,24 @@ Income   (0) - Revenue sources
 Expense  (1) - Money outflows
 ```
 
-**Validation ValueObjects**
+**Validation ValueObjects** (Per Clarification #5: Defense-in-Depth Color Validation)
 
 ```
 CategoryName (ValueObject)
   - Value: string
   - Constraints: 1-50 chars, not empty/whitespace, trimmed
+  - Validation: Applied in Domain layer; prevents invalid names at construction
 
-CategoryColor (ValueObject)
+ColorHex (ValueObject)
   - Value: string (hex format)
-  - Constraints: Must match regex #[0-9A-Fa-f]{6}
+  - Constraints: Must match regex #[0-9A-F]{6} (uppercase hex, 6 digits)
+  - Validation: Domain layer regex enforcement + Frontend HTML5 color picker (defense-in-depth per Clarification #5)
+  - Examples: #F39C12, #E74C3C, #27AE60
 
-CategoryIcon (ValueObject)
-  - Value: string
+IconName (String, validated in Application)
+  - Value: string (Bootstrap icon identifier)
   - Constraints: Must exist in AllowedIcons list (e.g., "shopping-cart", "home", etc.)
+  - Note: Not a ValueObject in MVP; validation delegated to Application handler against hardcoded allowed icon list
 ```
 
 ---
