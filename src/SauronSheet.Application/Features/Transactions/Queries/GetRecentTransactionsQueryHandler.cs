@@ -45,7 +45,7 @@ public class GetRecentTransactionsQueryHandler
 
         // Load categories for name lookup
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
-        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name);
+        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name.Value);
 
         var recent = allTransactions
             .OrderByDescending(t => t.Date)

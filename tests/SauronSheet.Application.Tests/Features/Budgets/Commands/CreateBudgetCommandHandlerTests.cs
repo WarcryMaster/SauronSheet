@@ -7,6 +7,7 @@ using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Commands;
 
@@ -33,12 +34,7 @@ public class CreateBudgetCommandHandlerTests
 
     private Category CreateCategory(CategoryId categoryId, UserId userId)
     {
-        return new Category(
-            categoryId,
-            userId,
-            "Groceries",
-            null,
-            null);
+        return TestCategoryFactory.CreateUserCategory(categoryId: categoryId, userId: userId, name: "Groceries");
     }
 
     [Fact]

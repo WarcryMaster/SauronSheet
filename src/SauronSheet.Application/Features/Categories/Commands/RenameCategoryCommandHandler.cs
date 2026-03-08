@@ -45,8 +45,12 @@ public class RenameCategoryCommandHandler
         // Validate unique name
         await _categoryService.ValidateUniqueName(userId, request.NewName);
 
-        // Rename via domain method (guards enforced)
-        category.Rename(request.NewName);
+        // Update via domain method (guards enforced)
+        // Use current color and icon, only update name
+        category.Update(
+            CategoryName.Create(request.NewName),
+            category.Color,
+            category.IconName);
 
         await _categoryRepo.UpdateAsync(category);
         return Unit.Value;

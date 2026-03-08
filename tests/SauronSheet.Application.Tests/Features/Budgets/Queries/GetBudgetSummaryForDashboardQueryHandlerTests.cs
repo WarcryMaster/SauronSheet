@@ -7,6 +7,7 @@ using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 
@@ -58,9 +59,9 @@ public class GetBudgetSummaryForDashboardQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { budget1, budget2, budget3 });
 
-        var cat1 = new Category(cat1Id, userId, "A", null, null);
-        var cat2 = new Category(cat2Id, userId, "B", null, null);
-        var cat3 = new Category(cat3Id, userId, "C", null, null);
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "A");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "B");
+        var cat3 = TestCategoryFactory.CreateUserCategory(categoryId: cat3Id, userId: userId, name: "C");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat1, cat2, cat3 });
@@ -134,8 +135,8 @@ public class GetBudgetSummaryForDashboardQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { budget1, budget2 });
 
-        var cat1 = new Category(cat1Id, userId, "A", null, null);
-        var cat2 = new Category(cat2Id, userId, "B", null, null);
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "A");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "B");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat1, cat2 });
@@ -178,7 +179,7 @@ public class GetBudgetSummaryForDashboardQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userA))
             .ReturnsAsync(new List<Budget> { budget });
 
-        var cat = new Category(catId, userA, "Food", null, null);
+        var cat = TestCategoryFactory.CreateUserCategory(categoryId: catId, userId: userA, name: "Food");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userA))
             .ReturnsAsync(new List<Category> { cat });

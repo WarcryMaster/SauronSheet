@@ -69,8 +69,8 @@ public class GetSpendingByCategoryQueryHandler
 
                 if (catId != null && categoryLookup.TryGetValue(catId, out var cat))
                 {
-                    catName = cat.Name;
-                    catColor = cat.Color;
+                    catName = cat.Name.Value;
+                    catColor = cat.Color.Value;
                 }
 
                 return new CategorySpendingDto(

@@ -3,6 +3,7 @@ using Moq;
 using SauronSheet.Application.Features.Categories.Queries;
 using SauronSheet.Application.Features.Categories.Commands;
 using SauronSheet.Application.Common;
+using SauronSheet.Application.Tests.Common;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.ValueObjects;
@@ -41,8 +42,8 @@ public class GetCategoriesQueryTests
         var userId = new UserId("test-user-id");
         var categories = new List<Category>
         {
-            Category.CreateSystemDefault(new CategoryId(Guid.NewGuid()), userId, "Groceries"),
-            new Category(new CategoryId(Guid.NewGuid()), userId, "Entertainment", null, null)
+            TestCategoryFactory.CreateSystemCategory(userId: userId, name: "Groceries"),
+            TestCategoryFactory.CreateUserCategory(userId: userId, name: "Entertainment")
         };
 
         _mockCategoryRepo.Setup(x => x.GetByUserIdAsync(userId))
@@ -76,8 +77,8 @@ public class GetCategoriesQueryTests
         var userId = new UserId("test-user-id");
         var categories = new List<Category>
         {
-            Category.CreateSystemDefault(new CategoryId(Guid.NewGuid()), userId, "Groceries"),
-            Category.CreateSystemDefault(new CategoryId(Guid.NewGuid()), userId, "Transport")
+            TestCategoryFactory.CreateSystemCategory(userId: userId, name: "Groceries"),
+            TestCategoryFactory.CreateSystemCategory(userId: userId, name: "Transport")
         };
 
         _mockCategoryRepo.Setup(x => x.GetByUserIdAsync(userId))
@@ -109,9 +110,9 @@ public class GetCategoriesQueryTests
         var userId = new UserId("test-user-id");
         var categories = new List<Category>
         {
-            new Category(new CategoryId(Guid.NewGuid()), userId, "Zebra", null, null),
-            Category.CreateSystemDefault(new CategoryId(Guid.NewGuid()), userId, "Groceries"),
-            new Category(new CategoryId(Guid.NewGuid()), userId, "Apple", null, null)
+            TestCategoryFactory.CreateUserCategory(userId: userId, name: "Zebra"),
+            TestCategoryFactory.CreateSystemCategory(userId: userId, name: "Groceries"),
+            TestCategoryFactory.CreateUserCategory(userId: userId, name: "Apple")
         };
 
         _mockCategoryRepo.Setup(x => x.GetByUserIdAsync(userId))

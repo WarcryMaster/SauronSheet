@@ -84,7 +84,7 @@ public class GetTransactionsQueryHandler
         {
             var category = await _categoryRepo.GetByIdAsync(new CategoryId(catId));
             if (category != null)
-                categories[new CategoryId(catId)] = category.Name;
+                categories[new CategoryId(catId)] = category.Name.Value;
         }
 
         var dtos = paginated.Select(t => new TransactionDto(

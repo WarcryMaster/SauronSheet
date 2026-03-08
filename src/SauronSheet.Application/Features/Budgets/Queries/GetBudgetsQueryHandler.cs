@@ -86,8 +86,8 @@ public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<Budg
             string? catColor = null;
             if (categoryLookup.TryGetValue(budget.CategoryId, out var cat))
             {
-                catName = cat.Name;
-                catColor = cat.Color;
+                catName = cat.Name.Value;
+                catColor = cat.Color.Value;
             }
 
             results.Add(new BudgetStatusDto(
