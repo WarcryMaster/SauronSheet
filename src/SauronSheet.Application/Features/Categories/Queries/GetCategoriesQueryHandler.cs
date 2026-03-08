@@ -42,20 +42,18 @@ public class GetCategoriesQueryHandler
 
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
 
-        // CRITICAL FIX I-4: Calculate TransactionCount per category
-        var categoryIds = categories.Select(c => c.Id).ToList();
-        var transactionCounts = await _transactionRepo.GetCountsByCategoriesAsync(categoryIds);
-
         var result = categories.Select(c => new CategoryDto(
             c.Id.Value,
-            c.Name,
-            c.Color,
-            c.Icon,
+            c.Name.Value,
+            c.Type.ToString(),
+            c.Color.Value,
+            c.IconName,
             c.IsSystemDefault,
-            transactionCounts.TryGetValue(c.Id, out var count) ? count : 0
+            c.CreatedAt,
+            c.UpdatedAt ?? DateTime.UtcNow
         )).ToList();
 
-        // Sort: system defaults first, then user-defined alphabetically
+        // Sort: system defaults first, then user-defined alphabetically by name
         return result
             .OrderByDescending(c => c.IsSystemDefault)
             .ThenBy(c => c.Name)

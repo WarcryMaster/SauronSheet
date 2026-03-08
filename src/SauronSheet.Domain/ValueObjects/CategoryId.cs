@@ -1,14 +1,16 @@
 namespace SauronSheet.Domain.ValueObjects;
 
 using System;
-using Common;
+using Exceptions;
 
 /// <summary>
-/// Strong-typed value object for Category ID.
-/// Prevents accidental mixing of different ID types.
+/// Strong-typed ID for Category aggregate root.
+/// Prevents accidental mixing with other Guid IDs at compile time.
 /// </summary>
 public record CategoryId(Guid Value)
 {
     public CategoryId() : this(Guid.Empty) =>
-        throw new ArgumentException("CategoryId cannot be empty.");
+        throw new DomainException("CategoryId cannot be empty.");
+
+    public static CategoryId New() => new(Guid.NewGuid());
 }

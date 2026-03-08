@@ -6,6 +6,7 @@ using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Domain.Exceptions;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Transactions.Commands;
 
@@ -61,7 +62,7 @@ public class CreateTransactionCommandTests
 
         var categoryId = Guid.NewGuid();
         var userId = new UserId("test-user-id");
-        var category = new Category(new CategoryId(categoryId), userId, "Food", null, null);
+        var category = TestCategoryFactory.CreateUserCategory(categoryId: new CategoryId(categoryId), userId: userId, name: "Food");
 
         _mockCategoryRepo.Setup(x => x.GetByIdAsync(new CategoryId(categoryId)))
             .ReturnsAsync(category);

@@ -91,8 +91,8 @@ public class GetBudgetVsActualQueryHandler : IRequestHandler<GetBudgetVsActualQu
             string? catColor = null;
             if (categoryLookup.TryGetValue(budget.CategoryId, out var cat))
             {
-                catName = cat.Name;
-                catColor = cat.Color;
+                catName = cat.Name.Value;
+                catColor = cat.Color.Value;
             }
 
             results.Add(new BudgetVsActualDto(
@@ -116,8 +116,8 @@ public class GetBudgetVsActualQueryHandler : IRequestHandler<GetBudgetVsActualQu
             string? catColor = null;
             if (categoryLookup.TryGetValue(kvp.Key, out var cat))
             {
-                catName = cat.Name;
-                catColor = cat.Color;
+                catName = cat.Name.Value;
+                catColor = cat.Color.Value;
             }
 
             results.Add(new BudgetVsActualDto(

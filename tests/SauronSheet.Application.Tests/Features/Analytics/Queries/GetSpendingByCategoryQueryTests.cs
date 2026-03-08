@@ -6,6 +6,7 @@ using SauronSheet.Application.Features.Analytics.Queries;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Analytics.Queries;
 
@@ -42,11 +43,7 @@ public class GetSpendingByCategoryQueryTests
 
     private static Category CreateCategory(Guid id, string name, string? color = null)
     {
-        return new Category(
-            new CategoryId(id),
-            new UserId("user-1"),
-            name,
-            color);
+        return TestCategoryFactory.CreateUserCategory(categoryId: new CategoryId(id), userId: new UserId("user-1"), name: name, color: color);
     }
 
     [Fact]

@@ -8,6 +8,7 @@ using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 
@@ -54,7 +55,7 @@ public class GetBudgetByIdQueryHandlerTests
             .Setup(r => r.GetByIdAsync(budget.Id))
             .ReturnsAsync(budget);
 
-        var category = new Category(catId, userId, "Groceries", "#00FF00", null);
+        var category = TestCategoryFactory.CreateUserCategory(categoryId: catId, userId: userId, name: "Groceries", color: "#00FF00");
         _categoryRepoMock
             .Setup(r => r.GetByIdAsync(catId))
             .ReturnsAsync(category);
@@ -120,7 +121,7 @@ public class GetBudgetByIdQueryHandlerTests
             .Setup(r => r.GetByIdAsync(budget.Id))
             .ReturnsAsync(budget);
 
-        var category = new Category(catId, userId, "Groceries", null, null);
+        var category = TestCategoryFactory.CreateUserCategory(categoryId: catId, userId: userId, name: "Groceries", color: "#00FF00");
         _categoryRepoMock
             .Setup(r => r.GetByIdAsync(catId))
             .ReturnsAsync(category);

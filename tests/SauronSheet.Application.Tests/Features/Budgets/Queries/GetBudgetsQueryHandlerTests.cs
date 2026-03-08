@@ -7,6 +7,7 @@ using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 
@@ -43,7 +44,7 @@ public class GetBudgetsQueryHandlerTests
 
     private Category CreateCategory(CategoryId id, UserId userId, string name, string? color = null)
     {
-        return new Category(id, userId, name, color, null);
+        return TestCategoryFactory.CreateUserCategory(categoryId: id, userId: userId, name: name, color: color);
     }
 
     private Transaction CreateExpense(UserId userId, CategoryId catId, decimal amount, DateTime date)

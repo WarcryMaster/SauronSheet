@@ -6,7 +6,10 @@ using SauronSheet.Application.Features.Categories.Commands;
 using SauronSheet.Application.Features.Categories.Queries;
 using SauronSheet.Application.Features.Categories.DTOs;
 using SauronSheet.Domain.Exceptions;
+using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Infrastructure.Assets;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace SauronSheet.Frontend.Pages.Categories;
 
@@ -14,99 +17,155 @@ namespace SauronSheet.Frontend.Pages.Categories;
 public class IndexModel : PageModel
 {
     private readonly IMediator _mediator;
+    private readonly ILogger<IndexModel> _logger;
 
     public List<CategoryDto> Categories { get; set; } = new();
+    public IReadOnlyList<string> AvailableIcons => AllowedBootstrapIcons.GetAllIconsForDropdown();
 
     [BindProperty]
-    public CreateCategoryInputModel? NewCategory { get; set; }
+    public CategoryFormModel CreateForm { get; set; } = new();
 
-    public string? ErrorMessage { get; set; }
-    public string? SuccessMessage { get; set; }
+    [BindProperty]
+    public CategoryFormModel EditForm { get; set; } = new();
 
-    public IndexModel(IMediator mediator)
+    public IndexModel(IMediator mediator, ILogger<IndexModel> logger)
     {
         _mediator = mediator;
+        _logger = logger;
     }
 
     public async Task OnGetAsync()
     {
-        Categories = await _mediator.Send(new GetCategoriesQuery());
+        try
+        {
+            Categories = await _mediator.Send(new GetCategoriesQuery());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading categories");
+        }
     }
 
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostCreateAsync()
     {
         try
         {
-            await _mediator.Send(new CreateCategoryCommand(
-                NewCategory!.Name,
-                NewCategory.Color,
-                NewCategory.Icon));
-            SuccessMessage = "Category created successfully.";
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Validate icon
+            if (!AllowedBootstrapIcons.IsValid(CreateForm.IconName))
+                return BadRequest(new { error = "Invalid icon selection" });
+
+            var command = new CreateCategoryCommand(
+                CreateForm.Name,
+                CreateForm.Color ?? "#3498DB",
+                CreateForm.IconName);
+
+            var result = await _mediator.Send(command);
+
+            return new JsonResult(new { success = true, categoryId = result });
         }
         catch (DomainException ex)
         {
-            ErrorMessage = ex.Message;
+            _logger.LogWarning("Category creation failed: {Message}", ex.Message);
+            return new JsonResult(new { success = false, error = ex.Message }, 
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            ErrorMessage = "An error occurred while creating the category.";
-            // TODO Phase 6: Log exception
+            _logger.LogError(ex, "Error creating category");
+            return new JsonResult(new { success = false, error = "An error occurred while creating the category" },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
-
-        Categories = await _mediator.Send(new GetCategoriesQuery());
-        return Page();
     }
 
-    public async Task<IActionResult> OnPostRenameAsync(Guid categoryId, string newName)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostUpdateAsync()
     {
         try
         {
-            await _mediator.Send(new RenameCategoryCommand(categoryId, newName));
-            SuccessMessage = "Category renamed successfully.";
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Validate icon
+            if (!AllowedBootstrapIcons.IsValid(EditForm.IconName))
+                return BadRequest(new { error = "Invalid icon selection" });
+
+            var command = new RenameCategoryCommand(
+                EditForm.CategoryId,
+                EditForm.Name);
+
+            await _mediator.Send(command);
+
+            return new JsonResult(new { success = true });
         }
         catch (DomainException ex)
         {
-            ErrorMessage = ex.Message;
+            _logger.LogWarning("Category update failed: {Message}", ex.Message);
+            return new JsonResult(new { success = false, error = ex.Message },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            ErrorMessage = "An error occurred while renaming the category.";
-            // TODO Phase 6: Log exception
+            _logger.LogError(ex, "Error updating category");
+            return new JsonResult(new { success = false, error = "An error occurred while updating the category" },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
-
-        Categories = await _mediator.Send(new GetCategoriesQuery());
-        return Page();
     }
 
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostDeleteAsync(Guid categoryId)
     {
         try
         {
-            await _mediator.Send(new DeleteCategoryCommand(categoryId));
-            SuccessMessage = "Category deleted successfully.";
+            var userId = User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var command = new DeleteCategoryCommand(categoryId);
+            await _mediator.Send(command);
+
+            return new JsonResult(new { success = true });
         }
         catch (DomainException ex)
         {
-            ErrorMessage = ex.Message;
+            _logger.LogWarning("Category deletion failed: {Message}", ex.Message);
+            return new JsonResult(new { success = false, error = ex.Message },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            ErrorMessage = "An error occurred while deleting the category.";
-            // TODO Phase 6: Log exception
+            _logger.LogError(ex, "Error deleting category");
+            return new JsonResult(new { success = false, error = "An error occurred while deleting the category" },
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
-
-        Categories = await _mediator.Send(new GetCategoriesQuery());
-        return Page();
     }
 }
 
-public class CreateCategoryInputModel
+public class CategoryFormModel
 {
     [Required]
-    [StringLength(100, MinimumLength = 1)]
+    [StringLength(50, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
 
-    public string? Color { get; set; }
+    [Required(ErrorMessage = "Type is required")]
+    public int Type { get; set; } = 1; // Default to Expense
 
-    public string? Icon { get; set; }
+    [Required]
+    public string Color { get; set; } = "#3498DB";
+
+    [Required]
+    public string IconName { get; set; } = "tag";
+
+    public Guid CategoryId { get; set; }
 }

@@ -7,6 +7,7 @@ using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
+using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 
@@ -56,8 +57,8 @@ public class GetBudgetVsActualQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { budget1, budget2 });
 
-        var cat1 = new Category(cat1Id, userId, "Groceries", null, null);
-        var cat2 = new Category(cat2Id, userId, "Entertainment", null, null);
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "Groceries");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "Entertainment");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat1, cat2 });
@@ -99,8 +100,8 @@ public class GetBudgetVsActualQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { budget });
 
-        var cat1 = new Category(budgetedCatId, userId, "Groceries", null, null);
-        var cat2 = new Category(unbudgetedCatId, userId, "Transport", null, null);
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: budgetedCatId, userId: userId, name: "Groceries");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: unbudgetedCatId, userId: userId, name: "Transport");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat1, cat2 });
@@ -142,7 +143,7 @@ public class GetBudgetVsActualQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { budget });
 
-        var cat = new Category(catId, userId, "Groceries", null, null);
+        var cat = TestCategoryFactory.CreateUserCategory(categoryId: catId, userId: userId, name: "Groceries");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat });
@@ -180,8 +181,8 @@ public class GetBudgetVsActualQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { budget1, budget2 });
 
-        var cat1 = new Category(cat1Id, userId, "A", null, null);
-        var cat2 = new Category(cat2Id, userId, "B", null, null);
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "A");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "B");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat1, cat2 });
@@ -227,8 +228,8 @@ public class GetBudgetVsActualQueryHandlerTests
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Budget> { underBudget, overBudget });
 
-        var cat1 = new Category(underCatId, userId, "Under", null, null);
-        var cat2 = new Category(overCatId, userId, "Over", null, null);
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: underCatId, userId: userId, name: "Under");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: overCatId, userId: userId, name: "Over");
         _categoryRepoMock
             .Setup(r => r.GetByUserIdAsync(userId))
             .ReturnsAsync(new List<Category> { cat1, cat2 });

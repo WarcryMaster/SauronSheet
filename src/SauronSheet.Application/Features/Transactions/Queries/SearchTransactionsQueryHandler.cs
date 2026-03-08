@@ -84,7 +84,7 @@ public class SearchTransactionsQueryHandler
 
         // Load categories for name lookup
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
-        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name);
+        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name.Value);
 
         // Sort, paginate, map
         var sorted = transactions.OrderByDescending(t => t.Date).ToList();

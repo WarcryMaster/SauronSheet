@@ -1,52 +1,528 @@
 ﻿@page
 @model SauronSheet.Frontend.Pages.Categories.IndexModel
+@using SauronSheet.Domain.ValueObjects
 @{
-    ViewData["Title"] = "Categories";
+    ViewData["Title"] = "Category Management";
 }
 
-<div class="d-flex flex-column gap-4">
-    <h1 class="h3 fw-bold mb-0">Categories</h1>
-
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="alert alert-success d-flex align-items-center gap-2" role="alert">
-            <svg xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-            <span>@Model.SuccessMessage</span>
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-2">Manage Categories</h1>
+            <p class="text-muted">Create and organize custom expense categories. System categories are read-only.</p>
         </div>
-    }
-
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
-            <svg xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0" width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z" clip-rule="evenodd"/></svg>
-            <span>@Model.ErrorMessage</span>
-        </div>
-    }
-
-    <!-- Create Category Form -->
-    <div class="card border-0 shadow-sm p-4">
-        <h2 class="h6 fw-semibold mb-3">Create New Category</h2>
-        <form method="post" asp-page-handler="Create">
-            <div class="row g-3 mb-3">
-                <div class="col-12 col-sm-4">
-                    <label for="NewCategory_Name" class="form-label small fw-semibold text-muted text-uppercase">Name</label>
-                    <input type="text" id="NewCategory_Name" name="NewCategory.Name" asp-for="NewCategory.Name"
-                           class="form-control form-control-sm" placeholder="e.g., Entertainment" required />
-                </div>
-                <div class="col-12 col-sm-4">
-                    <label for="NewCategory_Color" class="form-label small fw-semibold text-muted text-uppercase">Color <span class="text-muted fw-normal">(optional)</span></label>
-                    <input type="color" id="NewCategory_Color" name="NewCategory.Color" asp-for="NewCategory.Color"
-                           class="form-control form-control-sm form-control-color w-100" />
-                </div>
-                <div class="col-12 col-sm-4">
-                    <label for="NewCategory_Icon" class="form-label small fw-semibold text-muted text-uppercase">Icon <span class="text-muted fw-normal">(optional)</span></label>
-                    <input type="text" id="NewCategory_Icon" name="NewCategory.Icon" asp-for="NewCategory.Icon"
-                           class="form-control form-control-sm" placeholder="e.g., 🎬" />
-                </div>
-            </div>
-            <button type="submit" class="btn btn-brand btn-sm">+ Create Category</button>
-        </form>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCategoryModal" aria-label="Add new category">
+            <i class="bi bi-plus-circle"></i> Add New Category
+        </button>
     </div>
+
+    <!-- Category List by Type -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <h3 class="h5 fw-bold mb-3">Income Categories</h3>
+            <div class="list-group" role="region" aria-label="Income categories">
+                @{
+                    var incomeCategories = Model.Categories.Where(c => c.Type == "Income").OrderBy(c => c.Name).ToList();
+                }
+                @if (incomeCategories.Any())
+                {
+                    @foreach (var category in incomeCategories)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center" role="listitem">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="category-color-chip" style="background-color: @category.Color; width: 24px; height: 24px; border-radius: 4px;" aria-label="Category color @category.Color"></div>
+                                <div>
+                                    <div class="fw-bold">@category.Name</div>
+                                    @if (category.IsSystemDefault)
+                                    {
+                                        <span class="badge bg-secondary">System</span>
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                @if (!category.IsSystemDefault)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
+                                            onclick="loadEditForm(@Html.Raw(Json.Serialize(category)))" 
+                                            aria-label="Edit @category.Name category">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeleteConfirm('@category.Id', '@Html.Encode(category.Name)')" 
+                                            aria-label="Delete @category.Name category">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted text-center py-3">No income categories yet</div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <h3 class="h5 fw-bold mb-3">Expense Categories</h3>
+            <div class="list-group" role="region" aria-label="Expense categories">
+                @{
+                    var expenseCategories = Model.Categories.Where(c => c.Type == "Expense").OrderBy(c => c.Name).ToList();
+                }
+                @if (expenseCategories.Any())
+                {
+                    @foreach (var category in expenseCategories)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center" role="listitem">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="category-color-chip" style="background-color: @category.Color; width: 24px; height: 24px; border-radius: 4px;" aria-label="Category color @category.Color"></div>
+                                <div>
+                                    <div class="fw-bold">@category.Name</div>
+                                    @if (category.IsSystemDefault)
+                                    {
+                                        <span class="badge bg-secondary">System</span>
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                @if (!category.IsSystemDefault)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
+                                            onclick="loadEditForm(@Html.Raw(Json.Serialize(category)))" 
+                                            aria-label="Edit @category.Name category">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeleteConfirm('@category.Id', '@Html.Encode(category.Name)')" 
+                                            aria-label="Delete @category.Name category">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted text-center py-3">No expense categories yet</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCategoryLabel">Add New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createForm" method="post" asp-page-handler="Create" onsubmit="return validateCreateForm(event)">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label for="createName" class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required 
+                               aria-describedby="nameError" aria-required="true" />
+                        <div class="form-text">Max 50 characters (<span id="charCounter">0</span>/50)</div>
+                        <div id="nameError" class="invalid-feedback d-block" style="display: none;">Category name is required</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="createType" class="form-label">Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="createType" name="CreateForm.Type" required aria-required="true">
+                            <option value="">Select type...</option>
+                            <option value="0">Income</option>
+                            <option value="1">Expense</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="createColor" class="form-label">Color <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="color" class="form-control form-control-color" id="createColor" name="CreateForm.Color" value="#3498DB" required 
+                                   style="width: 60px;" aria-label="Select category color" />
+                            <span id="colorPreview" class="badge" style="background-color: #3498DB;">Preview</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="createIcon" class="form-label">Icon <span class="text-danger">*</span></label>
+                        <select class="form-select" id="createIcon" name="CreateForm.IconName" required aria-required="true">
+                            <option value="">Select icon...</option>
+                            @foreach (var icon in Model.AvailableIcons)
+                            {
+                                <option value="@icon">@icon</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div id="createError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="createSubmitBtn" disabled>Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCategoryLabel">Edit Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editForm" method="post" asp-page-handler="Update" onsubmit="return validateEditForm(event)">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="editCategoryId" name="EditForm.CategoryId" />
+                    
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
+                        <div class="form-text">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editColor" class="form-label">Color <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="color" class="form-control form-control-color" id="editColor" name="EditForm.Color" required 
+                                   style="width: 60px;" aria-label="Select category color" />
+                            <span id="editColorPreview" class="badge">Preview</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editIcon" class="form-label">Icon <span class="text-danger">*</span></label>
+                        <select class="form-select" id="editIcon" name="EditForm.IconName" required aria-required="true">
+                            @foreach (var icon in Model.AvailableIcons)
+                            {
+                                <option value="@icon">@icon</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div id="editError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="editSubmitBtn">Update Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmLabel">Delete Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+                <div id="deleteError" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .category-color-chip {
+        border: 1px solid #dee2e6;
+    }
+    
+    .form-control:focus,
+    .form-select:focus,
+    .form-control-color:focus {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+    }
+    
+    .btn:focus {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+    }
+</style>
+
+<script>
+    let currentDeleteCategoryId = null;
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        // Create form listeners
+        const createNameInput = document.getElementById('createName');
+        const createColorInput = document.getElementById('createColor');
+        const createTypeSelect = document.getElementById('createType');
+        const createIconSelect = document.getElementById('createIcon');
+        const createModal = document.getElementById('createCategoryModal');
+
+        if (createNameInput) {
+            createNameInput.addEventListener('input', function() {
+                updateCharCounter('charCounter', this.value.length);
+                validateCreateForm();
+            });
+        }
+
+        if (createColorInput) {
+            createColorInput.addEventListener('change', function() {
+                document.getElementById('colorPreview').style.backgroundColor = this.value;
+                validateCreateForm();
+            });
+        }
+
+        if (createTypeSelect) {
+            createTypeSelect.addEventListener('change', validateCreateForm);
+        }
+
+        if (createIconSelect) {
+            createIconSelect.addEventListener('change', validateCreateForm);
+        }
+
+        // Edit form listeners
+        const editNameInput = document.getElementById('editName');
+        const editColorInput = document.getElementById('editColor');
+
+        if (editNameInput) {
+            editNameInput.addEventListener('input', function() {
+                updateCharCounter('editCharCounter', this.value.length);
+            });
+        }
+
+        if (editColorInput) {
+            editColorInput.addEventListener('change', function() {
+                document.getElementById('editColorPreview').style.backgroundColor = this.value;
+            });
+        }
+
+        // Delete confirmation
+        const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
+        if (deleteConfirmBtn) {
+            deleteConfirmBtn.addEventListener('click', performDelete);
+        }
+
+        // Enhanced Modal focus management with focus trap
+        let lastFocusedElement = null;
+        
+        const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        
+        function setupModalFocusTrap(modalElement, initialFocusId) {
+            // Save the element that triggered the modal
+            modalElement.addEventListener('shown.bs.modal', function() {
+                lastFocusedElement = document.activeElement;
+                const initialFocus = document.getElementById(initialFocusId);
+                if (initialFocus) initialFocus.focus();
+                
+                // Implement focus trap on Tab/Shift+Tab
+                const focusableElements = modalElement.querySelectorAll(focusableSelectors);
+                if (focusableElements.length > 0) {
+                    const firstElement = focusableElements[0];
+                    const lastElement = focusableElements[focusableElements.length - 1];
+                    
+                    modalElement.addEventListener('keydown', function(e) {
+                        if (e.key === 'Tab') {
+                            if (e.shiftKey) {
+                                if (document.activeElement === firstElement) {
+                                    lastElement.focus();
+                                    e.preventDefault();
+                                }
+                            } else {
+                                if (document.activeElement === lastElement) {
+                                    firstElement.focus();
+                                    e.preventDefault();
+                                }
+                            }
+                        }
+                        // Escape key closes modal
+                        if (e.key === 'Escape') {
+                            bootstrap.Modal.getInstance(modalElement)?.hide();
+                        }
+                    });
+                }
+            });
+            
+            // Return focus to trigger element when modal closes
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                if (lastFocusedElement) {
+                    lastFocusedElement.focus();
+                    lastFocusedElement = null;
+                }
+            });
+        }
+        
+        // Setup focus traps for all modals
+        if (createModal) {
+            setupModalFocusTrap(createModal, 'createName');
+        }
+        
+        const editModal = document.getElementById('editCategoryModal');
+        if (editModal) {
+            setupModalFocusTrap(editModal, 'editName');
+        }
+        
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        if (deleteConfirmModal) {
+            setupModalFocusTrap(deleteConfirmModal, 'deleteConfirmBtn');
+        }
+    }
+
+    function updateCharCounter(elementId, length) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = length;
+        }
+    }
+
+    function validateCreateForm(event) {
+        const name = document.getElementById('createName').value.trim();
+        const type = document.getElementById('createType').value;
+        const icon = document.getElementById('createIcon').value;
+        const submitBtn = document.getElementById('createSubmitBtn');
+
+        const isValid = name && type && icon;
+        submitBtn.disabled = !isValid;
+
+        if (event && event.submitter === submitBtn) {
+            if (!isValid) {
+                if (!name) document.getElementById('nameError').style.display = 'block';
+                return false;
+            }
+
+            submitCreateForm(event);
+            return false;
+        }
+
+        return isValid;
+    }
+
+    function submitCreateForm(event) {
+        event.preventDefault();
+        const form = document.getElementById('createForm');
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
+                location.reload();
+            } else {
+                document.getElementById('createError').textContent = data.error || 'An error occurred';
+                document.getElementById('createError').classList.remove('d-none');
+            }
+        })
+        .catch(err => {
+            document.getElementById('createError').textContent = 'Request failed';
+            document.getElementById('createError').classList.remove('d-none');
+        });
+    }
+
+    function validateEditForm(event) {
+        const name = document.getElementById('editName').value.trim();
+        const submitBtn = document.getElementById('editSubmitBtn');
+
+        if (!name) {
+            event.preventDefault();
+            return false;
+        }
+
+        submitEditForm(event);
+        return false;
+    }
+
+    function submitEditForm(event) {
+        event.preventDefault();
+        const form = document.getElementById('editForm');
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
+                location.reload();
+            } else {
+                document.getElementById('editError').textContent = data.error || 'An error occurred';
+                document.getElementById('editError').classList.remove('d-none');
+            }
+        })
+        .catch(err => {
+            document.getElementById('editError').textContent = 'Request failed';
+            document.getElementById('editError').classList.remove('d-none');
+        });
+    }
+
+    function loadEditForm(category) {
+        document.getElementById('editCategoryId').value = category.id;
+        document.getElementById('editName').value = category.name;
+        document.getElementById('editColor').value = category.color;
+        document.getElementById('editColorPreview').style.backgroundColor = category.color;
+        document.getElementById('editIcon').value = category.iconName;
+        document.getElementById('editError').classList.add('d-none');
+        updateCharCounter('editCharCounter', category.name.length);
+    }
+
+    function showDeleteConfirm(categoryId, categoryName) {
+        currentDeleteCategoryId = categoryId;
+        document.getElementById('deleteCategoryName').textContent = categoryName;
+        document.getElementById('deleteError').classList.add('d-none');
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
+
+    function performDelete() {
+        if (!currentDeleteCategoryId) return;
+
+        fetch(`?handler=Delete&categoryId=${currentDeleteCategoryId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+                location.reload();
+            } else {
+                document.getElementById('deleteError').textContent = data.error || 'An error occurred';
+                document.getElementById('deleteError').classList.remove('d-none');
+            }
+        })
+        .catch(err => {
+            document.getElementById('deleteError').textContent = 'Request failed';
+            document.getElementById('deleteError').classList.remove('d-none');
+        });
+    }
+</script>
 
     <!-- Categories List -->
     @if (!Model.Categories.Any())
@@ -65,9 +541,9 @@
                 {
                     <li class="list-group-item d-flex align-items-center justify-content-between gap-3 px-4 py-3">
                         <div class="d-flex align-items-center gap-2 min-w-0">
-                            @if (!string.IsNullOrEmpty(category.Icon))
+                            @if (!string.IsNullOrEmpty(category.IconName))
                             {
-                                <span class="fs-5 flex-shrink-0">@category.Icon</span>
+                                <span class="fs-5 flex-shrink-0">@category.IconName</span>
                             }
                             @if (!string.IsNullOrEmpty(category.Color))
                             {

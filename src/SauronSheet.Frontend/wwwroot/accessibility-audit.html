@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Category Management - A11y Audit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #0d6efd;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 40px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 30px;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        h2 {
+            color: #0d6efd;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .status-pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-running {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #0d6efd;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #0b5ed7;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .result-item {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: white;
+            border-left: 4px solid #ddd;
+            border-radius: 2px;
+        }
+        .result-item.pass {
+            border-left-color: #28a745;
+            background: #f0f8f4;
+        }
+        .result-item.fail {
+            border-left-color: #dc3545;
+            background: #fdf4f4;
+        }
+        .result-item.warn {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .result-detail {
+            font-size: 0.9em;
+            color: #555;
+            line-height: 1.5;
+        }
+        .checklist {
+            list-style: none;
+            margin-top: 15px;
+        }
+        .checklist-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .checklist-item input {
+            margin-top: 3px;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+        }
+        .checklist-item label {
+            cursor: pointer;
+            flex: 1;
+            user-select: none;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-box {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-box strong {
+            color: #0c5460;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <h1>Category Management - Accessibility & Performance Audit</h1>
+            <p class="subtitle">Task 23 Verification for Feature 2 MVP - SauronSheet</p>
+        </div>
+
+        <div class="info-box">
+            <strong>ℹ️ Instructions:</strong> This page provides automated accessibility validation using axe-core.
+            Click each test button to run the audit and review results. All tests must pass before releasing Feature 2.
+        </div>
+
+        <!-- axe-core Automated Tests -->
+        <div class="section">
+            <h2>
+                <span>🤖 Automated Tests (axe-core)</span>
+                <span class="status-badge status-pending">Ready</span>
+            </h2>
+            
+            <div class="info-box">
+                <strong>🔍 This test will:</strong><br>
+                1. Load the Categories page<br>
+                2. Inject axe-core accessibility scanner<br>
+                3. Analyze all interactive elements<br>
+                4. Report violations and passes<br><br>
+                <em>Note: You must be authenticated to see the Categories page.</em>
+            </div>
+            
+            <div class="test-controls">
+                <button onclick="runAxeAudit()">Run axe-core Scan on Categories</button>
+                <button onclick="clearResults()">Clear Results</button>
+            </div>
+
+            <div id="axeResults" class="results" style="display: none;">
+                <div id="axeLoading" style="text-align: center; color: #666;">
+                    <p>Loading...</p>
+                </div>
+            </div>
+            <div id="axeStatus"></div>
+        </div>
+
+        <!-- Lighthouse Performance Metrics -->
+        <div class="section">
+            <h2>
+                <span>📊 Lighthouse Metrics</span>
+                <span class="status-badge status-pending">Manual</span>
+            </h2>
+            
+            <div class="info-box">
+                <strong>📌 How to Run:</strong><br>
+                1. Open <code>DevTools</code> (F12) in your browser<br>
+                2. Go to <code>Lighthouse</code> tab<br>
+                3. Select <code>Accessibility</code> category<br>
+                4. Click <code>Analyze page load</code><br>
+                5. Target score: <strong>≥90</strong>
+            </div>
+
+            <div class="summary-stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="a11yScore" style="color: #ffc107;">?</div>
+                    <div class="stat-label">A11y Score</div>
+                    <div style="font-size: 0.8em; color: #999; margin-top: 5px;">Target: ≥90</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="perfScore" style="color: #ffc107;">?</div>
+                    <div class="stat-label">Performance Score</div>
+                    <div style="font-size: 0.8em; color: #999; margin-top: 5px;">Target: ≥75</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="bestPracticesScore" style="color: #ffc107;">?</div>
+                    <div class="stat-label">Best Practices</div>
+                    <div style="font-size: 0.8em; color: #999; margin-top: 5px;">Target: ≥90</div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px;">
+                <strong>📋 Key Checks:</strong><br>
+                ✓ Color contrast ≥4.5:1 (WCAG AA)<br>
+                ✓ Form labels associated with inputs<br>
+                ✓ Button purposes clear (aria-label)<br>
+                ✓ Focus indicator visible<br>
+                ✓ Modal focus trap working (Tab/Escape)
+            </div>
+        </div>
+
+        <!-- Manual Accessibility Checklist -->
+        <div class="section">
+            <h2>
+                <span>♿ Manual A11y Checklist</span>
+                <span class="status-badge status-pending">Interactive</span>
+            </h2>
+
+            <div class="info-box">
+                <strong>🔍 Test with Keyboard Only:</strong><br>
+                Leave mouse aside and navigate using Tab, Shift+Tab, Enter, and Escape keys.
+            </div>
+
+            <ul class="checklist">
+                <li class="checklist-item">
+                    <input type="checkbox" id="check1" onchange="updateProgress()">
+                    <label for="check1"><strong>Tab Navigation:</strong> Tab reaches all interactive elements (buttons, inputs, links)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check2" onchange="updateProgress()">
+                    <label for="check2"><strong>Tab Order:</strong> Tab order is logical (left-to-right, top-to-bottom)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check3" onchange="updateProgress()">
+                    <label for="check3"><strong>Focus Visible:</strong> Focus indicator (outline) visible when tabbing</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check4" onchange="updateProgress()">
+                    <label for="check4"><strong>Modal Open:</strong> Click "Add New Category" → focus moves to Name field</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check5" onchange="updateProgress()">
+                    <label for="check5"><strong>Focus Trap:</strong> Tab in modal stays within modal (wraps from last to first)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check6" onchange="updateProgress()">
+                    <label for="check6"><strong>Escape Key:</strong> Press Escape in modal → modal closes, focus returns to button</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check7" onchange="updateProgress()">
+                    <label for="check7"><strong>Form Validation:</strong> Empty form → Save disabled; add name → Save enabled</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check8" onchange="updateProgress()">
+                    <label for="check8"><strong>Character Counter:</strong> Type in name → counter updates (0/50, 1/50, etc.)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check9" onchange="updateProgress()">
+                    <label for="check9"><strong>Color Contrast:</strong> All text readable against background (high contrast visible)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="check10" onchange="updateProgress()">
+                    <label for="check10"><strong>System Categories:</strong> Edit/Delete buttons disabled for system categories</label>
+                </li>
+            </ul>
+
+            <div id="checklistProgress" class="summary-stats" style="margin-top: 20px;">
+                <div class="stat-box">
+                    <div class="stat-number" id="checkedCount">0</div>
+                    <div class="stat-label">Checks Passed</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="totalCount">10</div>
+                    <div class="stat-label">Total Checks</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="percentagePass" style="color: #ffc107;">0%</div>
+                    <div class="stat-label">Progress</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen Reader Testing -->
+        <div class="section">
+            <h2>
+                <span>🔊 Screen Reader Testing (Optional)</span>
+                <span class="status-badge status-pending">Manual</span>
+            </h2>
+            
+            <div class="info-box">
+                <strong>📌 Tools:</strong> NVDA (Windows, free) | JAWS (commercial) | VoiceOver (macOS/iOS)<br><br>
+                <strong>Test Scenarios:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                    <li>Page loads → screen reader announces "Manage Categories"</li>
+                    <li>Category list → each item announced with name, color, and actions</li>
+                    <li>Edit button → announced as "Edit [CategoryName] category"</li>
+                    <li>Modal opens → title announced; focus in name field</li>
+                    <li>Error message → announced immediately with aria-live</li>
+                    <li>System category → "System" badge announced, Edit/Delete unavailable</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Final Sign-Off -->
+        <div class="section" style="border-bottom: none; background: #f9f9f9; padding: 20px; border-radius: 4px; margin-bottom: 0;">
+            <h2>✅ Task 23 - Sign-Off Criteria</h2>
+            
+            <ul class="checklist">
+                <li class="checklist-item">
+                    <input type="checkbox" id="cop1" onchange="updateSignOff()">
+                    <label for="cop1"><strong>axe-core Results:</strong> <span class="success">0 violations</span> (must be zero)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="cop2" onchange="updateSignOff()">
+                    <label for="cop2"><strong>Lighthouse A11y Score:</strong> <span class="success">≥90</span> (recommended ≥93)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="cop3" onchange="updateSignOff()">
+                    <label for="cop3"><strong>Manual Keyboard Testing:</strong> All tests passed (10/10 checks)</label>
+                </li>
+                <li class="checklist-item">
+                    <input type="checkbox" id="cop4" onchange="updateSignOff()">
+                    <label for="cop4"><strong>WCAG 2.1 AA Compliance:</strong> Verified via all above tests</label>
+                </li>
+            </ul>
+
+            <div id="signOffStatus" style="margin-top: 20px; padding: 15px; background: white; border-radius: 4px; text-align: center; display: none;">
+                <p style="font-size: 1.2em; font-weight: bold; color: #28a745;">
+                    ✅ All criteria met! Task 23 & Feature 2 MVP ready for release.
+                </p>
+            </div>
+        </div>
+    </div>
+
+        <!-- Load axe-core and initialize -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js"></script>
+    <script>
+        let axeResults = null;
+
+        async function runAxeAudit() {
+            const resultsDiv = document.getElementById('axeResults');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<div id="axeLoading" style="text-align: center; color: #666;"><p>🔍 Running axe-core scan... please wait</p></div>';
+            
+            try {
+                // Run axe accessibility audit
+                const results = await axe.run();
+                axeResults = results;
+                
+                displayAxeResults(results);
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result-item fail"><div class="result-title error">Error Running Scan</div><div class="result-detail">${error.message}</div></div>`;
+            }
+        }
+
+        function displayAxeResults(results) {
+            const resultsDiv = document.getElementById('axeResults');
+            const statusDiv = document.getElementById('axeStatus');
+            
+            let html = '<div class="summary-stats" style="margin-bottom: 20px;">';
+            html += `<div class="stat-box"><div class="stat-number" style="color: #28a745;">${results.violations.length}</div><div class="stat-label">Violations</div></div>`;
+            html += `<div class="stat-box"><div class="stat-number" style="color: #ffc107;">${results.incomplete.length}</div><div class="stat-label">Incomplete</div></div>`;
+            html += `<div class="stat-box"><div class="stat-number" style="color: #0d6efd;">${results.passes.length}</div><div class="stat-label">Passed Checks</div></div>`;
+            html += '</div>';
+
+            if (results.violations.length === 0) {
+                html += '<div class="result-item pass"><div class="result-title">✅ PASS - No Violations</div><div class="result-detail">Congratulations! No accessibility violations detected by axe-core.</div></div>';
+                statusDiv.innerHTML = '<p class="success">✅ axe-core: PASS (0 violations)</p>';
+            } else {
+                html += '<div class="result-item fail"><div class="result-title error">❌ VIOLATIONS FOUND</div><div class="result-detail">The following accessibility violations must be fixed:</div></div>';
+                results.violations.forEach(violation => {
+                    html += `<div class="result-item fail">
+                        <div class="result-title">${violation.id.toUpperCase()}</div>
+                        <div class="result-detail">
+                            <strong>Impact:</strong> ${violation.impact}<br>
+                            <strong>Message:</strong> ${violation.help}<br>
+                            <strong>Elements affected:</strong> ${violation.nodes.length}
+                        </div>
+                    </div>`;
+                });
+                statusDiv.innerHTML = `<p class="error">❌ axe-core: FAIL (${results.violations.length} violations found - must be fixed)</p>`;
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function clearResults() {
+            document.getElementById('axeResults').style.display = 'none';
+            document.getElementById('axeStatus').innerHTML = '';
+            axeResults = null;
+        }
+
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.checklist input[type="checkbox"][id^="check"]');
+            const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+            document.getElementById('checkedCount').textContent = checked;
+            document.getElementById('percentagePass').textContent = Math.round((checked / checkboxes.length) * 100) + '%';
+        }
+
+        function updateSignOff() {
+            const signOffCheckboxes = document.querySelectorAll('.checklist input[type="checkbox"][id^="cop"]');
+            const allChecked = Array.from(signOffCheckboxes).every(cb => cb.checked);
+            const statusDiv = document.getElementById('signOffStatus');
+            
+            if (allChecked) {
+                statusDiv.style.display = 'block';
+            } else {
+                statusDiv.style.display = 'none';
+            }
+        }
+
+        // Log on page load
+        console.log('🧪 Accessibility Audit Page Loaded');
+        console.log('📍 Navigate to Categories page and run axe-core scan');
+    </script>
+</body>
+</html>

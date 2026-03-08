@@ -37,7 +37,17 @@ public class CreateCategoryCommandHandler
         await _categoryService.ValidateUniqueName(userId, request.Name);
 
         var categoryId = new CategoryId(Guid.NewGuid());
-        var category = new Category(categoryId, userId, request.Name, request.Color, request.Icon);
+        var categoryName = CategoryName.Create(request.Name);
+        var categoryColor = ColorHex.Create(request.Color ?? "#3498DB"); // Default color if not provided
+        var iconName = request.Icon ?? "tag"; // Default icon if not provided
+
+        var category = new Category(
+            categoryId,
+            userId,
+            categoryName,
+            CategoryType.Expense, // Default to Expense for user-created categories
+            categoryColor,
+            iconName);
 
         await _categoryRepo.AddAsync(category);
         return categoryId.Value;

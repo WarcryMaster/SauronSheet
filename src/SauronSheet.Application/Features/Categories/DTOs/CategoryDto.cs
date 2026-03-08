@@ -1,12 +1,16 @@
 namespace SauronSheet.Application.Features.Categories.DTOs;
 
 /// <summary>
-/// CRITICAL FIX I-4: TransactionCount property added
+/// Data Transfer Object for Category.
+/// Used to return category data to frontend/API consumers.
 /// </summary>
 public record CategoryDto(
     Guid Id,
     string Name,
-    string? Color,
-    string? Icon,
+    string Type,
+    string Color,
+    string IconName,
     bool IsSystemDefault,
-    int TransactionCount);
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    int TransactionCount = 0);

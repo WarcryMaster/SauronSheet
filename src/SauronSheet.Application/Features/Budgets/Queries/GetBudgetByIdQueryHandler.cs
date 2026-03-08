@@ -69,8 +69,8 @@ public class GetBudgetByIdQueryHandler : IRequestHandler<GetBudgetByIdQuery, Bud
         return new BudgetStatusDto(
             budget.Id.Value,
             budget.CategoryId.Value,
-            category?.Name ?? "Unknown",
-            category?.Color,
+            category?.Name.Value ?? "Unknown",
+            category?.Color.Value,
             budget.Limit.Amount,
             currentSpendAmount,
             remaining.Amount,

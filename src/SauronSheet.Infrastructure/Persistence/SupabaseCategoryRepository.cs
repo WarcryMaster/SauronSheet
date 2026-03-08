@@ -27,11 +27,14 @@ internal class CategoryRow : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("color")]
-    public string? Color { get; set; }
+    [Column("type")]
+    public string Type { get; set; } = "Expense";
 
-    [Column("icon")]
-    public string? Icon { get; set; }
+    [Column("color")]
+    public string Color { get; set; } = "#3498DB";
+
+    [Column("icon_name")]
+    public string IconName { get; set; } = "tag";
 
     [Column("is_system_default")]
     public bool IsSystemDefault { get; set; }
@@ -44,20 +47,26 @@ internal class CategoryRow : BaseModel
 
     public Category ToDomain()
     {
+        var categoryType = Type == "Income" ? CategoryType.Income : CategoryType.Expense;
+
         if (IsSystemDefault)
         {
             return Category.CreateSystemDefault(
                 new CategoryId(Guid.Parse(Id)),
                 new UserId(UserId),
-                Name);
+                CategoryName.Create(Name),
+                categoryType,
+                ColorHex.Create(Color),
+                IconName);
         }
 
         return new Category(
             new CategoryId(Guid.Parse(Id)),
             new UserId(UserId),
-            Name,
-            Color,
-            Icon);
+            CategoryName.Create(Name),
+            categoryType,
+            ColorHex.Create(Color),
+            IconName);
     }
 
     public static CategoryRow FromDomain(Category c)
@@ -66,9 +75,10 @@ internal class CategoryRow : BaseModel
         {
             Id = c.Id.Value.ToString(),
             UserId = c.UserId.Value,
-            Name = c.Name,
-            Color = c.Color,
-            Icon = c.Icon,
+            Name = c.Name.Value,
+            Type = c.Type.ToString(),
+            Color = c.Color.Value,
+            IconName = c.IconName,
             IsSystemDefault = c.IsSystemDefault,
             CreatedAt = c.CreatedAt,
             UpdatedAt = c.UpdatedAt
@@ -85,9 +95,10 @@ internal class CategoryRow : BaseModel
         {
             Id = c.Id.Value.ToString(),
             UserId = c.UserId.Value,
-            Name = c.Name,
-            Color = c.Color,
-            Icon = c.Icon,
+            Name = c.Name.Value,
+            Type = c.Type.ToString(),
+            Color = c.Color.Value,
+            IconName = c.IconName,
             IsSystemDefault = c.IsSystemDefault
             // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
         };
@@ -180,5 +191,15 @@ public class SupabaseCategoryRepository : ICategoryRepository
             .Get();
 
         return response.Models.Any();
+    }
+
+    public async Task<int> GetTransactionCountAsync(CategoryId categoryId)
+    {
+        var catIdStr = categoryId.Value.ToString();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.CategoryId == catIdStr)
+            .Get();
+
+        return response.Models.Count;
     }
 }
