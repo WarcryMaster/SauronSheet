@@ -88,8 +88,12 @@ public class GenericBankPdfParser : IPdfParser
                         rows.Add(new RawTransactionRow(
                             rowNumber,
                             dateRaw,
+                            null,               // category
+                            null,               // subCategory
                             descriptionRaw,
+                            null,               // comment
                             amountRaw,
+                            null,               // balance
                             currencyRaw));
                     }
                 }
