@@ -110,6 +110,11 @@ public class SupabaseAuthService : IAuthService
         }
         catch (Exception ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("service", "SupabaseAuthService.RegisterAsync");
+                scope.SetTag("register.email", email);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             return AuthResult.Failure($"Registration error: {ex.Message}");
         }
     }
@@ -156,6 +161,11 @@ public class SupabaseAuthService : IAuthService
         }
         catch (Exception ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("service", "SupabaseAuthService.LoginAsync");
+                scope.SetTag("login.email", email);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             return AuthResult.Failure($"Login error: {ex.Message}");
         }
     }

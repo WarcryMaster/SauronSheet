@@ -76,17 +76,41 @@ public class SupabasePdfImportRepository : IPdfImportRepository
 
     public async Task AddAsync(ImportBatch importBatch, UserId userId)
     {
-        var row = PdfImportRow.FromDomain(importBatch, userId.Value);
-        await _client.From<PdfImportRow>().Insert(row);
+        try
+        {
+            var row = PdfImportRow.FromDomain(importBatch, userId.Value);
+            await _client.From<PdfImportRow>().Insert(row);
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabasePdfImportRepository.AddAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<ImportBatch>> GetByUserIdAsync(UserId userId)
     {
-        var response = await _client.From<PdfImportRow>()
-            .Where(x => x.UserId == userId.Value)
-            .Order("imported_at", Constants.Ordering.Descending)
-            .Get();
+        try
+        {
+            var response = await _client.From<PdfImportRow>()
+                .Where(x => x.UserId == userId.Value)
+                .Order("imported_at", Constants.Ordering.Descending)
+                .Get();
 
-        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabasePdfImportRepository.GetByUserIdAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 }

@@ -43,6 +43,10 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading categories");
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Categories/Index.OnGetAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
         }
     }
 
@@ -74,12 +78,20 @@ public class IndexModel : PageModel
         catch (DomainException ex)
         {
             _logger.LogWarning("Category creation failed: {Message}", ex.Message);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Categories/Index.OnPostCreateAsync");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             return new JsonResult(new { success = false, error = ex.Message }, 
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating category");
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Categories/Index.OnPostCreateAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             return new JsonResult(new { success = false, error = "An error occurred while creating the category" },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
@@ -112,12 +124,20 @@ public class IndexModel : PageModel
         catch (DomainException ex)
         {
             _logger.LogWarning("Category update failed: {Message}", ex.Message);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Categories/Index.OnPostUpdateAsync");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             return new JsonResult(new { success = false, error = ex.Message },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating category");
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Categories/Index.OnPostUpdateAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             return new JsonResult(new { success = false, error = "An error occurred while updating the category" },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }

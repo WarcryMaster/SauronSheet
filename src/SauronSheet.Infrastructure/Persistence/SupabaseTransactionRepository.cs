@@ -117,22 +117,46 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<Transaction?> GetByIdAsync(TransactionId id)
     {
-        var response = await _client.From<TransactionRow>()
-            .Where(x => x.Id == id.Value.ToString())
-            .Get();
+        try
+        {
+            var response = await _client.From<TransactionRow>()
+                .Where(x => x.Id == id.Value.ToString())
+                .Get();
 
-        var row = response.Models.FirstOrDefault();
-        return row?.ToDomain();
+            var row = response.Models.FirstOrDefault();
+            return row?.ToDomain();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseTransactionRepository.GetByIdAsync");
+                scope.SetTag("transactionId", id.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAsync(UserId userId)
     {
-        var response = await _client.From<TransactionRow>()
-            .Where(x => x.UserId == userId.Value)
-            .Order("date", Constants.Ordering.Descending)
-            .Get();
+        try
+        {
+            var response = await _client.From<TransactionRow>()
+                .Where(x => x.UserId == userId.Value)
+                .Order("date", Constants.Ordering.Descending)
+                .Get();
 
-        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseTransactionRepository.GetByUserIdAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<Transaction>> FindBySpecificationAsync(
@@ -141,13 +165,24 @@ public class SupabaseTransactionRepository : ITransactionRepository
         // Fetch all user transactions from Supabase, then apply specification in-memory.
         // The specification's Criteria expression is compiled and used as a filter.
         // This approach works for MVP scale. For large datasets, translate specs to Postgrest filters.
-        var response = await _client.From<TransactionRow>()
-            .Limit(specification.MaxResults)
-            .Get();
+        try
+        {
+            var response = await _client.From<TransactionRow>()
+                .Limit(specification.MaxResults)
+                .Get();
 
-        var allTransactions = response.Models.Select(r => r.ToDomain()).ToList();
-        var predicate = specification.Criteria.Compile();
-        return allTransactions.Where(predicate).ToList().AsReadOnly();
+            var allTransactions = response.Models.Select(r => r.ToDomain()).ToList();
+            var predicate = specification.Criteria.Compile();
+            return allTransactions.Where(predicate).ToList().AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseTransactionRepository.FindBySpecificationAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task AddAsync(Transaction transaction)

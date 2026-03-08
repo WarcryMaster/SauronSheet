@@ -106,51 +106,124 @@ public class SupabaseBudgetRepository : IBudgetRepository
 
     public async Task<Budget?> GetByIdAsync(BudgetId id)
     {
-        var response = await _client.From<BudgetRow>()
-            .Where(r => r.Id == id.Value.ToString())
-            .Get();
-        var row = response.Models.FirstOrDefault();
-        return row?.ToDomain();
+        try
+        {
+            var response = await _client.From<BudgetRow>()
+                .Where(r => r.Id == id.Value.ToString())
+                .Get();
+            var row = response.Models.FirstOrDefault();
+            return row?.ToDomain();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseBudgetRepository.GetByIdAsync");
+                scope.SetTag("budgetId", id.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<Budget>> GetByUserIdAsync(UserId userId)
     {
-        var response = await _client.From<BudgetRow>()
-            .Where(r => r.UserId == userId.Value)
-            .Get();
-        return response.Models.Select(r => r.ToDomain()).ToList();
+        try
+        {
+            var response = await _client.From<BudgetRow>()
+                .Where(r => r.UserId == userId.Value)
+                .Get();
+            return response.Models.Select(r => r.ToDomain()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserIdAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task<Budget?> GetByUserAndCategoryAndMonthAsync(
         UserId userId, CategoryId categoryId, DateRange period)
     {
-        var response = await _client.From<BudgetRow>()
-            .Where(r => r.UserId == userId.Value)
-            .Where(r => r.CategoryId == categoryId.Value.ToString())
-            .Where(r => r.PeriodStart == period.StartDate)
-            .Get();
-        var row = response.Models.FirstOrDefault();
-        return row?.ToDomain();
+        try
+        {
+            var response = await _client.From<BudgetRow>()
+                .Where(r => r.UserId == userId.Value)
+                .Where(r => r.CategoryId == categoryId.Value.ToString())
+                .Where(r => r.PeriodStart == period.StartDate)
+                .Get();
+            var row = response.Models.FirstOrDefault();
+            return row?.ToDomain();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserAndCategoryAndMonthAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.SetTag("categoryId", categoryId.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task AddAsync(Budget budget)
     {
-        var row = BudgetRow.FromDomainForInsert(budget);
-        await _client.From<BudgetRow>().Insert(row);
+        try
+        {
+            var row = BudgetRow.FromDomainForInsert(budget);
+            await _client.From<BudgetRow>().Insert(row);
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseBudgetRepository.AddAsync");
+                scope.SetTag("userId", budget.UserId.Value);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task UpdateAsync(Budget budget)
     {
-        var row = BudgetRow.FromDomain(budget);
-        await _client.From<BudgetRow>()
-            .Where(r => r.Id == budget.Id.Value.ToString())
-            .Update(row);
+        try
+        {
+            var row = BudgetRow.FromDomain(budget);
+            await _client.From<BudgetRow>()
+                .Where(r => r.Id == budget.Id.Value.ToString())
+                .Update(row);
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseBudgetRepository.UpdateAsync");
+                scope.SetTag("budgetId", budget.Id.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 
     public async Task DeleteAsync(BudgetId id)
     {
-        await _client.From<BudgetRow>()
-            .Where(r => r.Id == id.Value.ToString())
-            .Delete();
+        try
+        {
+            await _client.From<BudgetRow>()
+                .Where(r => r.Id == id.Value.ToString())
+                .Delete();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseBudgetRepository.DeleteAsync");
+                scope.SetTag("budgetId", id.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
     }
 }
