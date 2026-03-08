@@ -86,18 +86,33 @@ public class LoginModel : PageModel
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Login failed for email {Email}: Unauthorized - {Message}", Input.Email, ex.Message);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("auth.email", Input.Email ?? "");
+                scope.SetTag("auth.stage", "login");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = "Invalid email or password.";
             return Page();
         }
         catch (DomainException ex)
         {
             _logger.LogWarning("Login failed for email {Email}: Domain error - {Message}", Input.Email, ex.Message);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("auth.email", Input.Email ?? "");
+                scope.SetTag("auth.stage", "login");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
             return Page();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for email {Email}: Unexpected error", Input.Email);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("auth.email", Input.Email ?? "");
+                scope.SetTag("auth.stage", "login");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             ErrorMessage = "An error occurred during login. Please try again later.";
             return Page();
         }

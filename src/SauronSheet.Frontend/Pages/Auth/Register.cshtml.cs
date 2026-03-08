@@ -77,7 +77,22 @@ public class RegisterModel : PageModel
         }
         catch (DomainException ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Auth/Register.OnPostAsync");
+                scope.SetTag("register.email", Input.Email);
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Auth/Register.OnPostAsync");
+                scope.SetTag("register.email", Input.Email);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An error occurred during registration. Please try again later.";
             return Page();
         }
     }

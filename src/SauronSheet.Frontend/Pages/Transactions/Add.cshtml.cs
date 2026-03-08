@@ -52,13 +52,20 @@ public class AddModel : PageModel
         }
         catch (DomainException ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Add.OnPostAsync");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
             return Page();
         }
         catch (Exception ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Add.OnPostAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             ErrorMessage = $"An error occurred: {ex.GetType().Name}: {ex.Message}";
-            // TODO Phase 6: Log exception
             return Page();
         }
     }

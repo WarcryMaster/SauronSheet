@@ -65,9 +65,22 @@ public class SearchModel : PageModel
 
             return Page();
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Search.OnGetAsync");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             return RedirectToPage("/Auth/Login");
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Search.OnGetAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            // Redirigir a página de error genérica
+            return RedirectToPage("/Error");
         }
     }
 }

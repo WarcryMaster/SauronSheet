@@ -51,6 +51,11 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Index.OnPostDeleteAsync");
+                scope.SetTag("transactionId", id.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             TempData["ErrorMessage"] = $"Error deleting transaction: {ex.Message}";
         }
 
