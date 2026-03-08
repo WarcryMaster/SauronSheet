@@ -9,10 +9,11 @@ using Exceptions;
 /// Category aggregate root.
 /// Represents an expense or income category (system default or user-defined).
 /// Enforces invariants: system categories immutable, names unique per user, delete guarded by transactions.
+/// Feature 3: Supports nullable UserId for system/global categories (user_id = NULL in database).
 /// </summary>
 public class Category : AggregateRoot<CategoryId>
 {
-    public UserId UserId { get; private set; }
+    public UserId? UserId { get; private set; }
     public CategoryName Name { get; private set; }
     public CategoryType Type { get; private set; }
     public ColorHex Color { get; private set; }
@@ -21,10 +22,11 @@ public class Category : AggregateRoot<CategoryId>
 
     /// <summary>
     /// Private constructor (use factory methods instead).
+    /// Accepts nullable UserId for system categories.
     /// </summary>
     private Category(
         CategoryId id,
-        UserId userId,
+        UserId? userId,
         CategoryName name,
         CategoryType type,
         ColorHex color,
@@ -32,7 +34,13 @@ public class Category : AggregateRoot<CategoryId>
         bool isSystemDefault)
         : base(id)
     {
-        UserId = userId ?? throw new ArgumentNullException(nameof(userId));
+        // Domain invariant: NULL user_id requires IsSystemDefault=true
+        if (userId == null && !isSystemDefault)
+        {
+            throw new DomainException("Categories with null UserId must be marked as system defaults.");
+        }
+
+        UserId = userId;
         Name = name ?? throw new ArgumentNullException(nameof(name));
         Type = type;
         Color = color ?? throw new ArgumentNullException(nameof(color));
@@ -42,6 +50,7 @@ public class Category : AggregateRoot<CategoryId>
 
     /// <summary>
     /// Public constructor for user-defined custom categories.
+    /// Requires non-null userId for user-scoped categories.
     /// </summary>
     public Category(
         CategoryId id,
@@ -52,7 +61,7 @@ public class Category : AggregateRoot<CategoryId>
         string iconName)
         : this(
             id,
-            userId,
+            userId ?? throw new ArgumentNullException(nameof(userId)),
             name,
             type,
             color,
@@ -63,11 +72,11 @@ public class Category : AggregateRoot<CategoryId>
 
     /// <summary>
     /// Factory method to create a system default category.
-    /// System categories are immutable and global (owned by system, not a specific user).
+    /// System categories are immutable and global (user_id = NULL in database).
+    /// Feature 3: No userId parameter required.
     /// </summary>
     public static Category CreateSystemDefault(
         CategoryId id,
-        UserId userId,
         CategoryName name,
         CategoryType type,
         ColorHex color,
@@ -75,7 +84,7 @@ public class Category : AggregateRoot<CategoryId>
     {
         return new Category(
             id,
-            userId,
+            userId: null,
             name,
             type,
             color,
@@ -123,5 +132,34 @@ public class Category : AggregateRoot<CategoryId>
     public bool CanDelete(bool hasActiveTransactions = false)
     {
         return !IsSystemDefault && !hasActiveTransactions;
+    }
+
+    /// <summary>
+    /// Feature 3: Helper property to determine if this is a global system category (null UserId).
+    /// </summary>
+    public bool IsGlobal => UserId is null;
+
+    /// <summary>
+    /// Feature 3: Helper property to determine if this is user-scoped (non-null UserId).
+    /// </summary>
+    public bool IsUserScoped => UserId is not null;
+
+    /// <summary>
+    /// Feature 3: Check if this category is owned by a specific user.
+    /// Returns false for system categories (null UserId).
+    /// </summary>
+    public bool IsOwnedByUser(UserId userId)
+    {
+        return UserId != null && UserId.Value == userId.Value;
+    }
+
+    /// <summary>
+    /// Feature 3: Check if this category is accessible to a specific user.
+    /// System categories (IsSystemDefault=true) are accessible to all users.
+    /// User-scoped categories are only accessible to their owner.
+    /// </summary>
+    public bool IsAccessibleToUser(UserId userId)
+    {
+        return IsSystemDefault || IsOwnedByUser(userId);
     }
 }

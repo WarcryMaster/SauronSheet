@@ -57,7 +57,8 @@ public class CategoryTests
 
         // Assert
         Assert.True(category.CreatedAt >= beforeCreation && category.CreatedAt <= afterCreation);
-        Assert.True(category.UpdatedAt >= beforeCreation && category.UpdatedAt <= afterCreation);
+        // UpdatedAt is null until the first Update() call
+        Assert.Null(category.UpdatedAt);
     }
 
     [Fact]
@@ -96,9 +97,9 @@ public class CategoryTests
     public void CreateSystemDefault_WithValidData_CreatesSystemCategory()
     {
         // Arrange & Act
+        // Feature 3: CreateSystemDefault no longer takes userId parameter
         var category = Category.CreateSystemDefault(
             CategoryId.New(),
-            _testUserId,
             CategoryName.Create("Salary"),
             CategoryType.Income,
             ColorHex.Create("#27AE60"),
@@ -106,6 +107,7 @@ public class CategoryTests
 
         // Assert
         Assert.True(category.IsSystemDefault);
+        Assert.Null(category.UserId); // Feature 3: System categories have NULL user_id
         Assert.Equal("Salary", category.Name.Value);
         Assert.Equal(CategoryType.Income, category.Type);
     }
@@ -133,7 +135,8 @@ public class CategoryTests
     {
         // Arrange
         var category = CreateTestCategory();
-        var originalUpdatedAt = category.UpdatedAt;
+        Assert.Null(category.UpdatedAt); // UpdatedAt is null before first update
+        var beforeUpdate = DateTime.UtcNow;
         System.Threading.Thread.Sleep(100); // Ensure time passes
 
         // Act
@@ -142,8 +145,11 @@ public class CategoryTests
             ColorHex.Create("#E74C3C"),
             "new-icon");
 
+        var afterUpdate = DateTime.UtcNow;
+
         // Assert
-        Assert.True(category.UpdatedAt > originalUpdatedAt);
+        Assert.NotNull(category.UpdatedAt);
+        Assert.True(category.UpdatedAt >= beforeUpdate && category.UpdatedAt <= afterUpdate);
     }
 
     [Fact]
@@ -152,7 +158,6 @@ public class CategoryTests
         // Arrange
         var category = Category.CreateSystemDefault(
             CategoryId.New(),
-            _testUserId,
             CategoryName.Create("Salary"),
             CategoryType.Income,
             ColorHex.Create("#27AE60"),
@@ -197,7 +202,6 @@ public class CategoryTests
         // Arrange
         var category = Category.CreateSystemDefault(
             CategoryId.New(),
-            _testUserId,
             CategoryName.Create("Salary"),
             CategoryType.Income,
             ColorHex.Create("#27AE60"),
@@ -223,7 +227,6 @@ public class CategoryTests
         // Arrange
         var category = Category.CreateSystemDefault(
             CategoryId.New(),
-            _testUserId,
             CategoryName.Create("Salary"),
             CategoryType.Income,
             ColorHex.Create("#27AE60"),

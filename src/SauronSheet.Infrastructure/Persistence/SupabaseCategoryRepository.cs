@@ -22,7 +22,7 @@ internal class CategoryRow : BaseModel
     public string Id { get; set; } = "";
 
     [Column("user_id")]
-    public string UserId { get; set; } = "";
+    public string? UserId { get; set; } = null;
 
     [Column("name")]
     public string Name { get; set; } = "";
@@ -45,15 +45,22 @@ internal class CategoryRow : BaseModel
     [Column("updated_at")]
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// Feature 3: Updated to handle nullable UserId from database.
+    /// </summary>
     public Category ToDomain()
     {
         var categoryType = Type == "Income" ? CategoryType.Income : CategoryType.Expense;
+
+        // Feature 3: Handle nullable UserId from database
+        UserId? userId = string.IsNullOrEmpty(UserId) 
+            ? null 
+            : new UserId(UserId);
 
         if (IsSystemDefault)
         {
             return Category.CreateSystemDefault(
                 new CategoryId(Guid.Parse(Id)),
-                new UserId(UserId),
                 CategoryName.Create(Name),
                 categoryType,
                 ColorHex.Create(Color),
@@ -62,19 +69,22 @@ internal class CategoryRow : BaseModel
 
         return new Category(
             new CategoryId(Guid.Parse(Id)),
-            new UserId(UserId),
+            userId ?? throw new InvalidOperationException($"User category {Id} missing user_id"),
             CategoryName.Create(Name),
             categoryType,
             ColorHex.Create(Color),
             IconName);
     }
 
+    /// <summary>
+    /// Feature 3: Updated to handle nullable UserId.
+    /// </summary>
     public static CategoryRow FromDomain(Category c)
     {
         return new CategoryRow
         {
             Id = c.Id.Value.ToString(),
-            UserId = c.UserId.Value,
+            UserId = c.UserId?.Value,
             Name = c.Name.Value,
             Type = c.Type.ToString(),
             Color = c.Color.Value,
@@ -88,13 +98,14 @@ internal class CategoryRow : BaseModel
     /// <summary>
     /// Converts category to insert-safe DTO (excludes server-managed timestamps).
     /// Timestamps are assigned by database triggers, not by client.
+    /// Feature 3: Handles nullable UserId for system categories.
     /// </summary>
     public static CategoryRow FromDomainForInsert(Category c)
     {
         return new CategoryRow
         {
             Id = c.Id.Value.ToString(),
-            UserId = c.UserId.Value,
+            UserId = c.UserId?.Value,
             Name = c.Name.Value,
             Type = c.Type.ToString(),
             Color = c.Color.Value,
@@ -128,10 +139,14 @@ public class SupabaseCategoryRepository : ICategoryRepository
         return row?.ToDomain();
     }
 
+    /// <summary>
+    /// Feature 3: Get categories for user, including system defaults (union query).
+    /// Returns both user-scoped categories and system categories in single query.
+    /// </summary>
     public async Task<IReadOnlyList<Category>> GetByUserIdAsync(UserId userId)
     {
         var response = await _client.From<CategoryRow>()
-            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.UserId == userId.Value || x.UserId == null)  // UNION: user + system
             .Order("name", Constants.Ordering.Ascending)
             .Get();
 
@@ -150,10 +165,28 @@ public class SupabaseCategoryRepository : ICategoryRepository
         return row?.ToDomain();
     }
 
-    public async Task<IReadOnlyList<Category>> GetSystemDefaultsAsync(UserId userId)
+    /// <summary>
+    /// Feature 3: Find category by name across all scopes (user + system).
+    /// Used for validation in CreateCategoryCommand.
+    /// </summary>
+    public async Task<Category?> FindByNameAsync(string name)
     {
         var response = await _client.From<CategoryRow>()
-            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.Name == name)  // NO user_id filter - global search
+            .Limit(1)
+            .Get();
+
+        return response.Models.FirstOrDefault()?.ToDomain();
+    }
+
+    /// <summary>
+    /// Feature 3: Get system default categories (NULL user_id).
+    /// No userId parameter required - system categories are global.
+    /// </summary>
+    public async Task<IReadOnlyList<Category>> GetSystemDefaultsAsync()
+    {
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == null)
             .Where(x => x.IsSystemDefault == true)
             .Get();
 

@@ -40,8 +40,9 @@ public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, G
         var categoryId = new CategoryId(request.CategoryId);
 
         // Validate category exists for this user
+        // Feature 3: Safe null-checking for nullable UserId
         var category = await _categoryRepo.GetByIdAsync(categoryId);
-        if (category is null || !category.UserId.Value.Equals(userId.Value, StringComparison.OrdinalIgnoreCase))
+        if (category is null || !category.IsAccessibleToUser(userId))
             throw new EntityNotFoundException("Category", request.CategoryId);
 
         // Build domain values

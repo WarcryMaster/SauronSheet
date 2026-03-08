@@ -34,16 +34,17 @@ public class SeedSystemDefaultsCommandHandler
     {
         var userId = new UserId(_userContext.UserId);
 
-        // Check if system defaults already exist (idempotent)
-        var existingDefaults = await _categoryRepo.GetSystemDefaultsAsync(userId);
-        if (existingDefaults.Count == 4)
+        // Feature 3: Check if system defaults already exist (idempotent)
+        // Note: This handler may be deprecated after Feature 3 (Task 6.5)
+        var existingDefaults = await _categoryRepo.GetSystemDefaultsAsync();
+        if (existingDefaults.Count == 24)
         {
             // Already seeded, return existing IDs
             return existingDefaults.Select(c => c.Id.Value).ToList();
         }
 
-        // Get system defaults from domain service
-        var systemDefaults = _categoryService.GetSystemDefaults(userId);
+        // Get system defaults from domain service (no userId param now)
+        var systemDefaults = _categoryService.GetSystemDefaults();
 
         var createdIds = new List<Guid>();
         foreach (var category in systemDefaults)

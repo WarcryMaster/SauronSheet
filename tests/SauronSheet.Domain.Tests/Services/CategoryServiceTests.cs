@@ -111,7 +111,6 @@ public class CategoryServiceTests
         // Arrange
         var category = Category.CreateSystemDefault(
             CategoryId.New(),
-            _testUserId,
             CategoryName.Create("Salary"),
             CategoryType.Income,
             ColorHex.Create("#27AE60"),
@@ -150,8 +149,9 @@ public class CategoryServiceTests
     [Fact]
     public void GetSystemDefaults_ReturnsExactly24Categories()
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert
         Assert.Equal(24, defaults.Count);
@@ -160,8 +160,9 @@ public class CategoryServiceTests
     [Fact]
     public void GetSystemDefaults_ReturnsAllMarkedAsSystemDefault()
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert
         Assert.All(defaults, c => Assert.True(c.IsSystemDefault));
@@ -172,8 +173,9 @@ public class CategoryServiceTests
     [InlineData(CategoryType.Expense, 19)] // 19 expense categories
     public void GetSystemDefaults_HasCorrectCategoryTypeDistribution(CategoryType type, int expectedCount)
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert
         var count = defaults.Count(c => c.Type == type);
@@ -189,26 +191,27 @@ public class CategoryServiceTests
     [InlineData("Housing")]
     [InlineData("Utilities")]
     [InlineData("Insurance")]
-    [InlineData("Subscriptions")]
+    [InlineData("Subscription")]
     [InlineData("Education")]
     [InlineData("Groceries")]
     [InlineData("Transportation")]
-    [InlineData("Personal Care")]
-    [InlineData("Home")]
-    [InlineData("Pets")]
-    [InlineData("Restaurants")]
     [InlineData("Entertainment")]
+    [InlineData("Dining Out")]
     [InlineData("Shopping")]
-    [InlineData("Travel")]
-    [InlineData("Health & Wellness")]
-    [InlineData("Debt Payments")]
-    [InlineData("Savings & Investment")]
-    [InlineData("Donations")]
-    [InlineData("Unexpected Expenses")]
+    [InlineData("Coffee")]
+    [InlineData("Fitness")]
+    [InlineData("Healthcare")]
+    [InlineData("Hobbies")]
+    [InlineData("Gifts Given")]
+    [InlineData("Phone")]
+    [InlineData("Internet")]
+    [InlineData("Gas")]
+    [InlineData("Other Expense")]
     public void GetSystemDefaults_ContainsExpectedCategories(string categoryName)
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert
         Assert.Contains(defaults, c => c.Name.Value == categoryName);
@@ -217,14 +220,15 @@ public class CategoryServiceTests
     [Fact]
     public void GetSystemDefaults_AllCategoriesHaveValidProperties()
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert
         Assert.All(defaults, c =>
         {
             Assert.NotEqual(Guid.Empty, c.Id.Value);
-            Assert.Equal(_testUserId, c.UserId);
+            Assert.Null(c.UserId); // Feature 3: System categories have NULL user_id
             Assert.NotNull(c.Name);
             Assert.NotEmpty(c.Name.Value);
             Assert.NotNull(c.Color);
@@ -238,8 +242,9 @@ public class CategoryServiceTests
     [Fact]
     public void GetSystemDefaults_AllCategoriesHaveValidColors()
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert
         var colorRegex = new System.Text.RegularExpressions.Regex(@"^#[0-9A-F]{6}$");
@@ -252,8 +257,9 @@ public class CategoryServiceTests
     [Fact]
     public void GetSystemDefaults_IncomeAndExpenseGroupsHaveCorrectColors()
     {
+        // Feature 3: GetSystemDefaults no longer takes userId parameter
         // Act
-        var defaults = _service.GetSystemDefaults(_testUserId);
+        var defaults = _service.GetSystemDefaults();
 
         // Assert Income categories (green)
         var incomeCategories = defaults.Where(c => c.Type == CategoryType.Income);
