@@ -112,6 +112,7 @@ public static class DependencyInjection
             o.Dsn = configuration["Sentry:Dsn"];
             o.Debug = true;
             o.TracesSampleRate = 1.0;
+            o.Experimental.EnableMetrics = true;
         });
     }
 }
