@@ -111,6 +111,46 @@
 - But semantically, system defaults are same for all users
 - **Implication**: Signature should change to remove userId parameter
 
+## Seeding Strategy: Migration-Only vs App-Level (DECISION REQUIRED)
+
+### Key Finding from Code Audit
+
+Feature 2 currently implements **app-level seeding**:
+- `SeedSystemDefaultsCommandHandler` persists categories via MediatR command
+- `GetCategoriesQueryHandler` calls `SeedSystemDefaultsCommand()` on every query
+- This contradicts plan's "migration-only" approach
+
+### Options
+
+**Option A: Migration-Only Seeding (RECOMMENDED)**
+- ✅ Migration 004 inserts 24 rows with NULL user_id
+- ✅ Remove SeedSystemDefaultsCommandHandler entirely
+- ✅ Remove MediatR.Send(SeedSystemDefaultsCommand) from GetCategoriesQueryHandler
+- ✅ Cleaner architecture, migration-driven
+- ❌ Breaking change: removes existing seeding mechanism
+- **Effort impact**: Add 1 task (remove handler) = +0.5h
+
+**Option B: Hybrid (Keep Handler for Backward Compat)**
+- ✅ Migration 004 creates schema (nullable, constraints, indexes)
+- ✅ SeedSystemDefaultsCommandHandler adapted for NULL user_id
+- ✅ No breaking changes; handler still works
+- ❌ Redundant: handler + migration both available
+- **Effort impact**: Update 1 task (refactor handler) = +0.5h
+
+### DECISION: **Option A (Migration-Only)**
+
+**Rationale:**
+- Simpler, cleaner architecture
+- Migration-driven aligns with "persisted" design goal
+- One source of truth (migration)
+- Breaking change acceptable for internal refactoring
+
+**Implication:**
+- Must add task: "Task 6.5: Remove SeedSystemDefaultsCommandHandler"
+- Must update: GetCategoriesQueryHandler (remove SeedSystemDefaultsCommand call)
+
+---
+
 ### Design Decisions
 
 **Decision 1: Nullable UserId Implementation**
@@ -178,8 +218,18 @@
   - Remove `userId` parameter from `GetSystemDefaults()`
   - Add lazy singleton caching with lock
   - Update all 24 category definitions to use `CreateSystemDefault()`
-- Effort: 1 hour
+
+  **CASCADE CHANGES (if keeping seeding handler):**
+  - Update `SeedSystemDefaultsCommandHandler`:
+    - Remove userId from GetSystemDefaultsAsync() call (see Task 4.4)
+    - Change idempotency check: 24 instead of 4
+    - Note: Handler may be deprecated/removed in Task 6.5
+
+- Effort: 1.5 hours (was 1 hour; +0.5h for cascade)
 - Tests: Unit tests T-3.13, T-3.14
+- Files affected:
+  - `src/SauronSheet.Domain/Services/CategoryService.cs` ✅
+  - `src/SauronSheet.Application/Features/Categories/Commands/SeedSystemDefaultsCommandHandler.cs` ✅ (NEW CASCADE)
 
 **Task Set 2: Domain Tests**
 - Location: `tests/SauronSheet.Domain.Tests/Categories/`
@@ -211,25 +261,89 @@
 
 **Task 3.2: Create rollback migration**
 - Location: `src/SauronSheet.Infrastructure/Persistence/Migrations/005_RevertSystemCategoriesGlobalScope.sql`
-- Steps:
-  1. DELETE FROM categories WHERE user_id IS NULL AND is_system_default = true
-  2. DROP UNIQUE index (idx_categories_user_name_unique)
-  3. CREATE old UNIQUE index (user_id, name)
-  4. ALTER TABLE categories: SET user_id NOT NULL
-  5. DROP composite index (idx_categories_is_system_default)
-  6. DROP CHECK constraint (chk_null_user_implies_system_default)
+- Purpose: Revert Feature 3 changes if needed
+
+**Complete SQL steps:**
+
+```sql
+-- Rollback Feature 3: System Categories Global Scope
+
+-- Step 1: Delete system categories (NULL user_id)
+DELETE FROM public.categories WHERE user_id IS NULL AND is_system_default = true;
+
+-- Step 2: Remove new indexes
+DROP INDEX IF EXISTS public.idx_categories_is_system_default;
+DROP INDEX IF EXISTS public.idx_categories_user_name_unique;
+
+-- Step 3: Drop CHECK constraint
+ALTER TABLE public.categories DROP CONSTRAINT IF EXISTS chk_null_user_implies_system_default;
+
+-- Step 4: Recreate old UNIQUE index (user_id, name)
+CREATE UNIQUE INDEX idx_categories_user_id_name ON public.categories(user_id, name);
+
+-- Step 5: Make user_id NOT NULL again
+ALTER TABLE public.categories ALTER COLUMN user_id SET NOT NULL;
+```
+
+**Verification:**
+- [ ] Migration executes without errors
+- [ ] Schema matches pre-Feature 3 state
+- [ ] User categories preserved (not deleted)
+- [ ] UNIQUE constraint restored
+- [ ] All indexes in place
+
 - Effort: 0.5 hours
-- Acceptance: Rollback executes successfully, user categories preserved
+- Test: Rollback migration test (verify schema reverted)
 
 **Task Set 4: Repository Updates**
 
 **Task 4.1: Update CategoryRow mapping**
 - Location: `src/SauronSheet.Infrastructure/Persistence/SupabaseCategoryRepository.cs`
 - Changes:
-  - Update `CategoryRow.UserId` property to `string?` (nullable)
-  - Update `ToDomain()` method to handle NULL user_id
-  - Create `UserId?` conditionally: `string.IsNullOrEmpty(UserId) ? null : new UserId(UserId)`
-  - Use `Category.CreateSystemDefault()` for system categories
+
+1. **Update CategoryRow property (make nullable):**
+   ```csharp
+   [Column("user_id")]
+   public string? UserId { get; set; } = null;  // ← Changed from = ""
+   ```
+
+2. **Update `ToDomain()` mapping to handle NULL:**
+   ```csharp
+   private Category ToDomain(CategoryRow row)
+   {
+       var categoryType = row.Type == "Income" ? CategoryType.Income : CategoryType.Expense;
+
+       // Handle nullable UserId from database
+       UserId? userId = string.IsNullOrEmpty(row.UserId) 
+           ? null 
+           : new UserId(row.UserId);
+
+       if (row.IsSystemDefault)
+       {
+           return Category.CreateSystemDefault(
+               new CategoryId(Guid.Parse(row.Id)),
+               CategoryName.Create(row.Name),
+               categoryType,
+               ColorHex.Create(row.Color),
+               row.IconName);
+       }
+
+       return new Category(
+           new CategoryId(Guid.Parse(row.Id)),
+           userId ?? throw new DomainException($"User category {row.Id} missing user_id"),
+           CategoryName.Create(row.Name),
+           categoryType,
+           ColorHex.Create(row.Color),
+           row.IconName);
+   }
+   ```
+
+- Verification:
+  - [ ] CategoryRow.UserId is nullable (string?)
+  - [ ] Mapping correctly handles NULL
+  - [ ] System categories created with CreateSystemDefault()
+  - [ ] User categories still require non-null UserId
+
 - Effort: 0.5 hours
 - Tests: Integration tests T-3.08, T-3.09, T-3.10, T-3.11, T-3.12
 
@@ -253,12 +367,27 @@
 - Tests: Integration tests T-3.11, T-3.12
 
 **Task 4.4: Update GetSystemDefaultsAsync()**
-- Location: `src/SauronSheet.Infrastructure/Persistence/SupabaseCategoryRepository.cs`
+- Location: `src/SauronSheet.Infrastructure/Persistence/SupabaseCategoryRepository.cs` + `ICategoryRepository.cs`
+- **BREAKING CHANGE:** Method signature changes (userId parameter removed)
 - Changes:
-  - Remove `userId` parameter from method signature
+  - Remove `userId` parameter from method signature in interface and implementation
   - Change query: `.Where(x => x.UserId == null && x.IsSystemDefault == true)`
-  - Note: This is now redundant with CategoryService caching, but kept for potential future use
-- Effort: 0.25 hours
+  - Update interface: `ICategoryRepository.GetSystemDefaultsAsync()` (remove param)
+
+  **CASCADING UPDATES REQUIRED:**
+  - `SeedSystemDefaultsCommandHandler.cs` line ~38:
+    - BEFORE: `var existingDefaults = await _categoryRepo.GetSystemDefaultsAsync(userId);`
+    - AFTER: `var existingDefaults = await _categoryRepo.GetSystemDefaultsAsync();`
+
+  - If using Option A (remove handler), this method becomes redundant but should remain for future use
+  - If using Option B (keep handler), verify idempotency check uses 24 instead of 4
+
+- Verification:
+  - [ ] Signature updated in interface and implementation
+  - [ ] All call sites updated (check SeedSystemDefaultsCommandHandler)
+  - [ ] No compilation errors
+
+- Effort: 1 hour (was 0.25h; +0.75h for cascading changes)
 - Tests: Could be removed or kept for backward compatibility
 
 **Task Set 5: Infrastructure Tests**
@@ -275,13 +404,30 @@
 
 **Task 5.2: RLS policy verification**
 - Location: `tests/SauronSheet.Application.Tests/Infrastructure/RLS/CategoryRLSPolicyTests.cs`
+- Purpose: Verify RLS policies work correctly with NULL user_id
+- **Setup required:**
+  - Create test user with JWT token
+  - Insert test data:
+    - 1 system category (NULL user_id): `(uuid, NULL, 'Salary', 'Income', ..., true)`
+    - 2 user categories (user_id = test user): `(uuid, 'test-user', 'Coffee', 'Expense', ..., false)`
+  - Sign in as test-user
+
 - Tests: T-3.18, T-3.19, T-3.20
 - Coverage:
-  - SELECT works for user categories (auth.uid() = user_id)
-  - SELECT works for system categories (user_id IS NULL)
-  - UPDATE/DELETE blocked for system categories
-- Effort: 1.5 hours
-- Acceptance: All 3 tests pass (may require test Supabase instance)
+  - T-3.18: SELECT works for user categories (auth.uid() = user_id)
+    - Expected: User can view own categories ✅
+  - T-3.19: SELECT works for system categories (user_id IS NULL)
+    - Expected: User can view system categories (NULL rows) ✅
+  - T-3.20: UPDATE/DELETE blocked for system categories
+    - Expected: UPDATE/DELETE fails when trying to modify NULL user_id rows ✅
+
+- **Test data verification:**
+  - [ ] SELECT returns 2 rows (1 system + 1 user)
+  - [ ] User CANNOT UPDATE system category (NULL user_id)
+  - [ ] User CANNOT DELETE system category (NULL user_id)
+
+- Effort: 2 hours (was 1.5h; +0.5h for explicit test data setup)
+- Acceptance: All 3 tests pass with actual Supabase RLS enforced
 
 **Task 5.3: Migration verification**
 - Location: `tests/SauronSheet.Application.Tests/Infrastructure/Migrations/SystemCategoriesMigrationTests.cs`
@@ -293,6 +439,31 @@
   - Indexes created
 - Effort: 1 hour
 - Acceptance: All tests pass, migration idempotent
+
+**Task 5.4: Migration Idempotency Tests (NEW)**
+- Location: `tests/SauronSheet.Application.Tests/Infrastructure/Migrations/MigrationIdempotencyTests.cs`
+- Purpose: Verify 004 migration is idempotent (safe to run twice)
+- Tests:
+  - T-3.21: Migration_RunTwice_NoDuplicates
+    - Run migration once, check 24 rows inserted
+    - Run migration again, verify no duplicates created
+    - Assert row count still = 24
+
+  - T-3.22: SystemCategories_Correct_AfterIdempotentMigration
+    - Verify 24 categories with correct names/colors/icons
+    - Run migration again
+    - Verify data unchanged
+
+  - T-3.23: Migration_WithExistingUserCategories_PreservedOnSecondRun
+    - Insert user category
+    - Run migration
+    - Run migration again
+    - Verify user category still exists (not deleted)
+
+- Effort: 1.5 hours
+- Acceptance:
+  - [ ] All 3 tests green
+  - [ ] Migration proven idempotent
 
 **Infrastructure Layer Total Effort: 7 hours**
 
@@ -332,6 +503,32 @@
 - Effort: 0.5 hours
 - Tests: Integration test T-3.15
 
+**Task 6.5: Remove SeedSystemDefaultsCommandHandler (CONDITIONAL - OPTION A ONLY)**
+- Condition: Only if "Seeding Strategy: Migration-Only" is chosen (Recommended)
+- Location: `src/SauronSheet.Application/Features/Categories/Commands/SeedSystemDefaultsCommandHandler.cs`
+- Changes:
+  - Delete file entirely (no longer needed)
+  - Delete SeedSystemDefaultsCommand.cs (request class)
+  - Update `GetCategoriesQueryHandler.cs`:
+    - Remove line: `await _mediator.Send(new SeedSystemDefaultsCommand(), cancellationToken);`
+    - Verify system categories still available via migration + repository union query
+
+- Files deleted:
+  - `SeedSystemDefaultsCommandHandler.cs`
+  - `SeedSystemDefaultsCommand.cs`
+- Tests affected:
+  - Search codebase for tests calling SeedSystemDefaultsCommand
+  - May need to update GetCategoriesQueryTests
+
+- Verification:
+  - [ ] Handler deleted
+  - [ ] Command deleted
+  - [ ] No compilation errors
+  - [ ] System categories still visible after GetCategoriesQuery execution
+
+- Effort: 0.5 hours
+- Acceptance: Build succeeds, system categories visible via repository union query
+
 **Task Set 7: Application Tests**
 
 **Task 7.1: Handler integration tests**
@@ -345,7 +542,7 @@
 - Effort: 1.5 hours
 - Acceptance: All 3 tests green
 
-**Application Layer Total Effort: 3 hours**
+**Application Layer Total Effort: 3.5 hours** (was 3 hours; +0.5h for Task 6.5)
 
 ---
 
@@ -354,35 +551,40 @@
 ### Execution Sequence (Dependency-ordered)
 
 ```
-┌─────────────────────────────────────────────────────┐
-│ DOMAIN LAYER (2.75 hours)                           │
-│ ├─ Task 1.1: Make UserId nullable                   │
-│ ├─ Task 1.2: Add helper methods                     │
-│ ├─ Task 1.3: Update CategoryService caching         │
-│ └─ Task 2.x: Domain tests (8 tests)                 │
-│                                                      │
-│ INFRASTRUCTURE LAYER (7 hours)                      │
-│ ├─ Task 3.1: Create migration SQL                   │
-│ ├─ Task 3.2: Create rollback migration              │
-│ ├─ Task 4.1: Update CategoryRow mapping             │
-│ ├─ Task 4.2: Update GetByUserIdAsync() union query  │
-│ ├─ Task 4.3: Add FindByNameAsync()                  │
-│ ├─ Task 4.4: Update GetSystemDefaultsAsync()        │
-│ └─ Task 5.x: Infrastructure tests (9 tests)         │
-│                                                      │
-│ APPLICATION LAYER (3 hours)                         │
-│ ├─ Task 6.1-6.3: Handler null-checking              │
-│ ├─ Task 6.4: CreateCategoryCommand validation       │
-│ └─ Task 7.x: Application tests (3 tests)            │
-│                                                      │
-│ TESTING & VERIFICATION (4 hours)                    │
-│ ├─ Full test suite run (20 tests)                   │
-│ ├─ Performance profiling (caching)                  │
-│ ├─ Regression testing (Feature 2 functionality)     │
-│ └─ Staging validation (blue-green strategy)         │
-│                                                      │
-│ TOTAL: 19.75 hours (~5 days with 2 engineers)       │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ DOMAIN LAYER (3.25 hours)                                │
+│ ├─ Task 1.1: Make UserId nullable                        │
+│ ├─ Task 1.2: Add helper methods                          │
+│ ├─ Task 1.3: Update CategoryService + cascade (CASCADE)  │
+│ └─ Task 2.x: Domain tests (8 tests)                      │
+│                                                           │
+│ INFRASTRUCTURE LAYER (7.5 hours)                         │
+│ ├─ Task 3.1: Create migration SQL (004)                  │
+│ ├─ Task 3.2: Create rollback migration (005)             │
+│ ├─ Task 4.1: Update CategoryRow mapping (NULLABLE)       │
+│ ├─ Task 4.2: Update GetByUserIdAsync() union query       │
+│ ├─ Task 4.3: Add FindByNameAsync()                       │
+│ ├─ Task 4.4: Update GetSystemDefaultsAsync() (BREAKING)  │
+│ ├─ Task 5.1: Repository NULL tests (5 tests)             │
+│ ├─ Task 5.2: RLS policy tests (3 tests + setup)          │
+│ ├─ Task 5.3: Migration basic tests (3 tests)             │
+│ └─ Task 5.4: Migration idempotency tests (3 tests) (NEW) │
+│                                                           │
+│ APPLICATION LAYER (3.5 hours)                            │
+│ ├─ Task 6.1-6.3: Handler null-checking (3 updates)       │
+│ ├─ Task 6.4: CreateCategoryCommand validation            │
+│ ├─ Task 6.5: Remove SeedSystemDefaults (OPTION A ONLY)   │
+│ └─ Task 7.x: Application tests (3 tests)                 │
+│                                                           │
+│ TESTING & VERIFICATION (4.5 hours)                       │
+│ ├─ Full test suite run (20+ tests)                       │
+│ ├─ Idempotency validation (migration × 2)                │
+│ ├─ Performance profiling (caching)                       │
+│ ├─ Regression testing (Feature 2 functionality)          │
+│ └─ Staging validation (blue-green strategy)              │
+│                                                           │
+│ TOTAL: 20.75 hours (~5-6 days @1 engineer or 3 @2)       │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### Critical Path Analysis
@@ -390,7 +592,7 @@
 **Blocker 1: Domain changes**
 - All other layers depend on nullable UserId
 - Must complete before infrastructure/application changes
-- Effort: 2.75 hours
+- Effort: 3.25 hours (includes cascade to SeedSystemDefaultsCommandHandler)
 
 **Blocker 2: Database migration**
 - Repository changes depend on migration being designed
@@ -406,6 +608,7 @@
 - Domain tests can run in parallel with domain implementation
 - Infrastructure tests can run in parallel with repository changes
 - Application tests depend only on handlers (no infrastructure mocking needed)
+- Task 6.5 (remove handler) is conditional on Option A seeding strategy
 
 ---
 
@@ -545,12 +748,12 @@ If any of the following occur, execute rollback immediately:
 
 | Phase | Hours | FTE Days | Notes |
 |-------|-------|----------|-------|
-| Domain Layer | 2.75 | 0.35 | Including 8 unit tests |
-| Infrastructure Layer | 7 | 0.9 | Including migration + 9 integration tests |
-| Application Layer | 3 | 0.4 | Including 3 handler updates + 3 tests |
-| Testing & Verification | 4 | 0.5 | Full suite + performance + regression |
-| Documentation | 2 | 0.25 | Dev guide + runbook |
-| **TOTAL** | **18.75** | **2.4** | **5 days @1 engineer or 2.5 days @2 engineers** |
+| Domain Layer | 3.25 | 0.4 | +0.5h for SeedSystemDefaultsCommandHandler cascade |
+| Infrastructure Layer | 7.5 | 0.95 | +0.5h for migration idempotency tests (Task 5.4) |
+| Application Layer | 3.5 | 0.45 | +0.5h for handler removal (Task 6.5 Option A) |
+| Testing & Verification | 4.5 | 0.55 | +0.5h for additional idempotency validation |
+| Documentation | 2 | 0.25 | (unchanged) |
+| **TOTAL** | **20.75** | **2.6** | **+2h from 18.75h; 5-6 days @1 engineer or 3 days @2 engineers** |
 
 ---
 
@@ -601,6 +804,7 @@ If any of the following occur, execute rollback immediately:
 
 ---
 
-_Implementation Plan Complete: 2026-02-19_  
+_Implementation Plan Updated: 2026-02-19_  
 _Status: Ready for Task Generation via /speckit.tasks_  
-_Estimated Effort: 18.75 hours | Recommended Timeline: 5 days_
+_Estimated Effort: 20.75 hours | Recommended Timeline: 5-6 days @1 engineer or 3 days @2 engineers_  
+_Critical Decision: Seeding Strategy (Option A: Migration-Only recommended)_
