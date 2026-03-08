@@ -141,18 +141,27 @@ public class SupabaseCategoryRepository : ICategoryRepository
 
     /// <summary>
     /// Feature 3: Get categories for user, including system defaults (union query).
-    /// Returns both user-scoped categories and system categories in single query.
+    /// Uses two separate queries because the Postgrest C# client does not support
+    /// OR conditions (||) in .Where() lambdas — it produces an empty UUID string
+    /// which causes "invalid input syntax for type uuid" on PostgreSQL uuid columns.
     /// </summary>
     public async Task<IReadOnlyList<Category>> GetByUserIdAsync(UserId userId)
     {
         try
         {
-            var response = await _client.From<CategoryRow>()
-                .Where(x => x.UserId == userId.Value || x.UserId == null)  // UNION: user + system
-                .Order("name", Constants.Ordering.Ascending)
+            var userResponse = await _client.From<CategoryRow>()
+                .Where(x => x.UserId == userId.Value)
                 .Get();
 
-            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+            var systemResponse = await _client.From<CategoryRow>()
+                .Where(x => x.IsSystemDefault == true)
+                .Get();
+
+            var allRows = userResponse.Models
+                .Concat(systemResponse.Models)
+                .OrderBy(r => r.Name);
+
+            return allRows.Select(r => r.ToDomain()).ToList().AsReadOnly();
         }
         catch (Exception ex)
         {

@@ -404,6 +404,29 @@ Supabase__Key=your-public-anon-key
 - ❌ **Creating duplicate agent instruction files** (only `.github/copilot-instructions.md` exists).
 - ❌ **Leaving temporary files in repository** (analysis, audit, reasoning docs — delete after use).
 
+### 🐞 Lessons Learned: Supabase/Postgrest C# Client
+
+- **OR conditions in .Where() lambdas are NOT supported**: El cliente Postgrest C# (supabase-csharp 0.16.2) no soporta expresiones OR (`||`) dentro de `.Where()` en LINQ. Si se usa `.Where(x => x.UserId == userId.Value || x.UserId == null)`, genera una cadena vacía para el UUID y produce el error `invalid input syntax for type uuid: ""` en PostgreSQL.
+- **Solución**: Realiza dos consultas separadas (una para el usuario, otra para system defaults) y combina los resultados en memoria. Nunca dependas de OR en el lado del cliente para columnas UUID.
+- **Síntoma**: Excepción Postgrest con código 22P02 y mensaje sobre UUID vacío cuando se consulta una tabla con columna uuid y filtro OR.
+
+Ejemplo de patrón correcto:
+```csharp
+// INCORRECTO (no usar):
+await _client.From<CategoryRow>()
+    .Where(x => x.UserId == userId.Value || x.UserId == null)
+    .Get();
+
+// CORRECTO:
+var userRows = await _client.From<CategoryRow>()
+    .Where(x => x.UserId == userId.Value)
+    .Get();
+var systemRows = await _client.From<CategoryRow>()
+    .Where(x => x.IsSystemDefault == true)
+    .Get();
+var all = userRows.Models.Concat(systemRows.Models);
+```
+
 ---
 
 ## 📜 Constitutional Compliance (Non-Negotiable)
