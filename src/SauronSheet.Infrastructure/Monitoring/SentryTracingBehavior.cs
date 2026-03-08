@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Sentry;
+using Sentry.Extensibility;
 using SauronSheet.Application.Common;
 
 /// <summary>
@@ -36,6 +37,8 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
             breadcrumbData["operationDetails"] = BuildTransactionDetails(transactionRequest);
         }
 
+        SentrySdk.Logger?.LogDebug("MediatR handler starting: {0}", requestTypeName);
+
         SentrySdk.AddBreadcrumb(
             $"Executing {requestTypeName}",
             "request",
@@ -48,6 +51,8 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
         {
             var response = await next();
             sw.Stop();
+
+            SentrySdk.Logger?.LogInfo("MediatR handler completed in {0}ms: {1}", (int)sw.Elapsed.TotalMilliseconds, requestTypeName);
 
             SentrySdk.AddBreadcrumb(
                 $"Completed {requestTypeName}",
@@ -75,6 +80,8 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
 
             // Add error details as breadcrumb before capturing
             sw.Stop();
+
+            SentrySdk.Logger?.LogError("MediatR handler failed: {0} — {1}", requestTypeName, ex.GetType().Name);
 
             SentrySdk.AddBreadcrumb(
                 $"Error in {requestTypeName}: {ex.Message}",

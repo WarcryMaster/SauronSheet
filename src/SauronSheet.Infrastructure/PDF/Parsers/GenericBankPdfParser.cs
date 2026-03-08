@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Sentry;
+using Sentry.Extensibility;
 using SauronSheet.Application.Common.Models;
 using SauronSheet.Application.Interfaces;
 using UglyToad.PdfPig;
@@ -31,6 +33,8 @@ public class GenericBankPdfParser : IPdfParser
             pdfBytes = ms.ToArray();
         }
 
+        SentrySdk.Logger?.LogInfo("GenericBankPdfParser: parsing PDF ({0} bytes)", pdfBytes.Length);
+
         try
         {
             using var document = PdfDocument.Open(pdfBytes);
@@ -38,6 +42,7 @@ public class GenericBankPdfParser : IPdfParser
 
             foreach (var page in document.GetPages())
             {
+                SentrySdk.Logger?.LogDebug("GenericBankPdfParser: processing page {0}", page.Number);
                 try
                 {
                     // Reconstruct lines by grouping words on the same vertical position (Y)
@@ -90,6 +95,7 @@ public class GenericBankPdfParser : IPdfParser
                 }
                 catch (Exception ex)
                 {
+                    SentrySdk.Logger?.LogWarning("GenericBankPdfParser: page {0} parse error — {1}", page.Number, ex.Message);
                     Console.WriteLine($"Warning: Error parsing page {page.Number}: {ex.Message}");
                 }
             }
@@ -98,15 +104,18 @@ public class GenericBankPdfParser : IPdfParser
             ex.Message.Contains("encrypt", StringComparison.OrdinalIgnoreCase) ||
             ex.Message.Contains("password", StringComparison.OrdinalIgnoreCase))
         {
+            SentrySdk.Logger?.LogError("GenericBankPdfParser: PDF is encrypted or password-protected");
             throw new InvalidOperationException(
                 "PDF cannot be read. It may be password-protected or encrypted.", ex);
         }
         catch (Exception ex)
         {
+            SentrySdk.Logger?.LogError("GenericBankPdfParser: unexpected error — {0}", ex.Message);
             throw new InvalidOperationException(
                 $"Unexpected error while parsing PDF: {ex.Message}", ex);
         }
 
+        SentrySdk.Logger?.LogInfo("GenericBankPdfParser: parsed {0} raw rows from PDF", rows.Count);
         return rows;
     }
 

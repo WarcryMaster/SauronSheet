@@ -10,9 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Configured via Infrastructure.DependencyInjection.AddSentryMonitoring
 builder.WebHost.AddSentryMonitoring(builder.Configuration);
 
-// Optional: Send a test message to Sentry on startup
-Sentry.SentrySdk.CaptureMessage("Hello Sentry");
-
 // Register application and infrastructure services
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);

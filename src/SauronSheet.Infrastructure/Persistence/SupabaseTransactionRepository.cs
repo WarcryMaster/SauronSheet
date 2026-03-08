@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Postgrest;
 using Postgrest.Attributes;
 using Postgrest.Models;
+using Sentry.Extensibility;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.ValueObjects;
@@ -139,6 +140,7 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAsync(UserId userId)
     {
+        Sentry.SentrySdk.Logger?.LogDebug("SupabaseTransactionRepository.GetByUserIdAsync: querying transactions");
         try
         {
             var response = await _client.From<TransactionRow>()
@@ -146,7 +148,9 @@ public class SupabaseTransactionRepository : ITransactionRepository
                 .Order("date", Constants.Ordering.Descending)
                 .Get();
 
-            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+            var result = response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+            Sentry.SentrySdk.Logger?.LogInfo("SupabaseTransactionRepository.GetByUserIdAsync: loaded {0} transactions", result.Count);
+            return result;
         }
         catch (Exception ex)
         {
@@ -187,6 +191,7 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task AddAsync(Transaction transaction)
     {
+        Sentry.SentrySdk.Logger?.LogDebug("SupabaseTransactionRepository.AddAsync: inserting transaction {0}", transaction.Id.Value);
         var row = TransactionRow.FromDomainForInsert(transaction);
         await _client.From<TransactionRow>().Insert(row);
     }
