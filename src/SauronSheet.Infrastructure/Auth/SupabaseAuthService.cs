@@ -51,6 +51,8 @@ public class SupabaseAuthService : IAuthService
 
             if (!response.IsSuccessStatusCode)
             {
+                Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.register", 1.0,
+                    new KeyValuePair<string, object>[] { new("result", "failure") });
                 return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Registration failed"));
             }
 
@@ -103,6 +105,8 @@ public class SupabaseAuthService : IAuthService
             var refreshToken = rtElement.GetString() ?? "";
             var expiresIn = exElement.GetInt32();
 
+            Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.register", 1.0,
+                new KeyValuePair<string, object>[] { new("result", "success") });
             return AuthResult.Success(
                 new UserId(userId),
                 accessToken,
@@ -138,7 +142,11 @@ public class SupabaseAuthService : IAuthService
             var jsonContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
+            {
+                Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.login", 1.0,
+                    new KeyValuePair<string, object>[] { new("result", "failure") });
                 return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Invalid email or password."));
+            }
 
             var doc = JsonDocument.Parse(jsonContent);
             var root = doc.RootElement;
@@ -154,6 +162,8 @@ public class SupabaseAuthService : IAuthService
                 !root.TryGetProperty("expires_in", out var exEl))
                 return AuthResult.Failure("Login response missing token data.");
 
+            Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.login", 1.0,
+                new KeyValuePair<string, object>[] { new("result", "success") });
             return AuthResult.Success(
                 new UserId(userId),
                 atEl.GetString() ?? "",

@@ -52,6 +52,18 @@ public class UploadModel : PageModel
             using var stream = PdfFile.OpenReadStream();
             ImportResult = await _mediator.Send(
                 new ImportTransactionsFromPdfCommand(stream, PdfFile.FileName));
+
+            // Metrics: PDF import results
+            Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.pdf.import.count", 1.0,
+                new KeyValuePair<string, object>[] { new("result", "success") });
+            Sentry.SentrySdk.Experimental.Metrics.EmitDistribution("app.pdf.import.rows_imported",
+                ImportResult.ImportedCount,
+                Sentry.MeasurementUnit.None,
+                new KeyValuePair<string, object>[] { new("type", "imported") });
+            Sentry.SentrySdk.Experimental.Metrics.EmitDistribution("app.pdf.import.rows_skipped",
+                ImportResult.SkippedCount,
+                Sentry.MeasurementUnit.None,
+                new KeyValuePair<string, object>[] { new("type", "skipped") });
         }
         catch (HttpRequestException)
         {

@@ -2,6 +2,7 @@ namespace SauronSheet.Infrastructure.Monitoring;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -41,15 +42,26 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
             data: breadcrumbData
         );
 
+        var sw = Stopwatch.StartNew();
+
         try
         {
             var response = await next();
-            
+            sw.Stop();
+
             SentrySdk.AddBreadcrumb(
                 $"Completed {requestTypeName}",
                 "request",
                 level: BreadcrumbLevel.Info
             );
+
+            // Metrics: count successful handler executions and record duration
+            SentrySdk.Experimental.Metrics.EmitCounter("app.handler.success", 1.0,
+                new KeyValuePair<string, object>[] { new("handler", requestTypeName) });
+            SentrySdk.Experimental.Metrics.EmitDistribution("app.handler.duration_ms",
+                sw.Elapsed.TotalMilliseconds,
+                MeasurementUnit.Duration.Millisecond,
+                new KeyValuePair<string, object>[] { new("handler", requestTypeName) });
 
             return response;
         }
@@ -62,12 +74,22 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
             });
 
             // Add error details as breadcrumb before capturing
+            sw.Stop();
+
             SentrySdk.AddBreadcrumb(
                 $"Error in {requestTypeName}: {ex.Message}",
                 "error",
                 level: BreadcrumbLevel.Error,
                 data: breadcrumbData
             );
+
+            // Metrics: count handler failures
+            SentrySdk.Experimental.Metrics.EmitCounter("app.handler.error", 1.0,
+                new KeyValuePair<string, object>[]
+                {
+                    new("handler", requestTypeName),
+                    new("exception", ex.GetType().Name)
+                });
 
             SentrySdk.CaptureException(ex);
             throw;
