@@ -39,9 +39,9 @@ public static class TestCategoryFactory
         string? color = null,
         string? icon = null)
     {
+        // Feature 3: CreateSystemDefault no longer takes userId parameter
         return Category.CreateSystemDefault(
             categoryId ?? CategoryId.New(),
-            userId ?? new UserId("test-user-id"),
             CategoryName.Create(name ?? "System Category"),
             type ?? CategoryType.Expense,
             ColorHex.Create(color ?? "#3498DB"),

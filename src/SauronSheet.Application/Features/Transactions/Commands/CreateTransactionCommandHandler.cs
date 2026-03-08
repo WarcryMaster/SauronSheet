@@ -42,7 +42,9 @@ public class CreateTransactionCommandHandler
             if (category == null)
                 throw new EntityNotFoundException("Category", request.CategoryId.Value);
 
-            if (category.UserId != userId)
+            // Feature 3: Safe null-checking for nullable UserId
+            // System categories (NULL user_id) are accessible to all users
+            if (!category.IsAccessibleToUser(userId))
                 throw new EntityNotFoundException("Category", request.CategoryId.Value); // Tenant isolation
 
             categoryId = new CategoryId(request.CategoryId.Value);

@@ -33,7 +33,12 @@ public class CreateCategoryCommandHandler
     {
         var userId = new UserId(_userContext.UserId);
 
-        // Validate unique name via domain service
+        // Feature 3: Check database for duplicate (across all scopes: user + system)
+        var duplicate = await _categoryRepo.FindByNameAsync(request.Name);
+        if (duplicate != null)
+            throw new Domain.Exceptions.DomainException($"Category name '{request.Name}' is already in use (system or custom)");
+
+        // Validate unique name via domain service (hardcoded + cached system defaults)
         await _categoryService.ValidateUniqueName(userId, request.Name);
 
         var categoryId = new CategoryId(Guid.NewGuid());
