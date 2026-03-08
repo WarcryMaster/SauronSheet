@@ -110,6 +110,7 @@ public static class DependencyInjection
         return webBuilder.UseSentry(o =>
         {
             o.Dsn = configuration["Sentry:Dsn"];
+            o.EnableLogs = true;
             o.Debug = true;
             o.TracesSampleRate = 1.0;
             o.Experimental.EnableMetrics = true;

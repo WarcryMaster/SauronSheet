@@ -3,6 +3,7 @@ namespace SauronSheet.Infrastructure.Auth;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Sentry.Extensibility;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
 
@@ -32,6 +33,7 @@ public class SupabaseAuthService : IAuthService
 
     public async Task<AuthResult> RegisterAsync(string email, string password)
     {
+        Sentry.SentrySdk.Logger?.LogDebug("RegisterAsync: starting registration");
         try
         {
             var payload = new
@@ -51,6 +53,7 @@ public class SupabaseAuthService : IAuthService
 
             if (!response.IsSuccessStatusCode)
             {
+                Sentry.SentrySdk.Logger?.LogWarning("RegisterAsync: HTTP {0} — registration rejected", (int)response.StatusCode);
                 Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.register", 1.0,
                     new KeyValuePair<string, object>[] { new("result", "failure") });
                 return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Registration failed"));
@@ -105,6 +108,7 @@ public class SupabaseAuthService : IAuthService
             var refreshToken = rtElement.GetString() ?? "";
             var expiresIn = exElement.GetInt32();
 
+            Sentry.SentrySdk.Logger?.LogInfo("RegisterAsync: user registered successfully");
             Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.register", 1.0,
                 new KeyValuePair<string, object>[] { new("result", "success") });
             return AuthResult.Success(
@@ -115,6 +119,7 @@ public class SupabaseAuthService : IAuthService
         }
         catch (Exception ex)
         {
+            Sentry.SentrySdk.Logger?.LogError("RegisterAsync: exception — {0}", ex.Message);
             Sentry.SentrySdk.CaptureException(ex, scope => {
                 scope.SetTag("service", "SupabaseAuthService.RegisterAsync");
                 scope.SetTag("register.email", email);
@@ -126,6 +131,7 @@ public class SupabaseAuthService : IAuthService
 
     public async Task<AuthResult> LoginAsync(string email, string password)
     {
+        Sentry.SentrySdk.Logger?.LogDebug("LoginAsync: starting login");
         try
         {
             var payload = new
@@ -143,6 +149,7 @@ public class SupabaseAuthService : IAuthService
 
             if (!response.IsSuccessStatusCode)
             {
+                Sentry.SentrySdk.Logger?.LogWarning("LoginAsync: HTTP {0} — login rejected", (int)response.StatusCode);
                 Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.login", 1.0,
                     new KeyValuePair<string, object>[] { new("result", "failure") });
                 return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Invalid email or password."));
@@ -162,6 +169,7 @@ public class SupabaseAuthService : IAuthService
                 !root.TryGetProperty("expires_in", out var exEl))
                 return AuthResult.Failure("Login response missing token data.");
 
+            Sentry.SentrySdk.Logger?.LogInfo("LoginAsync: user authenticated successfully");
             Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.login", 1.0,
                 new KeyValuePair<string, object>[] { new("result", "success") });
             return AuthResult.Success(
@@ -172,6 +180,7 @@ public class SupabaseAuthService : IAuthService
         }
         catch (Exception ex)
         {
+            Sentry.SentrySdk.Logger?.LogError("LoginAsync: exception — {0}", ex.Message);
             Sentry.SentrySdk.CaptureException(ex, scope => {
                 scope.SetTag("service", "SupabaseAuthService.LoginAsync");
                 scope.SetTag("login.email", email);
@@ -183,6 +192,7 @@ public class SupabaseAuthService : IAuthService
 
     public async Task LogoutAsync(string accessToken)
     {
+        Sentry.SentrySdk.Logger?.LogDebug("LogoutAsync: terminating user session");
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Post, "auth/v1/logout");
