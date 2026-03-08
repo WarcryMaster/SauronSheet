@@ -68,42 +68,42 @@ public class ImportTransactionsFromPdfCommandHandler
             try
             {
                 // Validate row
-                if (string.IsNullOrWhiteSpace(row.DateRaw) ||
-                    string.IsNullOrWhiteSpace(row.DescriptionRaw) ||
-                    string.IsNullOrWhiteSpace(row.AmountRaw))
+                if (string.IsNullOrWhiteSpace(row.Date) ||
+                    string.IsNullOrWhiteSpace(row.Description) ||
+                    string.IsNullOrWhiteSpace(row.Amount))
                 {
                     errors.Add(new ImportRowErrorDto(
                         row.RowNumber,
-                        $"{row.DateRaw} | {row.DescriptionRaw} | {row.AmountRaw}",
+                        $"{row.Date} | {row.Description} | {row.Amount}",
                         "Missing required fields"));
                     skippedCount++;
                     continue;
                 }
 
                 // Parse date
-                if (!DateTime.TryParse(row.DateRaw, out var date))
+                if (!DateTime.TryParse(row.Date, out var date))
                 {
                     errors.Add(new ImportRowErrorDto(
                         row.RowNumber,
-                        row.DateRaw,
+                        row.Date,
                         "Invalid date format"));
                     skippedCount++;
                     continue;
                 }
 
                 // Parse amount
-                if (!decimal.TryParse(row.AmountRaw, out var amount))
+                if (!decimal.TryParse(row.Amount, out var amount))
                 {
                     errors.Add(new ImportRowErrorDto(
                         row.RowNumber,
-                        row.AmountRaw,
+                        row.Amount,
                         "Invalid amount format"));
                     skippedCount++;
                     continue;
                 }
 
-                var currency = row.CurrencyRaw ?? "EUR";
-                var description = row.DescriptionRaw;
+                var currency = row.Currency ?? "EUR";
+                var description = row.Description;
 
                 // CRITICAL FIX C-3: Check duplicate (ignores currency)
                 var isDuplicate = await _transactionRepo.ExistsDuplicateAsync(
@@ -136,7 +136,7 @@ public class ImportTransactionsFromPdfCommandHandler
             {
                 errors.Add(new ImportRowErrorDto(
                     row.RowNumber,
-                    $"{row.DateRaw} | {row.DescriptionRaw} | {row.AmountRaw}",
+                    $"{row.Date} | {row.Description} | {row.Amount}",
                     ex.Message));
                 skippedCount++;
             }

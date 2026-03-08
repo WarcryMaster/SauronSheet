@@ -82,8 +82,10 @@ public static class DependencyInjection
         services.AddScoped<IPdfImportRepository, SupabasePdfImportRepository>();
 
         // PDF parsing (NEW in Phase 3)
-        services.AddScoped<IPdfParser, GenericBankPdfParser>();
-        services.AddSingleton<PdfParserFactory>();
+        // Support multiple bank formats: ING-specific and generic fallback
+        services.AddScoped<GenericBankPdfParser>();
+        services.AddScoped<IngBankPdfParser>();
+        services.AddScoped<IPdfParser, AdaptivePdfParser>();
 
         // Domain services (NEW in Phase 3)
         services.AddScoped<CategoryService>();

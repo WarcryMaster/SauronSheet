@@ -48,8 +48,8 @@ public class ImportTransactionsFromPdfCommandTests
 
         var rawRows = new List<RawTransactionRow>
         {
-            new RawTransactionRow(1, "2024-01-01", "Coffee", "-5.50", "EUR"),
-            new RawTransactionRow(2, "2024-01-02", "Salary", "2000.00", "EUR")
+            new RawTransactionRow(1, "2024-01-01", null, null, "Coffee", null, "-5.50", null, "EUR"),
+            new RawTransactionRow(2, "2024-01-02", null, null, "Salary", null, "2000.00", null, "EUR")
         };
 
         _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>()))
@@ -88,8 +88,8 @@ public class ImportTransactionsFromPdfCommandTests
 
         var rawRows = new List<RawTransactionRow>
         {
-            new RawTransactionRow(1, "2024-01-01", "Coffee", "-5.50", "EUR"),
-            new RawTransactionRow(2, "2024-01-01", "Coffee", "-5.50", "EUR") // Duplicate
+            new RawTransactionRow(1, "2024-01-01", null, null, "Coffee", null, "-5.50", null, "EUR"),
+            new RawTransactionRow(2, "2024-01-01", null, null, "Coffee", null, "-5.50", null, "EUR") // Duplicate
         };
 
         _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>()))
@@ -128,9 +128,9 @@ public class ImportTransactionsFromPdfCommandTests
 
         var rawRows = new List<RawTransactionRow>
         {
-            new RawTransactionRow(1, "", "Coffee", "-5.50", "EUR"), // Missing date
-            new RawTransactionRow(2, "2024-01-01", "", "-5.50", "EUR"), // Missing description
-            new RawTransactionRow(3, "2024-01-01", "Coffee", "", "EUR") // Missing amount
+            new RawTransactionRow(1, "", null, null, "Coffee", null, "-5.50", null, "EUR"), // Missing date
+            new RawTransactionRow(2, "2024-01-01", null, null, "", null, "-5.50", null, "EUR"), // Missing description
+            new RawTransactionRow(3, "2024-01-01", null, null, "Coffee", null, "", null, "EUR") // Missing amount
         };
 
         _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>()))
