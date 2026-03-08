@@ -79,15 +79,16 @@ public class SupabaseAuthService : IAuthService
             }
 
             // Check if email confirmation is required (no session returned)
+
             if (root.TryGetProperty("confirmation_sent_at", out _))
             {
-                return AuthResult.Failure("Registration successful! Please check your email to confirm your account.");
+                return AuthResult.Failure("Registration failed: confirmation_sent_at present but no session returned.");
             }
 
             // Extract session if available
             if (!root.TryGetProperty("session", out var session) || session.ValueKind == JsonValueKind.Null)
             {
-                return AuthResult.Failure("Registration successful! Please check your email to confirm your account.");
+                return AuthResult.Failure("Registration failed: session not created.");
             }
 
             // Extract tokens from session
@@ -95,7 +96,7 @@ public class SupabaseAuthService : IAuthService
                 !session.TryGetProperty("refresh_token", out var rtElement) ||
                 !session.TryGetProperty("expires_in", out var exElement))
             {
-                return AuthResult.Failure("Registration successful but session is incomplete.");
+                return AuthResult.Failure("Registration failed: missing token data.");
             }
 
             var accessToken = atElement.GetString() ?? "";
