@@ -2,50 +2,83 @@ namespace SauronSheet.Infrastructure.PDF.Parsers;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using SauronSheet.Application.Common.Models;
 using SauronSheet.Application.Interfaces;
-using iTextSharp.text.pdf;
-using iTextSharp.text.pdf.parser;
+using UglyToad.PdfPig;
 
 /// <summary>
-/// Generic bank PDF parser implementation.
-/// CRITICAL FIX NC-3: Error handling for encoding issues, password-protected PDFs.
+/// Generic bank PDF parser using PdfPig (Apache 2.0, native .NET).
+/// Replaces iTextSharp (AGPL, Java-based legacy).
+/// Reconstructs lines from word bounding boxes and normalizes currency to ISO 4217 (max 3 chars).
+/// Heuristic parsing: expects format "DD/MM/YYYY Description AMOUNT [CURRENCY]".
 /// </summary>
 public class GenericBankPdfParser : IPdfParser
 {
+    private static readonly HashSet<string> KnownCurrencies =
+        new(StringComparer.OrdinalIgnoreCase) { "EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD" };
+
     public async Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream)
     {
         var rows = new List<RawTransactionRow>();
 
+        // PdfPig requires a byte array — read stream fully first
+        byte[] pdfBytes;
+        using (var ms = new MemoryStream())
+        {
+            await pdfStream.CopyToAsync(ms);
+            pdfBytes = ms.ToArray();
+        }
+
         try
         {
-            var reader = new PdfReader(pdfStream);
+            using var document = PdfDocument.Open(pdfBytes);
             var rowNumber = 0;
 
-            for (int pageNum = 1; pageNum <= reader.NumberOfPages; pageNum++)
+            foreach (var page in document.GetPages())
             {
                 try
                 {
-                    var text = PdfTextExtractor.GetTextFromPage(reader, pageNum);
-                    var lines = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                    // Reconstruct lines by grouping words on the same vertical position (Y)
+                    var lines = page.GetWords()
+                        .GroupBy(w => Math.Round(w.BoundingBox.Bottom, 0))
+                        .OrderByDescending(g => g.Key)
+                        .Select(g =>
+                            string.Join(" ", g.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text)));
 
                     foreach (var line in lines)
                     {
                         rowNumber++;
 
-                        // Heuristic parsing: assumes format "DD/MM/YYYY Description AMOUNT EUR"
                         var parts = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
                         if (parts.Length < 3)
-                            continue; // Skip invalid lines
+                            continue;
 
                         var dateRaw = parts[0];
-                        var amountRaw = parts.Length >= 2 ? parts[^2] : null; // Second-to-last part
-                        var currencyRaw = parts.Length >= 1 ? parts[^1] : null; // Last part
-                        var descriptionRaw = parts.Length > 2 
-                            ? string.Join(" ", parts[1..^2]) 
-                            : null; // Middle parts
+                        var lastPart = parts[^1];
+
+                        string? currencyRaw;
+                        string? amountRaw;
+                        string? descriptionRaw;
+
+                        // Detect if last token is a currency code (≤3 letters, alpha only)
+                        if (IsCurrencyCode(lastPart) && parts.Length >= 4)
+                        {
+                            currencyRaw = NormalizeCurrency(lastPart);
+                            amountRaw = parts[^2];
+                            descriptionRaw = string.Join(" ", parts[1..^2]);
+                        }
+                        else
+                        {
+                            // No currency suffix — assume EUR, last part is amount
+                            currencyRaw = "EUR";
+                            amountRaw = lastPart;
+                            descriptionRaw = parts.Length > 2
+                                ? string.Join(" ", parts[1..^1])
+                                : null;
+                        }
 
                         rows.Add(new RawTransactionRow(
                             rowNumber,
@@ -57,34 +90,33 @@ public class GenericBankPdfParser : IPdfParser
                 }
                 catch (Exception ex)
                 {
-                    // CRITICAL FIX NC-3: Log page-level errors but continue processing
-                    Console.WriteLine($"Warning: Error parsing page {pageNum}: {ex.Message}");
+                    Console.WriteLine($"Warning: Error parsing page {page.Number}: {ex.Message}");
                 }
             }
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("encrypted"))
+        catch (Exception ex) when (
+            ex.Message.Contains("encrypt", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("password", StringComparison.OrdinalIgnoreCase))
         {
-            // CRITICAL FIX NC-3: Handle password-protected PDFs
             throw new InvalidOperationException(
-                "PDF cannot be read. It may be password-protected, corrupted, or use an unsupported format.", 
-                ex);
-        }
-        catch (System.Text.DecoderFallbackException ex)
-        {
-            // CRITICAL FIX NC-3: Handle encoding errors (UTF-16, scanned PDFs)
-            throw new InvalidOperationException(
-                "PDF contains encoding issues. It may be scanned or use unsupported character encoding.", 
-                ex);
+                "PDF cannot be read. It may be password-protected or encrypted.", ex);
         }
         catch (Exception ex)
         {
-            // CRITICAL FIX NC-3: General error handling
             throw new InvalidOperationException(
-                $"Unexpected error while parsing PDF: {ex.Message}", 
-                ex);
+                $"Unexpected error while parsing PDF: {ex.Message}", ex);
         }
 
         return rows;
+    }
+
+    private static bool IsCurrencyCode(string value) =>
+        value.Length <= 3 && value.All(char.IsLetter);
+
+    private static string NormalizeCurrency(string raw)
+    {
+        var upper = raw.ToUpperInvariant().Trim();
+        return KnownCurrencies.Contains(upper) ? upper : "EUR";
     }
 }
 
