@@ -30,6 +30,7 @@ INFRASTRUCTURE LAYER (persistence)
 ├── Task 09: SupabaseCategoryRepository Implementation
 ├── Task 10: SQL Migration + Seeding 24 System Defaults
 ├── Task 11: Repository Integration Tests
+├── Task 11.5: Create AllowedBootstrapIcons Constant (NEW - per Analysis Action 1)
 
 APPLICATION LAYER (orchestration)
 ├── Task 12: CreateCategoryCommand + CommandHandler
@@ -469,7 +470,10 @@ FOREIGN KEY(user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 - [ ] Mapping logic correctly converts between CategoryRow and Category entity.
 - [ ] Tenant filtering (UserId) enforced in every query.
 - [ ] CreatedAt/UpdatedAt excluded from insert/update DTOs (database triggers handle).
-- [ ] Error handling translates database errors to domain exceptions.
+- [ ] **Error handling translates database errors to domain exceptions with specific mappings** (per Analysis Action 4):
+  - [ ] Postgrest `UNIQUE` constraint violation (duplicate name) → `DomainException("Category name already exists for this user")`
+  - [ ] Foreign key violation or not-found errors → `EntityNotFoundException("Category not found")`
+  - [ ] Other database errors → `DomainException("Database operation failed")` with detailed logging
 - [ ] Code compiles with no warnings; follows existing repository patterns (e.g., SupabaseTransactionRepository).
 
 **Effort Estimate**: 3 hours  
@@ -504,13 +508,25 @@ Create `Infrastructure/Persistence/Migrations/20260307_SeedSystemDefaultCategori
    );
    ```
 
-2. **CREATE TRIGGER** (auto-update UpdatedAt on modification):
+2. **CREATE TRIGGER** (auto-update UpdatedAt on modification) — per Analysis Action 3:
    ```sql
+   -- Define trigger function (if not already exists globally)
+   CREATE OR REPLACE FUNCTION update_updated_at_column()
+   RETURNS TRIGGER AS $$
+   BEGIN
+       NEW.updated_at = CURRENT_TIMESTAMP;
+       RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql;
+
+   -- Attach trigger to categories table
    CREATE TRIGGER categories_updated_at_trigger
    BEFORE UPDATE ON public.categories
    FOR EACH ROW
    EXECUTE FUNCTION update_updated_at_column();
    ```
+   - Trigger ensures UpdatedAt timestamp **automatically updates on every row modification** without application code.
+   - Idempotent: `CREATE OR REPLACE FUNCTION` wraps function; trigger only created once.
 
 3. **INSERT 24 System Defaults**:
    - Income (5 categories): Salary, Sales, Investments, Gifts, Other Income
@@ -542,11 +558,15 @@ Create `Infrastructure/Persistence/Migrations/20260307_SeedSystemDefaultCategori
 - [ ] Migration file created with timestamped filename (e.g., 202603071430_*).
 - [ ] CREATE TABLE statement with all columns, types, constraints.
 - [ ] UNIQUE constraint on (user_id, name) to prevent duplicates per user.
-- [ ] All 24 system categories inserted with correct names, types, colors, icons.
+- [ ] All 24 system categories inserted with correct names, types, colors, icons from spec.md FR-002.
 - [ ] user_id = 'system' for all system defaults.
 - [ ] Migration is idempotent (safe to run multiple times).
 - [ ] Foreign key constraint to auth.users(id) with ON DELETE CASCADE.
-- [ ] UpdatedAt trigger configured correctly.
+- [ ] **UpdatedAt trigger configured correctly** (per Analysis Action 3):
+  - [ ] Trigger function `update_updated_at_column()` defined with `CREATE OR REPLACE FUNCTION`.
+  - [ ] Trigger attached to `categories` table: `BEFORE UPDATE FOR EACH ROW`.
+  - [ ] **Trigger verification test** (in Task 11): Insert test row; update a non-timestamp column; confirm updated_at changes automatically.
+- [ ] CREATE INDEX statements for common queries: `idx_categories_user_id`, `idx_categories_user_id_name`.
 
 **Effort Estimate**: 2 hours  
 **Blockages**: Requires Task 03 (understanding entity structure)  
@@ -689,7 +709,11 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
         // 1. Validate Name uniqueness via domain service
         await _categoryService.ValidateUniqueName(request.UserId, request.Name);
         
-        // 2. Create domain entity (ValueObjects validate)
+        // 2. Validate IconName against AllowedBootstrapIcons constant (Task 11.5) — per Analysis Action 1
+        if (!AllowedBootstrapIcons.IsValid(request.IconName))
+            throw new DomainException($"Icon '{request.IconName}' is not available. Choose from available icons.");
+        
+        // 3. Create domain entity (ValueObjects validate: CategoryName, ColorHex)
         var category = new Category(
             new CategoryId(Guid.NewGuid()),
             request.UserId,
@@ -701,10 +725,6 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
             createdAt: DateTime.UtcNow,
             updatedAt: DateTime.UtcNow
         );
-        
-        // 3. Validate IconName against allowed list
-        if (!AllowedBootstrapIcons.IsValid(request.IconName))
-            throw new DomainException($"Icon '{request.IconName}' is not available.");
         
         // 4. Persist to repository
         await _categoryRepository.AddAsync(category);
@@ -736,7 +756,7 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
 - [ ] Handler compiles; follows existing handler patterns.
 
 **Effort Estimate**: 2 hours  
-**Blockages**: Requires Task 04 (CategoryService), Task 09 (SupabaseCategoryRepository)  
+**Blockages**: Requires Task 04 (CategoryService), Task 09 (SupabaseCategoryRepository), **Task 11.5 (AllowedBootstrapIcons constant)**  
 **Test Validation**: Integration test in Task 18.
 
 ---
@@ -1681,6 +1701,97 @@ Enhance Categories.cshtml and Categories.cshtml.cs with robust validation, error
    - All form inputs, buttons, dropdowns accessible via Tab key.
    - Tab order logical (left-to-right, top-to-bottom).
    - Focus visible (CSS outline on focus).
+
+4. **Modal Focus Trap**:
+   - When modal opens, focus moves to first field (name input).
+   - Tab stays within modal; Escape closes modal.
+   - Focus returned to triggering button after modal closes.
+
+5. **Color Contrast**:
+   - All text ≥4.5:1 contrast ratio.
+   - Verified by Lighthouse Accessibility audit.
+
+6. **Color Badges**:
+   - Category color chips paired with text labels.
+   - Never color-only indicators.
+
+7. **Screen Reader Support**:
+   - Form fields announced with labels.
+   - Category list announced as table structure with column headers.
+   - Edit/Delete buttons labeled with category names.
+   - Error messages associated with fields via `aria-describedby`.
+   - Error region uses `aria-live="polite"` for screen reader announcements.
+
+**Acceptance Criteria** — per Analysis Action 2 (Expanded A11y scope):
+
+**Form Validation & Error Handling**:
+- [ ] Form validation: required fields enforced; max length (50 chars) validated.
+- [ ] Character counter shows remaining characters for name field.
+- [ ] Save button disabled if form invalid (name empty, type not selected, icon not selected).
+- [ ] Error messages clear and actionable (e.g., "Category name is required", not "Error").
+- [ ] Backend validation catches DomainExceptions and displays user-friendly messages.
+
+**Accessibility (WCAG 2.1 AA) — Critical for MVP compliance**:
+- [ ] **Semantic HTML**: All form elements use `<form>`, `<label>`, `<input>`, `<button>`, `<fieldset>` correctly.
+- [ ] **ARIA Labels**: All form inputs have labels (`<label for="">` or `aria-label`); buttons describe action (e.g., "Edit Coffee Subscriptions category").
+- [ ] **Keyboard Navigation**: Tab/Shift+Tab navigate all interactive elements; logical order (left-to-right, top-to-bottom).
+- [ ] **Tab Focus**: Focus visible (outline or high-contrast ring) on all focusable elements.
+- [ ] **Modal Focus Trap**: When modal opens, focus moves to first field (name input); Tab stays within modal; Escape closes modal.
+- [ ] **Color Contrast**: All text ≥4.5:1 contrast ratio (verified by Lighthouse A11y).
+- [ ] **Color Badges**: Category color chips paired with text labels (never color-only indicators).
+- [ ] **Screen Reader Support**: 
+  - [ ] Form fields announced with labels.
+  - [ ] Category list announced as table structure with column headers (Name, Type, Color, Actions).
+  - [ ] Edit/Delete buttons labeled with category names (e.g., "Edit Coffee Subscriptions category").
+  - [ ] Error messages associated with fields via `aria-describedby`.
+  - [ ] Error region uses `aria-live="polite"` so screen reader announces changes.
+  - [ ] Modal title announced on open.
+- [ ] **Focus Management**: Focus returned to triggering button after modal closes.
+- [ ] **Lighthouse A11y Audit**: Run Lighthouse in Chrome DevTools; score ≥90.
+- [ ] **axe-core Automated Tests**: Integrate axe-core JavaScript library; run in CI; zero violations reported.
+
+**Effort Estimate**: 2.5–3 hours (includes A11y infrastructure setup)  
+**Blockages**: Requires Task 21 (UI created), Task 11.5 (AllowedBootstrapIcons available)  
+**Test Validation**: Manual keyboard + screen reader testing (NVDA/JAWS if available) + Lighthouse audit in Task 23.
+
+---
+
+## Task 23: A11y & Performance Audit [P] (Frontend)
+**Description**: Final comprehensive A11y and performance audit using Lighthouse and axe-core. Validate all accessibility criteria met and performance targets hit.
+
+**Acceptance Criteria**:
+- [ ] **Lighthouse Audit** (run in Chrome DevTools on each page in category flow):
+  - [ ] **Accessibility Score ≥90** on Dashboard page (where category list is displayed).
+  - [ ] **Accessibility Score ≥90** on Create/Edit Category page (form).
+  - [ ] **Performance Score ≥85** on both pages (Core Web Vitals).
+  - [ ] **Best Practices Score ≥90** on both pages.
+  - [ ] No automatic Lighthouse failures (report any unavoidable issues).
+- [ ] **axe-core Automated Tests** (JavaScript library):
+  - [ ] Integrate axe-core in a dedicated test or in existing Playwright tests (if applicable).
+  - [ ] Run axe-core on:
+    - [ ] Dashboard page (category list).
+    - [ ] Create Category dialog.
+    - [ ] Edit Category dialog.
+  - [ ] **Zero axe-core violations** (all issues resolved before task close).
+  - [ ] Log results in CI output or test report.
+- [ ] **Manual Accessibility Testing**:
+  - [ ] Keyboard navigation verified (Tab/Shift+Tab through all pages).
+  - [ ] Modal focus trap confirmed: Tab wraps within modal; Escape closes.
+  - [ ] Focus visible on all interactive elements.
+  - [ ] Screen reader testing (NVDA or JAWS if available; Chrome VoiceOver on Mac) on:
+    - [ ] Dashboard category list: column headers, row data, Edit/Delete buttons announced correctly.
+    - [ ] Create Category form: labels, inputs, error messages announced.
+    - [ ] Edit Category form: pre-filled values announced; changes announced on update.
+  - [ ] Color contrast checked (≥4.5:1 for normal text, ≥3:1 for large text).
+  - [ ] No color-only indicators (all category badges paired with text).
+- [ ] **Report & Remediation**:
+  - [ ] Document Lighthouse scores and any deviations in commit message.
+  - [ ] If score <90, fix identified issues before task close.
+  - [ ] Confirm zero axe-core violations in commit message.
+
+**Effort Estimate**: 1.5 hours (assumes minimal issues from prior tasks)  
+**Blockages**: Requires Task 22 (A11y implementation complete)  
+**Success Criteria**: All three pages pass Lighthouse A11y ≥90 + axe-core zero violations.
    - Modal focus trap: Tab cycles within modal; Escape closes.
    - Buttons activatable via Enter/Space.
 
@@ -1735,26 +1846,37 @@ modal.addEventListener('show.bs.modal', () => {
 });
 ```
 
-**Acceptance Criteria**:
-- [ ] Form validation: required fields enforced; max length validated.
-- [ ] Character counter shows remaining characters for name field.
-- [ ] Save button disabled if form invalid.
-- [ ] Error messages clear and actionable.
-- [ ] All form labels associated with inputs (`<label for="">`).
-- [ ] Edit/Delete buttons labeled with `aria-label`.
-- [ ] Keyboard navigation: Tab cycles through all interactive elements.
-- [ ] Modal focus trap: Tab stays within modal; Escape closes.
-- [ ] All text ≥4.5:1 color contrast.
-- [ ] Category color badges paired with text (not color-only).
-- [ ] Screen reader support: form fields, list structure, error messages announced.
-- [ ] Focus management: moves to modal on open, returns on close.
-- [ ] Error messages use aria-live="polite" for screen reader announcement.
-- [ ] Lighthouse A11y audit ≥90.
-- [ ] axe-core automated tests pass (zero violations).
+**Acceptance Criteria** — per Analysis Action 2 (Expanded A11y scope):
 
-**Effort Estimate**: 2.5 hours  
-**Blockages**: Requires Task 21 (UI created)  
-**Test Validation**: Manual keyboard/screen reader testing + Lighthouse audit in Task 23.
+**Form Validation & Error Handling**:
+- [ ] Form validation: required fields enforced; max length (50 chars) validated.
+- [ ] Character counter shows remaining characters for name field.
+- [ ] Save button disabled if form invalid (name empty, type not selected, icon not selected).
+- [ ] Error messages clear and actionable (e.g., "Category name is required", not "Error").
+- [ ] Backend validation catches DomainExceptions and displays user-friendly messages.
+
+**Accessibility (WCAG 2.1 AA) — Critical for MVP compliance**:
+- [ ] **Semantic HTML**: All form elements use `<form>`, `<label>`, `<input>`, `<button>`, `<fieldset>` correctly.
+- [ ] **ARIA Labels**: All form inputs have labels (`<label for="">` or `aria-label`); buttons describe action (e.g., "Edit Coffee Subscriptions category").
+- [ ] **Keyboard Navigation**: Tab/Shift+Tab navigate all interactive elements; logical order (left-to-right, top-to-bottom).
+- [ ] **Tab Focus**: Focus visible (outline or high-contrast ring) on all focusable elements.
+- [ ] **Modal Focus Trap**: When modal opens, focus moves to first field (name input); Tab stays within modal; Escape closes modal.
+- [ ] **Color Contrast**: All text ≥4.5:1 contrast ratio (verified by Lighthouse A11y).
+- [ ] **Color Badges**: Category color chips paired with text labels (never color-only indicators).
+- [ ] **Screen Reader Support**: 
+  - [ ] Form fields announced with labels.
+  - [ ] Category list announced as table structure with column headers (Name, Type, Color, Actions).
+  - [ ] Edit/Delete buttons labeled with category names (e.g., "Edit Coffee Subscriptions category").
+  - [ ] Error messages associated with fields via `aria-describedby`.
+  - [ ] Error region uses `aria-live="polite"` so screen reader announces changes.
+  - [ ] Modal title announced on open.
+- [ ] **Focus Management**: Focus returned to triggering button after modal closes.
+- [ ] **Lighthouse A11y Audit**: Run Lighthouse in Chrome DevTools; score ≥90.
+- [ ] **axe-core Automated Tests**: Integrate axe-core JavaScript library; run in CI; zero violations reported.
+
+**Effort Estimate**: 2.5–3 hours (includes A11y infrastructure setup)  
+**Blockages**: Requires Task 21 (UI created), Task 11.5 (AllowedBootstrapIcons available)  
+**Test Validation**: Manual keyboard + screen reader testing (NVDA/JAWS if available) + Lighthouse audit in Task 23.
 
 ---
 
