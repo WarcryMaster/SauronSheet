@@ -18,6 +18,7 @@ public class ImportTransactionsFromPdfCommandTests
     private readonly Mock<ITransactionRepository> _mockTransactionRepo;
     private readonly Mock<ICategoryRepository> _mockCategoryRepo;
     private readonly Mock<IPdfImportRepository> _mockPdfImportRepo;
+    private readonly Mock<IUserProfileRepository> _mockUserProfileRepo;
     private readonly Mock<IUserContext> _mockUserContext;
     private readonly Mock<IMediator> _mockMediator;
 
@@ -27,10 +28,14 @@ public class ImportTransactionsFromPdfCommandTests
         _mockTransactionRepo = new Mock<ITransactionRepository>();
         _mockCategoryRepo = new Mock<ICategoryRepository>();
         _mockPdfImportRepo = new Mock<IPdfImportRepository>();
+        _mockUserProfileRepo = new Mock<IUserProfileRepository>();
         _mockUserContext = new Mock<IUserContext>();
         _mockMediator = new Mock<IMediator>();
 
         _mockUserContext.Setup(x => x.UserId).Returns("test-user-id");
+        _mockUserContext.Setup(x => x.UserEmail).Returns("test@example.com");
+        _mockUserProfileRepo.Setup(x => x.EnsureExistsAsync(It.IsAny<UserId>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
     }
 
     [Fact]
@@ -43,6 +48,7 @@ public class ImportTransactionsFromPdfCommandTests
             _mockTransactionRepo.Object,
             _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
             _mockUserContext.Object,
             _mockMediator.Object);
 
@@ -83,6 +89,7 @@ public class ImportTransactionsFromPdfCommandTests
             _mockTransactionRepo.Object,
             _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
             _mockUserContext.Object,
             _mockMediator.Object);
 
@@ -123,6 +130,7 @@ public class ImportTransactionsFromPdfCommandTests
             _mockTransactionRepo.Object,
             _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
             _mockUserContext.Object,
             _mockMediator.Object);
 
@@ -159,6 +167,7 @@ public class ImportTransactionsFromPdfCommandTests
             _mockTransactionRepo.Object,
             _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
             _mockUserContext.Object,
             _mockMediator.Object);
 
