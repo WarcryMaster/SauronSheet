@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<ITransactionRepository, SupabaseTransactionRepository>();
         services.AddScoped<ICategoryRepository, SupabaseCategoryRepository>();
         services.AddScoped<IPdfImportRepository, SupabasePdfImportRepository>();
+        services.AddScoped<IUserProfileRepository, SupabaseUserRepository>();
 
         // PDF parsing (NEW in Phase 3)
         // Support multiple bank formats: ING-specific and generic fallback

@@ -9,5 +9,6 @@ namespace SauronSheet.Application.Common;
 public interface IUserContext
 {
     string UserId { get; }
+    string UserEmail { get; }
     bool IsAuthenticated { get; }
 }

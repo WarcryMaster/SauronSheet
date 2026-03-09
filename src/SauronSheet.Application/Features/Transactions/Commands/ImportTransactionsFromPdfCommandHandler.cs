@@ -22,6 +22,7 @@ public class ImportTransactionsFromPdfCommandHandler
     private readonly ITransactionRepository _transactionRepo;
     private readonly ICategoryRepository _categoryRepo;
     private readonly IPdfImportRepository _pdfImportRepo;
+    private readonly IUserProfileRepository _userProfileRepo;
     private readonly IUserContext _userContext;
     private readonly IMediator _mediator;
 
@@ -30,6 +31,7 @@ public class ImportTransactionsFromPdfCommandHandler
         ITransactionRepository transactionRepo,
         ICategoryRepository categoryRepo,
         IPdfImportRepository pdfImportRepo,
+        IUserProfileRepository userProfileRepo,
         IUserContext userContext,
         IMediator mediator)
     {
@@ -37,6 +39,7 @@ public class ImportTransactionsFromPdfCommandHandler
         _transactionRepo = transactionRepo;
         _categoryRepo = categoryRepo;
         _pdfImportRepo = pdfImportRepo;
+        _userProfileRepo = userProfileRepo;
         _userContext = userContext;
         _mediator = mediator;
     }
@@ -52,6 +55,10 @@ public class ImportTransactionsFromPdfCommandHandler
             throw new DomainException("Only PDF files are accepted.");
 
         var userId = new UserId(_userContext.UserId);
+
+        // Ensure user profile exists in public.users before FK-constrained inserts.
+        // Guards against the case where the Supabase trigger did not fire for this user.
+        await _userProfileRepo.EnsureExistsAsync(userId, _userContext.UserEmail);
 
         // CLARIFICATION A-1: Seed system defaults via MediatR (NOT inline check)
         await _mediator.Send(new SeedSystemDefaultsCommand(), cancellationToken);
