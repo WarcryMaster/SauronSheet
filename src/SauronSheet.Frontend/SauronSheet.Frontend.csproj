@@ -9,7 +9,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
     <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
