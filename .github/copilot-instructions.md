@@ -17,9 +17,10 @@
 - Use `thought` blocks to reason internally, but keep the final output focused on code and execution.
 
 ## Quality Standards
-- Be **thorough** and **meticulous** like Claude Sonnet. 
-- Check for edge cases and side effects in the existing codebase before modifying.
-- Ensure all new code adheres to the architectural patterns defined in the root documentation.
+
+- Always use the specific variable name instead of the generic type when declaring or instantiating variables (e.g., use `var transaction = new();` instead of `Transaction transaction = new Transaction();`).
+- Prefer `new()` for instantiation when the type is clear from context, instead of repeating the class name (e.g., `var foo = new();` not `var foo = new Foo();`).
+- For lists and arrays, use the `[]` initializer syntax (e.g., `var items = new[] { ... }` or `var list = new List<Type> { ... }`).
 
 
 # SauronSheet - AI Coding Instructions
