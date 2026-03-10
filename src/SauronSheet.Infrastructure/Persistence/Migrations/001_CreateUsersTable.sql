@@ -25,5 +25,9 @@ CREATE POLICY "Users can update own profile"
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
 
+CREATE POLICY "Users can insert own profile"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
 COMMENT ON TABLE public.users IS 'User profiles linked to Supabase Auth';
 COMMENT ON COLUMN public.users.id IS 'Foreign key to auth.users(id)';

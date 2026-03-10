@@ -1,0 +1,6 @@
+{
+  "buildCommand": "dotnet publish -c Release -o ./out",
+  "outputDirectory": "./out",
+  "framework": "dotnet",
+  "nodeVersion": "18.x"
+}

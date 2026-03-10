@@ -209,6 +209,12 @@ public class SupabaseTransactionRepository : ITransactionRepository
         await _client.From<TransactionRow>()
             .Where(x => x.Id == id.Value.ToString())
             .Delete();
+        // Verifica si la transacción sigue existiendo
+        var stillExists = await ExistsAsync(id);
+        if (stillExists)
+        {
+            Sentry.SentrySdk.Logger?.LogError($"SupabaseTransactionRepository.DeleteAsync: No transaction deleted for id {id.Value}");
+        }
     }
 
     public async Task<bool> ExistsAsync(TransactionId id)
