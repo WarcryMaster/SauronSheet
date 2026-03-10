@@ -10,6 +10,7 @@
     <NoWarn>$(NoWarn);NU1701</NoWarn>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
