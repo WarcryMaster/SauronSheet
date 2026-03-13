@@ -27,9 +27,11 @@
 **Performance Goals**: Delete 5+ transactions in <30 seconds; 95% operation success rate (network reliability)  
 **Constraints**:
 - Atomic semantics (all-or-nothing deletion; transaction rollback on any failure)
-- Max 1000 transaction selection per operation (default specification limit)
+- Max 1000 transaction selection per operation (default specification limit); enforced at UI with error toast
 - Multi-tenant isolation enforced at Application handler level (UserId scoping)
-- 3 auto-retries maximum on transient network errors
+- 3 auto-retries maximum on transient network errors (network timeout, HTTP 503, Postgrest unavailability)
+- Retry backoff: Linear 1 second between attempts (no exponential backoff; simple predictable UX)
+- Transient errors: Only network-level (HttpRequestException, timeout on Postgrest) → retry; business logic errors (constraint violation, permission denied) → no retry, show error
 
 **Scale/Scope**: Single-user per request; no concurrent cross-user conflict handling (multi-tab concurrency out of scope)
 
@@ -219,15 +221,17 @@ Feature complexity is **MEDIUM** due to:
 
 ### Phase 4: Frontend UI (Razor Pages)
 - Add checkbox column to transaction list (Index.cshtml)
-- Add "Select All / Deselect All" toggle in table header
-- Enable "Delete Selected" button on 1+ selections
-- Create `_ConfirmDeleteModal.cshtml` partial with count display
+- Add "Select All / Deselect All" toggle in table header; disable if >1000 visible items
+- Enable "Delete Selected" button on 1+ selections; disable if >1000 selected
+- Create `_ConfirmDeleteModal.cshtml` partial with count display + MaxResults validation
 - Implement `bulk-delete.js`:
-  - Track selected TransactionIds
+  - Track selected TransactionIds; enforce MaxResults ≤ 1000 (show error toast if exceeded)
   - Clear selection on filter/sort/pagination
-  - Handle delete command dispatch via MediatR
-  - Implement cancel window (5-second grace period)
-  - Show retry button on error (max 3 auto-retries)
+  - Handle delete command dispatch via MediatR (optimistic: clear selection immediately)
+  - Implement cancel window (5-second grace period): if user clicks Cancel, UI restores selection from cache
+  - Auto-retry on error: max 3 attempts with 1-second linear backoff (only for network errors)
+  - Show retry button on persistent error (after 3 attempts); same selection preserved
+  - Test scenario: User cancels mid-delete → server completes delete independently; next page load shows transaction gone
 
 ### Phase 5: Integration & E2E Testing (Optional)
 - Full-stack test: UI → Handler → Repository → Database
@@ -254,12 +258,14 @@ Feature complexity is **MEDIUM** due to:
 ## Risk Mitigation
 
 | Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|-----------|
-| Partial delete failure (DB constraint) | Medium | High | Atomic transaction; rollback all; unit tests for constraint validation |
-| Network timeout during delete | High | Medium | 3 auto-retries at Infrastructure layer; manual retry UI button |
-| Multi-tenant ID mixing | Low | Critical | UserId parameter validation at handler entry; test with cross-tenant attempt |
-| Selection state loss on page refresh | Medium | Low | Session storage for selection state (opt); clear on logout |
-| Large bulk delete timeout | Low | Medium | Specification MaxResults=1000 limit; inform user of max selection size |
+|------|-------------|--------|------------|
+| Partial delete failure (DB constraint) | Medium | High | Atomic transaction; rollback all; unit tests for constraint violation scenario (e.g., active budget) |
+| Network timeout during delete | High | Medium | 3 auto-retries at Infrastructure layer (1s linear backoff); manual retry UI button on persistent error |
+| Multi-tenant ID mixing | Low | Critical | UserId parameter validation at handler entry; test with cross-tenant attempt (User A selects, User B logs in) |
+| Selection state loss on page refresh | Medium | Low | JavaScript cache selection in memory; UI restores from cache on cancel within 5s; clear on logout |
+| Large bulk delete timeout | Low | Medium | Specification MaxResults=1000 limit; UI enforces at selection (error toast); spec layer rejects if >1000 sent |
+| Optimistic delete UI mismatch | Medium | Low | Test scenario: User cancels within 5s, server completes anyway → next page load reflects true DB state |
+| Cancel after timeout (>5s) | Low | Low | Cancel button disabled after 5s; UI shows "Delete in progress" message; closes automatically after complete |
 
 ---
 
@@ -341,5 +347,59 @@ Feature complexity is **MEDIUM** due to:
 
 ---
 
-**Status**: Ready for `/speckit.tasks` command to generate actionable development tasks.
+## Frontend Considerations
+
+**Cancel Window Semantics (Decision: Optimistic)**
+- Delete is immediate in UI: selection clears, list refreshes, success toast shown
+- User clicks "Cancel" within 5-second window: UI restores cached selection; no server abort sent (cancel is client-side only)
+- Rationale: Simpler architecture (no server-side job tracking); reduces state management complexity; aligns with fast delete UX
+- Server-side: Delete proceeds independently after handler execution; no cancellation RPC endpoint needed
+- Test scenario: User confirms delete, network hiccup for 2 seconds, user clicks Cancel within 5s → selection restored in UI; server eventually completes delete; next refresh shows transaction gone
+
+**Retry State Machine**
+- **Initial**: User confirmed delete → send command → 3 auto-retries begin (network errors only)
+- **After 3 failed retries**: Error message displayed; same selection preserved; manual "Retry" button enabled
+- **Manual retry click**: Reset retry counter to 0; send command again; max 3 new attempts
+- **Persistent error (>3 attempts)**: Error modal permanent until user clicks "Retry", dismisses with X, or navigates away
+- Test scenarios: 
+  - User clicks Retry button 5 times → confirm message updates after each attempt
+  - Error occurs on 2nd of 3 retries → still shows Retry button (not "Give up")
+
+**MaxResults Enforcement at UI Layer**
+- Checkboxes disabled after 1000th transaction selected
+- Error toast: "Maximum 1000 transactions per operation. Please select fewer items."
+- Visual indicator: "1000 / 1000 selected" counter displayed
+- Clear Selection button provided for easy re-selection
+- Test scenario: User selects 1001 items → 1001st checkbox remains unchecked; error toast shown
+
+---
+
+## Test Scenarios (Implementation Reference)
+
+### Domain Layer Tests
+- `TransactionByIdsSpecification_MaxResults_Enforced`: Verify specification rejects >1000 IDs
+- `TransactionByIdsSpecification_FiltersByUserId_Correctly`: Ensure multi-tenant isolation in spec
+
+### Application Layer Tests
+- `BulkDeleteTransactionsHandler_SuccessfulDelete_ReturnsCount`: Happy path
+- `BulkDeleteTransactionsHandler_PartialFailure_RollsBackAll`: Atomic semantics (1 constraint error → all reverted)
+- `BulkDeleteTransactionsHandler_NetworkTimeout_RetriesThreeTimes`: Auto-retry logic with 1s backoff
+- `BulkDeleteTransactionsHandler_PersistentNetworkError_ThrowsAfterThreeAttempts`: Manual retry required
+- `BulkDeleteTransactionsHandler_CrossUserAttempt_FailsWithForbidden`: Multi-tenant isolation
+- `BulkDeleteTransactionsHandler_MaxResultsExceeded_ThrowsDomainException`: Selection >1000 rejected
+
+### Infrastructure Layer Tests
+- `TransactionRepository_DeleteTransactionsByIds_IsAtomic`: Rollback on single error
+- `TransactionRepository_DeleteTransactionsByIds_ConcurrentDelete_Handles`: Concurrent calls from different users
+- `TransactionRepository_DeleteTransactionsByIds_ConstraintViolation_Rollsback`: Real constraint (e.g., active budget)
+
+### Frontend Tests (Manual/Browser Console)
+- Cancel within 5s restores selection
+- MaxResults >1000 disables checkboxes + error toast
+- Manual retry button enables after 3 failed attempts
+- Selection clears on filter/sort/pagination
+
+---
+
+**Status**: ✅ Ready for `/speckit.tasks` command to generate actionable development tasks.
 **Next Step**: User executes `/speckit.tasks` to break down phases into granular, dependency-ordered implementation tasks.

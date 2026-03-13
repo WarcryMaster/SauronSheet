@@ -109,7 +109,7 @@ Network error, database issue, or permission problem occurs during deletion. Use
 - **Permission check**: User tries to delete another user's transaction (should fail at Application layer) → error shown
 - **Async delete with network interruption**: User selects 5 transactions, confirms delete, network drops during server-side deletion → server completes delete independently; UI may show stale state until refresh
 - **Delete with auto-retry**: User selects 5, delete fails with network timeout → system auto-retries up to 3 times silently; if still fails, shows manual retry button; same 5 remain selected
-- **Partial delete failure**: User deletes 10 transactions, 7 succeed, 3 fail due to permission error (should not happen, but edge case) → strategy is ATOMIC: rollback all 10; show error; user retries entire operation
+- **Partial delete failure**: User deletes 10 transactions; 1 has active budget constraint (violated during delete) → strategy is ATOMIC: rollback all 10 before any hit database; show error: "Delete failed: [Reason]. Your transactions were not deleted." ; user can retry entire operation with same selection preserved
 - **Filter after select**: User selects 5 transactions, then filters by date → selection is cleared; user must reselect from filtered results
 
 ---
@@ -129,7 +129,8 @@ Network error, database issue, or permission problem occurs during deletion. Use
 - **FR-009**: System MUST show error message with reason if delete fails; system attempts max 3 auto-retries on network errors, then shows manual retry button
 - **FR-010**: System MUST preserve user's selection state if delete fails (transactions remain checked for manual retry)
 - **FR-011**: System MUST clear selection state when user applies filter, sort, or pagination changes
-- **FR-012**: System MUST implement async delete with 5-second cancel window; if user closes tab/navigates during delete, server completes operation independently
+- **FR-012**: System MUST implement optimistic async delete (UI clears immediately); if user clicks Cancel within 5-second window, UI restores selection (cancel is cosmetic; server-side delete proceeds independently)
+- **FR-013**: System MUST enforce MaxResults limit; if user attempts to select >1000 transactions, show error toast: "Maximum 1000 transactions per operation. Please select fewer items." and disable additional checkboxes
 
 ### Key Entities
 
