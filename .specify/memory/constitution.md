@@ -150,6 +150,23 @@ Development lifecycle follows a strict sequence for every feature:
 - **Authentication:** Supabase Auth (JWT tokens); multi-tenancy enforced at query level
 - **Testing:** xUnit for unit tests; Moq for mocking; in-memory databases for integration tests
 - **Code Style:** C# nullable reference types enabled; enforce StyleCop rules; LINQ preferred over loops
+- **Language:** All source code (identifiers, comments, docstrings) MUST be in English. Specifications and plans only in Spanish.
+
+### PDF Parser: Dual-Format Number Normalization
+
+**Rule:** All amount parsing in PDF parsers (Infrastructure/PDF/Parsers) MUST normalize numeric
+values to standard format: decimal point separator, no thousands separator.
+
+**Formats Supported:**
+- European: `1.246,74` (point=thousands, comma=decimal) → `1246.74`
+- Anglo: `1,246.74` (comma=thousands, point=decimal) → `1246.74`
+- Single separator: `0,82` (decimal) → `0.82`
+
+**Implementation:** Static `NormalizeAmount()` private method in each parser detecting decimal
+position automatically (rightmost separator in mixed-format strings is always decimal).
+
+**Testing:** Minimum 22 test cases covering all format combinations (positive, negative, single
+separator, no separator, null/empty inputs).
 
 
 ### UI & Librerías Externas

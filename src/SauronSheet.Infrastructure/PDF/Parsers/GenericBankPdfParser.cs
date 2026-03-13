@@ -92,7 +92,7 @@ public class GenericBankPdfParser : IPdfParser
                             null,               // subCategory
                             descriptionRaw,
                             null,               // comment
-                            amountRaw,
+                            NormalizeAmount(amountRaw),
                             null,               // balance
                             currencyRaw));
                     }
@@ -130,6 +130,57 @@ public class GenericBankPdfParser : IPdfParser
     {
         var upper = raw.ToUpperInvariant().Trim();
         return KnownCurrencies.Contains(upper) ? upper : "EUR";
+    }
+
+    /// <summary>
+    /// Normaliza el formato del importe: soporta ambos formatos (europeo con coma decimal y anglo con punto decimal).
+    /// Convierte a formato estándar con punto decimal y sin separadores de miles.
+    /// Ejemplos: "1,246.74" → "1246.74", "1.246,74" → "1246.74", "0.82" → "0.82", "0,82" → "0.82"
+    /// </summary>
+    private static string? NormalizeAmount(string? amount)
+    {
+        if (string.IsNullOrWhiteSpace(amount))
+            return null;
+
+        amount = amount.Trim();
+
+        // Si no tiene punto ni coma, retornar como está
+        if (!amount.Contains(',') && !amount.Contains('.'))
+            return amount;
+
+        // Si tiene ambos separadores, detectar cuál es decimal y cuál es de miles
+        if (amount.Contains(',') && amount.Contains('.'))
+        {
+            // El último separador (más a la derecha) es el decimal
+            var lastCommaIndex = amount.LastIndexOf(',');
+            var lastDotIndex = amount.LastIndexOf('.');
+
+            string normalized;
+            if (lastCommaIndex > lastDotIndex)
+            {
+                // Coma es decimal: "1.246,74" → "1246.74"
+                normalized = amount
+                    .Replace(".", string.Empty)  // Quitar separador de miles
+                    .Replace(",", ".");          // Coma a punto decimal
+            }
+            else
+            {
+                // Punto es decimal: "1,246.74" → "1246.74"
+                normalized = amount.Replace(",", string.Empty);  // Quitar separador de miles
+            }
+
+            return normalized;
+        }
+
+        // Si solo tiene coma, es probablemente decimal (formato europeo)
+        if (amount.Contains(',') && !amount.Contains('.'))
+        {
+            return amount.Replace(",", ".");
+        }
+
+        // Si solo tiene punto, es probablemente decimal o parte de "1.234" sin decimales
+        // Retornar como está (ya tiene punto decimal)
+        return amount;
     }
 }
 

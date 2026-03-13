@@ -298,6 +298,20 @@ dotnet publish -c Release
 - Each PageModel extracts userId from JWT claims.
 - Queries automatically scoped to current user — enforced in handlers, not UI.
 
+## Documentation
+
+### Specifications & Planning
+- **Formal Phase Specs:** See `specs/` for phase-based requirements and implementation plans.
+- **Constitution:** See `.specify/memory/constitution.md` for governance, core principles, and compliance rules.
+
+### Architecture Decisions & Technical Context
+- **ADRs (Architecture Decision Records):** See `docs/adr/` for architectural decisions (e.g., PDF parser normalization strategy).
+- **Coding Standards:** See `.github/copilot-instructions.md` for patterns, conventions, and development guidelines.
+- **Language Rules:** All source code, comments, and identifiers MUST be in English. Specifications only in Spanish.
+
+### Development Guides
+- See individual ADR files and technical notes in `docs/` for implementation context not covered by formal specs.
+
 ### Budget Management
 
 - Users set monthly budget limits per category.
