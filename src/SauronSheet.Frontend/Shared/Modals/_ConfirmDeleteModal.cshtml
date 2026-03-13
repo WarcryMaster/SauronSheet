@@ -1,0 +1,47 @@
+<!-- Confirmation Modal for Bulk Delete -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title" id="confirmDeleteLabel">
+                    <span class="text-danger">⚠️ Delete Transactions</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-2">
+                    Delete <strong id="deleteCountDisplay">0</strong> transaction<span id="pluralS">s</span>?
+                </p>
+                <p class="text-muted small mb-4">
+                    <span class="d-block">This action cannot be undone.</span>
+                    <span class="d-block">All selected transactions will be permanently removed.</span>
+                </p>
+
+                <!-- Countdown Timer -->
+                <div class="alert alert-info mb-0" role="status">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>Confirm deletion in <strong id="countdownTimer">5</strong> seconds</span>
+                        <div class="progress" style="width: 80px; height: 6px;">
+                            <div id="countdownBar" class="progress-bar bg-info" role="progressbar" 
+                                 style="width: 100%;" aria-valuenow="5" aria-valuemin="0" aria-valuemax="5"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top gap-2">
+                <button type="button" id="cancelDeleteBtn" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    ← Cancel
+                </button>
+                <button type="button" id="confirmDeleteBtn" class="btn btn-danger btn-sm" disabled>
+                    🗑️ Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="bulkDeleteForm" method="post" asp-page-handler="BulkDelete" style="display: none;">
+    <input type="hidden" id="selectedIds" name="transactionIds" />
+</form>

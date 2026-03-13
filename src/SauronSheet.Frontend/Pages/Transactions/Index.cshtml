@@ -45,11 +45,32 @@
     }
     else
     {
+        <!-- Bulk Delete Toolbar -->
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="small text-muted">
+                <span id="selectionCounter">0 / @Math.Min(Model.Transactions.TotalCount, 1000) selected</span>
+                @if (Model.Transactions.TotalCount > 1000)
+                {
+                    <span class="badge bg-warning text-dark ms-2">⚠️ Limited to 1000 per transaction</span>
+                }
+            </div>
+            <button type="button" id="deleteSelectedBtn" class="btn btn-danger btn-sm" disabled
+                    data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                🗑️ Delete Selected
+            </button>
+        </div>
+
         <div class="card border-0 shadow-sm">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="transactionsTable">
                     <thead class="table-light">
                         <tr>
+                            <th style="width: 40px;">
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox" />
+                                    <label class="form-check-label" for="selectAllCheckbox" title="Select all"></label>
+                                </div>
+                            </th>
                             <th class="text-uppercase small fw-semibold text-muted">Date</th>
                             <th class="text-uppercase small fw-semibold text-muted">Description</th>
                             <th class="text-uppercase small fw-semibold text-muted">Amount</th>
@@ -61,6 +82,13 @@
                         @foreach (var transaction in Model.Transactions.Items)
                         {
                             <tr>
+                                <td style="width: 40px;">
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input transaction-checkbox" type="checkbox"
+                                               value="@transaction.Id" id="cb_@transaction.Id" />
+                                        <label class="form-check-label" for="cb_@transaction.Id"></label>
+                                    </div>
+                                </td>
                                 <td class="small text-muted">@transaction.Date.ToString("yyyy-MM-dd")</td>
                                 <td class="small">
                                     @transaction.Description
@@ -120,3 +148,10 @@
         </div>
     }
 </div>
+
+<!-- Include Confirmation Modal Partial -->
+@await Html.PartialAsync("Modals/_ConfirmDeleteModal")
+
+@section Scripts {
+    <script src="~/js/bulk-delete.js"></script>
+}
