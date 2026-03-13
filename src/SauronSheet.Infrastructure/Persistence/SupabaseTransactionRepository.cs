@@ -257,4 +257,13 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
         return result;
     }
+
+    /// <summary>
+    /// Feature 004: Bulk delete implementation (stub).
+    /// Full implementation in Phase 3 (Infrastructure) with atomic transaction support.
+    /// </summary>
+    public async Task<int> DeleteTransactionsByIdsAsync(UserId userId, IEnumerable<TransactionId> transactionIds)
+    {
+        throw new NotImplementedException("Phase 3: Infrastructure implementation required.");
+    }
 }

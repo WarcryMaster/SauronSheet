@@ -23,6 +23,16 @@ public interface ITransactionRepository
     Task<bool> ExistsDuplicateAsync(UserId userId, DateTime date, decimal amount, string description);
 
     /// <summary>
+    /// Deletes multiple transactions atomically for a user.
+    /// Feature 004: Bulk delete implementation.
+    /// If any transaction fails to delete, all deletions are rolled back (atomic semantics).
+    /// </summary>
+    /// <param name="userId">User owner of the transactions (multi-tenant isolation)</param>
+    /// <param name="transactionIds">IDs of transactions to delete</param>
+    /// <returns>Number of transactions successfully deleted</returns>
+    Task<int> DeleteTransactionsByIdsAsync(UserId userId, IEnumerable<TransactionId> transactionIds);
+
+    /// <summary>
     /// Gets transaction counts grouped by category.
     /// CRITICAL FIX I-4: Added to support CategoryDto.TransactionCount calculation.
     /// </summary>

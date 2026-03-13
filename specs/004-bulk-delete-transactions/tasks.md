@@ -24,23 +24,23 @@
 
 ### Domain Unit Tests (TDD: Red Phase)
 
-- [ ] T001 [P] Create domain test file `tests/SauronSheet.Domain.Tests/Specifications/TransactionByIdSpecificationTests.cs`
-- [ ] T002 [P] Write test: `TransactionByIdSpecification_FiltersByUserId_Correctly` → verify UserId scoping
-- [ ] T003 [P] Write test: `TransactionByIdSpecification_MaxResults_Enforced` → verify 1000 limit rejection
-- [ ] T004 [P] Write test: `TransactionByIdSpecification_EmptyIds_ReturnsEmpty` → edge case empty list
-- [ ] T005 [P] Write test: `TransactionByIdSpecification_SingleId_FiltersSingleTransaction` → single ID scenario
-- [ ] T006 [P] Write test: `TransactionByIdSpecification_BulkIds_Filters100Plus` → bulk scenario 100+ IDs
-- [ ] T007 [P] Write test: `TransactionByIdSpecification_NullUserId_ThrowsDomainException` → null guard
-- [ ] T008 [P] Write test: `TransactionByIdSpecification_AtomicityPreserved_WhenFiltering` → invariant check
+- [x] T001 [P] Create domain test file `tests/SauronSheet.Domain.Tests/Specifications/TransactionByIdSpecificationTests.cs`
+- [x] T002 [P] Write test: `TransactionByIdSpecification_FiltersByUserId_Correctly` → verify UserId scoping
+- [x] T003 [P] Write test: `TransactionByIdSpecification_MaxResults_Enforced` → verify 1000 limit rejection
+- [x] T004 [P] Write test: `TransactionByIdSpecification_EmptyIds_ReturnsEmpty` → edge case empty list
+- [x] T005 [P] Write test: `TransactionByIdSpecification_SingleId_FiltersSingleTransaction` → single ID scenario
+- [x] T006 [P] Write test: `TransactionByIdSpecification_BulkIds_Filters100Plus` → bulk scenario 100+ IDs
+- [x] T007 [P] Write test: `TransactionByIdSpecification_NullUserId_ThrowsDomainException` → null guard
+- [x] T008 [P] Write test: `TransactionByIdSpecification_AtomicityPreserved_WhenFiltering` → invariant check
 
 ### Domain Implementation (Green Phase)
 
-- [ ] T009 Create specification file `src/SauronSheet.Domain/Specifications/TransactionByIdSpecification.cs`
-- [ ] T010 Implement `TransactionByIdSpecification` class inheriting from `ISpecification<Transaction>`
-- [ ] T011 Add `ApplyCriteria(IQueryable<Transaction>)` method filtering by UserId + TransactionIds
-- [ ] T012 Add `MaxResults = 1000` constant per specification pattern
-- [ ] T013 Add guard clauses for null UserId and empty TransactionIds
-- [ ] T014 Run all domain tests → verify 8/8 passing
+- [x] T009 Create specification file `src/SauronSheet.Domain/Specifications/TransactionByIdSpecification.cs`
+- [x] T010 Implement `TransactionByIdSpecification` class inheriting from `ISpecification<Transaction>`
+- [x] T011 Add `ApplyCriteria(IQueryable<Transaction>)` method filtering by UserId + TransactionIds
+- [x] T012 Add `MaxResults = 1000` constant per specification pattern
+- [x] T013 Add guard clauses for null UserId and empty TransactionIds
+- [x] T014 Run all domain tests → verify 8/8 passing
 
 **Checkpoint**: Domain specification layer complete and testable; 80%+ coverage achieved
 
@@ -52,37 +52,37 @@
 
 ### Application Unit Tests (TDD: Red Phase)
 
-- [ ] T015 [P] Create test file `tests/SauronSheet.Application.Tests/Features/Transactions/BulkDeleteTransactionsHandlerTests.cs`
-- [ ] T016 [P] Write test: `BulkDeleteTransactionsHandler_SuccessfulDelete_ReturnsCount` → happy path 5 items
-- [ ] T017 [P] Write test: `BulkDeleteTransactionsHandler_UserIdValidation_FailsOnMismatch` → tenant isolation
-- [ ] T018 [P] Write test: `BulkDeleteTransactionsHandler_MaxResultsExceeded_ThrowsDomainException` → >1000 rejection
-- [ ] T019 [P] Write test: `BulkDeleteTransactionsHandler_NetworkTimeout_RetriesThreeTimes` → 3 auto-retries
-- [ ] T020 [P] Write test: `BulkDeleteTransactionsHandler_PersistentNetworkError_ThrowsAfterThreeAttempts` → manual retry required
-- [ ] T021 [P] Write test: `BulkDeleteTransactionsHandler_PartialFailure_RollsBackAll` → atomic semantics (constraint error)
-- [ ] T022 [P] Write test: `BulkDeleteTransactionsHandler_CrossUserAttempt_FailsWithForbidden` → multi-tenant abuse test
-- [ ] T023 [P] Write test: `BulkDeleteTransactionsHandler_EmptySelection_ReturnsZero` → edge case
-- [ ] T024 [P] Write test: `BulkDeleteTransactionsHandler_ErrorMessage_IsUserFriendly` → message validation
+- [x] T015 [P] Create test file `tests/SauronSheet.Application.Tests/Features/Transactions/BulkDeleteTransactionsHandlerTests.cs`
+- [x] T016 [P] Write test: `BulkDeleteTransactionsHandler_SuccessfulDelete_ReturnsCount` → happy path 5 items
+- [x] T017 [P] Write test: `BulkDeleteTransactionsHandler_UserIdValidation_FailsOnMismatch` → tenant isolation
+- [x] T018 [P] Write test: `BulkDeleteTransactionsHandler_MaxResultsExceeded_ThrowsDomainException` → >1000 rejection
+- [x] T019 [P] Write test: `BulkDeleteTransactionsHandler_NetworkTimeout_RetriesThreeTimes` → 3 auto-retries
+- [x] T020 [P] Write test: `BulkDeleteTransactionsHandler_PersistentNetworkError_ThrowsAfterThreeAttempts` → manual retry required
+- [x] T021 [P] Write test: `BulkDeleteTransactionsHandler_PartialFailure_RollsBackAll` → atomic semantics (constraint error)
+- [x] T022 [P] Write test: `BulkDeleteTransactionsHandler_CrossUserAttempt_FailsWithForbidden` → multi-tenant abuse test
+- [x] T023 [P] Write test: `BulkDeleteTransactionsHandler_EmptySelection_ReturnsZero` → edge case
+- [x] T024 [P] Write test: `BulkDeleteTransactionsHandler_ErrorMessage_IsUserFriendly` → message validation
 
 ### Application DTO Tests (TDD: Red Phase)
 
-- [ ] T025 [P] Create test file `tests/SauronSheet.Application.Tests/Features/Transactions/BulkDeleteResultDtoTests.cs`
-- [ ] T026 [P] Write test: `BulkDeleteResultDto_Serialization_Succeeds` → JSON roundtrip
-- [ ] T027 [P] Write test: `BulkDeleteResultDto_FailedIds_Tracked` → error reporting
+- [x] T025 [P] Create test file `tests/SauronSheet.Application.Tests/Features/Transactions/BulkDeleteResultDtoTests.cs`
+- [x] T026 [P] Write test: `BulkDeleteResultDto_Serialization_Succeeds` → JSON roundtrip
+- [x] T027 [P] Write test: `BulkDeleteResultDto_FailedIds_Tracked` → error reporting
 
 ### Application Implementation (Green Phase)
 
-- [ ] T028 Create command file `src/SauronSheet.Application/Features/Transactions/Commands/BulkDeleteTransactionsCommand.cs`
-- [ ] T029 Define `BulkDeleteTransactionsCommand` record with `UserId` and `IReadOnlyList<TransactionId>` parameters
-- [ ] T030 [P] Create DTO file `src/SauronSheet.Application/Features/Transactions/DTOs/BulkDeleteResultDto.cs`
-- [ ] T031 [P] Define `BulkDeleteResultDto` with properties: `Count`, `ErrorMessage`, `FailedTransactionIds`
-- [ ] T032 Create handler file `src/SauronSheet.Application/Features/Transactions/Commands/BulkDeleteTransactionsCommandHandler.cs`
-- [ ] T033 Implement handler: Validate UserId ownership (throw if mismatch)
-- [ ] T034 Implement handler: Create `TransactionByIdSpecification(userId, ids)` specification
-- [ ] T035 Implement handler: Call `_transactionRepository.DeleteTransactionsByIdsAsync(userId, ids)` wrapped in try-catch
-- [ ] T036 Implement handler: Retry logic (max 3 attempts, 1-second linear backoff, network errors only)
-- [ ] T037 Implement handler: Error mapping (distinguish transient vs business errors; show user-friendly message)
-- [ ] T038 Implement handler: Return `BulkDeleteResultDto(Count=deletedCount, ErrorMessage=null/message, FailedIds=[])`
-- [ ] T039 Run all handler tests → verify 10/10 passing
+- [x] T028 Create command file `src/SauronSheet.Application/Features/Transactions/Commands/BulkDeleteTransactionsCommand.cs`
+- [x] T029 Define `BulkDeleteTransactionsCommand` record with `UserId` and `IReadOnlyList<TransactionId>` parameters
+- [x] T030 [P] Create DTO file `src/SauronSheet.Application/Features/Transactions/DTOs/BulkDeleteResultDto.cs`
+- [x] T031 [P] Define `BulkDeleteResultDto` with properties: `Count`, `ErrorMessage`, `FailedTransactionIds`
+- [x] T032 Create handler file `src/SauronSheet.Application/Features/Transactions/Commands/BulkDeleteTransactionsCommandHandler.cs`
+- [x] T033 Implement handler: Validate UserId ownership (throw if mismatch)
+- [x] T034 Implement handler: Create `TransactionByIdSpecification(userId, ids)` specification
+- [x] T035 Implement handler: Call `_transactionRepository.DeleteTransactionsByIdsAsync(userId, ids)` wrapped in try-catch
+- [x] T036 Implement handler: Retry logic (max 3 attempts, 1-second linear backoff, network errors only)
+- [x] T037 Implement handler: Error mapping (distinguish transient vs business errors; show user-friendly message)
+- [x] T038 Implement handler: Return `BulkDeleteResultDto(Count=deletedCount, ErrorMessage=null/message, FailedIds=[])`
+- [x] T039 Run all handler tests → verify 10/10 passing
 
 **Checkpoint**: Application layer complete with full CQRS orchestration; 95%+ coverage achieved
 
