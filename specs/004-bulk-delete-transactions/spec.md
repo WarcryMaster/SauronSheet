@@ -17,6 +17,18 @@ This enables data cleanup and correction without tedious one-by-one deletion.
 
 ---
 
+## Clarifications
+
+### Session 2026-03-13
+
+- Q: State management during delete (network interruption, tab close, reload) → A: Delete is async; UI clears immediately but caches selection state to allow cancel within 5 seconds
+- Q: Retry mechanism and error recovery limits → A: On error, transactions remain selected; user can retry; max 3 auto-retries on network errors, then manual retry button
+- Q: Partial failure handling (some delete, some fail) → A: Atomic semantics: if any fail, rollback ALL deletions; show error; user can retry entire operation
+- Q: Multi-tab concurrency (same user, different tabs) → A: Out of scope
+- Q: Selection persistence across filter/sort/pagination → A: Selection clears when any filter/sort/pagination changes
+
+---
+
 ## User Scenarios & Testing
 
 ### User Story 1 — Select and Delete Multiple Transactions (Priority: P1)
@@ -92,9 +104,13 @@ Network error, database issue, or permission problem occurs during deletion. Use
 - **Empty selection**: User clicks "Delete Selected" with no transactions checked → button disabled
 - **Single transaction**: User selects 1 transaction and deletes → confirmation shows "Delete 1 transaction?" and completes
 - **All transactions**: User selects all 100 transactions → system confirms and deletes all in one operation (atomic)
-- **Pagination**: User is on page 2 of transaction list, selects items, navigates to page 3, selects more → delete affects both pages
+- **Pagination & Selection**: User is on page 2, selects items, navigates to page 3, selects more, applies filter → selection CLEARS (not persisted across UI state changes)
 - **Concurrent deletion**: User A deletes transaction while User B is viewing same transaction (multi-tenant isolation) → User B sees refresh with transaction gone
 - **Permission check**: User tries to delete another user's transaction (should fail at Application layer) → error shown
+- **Async delete with network interruption**: User selects 5 transactions, confirms delete, network drops during server-side deletion → server completes delete independently; UI may show stale state until refresh
+- **Delete with auto-retry**: User selects 5, delete fails with network timeout → system auto-retries up to 3 times silently; if still fails, shows manual retry button; same 5 remain selected
+- **Partial delete failure**: User deletes 10 transactions, 7 succeed, 3 fail due to permission error (should not happen, but edge case) → strategy is ATOMIC: rollback all 10; show error; user retries entire operation
+- **Filter after select**: User selects 5 transactions, then filters by date → selection is cleared; user must reselect from filtered results
 
 ---
 
@@ -107,11 +123,13 @@ Network error, database issue, or permission problem occurs during deletion. Use
 - **FR-003**: System MUST display "Select All / Deselect All" toggle to bulk-select visible transactions
 - **FR-004**: System MUST show confirmation dialog displaying exact count of selected transactions before deletion
 - **FR-005**: System MUST allow user to cancel delete operation from confirmation dialog (Cancel button, X button, or Escape key)
-- **FR-006**: System MUST delete all selected transactions atomically (all succeed or all rollback on failure)
+- **FR-006**: System MUST delete all selected transactions atomically; if any fail, rollback ALL deletions to maintain consistency
 - **FR-007**: System MUST prevent deletion of transactions belonging to other users (multi-tenant safety)
 - **FR-008**: System MUST show success message after delete completes
-- **FR-009**: System MUST show error message with reason if delete fails, and allow retry
-- **FR-010**: System MUST preserve user's selection state if delete fails (transactions remain checked)
+- **FR-009**: System MUST show error message with reason if delete fails; system attempts max 3 auto-retries on network errors, then shows manual retry button
+- **FR-010**: System MUST preserve user's selection state if delete fails (transactions remain checked for manual retry)
+- **FR-011**: System MUST clear selection state when user applies filter, sort, or pagination changes
+- **FR-012**: System MUST implement async delete with 5-second cancel window; if user closes tab/navigates during delete, server completes operation independently
 
 ### Key Entities
 
@@ -144,8 +162,10 @@ public record BulkDeleteTransactionsCommand(UserId UserId, IReadOnlyList<Transac
 // Handler must:
 // 1. Validate all TransactionIds belong to UserId (tenant check)
 // 2. Load all transactions from repository
-// 3. Delete all in single transaction (atomicity)
-// 4. Return count and any errors
+// 3. Delete all in single database transaction (atomicity guaranteed)
+// 4. On any error: rollback entire deletion; return count=0 + error message
+// 5. Return count of successfully deleted transactions
+// 6. Retry strategy: Infrastructure layer implements 3 auto-retries on transient errors
 ```
 
 ### Infrastructure Layer
