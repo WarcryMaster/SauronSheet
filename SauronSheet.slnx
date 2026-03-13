@@ -9,5 +9,6 @@
     <Project Path="tests/SauronSheet.Application.Tests/SauronSheet.Application.Tests.csproj" />
     <Project Path="tests/SauronSheet.Domain.Tests/SauronSheet.Domain.Tests.csproj" />
     <Project Path="tests/SauronSheet.Infrastructure.Tests/SauronSheet.Infrastructure.Tests.csproj" />
+    <Project Path="tests/SauronSheet.Integration.Tests/SauronSheet.Integration.Tests.csproj" />
   </Folder>
 </Solution>
