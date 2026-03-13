@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/SauronSheet.Application.Tests/SauronSheet.Application.Tests.csproj" />
     <Project Path="tests/SauronSheet.Domain.Tests/SauronSheet.Domain.Tests.csproj" />
+    <Project Path="tests/SauronSheet.Infrastructure.Tests/SauronSheet.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

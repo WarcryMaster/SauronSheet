@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsTestProject>true</IsTestProject>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <NoWarn>$(NoWarn);NU1902</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0"/>
+        <PackageReference Include="xunit" Version="2.8.1"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.0">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Moq" Version="4.20.70"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../src/SauronSheet.Infrastructure/SauronSheet.Infrastructure.csproj"/>
+        <ProjectReference Include="../../src/SauronSheet.Domain/SauronSheet.Domain.csproj"/>
+        <ProjectReference Include="../../src/SauronSheet.Application/SauronSheet.Application.csproj"/>
+    </ItemGroup>
+
+</Project>

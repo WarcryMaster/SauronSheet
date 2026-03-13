@@ -25,7 +25,9 @@
 
 # SauronSheet - AI Coding Instructions
 
-> IMPORTANT: All project documentation and specifications (including files in `specs/`, plans, requirements, acceptance criteria, and specification comments) must be written in Spanish. All other content (source code, file names, identifiers, implementation comments, commit messages, etc.) must be in English.
+> **IMPORTANT LANGUAGE RULES:**
+> - **Spanish**: Project specifications, plans, requirements in `specs/`, acceptance criteria, specification comments.
+> - **English**: Source code, file names, identifiers, implementation comments, docstrings, commit messages, PRs, ADRs in `docs/`.
 
 ## 🔗 Quick Links to Planning Documents
 * 📋 **Constitution**: See `.specify/memory/constitution.md` for 5 core principles & governance (v1.1.0).
@@ -35,8 +37,9 @@
 ## 📝 Project Overview
 SauronSheet is a multi-user expense tracking web application that imports bank transactions from PDF statements, provides analytics, and generates spending reports.
 
-* **Stack:** .NET Core 10 (Razor Pages + C# backend), Supabase PostgreSQL, Tailwind CSS, JavaScript.
-* **Version:** Roadmap v1.1.0 (updated 2026-02-15) | Constitution v1.1.0 (amended 2026-02-15).
+- **Stack:** .NET Core 10 (Razor Pages + C# backend), Supabase PostgreSQL, MDBootstrap (CDN), JavaScript.
+* **Version:** Roadmap v1.1.0 (updated 2026-02-15) | Constitution v1.1.0 (amended 2026-02-15)
+* **Product Context:** Informal architecture decisions and context documented in [`docs/`](docs/) (ADRs, not speckit tasks).
 
 ---
 
@@ -427,6 +430,53 @@ var systemRows = await _client.From<CategoryRow>()
     .Get();
 var all = userRows.Models.Concat(systemRows.Models);
 ```
+
+### 🔢 PDF Parser: Dual-Format Number Normalization
+
+**Problem:** Bank PDFs may use either European (decimal comma) or Anglo (decimal point) format.
+- European: `1.246,74` (point = thousands separator, comma = decimal)
+- Anglo: `1,246.74` (comma = thousands separator, point = decimal)
+
+**Solution (Infrastructure/PDF/Parsers):**
+
+All amount parsing normalizes to standard format (point decimal, no thousands separator):
+
+```csharp
+private static string? NormalizeAmount(string? amount)
+{
+    if (string.IsNullOrWhiteSpace(amount))
+        return null;
+
+    amount = amount.Trim();
+
+    // If both separators present: rightmost is decimal
+    if (amount.Contains(',') && amount.Contains('.'))
+    {
+        var lastCommaIndex = amount.LastIndexOf(',');
+        var lastDotIndex = amount.LastIndexOf('.');
+
+        if (lastCommaIndex > lastDotIndex)
+            // European: "1.246,74" → "1246.74"
+            return amount
+                .Replace(".", string.Empty)
+                .Replace(",", ".");
+        else
+            // Anglo: "1,246.74" → "1246.74"
+            return amount.Replace(",", string.Empty);
+    }
+
+    // Single separator: coma → point (European decimal)
+    if (amount.Contains(','))
+        return amount.Replace(",", ".");
+
+    // Only point or no separator: already normalized
+    return amount;
+}
+```
+
+**Places to Update:** `IngBankPdfParser.cs`, `GenericBankPdfParser.cs`
+
+**Testing:** `Infrastructure.Tests/PDF/Parsers/AmountNormalizationTests.cs` (22 test cases)
 
 ---
 
