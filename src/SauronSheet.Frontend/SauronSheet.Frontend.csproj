@@ -8,9 +8,9 @@
     <!-- Ignore NuGet compatibility warnings for legacy packages -->
     <WarningLevel>4</WarningLevel>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
-    <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
-    <PlatformTarget>x86</PlatformTarget>
+    <!-- Self-contained deployment for Azure production only -->
+    <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">win-x86</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>

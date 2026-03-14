@@ -1,7 +1,7 @@
 // Bulk Delete Selection Logic (Feature 004)
 // Tracks selected transaction IDs and manages UI state
 
-(function()  {
+document.addEventListener('DOMContentLoaded', function()  {
     const MAX_SELECTIONS = 1000;
     const COUNTDOWN_DURATION = 5;
 
@@ -159,4 +159,4 @@
 
     // Initialize counter on page load
     updateCounter();
-})();
+});
