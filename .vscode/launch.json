@@ -7,7 +7,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/SauronSheet.Frontend/bin/Debug/net10.0/win-x64/SauronSheet.Frontend.dll",
+            "program": "${workspaceFolder}/src/SauronSheet.Frontend/bin/Debug/net10.0/SauronSheet.Frontend.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/SauronSheet.Frontend",
             "stopAtEntry": false,
