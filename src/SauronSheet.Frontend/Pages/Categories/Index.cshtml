@@ -351,7 +351,7 @@
                         }
                         // Escape key closes modal
                         if (e.key === 'Escape') {
-                            bootstrap.Modal.getInstance(modalElement)?.hide();
+                            mdb.Modal.getInstance(modalElement)?.hide();
                         }
                     });
                 }
@@ -426,7 +426,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
+                mdb.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
                 location.reload();
             } else {
                 document.getElementById('createError').textContent = data.error || 'An error occurred';
@@ -467,7 +467,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
+                mdb.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
                 location.reload();
             } else {
                 document.getElementById('editError').textContent = data.error || 'An error occurred';
@@ -494,7 +494,7 @@
         currentDeleteCategoryId = categoryId;
         document.getElementById('deleteCategoryName').textContent = categoryName;
         document.getElementById('deleteError').classList.add('d-none');
-        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        const modal = new mdb.Modal(document.getElementById('deleteConfirmModal'));
         modal.show();
     }
 
@@ -510,7 +510,7 @@
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+                mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
                 location.reload();
             } else {
                 document.getElementById('deleteError').textContent = data.error || 'An error occurred';
