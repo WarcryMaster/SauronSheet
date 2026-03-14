@@ -2,7 +2,9 @@
 using SauronSheet.Application;
 using SauronSheet.Infrastructure;
 using SauronSheet.Infrastructure.Auth;
+using SauronSheet.Infrastructure.Middleware;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,19 @@ builder.Services.AddRazorPages()
         options.Conventions.AllowAnonymousToPage("/Error");
     });
 
+// Register authentication scheme so ASP.NET Core knows where to redirect
+// unauthorized users (to /Auth/Login). JWT validation is handled by
+// JwtCookieMiddleware — this cookie scheme is only used as the Challenge target.
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/Login";
+        // Session-only cookie; actual auth is JWT-based via JwtCookieMiddleware
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+    });
+
 // Add response compression (Brotli/Gzip)
 builder.Services.AddResponseCompression(options =>
 {
@@ -42,6 +57,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Global exception middleware: catches unhandled exceptions and logs them to Sentry
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseResponseCompression();
 app.UseStaticFiles();
