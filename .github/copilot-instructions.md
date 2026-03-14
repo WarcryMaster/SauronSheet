@@ -296,10 +296,15 @@ public bool IsSystemDefault { get; private set; }
 
 
 ### 📦 Política de librerías externas (CDN)
-- **Obligatorio:** Todas las librerías externas de CSS/JS (MDBootstrap, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
+- **Obligatorio:** Todas las librerías externas de CSS/JS (MDBootstrap, etc.) deben cargarse **exclusivamente mediante CDN** en _Layout.cshtml, tanto en desarrollo como en producción.
 - **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
 - **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
-- Si agregas una nueva librería externa, **debes** usar la versión oficial por CDN y declararla en _Layout.cshtml.
+- **Versiones:** Usa **siempre la última versión estable** de cada librería. Actualiza regularmente para corregir bugs y mejorar compatibilidad.
+  - **MDBootstrap**: Actualmente v9.2.0 (Cloudflare CDN) — CSS + UMD JS
+  - **Font Awesome**: Versión en uso en project (jsdelivr CDN)
+  - **Chart.js**: Versión en uso en project (jsdelivr CDN)
+- Si agregas una nueva librería externa, **debes** usar la versión oficial más reciente por CDN y declararla en _Layout.cshtml.
+- **Mantenimiento:** Revisa trimestral si hay actualizaciones de versiones y aplícalas para evitar problemas de compatibilidad, seguridad y rendimiento.
 
 ```csharp
 // Example PageModel pattern
@@ -507,6 +512,55 @@ private static string? NormalizeAmount(string? amount)
 **Places to Update:** `IngBankPdfParser.cs`, `GenericBankPdfParser.cs`
 
 **Testing:** `Infrastructure.Tests/PDF/Parsers/AmountNormalizationTests.cs` (22 test cases)
+
+### 🎨 MDBootstrap vs Bootstrap API (CRITICAL FOR FRONTEND)
+
+**Version & CDN Info:**
+- **Current Version:** MDBootstrap v9.2.0 (Cloudflare CDN - `cdnjs.cloudflare.com`)
+- **CSS:** `https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css`
+- **JS (UMD):** `https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.umd.min.js`
+
+**Problem:** SauronSheet uses **MDBootstrap (mdb-ui-kit)** via CDN, NOT standard Bootstrap. MDBootstrap does NOT expose `bootstrap` as a global variable. Attempting to use `new bootstrap.Modal()` or `bootstrap.Modal.getInstance()` results in **ReferenceError: bootstrap is not defined**.
+
+**Solution:** Always use `mdb.Modal` instead of `bootstrap.Modal` in frontend JavaScript:
+
+```javascript
+// ❌ INCORRECTO (will fail with ReferenceError):
+const modal = new bootstrap.Modal(document.getElementById('myModal'));
+bootstrap.Modal.getInstance(element)?.hide();
+
+// ✅ CORRECTO:
+const modal = new mdb.Modal(document.getElementById('myModal'));
+mdb.Modal.getInstance(element)?.hide();
+```
+
+**Affected Code:**
+- Any `.cshtml` file with inline `<script>` tags using modals
+- Any `.js` file attempting to create or manipulate Bootstrap modals
+
+**Files to Check Regularly:**
+- All `.cshtml` files in `Pages/` subdirectories for inline modal code
+- All `.js` files in `wwwroot/js/` that interact with modals
+- Update references if upgrading MDBootstrap versions
+
+**Testing:** Open browser console (F12) and verify no "bootstrap is not defined" errors when modal interactions occur. If upgrading versions, always test modal functionality.
+
+### ⚠️ MDBootstrap Version Issues (Lesson Learned)
+
+**Problem:** MDBootstrap v7.3.2 (from jsdelivr CDN) had intermittent issues with `mdb` object not being available after loading, particularly on slower connections or during page transitions. This caused "ReferenceError: mdb is not defined" errors even though the script was loaded.
+
+**Solution:** Upgraded to **MDBootstrap v9.2.0 from Cloudflare CDN**, which resolved the timing and availability issues. Cloudflare CDN appears to provide better reliability than jsdelivr for this specific library.
+
+**Correct URLs (v9.2.0 Cloudflare):**
+```html
+<!-- CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css" />
+
+<!-- JS (UMD) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.umd.min.js"></script>
+```
+
+**Key Takeaway:** When updating CDN versions, verify the CDN provider too. Sometimes switching CDN sources (e.g., from jsdelivr to Cloudflare) resolves timing and availability issues better than just updating the version number.
 
 ---
 
