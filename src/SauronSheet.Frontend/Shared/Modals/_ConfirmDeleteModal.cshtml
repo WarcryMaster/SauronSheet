@@ -42,6 +42,7 @@
     </div>
 </div>
 
-<form id="bulkDeleteForm" method="post" asp-page-handler="BulkDelete" style="display: none;">
+<form id="bulkDeleteForm" method="post" action="/Transactions?handler=BulkDelete" style="display: none;">
+    @Html.AntiForgeryToken()
     <input type="hidden" id="selectedIds" name="transactionIds" />
 </form>
