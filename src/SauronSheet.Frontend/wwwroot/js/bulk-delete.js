@@ -26,14 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const pluralS = document.getElementById('pluralS');
         let countdownInterval = null;
 
-        // Validate that all required elements exist
+        // Exit silently if bulk delete elements don't exist (no transactions on page)
         if (!deleteSelectedBtn || !bulkDeleteForm || !selectedIdsInput || !confirmDeleteModal) {
-            console.error('Bulk delete: Missing required DOM elements', {
-                deleteSelectedBtn: !!deleteSelectedBtn,
-                bulkDeleteForm: !!bulkDeleteForm,
-                selectedIdsInput: !!selectedIdsInput,
-                confirmDeleteModal: !!confirmDeleteModal
-            });
             return;
         }
 
