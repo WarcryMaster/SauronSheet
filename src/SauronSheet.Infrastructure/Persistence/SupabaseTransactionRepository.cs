@@ -120,8 +120,9 @@ public class SupabaseTransactionRepository : ITransactionRepository
     {
         try
         {
+            var idString = id.Value.ToString();
             var response = await _client.From<TransactionRow>()
-                .Where(x => x.Id == id.Value.ToString())
+                .Where(x => x.Id == idString)
                 .Get();
 
             var row = response.Models.FirstOrDefault();
@@ -199,15 +200,17 @@ public class SupabaseTransactionRepository : ITransactionRepository
     public async Task UpdateAsync(Transaction transaction)
     {
         var row = TransactionRow.FromDomain(transaction);
+        var idString = transaction.Id.Value.ToString();
         await _client.From<TransactionRow>()
-            .Where(x => x.Id == transaction.Id.Value.ToString())
+            .Where(x => x.Id == idString)
             .Update(row);
     }
 
     public async Task DeleteAsync(TransactionId id)
     {
+        var idString = id.Value.ToString();
         await _client.From<TransactionRow>()
-            .Where(x => x.Id == id.Value.ToString())
+            .Where(x => x.Id == idString)
             .Delete();
         // Verifica si la transacción sigue existiendo
         var stillExists = await ExistsAsync(id);
@@ -219,8 +222,9 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<bool> ExistsAsync(TransactionId id)
     {
+        var idString = id.Value.ToString();
         var response = await _client.From<TransactionRow>()
-            .Where(x => x.Id == id.Value.ToString())
+            .Where(x => x.Id == idString)
             .Get();
 
         return response.Models.Any();

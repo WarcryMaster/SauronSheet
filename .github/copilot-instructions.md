@@ -416,9 +416,33 @@ Supabase__Key=your-public-anon-key
 
 ### 🐞 Lessons Learned: Supabase/Postgrest C# Client
 
-- **OR conditions in .Where() lambdas are NOT supported**: El cliente Postgrest C# (supabase-csharp 0.16.2) no soporta expresiones OR (`||`) dentro de `.Where()` en LINQ. Si se usa `.Where(x => x.UserId == userId.Value || x.UserId == null)`, genera una cadena vacía para el UUID y produce el error `invalid input syntax for type uuid: ""` en PostgreSQL.
-- **Solución**: Realiza dos consultas separadas (una para el usuario, otra para system defaults) y combina los resultados en memoria. Nunca dependas de OR en el lado del cliente para columnas UUID.
-- **Síntoma**: Excepción Postgrest con código 22P02 y mensaje sobre UUID vacío cuando se consulta una tabla con columna uuid y filtro OR.
+#### 1. OR Conditions NOT Supported
+- **Problem**: El cliente Postgrest C# (supabase-csharp 0.16.2) no soporta expresiones OR (`||`) dentro de `.Where()` en LINQ. Si se usa `.Where(x => x.UserId == userId.Value || x.UserId == null)`, genera una cadena vacía para el UUID y produce el error `invalid input syntax for type uuid: ""` en PostgreSQL.
+- **Solution**: Realiza dos consultas separadas (una para el usuario, otra para system defaults) y combina los resultados en memoria. Nunca dependas de OR en el lado del cliente para columnas UUID.
+- **Symptom**: Excepción Postgrest con código 22P02 y mensaje sobre UUID vacío cuando se consulta una tabla con columna uuid y filtro OR.
+
+#### 2. Method Calls in .Where() Lambda NOT Supported (CRITICAL)
+- **Problem**: El cliente Postgrest C# **no puede transpiler métodos de conversión o llamadas de función dentro de expressions lambda**. Ejemplos problemáticos:
+  - `.Where(x => x.Id == id.Value.ToString())` → System.NotImplementedException: "Unsupported method"
+  - `.Where(x => x.Amount == decimal.Parse(amount))`
+  - Cualquier llamada a método en la lambda se traduce a "Unsupported method"
+- **Solution**: **Siempre convierte/prepara los valores ANTES de pasar al .Where()**. El cliente espera solo comparaciones simples de propiedades.
+- **Correct Pattern**:
+  ```csharp
+  // ❌ INCORRECTO (not supported):
+  var idString = id.Value.ToString();
+  await _client.From<TransactionRow>()
+      .Where(x => x.Id == id.Value.ToString())  // Method call inside
+      .Delete();
+
+  // ✅ CORRECTO:
+  var idString = id.Value.ToString();  // Convert outside
+  await _client.From<TransactionRow>()
+      .Where(x => x.Id == idString)  // Simple comparison only
+      .Delete();
+  ```
+- **Symptom**: System.NotImplementedException at `WhereExpressionVisitor.VisitMethodCall()` when deleting, updating, or querying by ID.
+- **Affected Methods**: GetByIdAsync, UpdateAsync, DeleteAsync, ExistsAsync, any .Where() with method calls.
 
 Ejemplo de patrón correcto:
 ```csharp
