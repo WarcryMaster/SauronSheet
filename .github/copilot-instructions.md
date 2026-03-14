@@ -418,6 +418,8 @@ Supabase__Key=your-public-anon-key
 - ❌ **Copying templates into specs/** (templates live only in `.specify/templates/`).
 - ❌ **Creating duplicate agent instruction files** (only `.github/copilot-instructions.md` exists).
 - ❌ **Leaving temporary files in repository** (analysis, audit, reasoning docs — delete after use).
+- ❌ **Never add _ViewImports.cshtml to Shared/** in Razor Pages projects. This breaks Tag Helpers for all forms in Pages/Auth/Login and other pages, causing login and other POST forms to silently fail. Only use _ViewImports.cshtml in Pages/.
+- ❌ **Never use `data-mdb-button-init` on `<button type="submit">` in forms.** In MDBootstrap v9+, this can break native form submission and cause the button to do nothing. Use only `data-mdb-ripple-init` for visual effects on submit buttons.
 
 ### 🐞 Lessons Learned: Supabase/Postgrest C# Client
 
