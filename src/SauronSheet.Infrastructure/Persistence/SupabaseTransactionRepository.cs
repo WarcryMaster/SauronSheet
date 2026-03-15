@@ -46,7 +46,7 @@ internal class TransactionRow : BaseModel
     public string? ImportedFrom { get; set; }
 
     [Column("created_at")]
-    public DateTime CreatedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
     [Column("updated_at")]
     public DateTime? UpdatedAt { get; set; }
