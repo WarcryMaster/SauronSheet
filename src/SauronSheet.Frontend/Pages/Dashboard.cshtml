@@ -110,7 +110,7 @@
                             @foreach (var tx in Model.RecentTransactions)
                             {
                                 <tr>
-                                    <td class="text-muted small">@tx.Date.ToString("MMM dd, yyyy")</td>
+                                    <td class="text-muted small">@tx.Date.ToString("dd/MM/yyyy")</td>
                                     <td class="small">@tx.Description</td>
                                     <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-brand" : "text-danger")">
                                         €@tx.Amount.ToString("N2")

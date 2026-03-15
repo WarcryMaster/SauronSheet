@@ -28,7 +28,7 @@ public class DashboardModel : PageModel
     public BudgetDashboardSummaryDto? BudgetSummary { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string DateFilter { get; set; } = "this-month";
+    public string DateFilter { get; set; } = "last-3-months";
 
     [BindProperty(SupportsGet = true)]
     public DateTime? CustomFromDate { get; set; }
@@ -87,11 +87,11 @@ public class DashboardModel : PageModel
         {
             "last-month" => (new DateTime(now.Year, now.Month, 1).AddMonths(-1),
                              new DateTime(now.Year, now.Month, 1).AddDays(-1)),
-            "last-3-months" => (now.AddMonths(-3).Date, now.Date),
+            "this-month" => (new DateTime(now.Year, now.Month, 1), now.Date),
             "this-year" => (new DateTime(now.Year, 1, 1), now.Date),
             "custom" when CustomFromDate.HasValue && CustomToDate.HasValue
                 => (CustomFromDate.Value, CustomToDate.Value),
-            _ => (new DateTime(now.Year, now.Month, 1), now.Date) // this-month default
+            _ => (now.AddMonths(-3).Date, now.Date) // last-3-months default
         };
     }
 }
