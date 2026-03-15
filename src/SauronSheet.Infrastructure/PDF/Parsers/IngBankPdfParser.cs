@@ -39,22 +39,44 @@ public class IngBankPdfParser : IPdfParser
 
             using var document = PdfDocument.Open(pdfBytes);
             var allLines = new List<string>();
+            var pageCount = document.NumberOfPages;
+
+            SentrySdk.AddBreadcrumb(
+                $"PDF opened: {pageCount} pages",
+                "pdf.parse",
+                data: new Dictionary<string, string> { ["pages"] = pageCount.ToString() });
 
             // 1. Extraer todo el texto línea por línea
+            var pageNumber = 0;
             foreach (var page in document.GetPages())
             {
-                var text = page.Text;
-
-                // PdfPig a veces no pone \n correctamente en tablas,
-                // así que usamos las palabras y sus posiciones Y para reconstruir líneas
+                pageNumber++;
                 var words = page.GetWords().ToList();
                 var reconstructedLines = ReconstructLinesFromWords(words);
                 allLines.AddRange(reconstructedLines);
+
+                SentrySdk.AddBreadcrumb(
+                    $"Page {pageNumber}: {words.Count} words → {reconstructedLines.Count} lines",
+                    "pdf.parse",
+                    data: new Dictionary<string, string>
+                    {
+                        ["page"] = pageNumber.ToString(),
+                        ["words"] = words.Count.ToString(),
+                        ["lines"] = reconstructedLines.Count.ToString()
+                    });
             }
+
+            SentrySdk.AddBreadcrumb(
+                $"Total lines extracted: {allLines.Count}",
+                "pdf.parse",
+                data: new Dictionary<string, string> { ["totalLines"] = allLines.Count.ToString() });
 
             // 2. Parsear las líneas extraídas
             var rowNumber = 0;
             var isDataSection = false;
+            var skippedLines = 0;
+            var failedLines = 0;
+            var dateLineCount = 0;
 
             foreach (var line in allLines)
             {
@@ -64,25 +86,58 @@ public class IngBankPdfParser : IPdfParser
                 if (trimmed.Contains("F. VALOR") && trimmed.Contains("CATEGORÍA"))
                 {
                     SentrySdk.Logger?.LogDebug("IngBankPdfParser: detected ING header section");
+                    SentrySdk.AddBreadcrumb("Header section detected", "pdf.parse");
                     isDataSection = true;
                     continue;
                 }
 
                 if (!isDataSection)
+                {
+                    skippedLines++;
                     continue;
+                }
 
                 // Solo procesar líneas que empiecen con una fecha
                 if (!DatePattern.IsMatch(trimmed))
                     continue;
 
+                dateLineCount++;
                 rowNumber++;
                 var parsed = ParseIngTransactionLine(trimmed, rowNumber);
 
                 if (parsed != null)
+                {
                     rows.Add(parsed);
+                    SentrySdk.AddBreadcrumb(
+                        $"Row {rowNumber} parsed: {parsed.Date} | {parsed.Description} | {parsed.Amount}",
+                        "pdf.row",
+                        data: new Dictionary<string, string>
+                        {
+                            ["row"] = rowNumber.ToString(),
+                            ["date"] = parsed.Date ?? "",
+                            ["description"] = parsed.Description ?? "",
+                            ["amount"] = parsed.Amount ?? "",
+                            ["rawLine"] = trimmed.Length > 200 ? trimmed[..200] : trimmed
+                        });
+                }
+                else
+                {
+                    failedLines++;
+                    SentrySdk.AddBreadcrumb(
+                        $"Row {rowNumber} FAILED to parse",
+                        "pdf.row",
+                        level: BreadcrumbLevel.Warning,
+                        data: new Dictionary<string, string>
+                        {
+                            ["row"] = rowNumber.ToString(),
+                            ["rawLine"] = trimmed.Length > 200 ? trimmed[..200] : trimmed
+                        });
+                }
             }
 
-            SentrySdk.Logger?.LogInfo("IngBankPdfParser: parsed {0} transactions from ING PDF", rows.Count);
+            SentrySdk.Logger?.LogDebug("IngBankPdfParser complete: {0} parsed, {1} failed, {2} date-lines found, {3} pre-header lines skipped", rows.Count, failedLines, dateLineCount, skippedLines);
+
+            SentrySdk.Logger?.LogDebug("IngBankPdfParser: parsed {0} transactions from ING PDF", rows.Count);
         }
         catch (Exception ex) when (ex.Message.Contains("password") || 
                                     ex.Message.Contains("encrypted"))
@@ -214,7 +269,16 @@ public class IngBankPdfParser : IPdfParser
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Warning: No se pudo parsear línea {rowNumber}: {ex.Message}");
+            SentrySdk.AddBreadcrumb(
+                $"Row {rowNumber} exception: {ex.Message}",
+                "pdf.row",
+                level: BreadcrumbLevel.Error,
+                data: new Dictionary<string, string>
+                {
+                    ["row"] = rowNumber.ToString(),
+                    ["error"] = ex.Message,
+                    ["rawLine"] = line.Length > 200 ? line[..200] : line
+                });
             return null;
         }
     }

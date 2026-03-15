@@ -83,7 +83,7 @@
                             @foreach (var tx in Model.Results.Items)
                             {
                                 <tr>
-                                    <td class="small text-muted">@tx.Date.ToString("MMM dd, yyyy")</td>
+                                    <td class="small text-muted">@tx.Date.ToString("dd/MM/yyyy")</td>
                                     <td class="small">@tx.Description</td>
                                     <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-brand" : "text-danger")">
                                         &euro;@tx.Amount.ToString("N2")

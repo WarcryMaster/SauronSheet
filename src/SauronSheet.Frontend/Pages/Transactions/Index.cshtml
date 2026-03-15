@@ -89,7 +89,7 @@
                                         <label class="form-check-label" for="cb_@transaction.Id"></label>
                                     </div>
                                 </td>
-                                <td class="small text-muted">@transaction.Date.ToString("yyyy-MM-dd")</td>
+                                <td class="small text-muted">@transaction.Date.ToString("dd/MM/yyyy")</td>
                                 <td class="small">
                                     @transaction.Description
                                     @if (!string.IsNullOrEmpty(transaction.ImportedFrom))
