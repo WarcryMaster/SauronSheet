@@ -1,19 +1,18 @@
 namespace SauronSheet.Application.Features.Transactions.Commands;
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Categories.Commands;
 using Common;
-using Common.Models;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.ValueObjects;
-using Domain.Exceptions;
 using DTOs;
 using Interfaces;
 using MediatR;
-using Categories.Commands;
+using Sentry;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 public class ImportTransactionsFromPdfCommandHandler
     : IRequestHandler<ImportTransactionsFromPdfCommand, ImportResultDto>
@@ -48,13 +47,21 @@ public class ImportTransactionsFromPdfCommandHandler
         ImportTransactionsFromPdfCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.PdfStream == null)
-            throw new ArgumentException("PDF stream is required.", nameof(request.PdfStream));
+        // Force InvariantCulture to ensure decimal serialization uses dot, not comma
+        // This prevents Postgrest numeric input errors when sending decimals with comma separators
+        var previousCulture = System.Threading.Thread.CurrentThread.CurrentCulture;
+        System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        System.Threading.Thread.CurrentThread.CurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
 
-        if (!request.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            throw new DomainException("Only PDF files are accepted.");
+        try
+        {
+            if (request.PdfStream == null)
+                throw new ArgumentException("PDF stream is required.", nameof(request.PdfStream));
 
-        var userId = new UserId(_userContext.UserId);
+            if (!request.Filename.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                throw new DomainException("Only PDF files are accepted.");
+
+            var userId = new UserId(_userContext.UserId);
 
         // Ensure user profile exists in public.users before FK-constrained inserts.
         // Guards against the case where the Supabase trigger did not fire for this user.
@@ -75,10 +82,24 @@ public class ImportTransactionsFromPdfCommandHandler
             try
             {
                 // Validate row
+
+                SentrySdk.Logger?.LogDebug("[Import] Row {RowNumber}: Date='{Date}' Desc='{Description}' Amount='{Amount}' Category='{Category}' Currency='{Currency}'",
+                    row.RowNumber,
+                    row.Date ?? string.Empty,
+                    row.Description ?? string.Empty,
+                    row.Amount ?? string.Empty,
+                    row.Category ?? string.Empty,
+                    row.Currency ?? string.Empty);
+
                 if (string.IsNullOrWhiteSpace(row.Date) ||
                     string.IsNullOrWhiteSpace(row.Description) ||
                     string.IsNullOrWhiteSpace(row.Amount))
                 {
+                    SentrySdk.Logger?.LogWarning("[Import] Row {RowNumber}: MISSING FIELDS — date='{Date}' desc='{Description}' amount='{Amount}'",
+                        row.RowNumber,
+                        row.Date ?? string.Empty,
+                        row.Description ?? string.Empty,
+                        row.Amount ?? string.Empty);
                     errors.Add(new ImportRowErrorDto(
                         row.RowNumber,
                         $"{row.Date} | {row.Description} | {row.Amount}",
@@ -90,16 +111,32 @@ public class ImportTransactionsFromPdfCommandHandler
                 // Parse date
                 if (!DateTime.TryParse(row.Date, out var date))
                 {
+                    SentrySdk.Logger?.LogWarning("[Import] Row {RowNumber}: INVALID DATE — raw value: '{Date}'",
+                        row.RowNumber,
+                        row.Date ?? string.Empty);
                     errors.Add(new ImportRowErrorDto(
                         row.RowNumber,
-                        row.Date,
+                        row.Date ?? string.Empty,
                         "Invalid date format"));
                     skippedCount++;
                     continue;
                 }
 
-                // Parse amount
-                if (!decimal.TryParse(row.Amount, out var amount))
+                // Parse amount with culture inference
+                decimal amount;
+                bool parsed = decimal.TryParse(row.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount);
+                if (!parsed)
+                {
+                    // Try Spanish (comma decimal)
+                    parsed = decimal.TryParse(row.Amount, System.Globalization.NumberStyles.Any, new System.Globalization.CultureInfo("es-ES"), out amount);
+                }
+                if (!parsed)
+                {
+                    // Try fallback: replace comma with dot and parse invariant
+                    var normalized = row.Amount.Replace(',', '.');
+                    parsed = decimal.TryParse(normalized, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out amount);
+                }
+                if (!parsed)
                 {
                     errors.Add(new ImportRowErrorDto(
                         row.RowNumber,
@@ -166,5 +203,12 @@ public class ImportTransactionsFromPdfCommandHandler
             request.Filename,
             DateTime.UtcNow,
             errors);
+        }
+        finally
+        {
+            // Restore previous culture
+            System.Threading.Thread.CurrentThread.CurrentCulture = previousCulture;
+            System.Threading.Thread.CurrentThread.CurrentUICulture = previousCulture;
+        }
     }
 }

@@ -3,7 +3,7 @@ namespace SauronSheet.Infrastructure.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
+
 using System.Threading.Tasks;
 using Postgrest;
 using Postgrest.Attributes;
@@ -46,9 +46,11 @@ internal class TransactionRow : BaseModel
     public string? ImportedFrom { get; set; }
 
     [Column("created_at")]
+    [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     public DateTime? CreatedAt { get; set; }
 
     [Column("updated_at")]
+    [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     public DateTime? UpdatedAt { get; set; }
 
     public Transaction ToDomain()
@@ -81,8 +83,9 @@ internal class TransactionRow : BaseModel
     }
 
     /// <summary>
-    /// Converts transaction to insert-safe DTO (excludes server-managed timestamps).
-    /// Timestamps are assigned by database triggers, not by client.
+    /// Converts transaction to insert-safe DTO.
+    /// CreatedAt is set client-side because Postgrest serializes all properties regardless of null
+    /// and the column has NOT NULL constraint. The value is semantically equivalent to DEFAULT NOW().
     /// </summary>
     public static TransactionRow FromDomainForInsert(Transaction t)
     {
@@ -95,8 +98,8 @@ internal class TransactionRow : BaseModel
             Date = t.Date,
             Description = t.Description,
             CategoryId = t.CategoryId?.Value.ToString(),
-            ImportedFrom = t.ImportedFrom
-            // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
+            ImportedFrom = t.ImportedFrom,
+            CreatedAt = DateTime.UtcNow
         };
         return row;
     }
@@ -234,6 +237,8 @@ public class SupabaseTransactionRepository : ITransactionRepository
         UserId userId, DateTime date, decimal amount, string description)
     {
         // CRITICAL FIX C-3: Duplicate detection ignores currency
+        // Note: Thread culture is set to InvariantCulture in ImportTransactionsFromPdfCommandHandler
+        // to ensure decimal serialization uses dot, not comma
         var dateStr = date.ToString("yyyy-MM-dd");
         var response = await _client.From<TransactionRow>()
             .Where(x => x.UserId == userId.Value)
