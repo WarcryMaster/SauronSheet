@@ -18,9 +18,11 @@
 
 ## Quality Standards
 
-- Always use the specific variable name instead of the generic type when declaring or instantiating variables (e.g., use `var transaction = new();` instead of `Transaction transaction = new Transaction();`).
-- Prefer `new()` for instantiation when the type is clear from context, instead of repeating the class name (e.g., `var foo = new();` not `var foo = new Foo();`).
-- For lists and arrays, use the `[]` initializer syntax (e.g., `var items = new[] { ... }` or `var list = new List<Type> { ... }`).
+
+- **Sentry Logging Policy:**
+    - All application and infrastructure logging, tracing, and diagnostics **must use Sentry** (`SentrySdk.Logger?.LogDebug`, `LogInfo`, `LogWarning`, `LogError`, `AddBreadcrumb`, etc.).
+    - **Never use** `System.Diagnostics.Debug.WriteLine`, `Console.WriteLine`, or `Trace.WriteLine` for runtime logs or traces.
+    - All error, warning, and debug traces must be visible in Sentry for observability and debugging.
 
 
 # SauronSheet - AI Coding Instructions
