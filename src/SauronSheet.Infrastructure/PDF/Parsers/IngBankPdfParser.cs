@@ -25,6 +25,27 @@ public class IngBankPdfParser : IPdfParser
         @"-?[\d.,]+", 
         RegexOptions.Compiled);
 
+    // Regex para detectar si una línea completa es un número (importe o saldo en formato multi-línea)
+    private static readonly Regex NumericLinePattern = new(
+        @"^-?[\d]+[.,\d]*$",
+        RegexOptions.Compiled);
+
+    private static readonly string[] KnownCategories =
+    [
+        "Compras", "Vehículo y transporte", "Alimentación",
+        "Otros gastos", "Movimientos excluidos", "Otros ingresos",
+        "Educación y salud", "Hogar"
+    ];
+
+    private static readonly string[] KnownSubCategories =
+    [
+        "Belleza, peluquería y perfumería", "Gasolina y combustible",
+        "Supermercados y alimentación", "ONG", "Traspaso entre cuentas",
+        "Otros ingresos (otros)", "Transferencias", "Ropa y complementos",
+        "Mantenimiento de vehículo", "Farmacia, herbolario y nutrición",
+        "Luz y gas", "Agua", "Suscripciones", "Teléfono e internet"
+    ];
+
     public Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream)
     {
         var rows = new List<RawTransactionRow>();
@@ -84,10 +105,37 @@ public class IngBankPdfParser : IPdfParser
             void FlushRowBuffer()
             {
                 if (rowBuffer.Count == 0) return;
-                // Concatenar todas las líneas en una sola para el parser legacy
-                var joined = string.Join(" ", rowBuffer).Trim();
-                rowNumber++;
-                var parsed = ParseIngTransactionLine(joined, rowNumber);
+
+                RawTransactionRow? parsed;
+                string rawLineForLog;
+
+                if (rowBuffer.Count == 1)
+                {
+                    var singleLine = rowBuffer[0].Trim();
+                    rawLineForLog = singleLine;
+
+                    // Skip bare date-only lines (F. OPERACIÓN date with no transaction data)
+                    var dateOnlyRemainder = singleLine.Substring(Math.Min(10, singleLine.Length)).Trim();
+                    if (singleLine.Length <= 10 || string.IsNullOrWhiteSpace(dateOnlyRemainder))
+                    {
+                        SentrySdk.AddBreadcrumb(
+                            "Skipping date-only line (operation date without transaction data)",
+                            "pdf.row",
+                            data: new Dictionary<string, string> { ["line"] = singleLine });
+                        rowBuffer.Clear();
+                        return;
+                    }
+
+                    rowNumber++;
+                    parsed = ParseIngTransactionLine(singleLine, rowNumber);
+                }
+                else
+                {
+                    rawLineForLog = string.Join(" | ", rowBuffer.Take(3));
+                    rowNumber++;
+                    parsed = ParseMultiLineTransaction(rowBuffer, rowNumber);
+                }
+
                 if (parsed != null)
                 {
                     rows.Add(parsed);
@@ -100,7 +148,7 @@ public class IngBankPdfParser : IPdfParser
                             ["date"] = parsed.Date ?? "",
                             ["description"] = parsed.Description ?? "",
                             ["amount"] = parsed.Amount ?? "",
-                            ["rawLine"] = joined.Length > 200 ? joined[..200] : joined
+                            ["rawLine"] = rawLineForLog.Length > 200 ? rawLineForLog[..200] : rawLineForLog
                         });
                 }
                 else
@@ -113,7 +161,7 @@ public class IngBankPdfParser : IPdfParser
                         data: new Dictionary<string, string>
                         {
                             ["row"] = rowNumber.ToString(),
-                            ["rawLine"] = joined.Length > 200 ? joined[..200] : joined
+                            ["rawLine"] = rawLineForLog.Length > 200 ? rawLineForLog[..200] : rawLineForLog
                         });
                 }
                 rowBuffer.Clear();
@@ -222,6 +270,106 @@ public class IngBankPdfParser : IPdfParser
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Parsea un bloque multi-línea de transacción ING donde cada campo está en su propia línea.
+    /// Estructura esperada: [0]=Fecha, [1]=Categoría, [2]=Subcategoría, [3..n-2]=Descripción, [n-1]=Importe, [n]=Saldo
+    /// </summary>
+    private RawTransactionRow? ParseMultiLineTransaction(List<string> lines, int rowNumber)
+    {
+        try
+        {
+            var firstLine = lines[0].Trim();
+            var dateMatch = DatePattern.Match(firstLine);
+            if (!dateMatch.Success) return null;
+            var date = dateMatch.Value;
+
+            // Buscar importe y saldo desde el final (líneas numéricas puras)
+            string? amount = null;
+            string? balance = null;
+            int firstNumericIndex = lines.Count; // índice exclusivo del primer numérico desde el final
+
+            for (int i = lines.Count - 1; i >= 1; i--)
+            {
+                var trimmed = lines[i].Trim();
+                if (NumericLinePattern.IsMatch(trimmed))
+                {
+                    if (balance == null)
+                    {
+                        balance = trimmed;
+                        firstNumericIndex = i;
+                    }
+                    else if (amount == null)
+                    {
+                        amount = trimmed;
+                        firstNumericIndex = i;
+                        break;
+                    }
+                }
+                else
+                {
+                    break; // Parar al primer no-numérico desde el final
+                }
+            }
+
+            // Líneas de texto: desde índice 1 hasta firstNumericIndex (exclusive)
+            // Skip(1) elimina la fecha; Take(firstNumericIndex - 1) toma hasta antes de los numéricos
+            var textLines = lines
+                .Skip(1)
+                .Take(firstNumericIndex - 1)
+                .Select(l => l.Trim())
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .ToList();
+
+            string? category = null;
+            string? subCategory = null;
+            string? description = null;
+            int descriptionStart = 0;
+
+            for (int i = 0; i < textLines.Count; i++)
+            {
+                if (category == null && KnownCategories.Any(c => string.Equals(c, textLines[i], StringComparison.OrdinalIgnoreCase)))
+                {
+                    category = textLines[i];
+                    descriptionStart = i + 1;
+                }
+                else if (category != null && subCategory == null && KnownSubCategories.Any(s => string.Equals(s, textLines[i], StringComparison.OrdinalIgnoreCase)))
+                {
+                    subCategory = textLines[i];
+                    descriptionStart = i + 1;
+                }
+                else
+                {
+                    // Esta y el resto de líneas forman la descripción
+                    descriptionStart = i;
+                    break;
+                }
+            }
+
+            if (descriptionStart < textLines.Count)
+            {
+                var desc = string.Join(" ", textLines.Skip(descriptionStart)).Trim();
+                description = string.IsNullOrWhiteSpace(desc) ? null : desc;
+            }
+
+            return new RawTransactionRow(
+                rowNumber, date, category, subCategory, description, null,
+                NormalizeAmount(amount), NormalizeAmount(balance));
+        }
+        catch (Exception ex)
+        {
+            SentrySdk.AddBreadcrumb(
+                $"Row {rowNumber} multi-line exception: {ex.Message}",
+                "pdf.row",
+                level: BreadcrumbLevel.Error,
+                data: new Dictionary<string, string>
+                {
+                    ["row"] = rowNumber.ToString(),
+                    ["error"] = ex.Message
+                });
+            return null;
+        }
     }
 
     /// <summary>
@@ -335,30 +483,13 @@ public class IngBankPdfParser : IPdfParser
         if (string.IsNullOrWhiteSpace(text))
             return (null, null, null, null);
 
-        // Categorías conocidas de ING para mejorar el parsing
-        var knownCategories = new[]
-        {
-            "Compras", "Vehículo y transporte", "Alimentación", 
-            "Otros gastos", "Movimientos excluidos", "Otros ingresos",
-            "Educación y salud", "Hogar"
-        };
-
-        var knownSubCategories = new[]
-        {
-            "Belleza, peluquería y perfumería", "Gasolina y combustible",
-            "Supermercados y alimentación", "ONG", "Traspaso entre cuentas",
-            "Otros ingresos (otros)", "Transferencias", "Ropa y complementos",
-            "Mantenimiento de vehículo", "Farmacia, herbolario y nutrición",
-            "Luz y gas", "Agua", "Suscripciones", "Teléfono e internet"
-        };
-
         string? category = null;
         string? subCategory = null;
         string? description = null;
         string? comment = null;
 
         // Intentar encontrar la categoría conocida
-        foreach (var cat in knownCategories.OrderByDescending(c => c.Length))
+        foreach (var cat in KnownCategories.OrderByDescending(c => c.Length))
         {
             if (text.Contains(cat, StringComparison.OrdinalIgnoreCase))
             {
@@ -370,7 +501,7 @@ public class IngBankPdfParser : IPdfParser
         }
 
         // Intentar encontrar la subcategoría conocida
-        foreach (var sub in knownSubCategories.OrderByDescending(s => s.Length))
+        foreach (var sub in KnownSubCategories.OrderByDescending(s => s.Length))
         {
             if (text.Contains(sub, StringComparison.OrdinalIgnoreCase))
             {
