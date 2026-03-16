@@ -71,12 +71,53 @@ public class IngBankPdfParser : IPdfParser
                 "pdf.parse",
                 data: new Dictionary<string, string> { ["totalLines"] = allLines.Count.ToString() });
 
-            // 2. Parsear las líneas extraídas
+            // 2. Parsear las líneas extraídas (soportar filas multi-línea)
             var rowNumber = 0;
             var isDataSection = false;
             var skippedLines = 0;
             var failedLines = 0;
             var dateLineCount = 0;
+
+            // Buffer para filas multi-línea
+            List<string> rowBuffer = new();
+
+            void FlushRowBuffer()
+            {
+                if (rowBuffer.Count == 0) return;
+                // Concatenar todas las líneas en una sola para el parser legacy
+                var joined = string.Join(" ", rowBuffer).Trim();
+                rowNumber++;
+                var parsed = ParseIngTransactionLine(joined, rowNumber);
+                if (parsed != null)
+                {
+                    rows.Add(parsed);
+                    SentrySdk.AddBreadcrumb(
+                        $"Row {rowNumber} parsed: {parsed.Date} | {parsed.Description} | {parsed.Amount}",
+                        "pdf.row",
+                        data: new Dictionary<string, string>
+                        {
+                            ["row"] = rowNumber.ToString(),
+                            ["date"] = parsed.Date ?? "",
+                            ["description"] = parsed.Description ?? "",
+                            ["amount"] = parsed.Amount ?? "",
+                            ["rawLine"] = joined.Length > 200 ? joined[..200] : joined
+                        });
+                }
+                else
+                {
+                    failedLines++;
+                    SentrySdk.AddBreadcrumb(
+                        $"Row {rowNumber} FAILED to parse",
+                        "pdf.row",
+                        level: BreadcrumbLevel.Warning,
+                        data: new Dictionary<string, string>
+                        {
+                            ["row"] = rowNumber.ToString(),
+                            ["rawLine"] = joined.Length > 200 ? joined[..200] : joined
+                        });
+                }
+                rowBuffer.Clear();
+            }
 
             foreach (var line in allLines)
             {
@@ -97,43 +138,23 @@ public class IngBankPdfParser : IPdfParser
                     continue;
                 }
 
-                // Solo procesar líneas que empiecen con una fecha
-                if (!DatePattern.IsMatch(trimmed))
-                    continue;
-
-                dateLineCount++;
-                rowNumber++;
-                var parsed = ParseIngTransactionLine(trimmed, rowNumber);
-
-                if (parsed != null)
+                // Si la línea empieza con fecha, es inicio de nueva transacción
+                if (DatePattern.IsMatch(trimmed))
                 {
-                    rows.Add(parsed);
-                    SentrySdk.AddBreadcrumb(
-                        $"Row {rowNumber} parsed: {parsed.Date} | {parsed.Description} | {parsed.Amount}",
-                        "pdf.row",
-                        data: new Dictionary<string, string>
-                        {
-                            ["row"] = rowNumber.ToString(),
-                            ["date"] = parsed.Date ?? "",
-                            ["description"] = parsed.Description ?? "",
-                            ["amount"] = parsed.Amount ?? "",
-                            ["rawLine"] = trimmed.Length > 200 ? trimmed[..200] : trimmed
-                        });
+                    // Si hay buffer, procesar la fila anterior
+                    FlushRowBuffer();
+                    dateLineCount++;
+                    rowBuffer.Add(trimmed);
                 }
-                else
+                else if (rowBuffer.Count > 0)
                 {
-                    failedLines++;
-                    SentrySdk.AddBreadcrumb(
-                        $"Row {rowNumber} FAILED to parse",
-                        "pdf.row",
-                        level: BreadcrumbLevel.Warning,
-                        data: new Dictionary<string, string>
-                        {
-                            ["row"] = rowNumber.ToString(),
-                            ["rawLine"] = trimmed.Length > 200 ? trimmed[..200] : trimmed
-                        });
+                    // Si ya hay una fila en buffer, agregar líneas adicionales (categoría, subcategoría, descripción, importe, saldo)
+                    rowBuffer.Add(trimmed);
                 }
+                // Si no hay buffer y la línea no empieza con fecha, ignorar
             }
+            // Procesar la última fila en buffer
+            FlushRowBuffer();
 
             SentrySdk.Logger?.LogDebug("IngBankPdfParser complete: {0} parsed, {1} failed, {2} date-lines found, {3} pre-header lines skipped", rows.Count, failedLines, dateLineCount, skippedLines);
 

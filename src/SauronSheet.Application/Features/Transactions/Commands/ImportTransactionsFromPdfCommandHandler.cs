@@ -82,7 +82,6 @@ public class ImportTransactionsFromPdfCommandHandler
             try
             {
                 // Validate row
-
                 SentrySdk.Logger?.LogDebug("[Import] Row {RowNumber}: Date='{Date}' Desc='{Description}' Amount='{Amount}' Category='{Category}' Currency='{Currency}'",
                     row.RowNumber,
                     row.Date ?? string.Empty,
@@ -108,8 +107,8 @@ public class ImportTransactionsFromPdfCommandHandler
                     continue;
                 }
 
-                // Parse date
-                if (!DateTime.TryParse(row.Date, out var date))
+                // Parse date using dd/MM/yyyy (European format)
+                if (!DateTime.TryParseExact(row.Date, "dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date))
                 {
                     SentrySdk.Logger?.LogWarning("[Import] Row {RowNumber}: INVALID DATE — raw value: '{Date}'",
                         row.RowNumber,
