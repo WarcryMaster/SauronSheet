@@ -31,29 +31,20 @@
 > - **Spanish**: Project specifications, plans, requirements in `specs/`, acceptance criteria, specification comments.
 > - **English**: Source code, file names, identifiers, implementation comments, docstrings, commit messages, PRs, ADRs in `docs/`.
 
-## 🔒 Explicit Typing & Modern C# Rules
+## � Scoped Coding Standards (auto-loaded by Copilot)
 
-- **Always use explicit type declarations.**
-    - Do **not** use `var` for variable declarations. Always specify the type explicitly (e.g., `int count = 0;`, `List<string> names = new();`).
-- **Prefer primary constructors** where possible (C# 12+), especially for records and simple classes.
-- **Use collection initializers with `new[]` or `new {}`** for arrays and lists (e.g., `new[] { 1, 2, 3 }`, `new List<int> { 1, 2, 3 }`).
-- **Use `new()` without type** only when the type is explicit in the declaration (e.g., `List<string> names = new();`).
-- **Do not use `var`** even when the type is obvious from the right-hand side.
+These files are automatically injected into context only when the relevant file type is open — keeping the global context lean:
 
-**Examples:**
-```csharp
-// ✅ Correct
-int total = 0;
-string name = "John";
-List<string> items = new();
-int[] numbers = new[] { 1, 2, 3 };
-Dictionary<string, int> map = new() { ["a"] = 1, ["b"] = 2 };
+| File | Applies to | Content |
+|---|---|---|
+| `.github/instructions/csharp-quality.instructions.md` | `**/*.cs` | Lightweight always-on C# baseline (explicit types, primary constructors, cancellation, dispose, exception handling) |
+| `.github/instructions/csharp-rules-design-and-naming.instructions.md` | On-demand (`description`) | Full CA design/API + globalization + naming catalog |
+| `.github/instructions/csharp-rules-performance-and-maintainability.instructions.md` | On-demand (`description`) | Full CA performance + maintainability catalog |
+| `.github/instructions/csharp-rules-reliability-and-usage.instructions.md` | On-demand (`description`) | Full CA reliability + usage catalog |
+| `.github/instructions/csharp-rules-security-platform-and-il.instructions.md` | On-demand (`description`) | Full CA security/platform/serialization + IL3000/IL3001/IL3002/IL3003/IL3005 |
+| `.github/instructions/razor-frontend.instructions.md` | `**/*.cshtml` | MDBootstrap v9.2.0 API, PageModel patterns, antiforgery, JS rules |
 
-// ❌ Incorrect
-var total = 0;
-var items = new List<string>();
-var numbers = new[] { 1, 2, 3 };
-```
+> **Note for AI agents:** These files are auto-attached via `applyTo` globs. Do NOT inline their contents here — they are already in context when relevant files are open.
 
 ## 🔗 Quick Links to Planning Documents
 * 📋 **Constitution**: See `.specify/memory/constitution.md` for 5 core principles & governance (v1.1.0).
@@ -313,42 +304,13 @@ public bool IsSystemDefault { get; private set; }
 
 ---
 
-
-- Each page has a PageModel handling GET/POST.
+## Razor Pages (Frontend)
+- Each page has a PageModel handling GET/POST using primary constructors.
 - MediatR calls in PageModel `OnGetAsync` / `OnPostAsync`.
-- Pass data to views as Model.
-- Usa solo componentes y estilos de MDBootstrap (Material Design for Bootstrap, por CDN) para toda la interfaz. No se permite Tailwind, Alpine.js ni Chart.js.
-
-
-
-### 📦 Política de librerías externas (CDN)
-- **Obligatorio:** Todas las librerías externas de CSS/JS (MDBootstrap, etc.) deben cargarse **exclusivamente mediante CDN** en _Layout.cshtml, tanto en desarrollo como en producción.
-- **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
-- **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
-- **Versiones:** Usa **siempre la última versión estable** de cada librería. Actualiza regularmente para corregir bugs y mejorar compatibilidad.
-  - **MDBootstrap**: Actualmente v9.2.0 (Cloudflare CDN) — CSS + UMD JS
-  - **Font Awesome**: Versión en uso en project (jsdelivr CDN)
-  - **Chart.js**: Versión en uso en project (jsdelivr CDN)
-- Si agregas una nueva librería externa, **debes** usar la versión oficial más reciente por CDN y declararla en _Layout.cshtml.
-- **Mantenimiento:** Revisa trimestral si hay actualizaciones de versiones y aplícalas para evitar problemas de compatibilidad, seguridad y rendimiento.
-
-```csharp
-// Example PageModel pattern
-public class DashboardModel : PageModel
-{
-    private readonly IMediator _mediator;
-
-    public DashboardModel(IMediator mediator) => _mediator = mediator;
-
-    public SpendingByCategoryDto SpendingData { get; set; }
-
-    public async Task OnGetAsync()
-    {
-        var userId = User.FindFirst("sub")?.Value;
-        SpendingData = await _mediator.Send(new GetSpendingByCategoryQuery(userId));
-    }
-}
-```
+- Pass data to views as `Model` properties.
+- **MDBootstrap v9.2.0 (Cloudflare CDN) only** — no Tailwind, no Alpine.js.
+- All external CSS/JS loaded via CDN in `_Layout.cshtml`; no local copies or npm.
+- See `.github/instructions/razor-frontend.instructions.md` for full MDBootstrap API, PageModel patterns, and JS rules (auto-loaded for `.cshtml` files).
 
 ---
 
@@ -444,8 +406,8 @@ Supabase__Key=your-public-anon-key
 - ❌ **Copying templates into specs/** (templates live only in `.specify/templates/`).
 - ❌ **Creating duplicate agent instruction files** (only `.github/copilot-instructions.md` exists).
 - ❌ **Leaving temporary files in repository** (analysis, audit, reasoning docs — delete after use).
-- ❌ **Never add _ViewImports.cshtml to Shared/** in Razor Pages projects. This breaks Tag Helpers for all forms in Pages/Auth/Login and other pages, causing login and other POST forms to silently fail. Only use _ViewImports.cshtml in Pages/.
-- ❌ **Never use `data-mdb-button-init` on `<button type="submit">` in forms.** In MDBootstrap v9+, this can break native form submission and cause the button to do nothing. Use only `data-mdb-ripple-init` for visual effects on submit buttons.
+- ❌ **Never add _ViewImports.cshtml to Shared/** — breaks Tag Helpers on all forms. Only use it in `Pages/`. (Detail: `razor-frontend.instructions.md`)
+- ❌ **Never use `data-mdb-button-init` on `<button type="submit">`** — breaks form submission in MDBootstrap v9+. (Detail: `razor-frontend.instructions.md`)
 
 ### 🐞 Lessons Learned: Supabase/Postgrest C# Client
 
@@ -541,54 +503,11 @@ private static string? NormalizeAmount(string? amount)
 
 **Testing:** `Infrastructure.Tests/PDF/Parsers/AmountNormalizationTests.cs` (22 test cases)
 
-### 🎨 MDBootstrap vs Bootstrap API (CRITICAL FOR FRONTEND)
+### 🎨 MDBootstrap (Lessons Learned → moved)
 
-**Version & CDN Info:**
-- **Current Version:** MDBootstrap v9.2.0 (Cloudflare CDN - `cdnjs.cloudflare.com`)
-- **CSS:** `https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css`
-- **JS (UMD):** `https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.umd.min.js`
+Full MDBootstrap API rules, CDN URLs, and version history are documented in `.github/instructions/razor-frontend.instructions.md` (auto-loaded for `.cshtml` files).
 
-**Problem:** SauronSheet uses **MDBootstrap (mdb-ui-kit)** via CDN, NOT standard Bootstrap. MDBootstrap does NOT expose `bootstrap` as a global variable. Attempting to use `new bootstrap.Modal()` or `bootstrap.Modal.getInstance()` results in **ReferenceError: bootstrap is not defined**.
-
-**Solution:** Always use `mdb.Modal` instead of `bootstrap.Modal` in frontend JavaScript:
-
-```javascript
-// ❌ INCORRECTO (will fail with ReferenceError):
-const modal = new bootstrap.Modal(document.getElementById('myModal'));
-bootstrap.Modal.getInstance(element)?.hide();
-
-// ✅ CORRECTO:
-const modal = new mdb.Modal(document.getElementById('myModal'));
-mdb.Modal.getInstance(element)?.hide();
-```
-
-**Affected Code:**
-- Any `.cshtml` file with inline `<script>` tags using modals
-- Any `.js` file attempting to create or manipulate Bootstrap modals
-
-**Files to Check Regularly:**
-- All `.cshtml` files in `Pages/` subdirectories for inline modal code
-- All `.js` files in `wwwroot/js/` that interact with modals
-- Update references if upgrading MDBootstrap versions
-
-**Testing:** Open browser console (F12) and verify no "bootstrap is not defined" errors when modal interactions occur. If upgrading versions, always test modal functionality.
-
-### ⚠️ MDBootstrap Version Issues (Lesson Learned)
-
-**Problem:** MDBootstrap v7.3.2 (from jsdelivr CDN) had intermittent issues with `mdb` object not being available after loading, particularly on slower connections or during page transitions. This caused "ReferenceError: mdb is not defined" errors even though the script was loaded.
-
-**Solution:** Upgraded to **MDBootstrap v9.2.0 from Cloudflare CDN**, which resolved the timing and availability issues. Cloudflare CDN appears to provide better reliability than jsdelivr for this specific library.
-
-**Correct URLs (v9.2.0 Cloudflare):**
-```html
-<!-- CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css" />
-
-<!-- JS (UMD) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.umd.min.js"></script>
-```
-
-**Key Takeaway:** When updating CDN versions, verify the CDN provider too. Sometimes switching CDN sources (e.g., from jsdelivr to Cloudflare) resolves timing and availability issues better than just updating the version number.
+**Summary:** Use `mdb.Modal` not `bootstrap.Modal`. CDN: `cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/`.
 
 ---
 
@@ -628,4 +547,4 @@ mdb.Modal.getInstance(element)?.hide();
 
 ---
 
-_Last Updated: 2026-02-19 | Version: 1.3.0 (Aligned with Constitution v1.1.0, Phase 4 context merged)_
+_Last Updated: 2026-03-20 | Version: 1.4.0 (Scoped instructions split: csharp-quality.instructions.md + razor-frontend.instructions.md)_
