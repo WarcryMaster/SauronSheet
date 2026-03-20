@@ -31,6 +31,30 @@
 > - **Spanish**: Project specifications, plans, requirements in `specs/`, acceptance criteria, specification comments.
 > - **English**: Source code, file names, identifiers, implementation comments, docstrings, commit messages, PRs, ADRs in `docs/`.
 
+## 🔒 Explicit Typing & Modern C# Rules
+
+- **Always use explicit type declarations.**
+    - Do **not** use `var` for variable declarations. Always specify the type explicitly (e.g., `int count = 0;`, `List<string> names = new();`).
+- **Prefer primary constructors** where possible (C# 12+), especially for records and simple classes.
+- **Use collection initializers with `new[]` or `new {}`** for arrays and lists (e.g., `new[] { 1, 2, 3 }`, `new List<int> { 1, 2, 3 }`).
+- **Use `new()` without type** only when the type is explicit in the declaration (e.g., `List<string> names = new();`).
+- **Do not use `var`** even when the type is obvious from the right-hand side.
+
+**Examples:**
+```csharp
+// ✅ Correct
+int total = 0;
+string name = "John";
+List<string> items = new();
+int[] numbers = new[] { 1, 2, 3 };
+Dictionary<string, int> map = new() { ["a"] = 1, ["b"] = 2 };
+
+// ❌ Incorrect
+var total = 0;
+var items = new List<string>();
+var numbers = new[] { 1, 2, 3 };
+```
+
 ## 🔗 Quick Links to Planning Documents
 * 📋 **Constitution**: See `.specify/memory/constitution.md` for 5 core principles & governance (v1.1.0).
 

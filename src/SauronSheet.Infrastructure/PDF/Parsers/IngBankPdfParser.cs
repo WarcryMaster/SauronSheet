@@ -17,12 +17,12 @@ public class IngBankPdfParser : IPdfParser
 {
     // Regex para detectar líneas que empiezan con una fecha DD/MM/YYYY
     private static readonly Regex DatePattern = new(
-        @"^\d{2}/\d{2}/\d{4}", 
+        @"^\d{2}/\d{2}/\d{4}",
         RegexOptions.Compiled);
 
     // Regex para extraer importes (positivos y negativos, con decimales)
     private static readonly Regex AmountPattern = new(
-        @"-?[\d.,]+", 
+        @"-?[\d.,]+",
         RegexOptions.Compiled);
 
     // Regex para detectar si una línea completa es un número (importe o saldo en formato multi-línea)
@@ -208,7 +208,7 @@ public class IngBankPdfParser : IPdfParser
 
             SentrySdk.Logger?.LogDebug("IngBankPdfParser: parsed {0} transactions from ING PDF", rows.Count);
         }
-        catch (Exception ex) when (ex.Message.Contains("password") || 
+        catch (Exception ex) when (ex.Message.Contains("password") ||
                                     ex.Message.Contains("encrypted"))
         {
             SentrySdk.Logger?.LogError("IngBankPdfParser: PDF is password-protected or encrypted");
@@ -273,8 +273,10 @@ public class IngBankPdfParser : IPdfParser
     }
 
     /// <summary>
-    /// Parsea un bloque multi-línea de transacción ING donde cada campo está en su propia línea.
-    /// Estructura esperada: [0]=Fecha, [1]=Categoría, [2]=Subcategoría, [3..n-2]=Descripción, [n-1]=Importe, [n]=Saldo
+    /// Parsea un bloque multi-línea de transacción ING.
+    /// Maneja dos casos:
+    /// 1. Línea 0 con datos completos: [0]=Fecha+Categoría+Subcategoría+Descripción+Importe+Saldo, [1+]=Descripción adicional
+    /// 2. Línea 0 con solo fecha: [0]=Fecha, [1]=Categoría, [2]=Subcategoría, [3..n-2]=Descripción, [n-1]=Importe, [n]=Saldo
     /// </summary>
     private RawTransactionRow? ParseMultiLineTransaction(List<string> lines, int rowNumber)
     {
@@ -283,16 +285,55 @@ public class IngBankPdfParser : IPdfParser
             var firstLine = lines[0].Trim();
             var dateMatch = DatePattern.Match(firstLine);
             if (!dateMatch.Success) return null;
-            var date = dateMatch.Value;
 
-            // Buscar importe y saldo desde el final (líneas numéricas puras)
+            string? date = dateMatch.Value;
+
+            // Intenta parsear línea 0 como una línea completa (contiene fecha + datos + números)
             string? amount = null;
             string? balance = null;
-            int firstNumericIndex = lines.Count; // índice exclusivo del primer numérico desde el final
+            string? textPart = firstLine.Substring(dateMatch.Length).Trim();
+
+            // Buscar números al final de la primera línea
+            List<string> firstLineNumbers = ExtractTrailingNumbers(textPart);
+
+            if (firstLineNumbers.Count >= 2)
+            {
+                // Línea 0 contiene importe y saldo: usar ParseIngTransactionLine para procesarla
+                RawTransactionRow? result = ParseIngTransactionLine(firstLine, rowNumber);
+                
+                if (result != null && lines.Count > 1)
+                {
+                    // Si hay líneas adicionales, concatenarlas a la descripción
+                    List<string> additionalLines = new();
+                    for (int i = 1; i < lines.Count; i++)
+                    {
+                        string trimmedAdditional = lines[i].Trim();
+                        if (!string.IsNullOrWhiteSpace(trimmedAdditional))
+                        {
+                            additionalLines.Add(trimmedAdditional);
+                        }
+                    }
+
+                    if (additionalLines.Count > 0)
+                    {
+                        string additionalDesc = string.Join(" ", additionalLines);
+                        string combinedDesc = string.IsNullOrEmpty(result.Description)
+                            ? additionalDesc
+                            : $"{result.Description} {additionalDesc}";
+
+                        result = result with { Description = combinedDesc };
+                    }
+                }
+
+                return result;
+            }
+
+            // Caso 2: Línea 0 solo contiene fecha; buscar números en líneas posteriores
+            int firstNumericIndex = lines.Count;
 
             for (int i = lines.Count - 1; i >= 1; i--)
             {
-                var trimmed = lines[i].Trim();
+                string trimmed = lines[i].Trim();
                 if (NumericLinePattern.IsMatch(trimmed))
                 {
                     if (balance == null)
@@ -309,18 +350,20 @@ public class IngBankPdfParser : IPdfParser
                 }
                 else
                 {
-                    break; // Parar al primer no-numérico desde el final
+                    break;
                 }
             }
 
             // Líneas de texto: desde índice 1 hasta firstNumericIndex (exclusive)
-            // Skip(1) elimina la fecha; Take(firstNumericIndex - 1) toma hasta antes de los numéricos
-            var textLines = lines
-                .Skip(1)
-                .Take(firstNumericIndex - 1)
-                .Select(l => l.Trim())
-                .Where(l => !string.IsNullOrWhiteSpace(l))
-                .ToList();
+            List<string> textLines = new();
+            for (int i = 1; i < firstNumericIndex; i++)
+            {
+                string trimmedLine = lines[i].Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedLine))
+                {
+                    textLines.Add(trimmedLine);
+                }
+            }
 
             string? category = null;
             string? subCategory = null;
@@ -341,7 +384,6 @@ public class IngBankPdfParser : IPdfParser
                 }
                 else
                 {
-                    // Esta y el resto de líneas forman la descripción
                     descriptionStart = i;
                     break;
                 }
@@ -349,7 +391,7 @@ public class IngBankPdfParser : IPdfParser
 
             if (descriptionStart < textLines.Count)
             {
-                var desc = string.Join(" ", textLines.Skip(descriptionStart)).Trim();
+                string desc = string.Join(" ", textLines.Skip(descriptionStart)).Trim();
                 description = string.IsNullOrWhiteSpace(desc) ? null : desc;
             }
 
@@ -422,7 +464,7 @@ public class IngBankPdfParser : IPdfParser
 
             // Intentar separar Categoría, Subcategoría, Descripción del texto
             // Esto es heurístico ya que depende de cómo PdfPig extraiga el texto
-            var (category, subCategory, description, comment) = 
+            var (category, subCategory, description, comment) =
                 ParseTextColumns(textPart);
 
             return new RawTransactionRow(
@@ -460,7 +502,7 @@ public class IngBankPdfParser : IPdfParser
         // Patrón para números con formato europeo: -1.000,00 o 1,000.00
         var numberPattern = new Regex(@"-?[\d]+[.,\d]*");
         var matches = numberPattern.Matches(text);
-        
+
         var numbers = new List<string>();
         foreach (Match match in matches)
         {
@@ -477,7 +519,7 @@ public class IngBankPdfParser : IPdfParser
     /// <summary>
     /// Intenta separar las columnas de texto (Categoría, Subcategoría, Descripción, Comentario).
     /// </summary>
-    private (string? category, string? subCategory, string? description, string? comment) 
+    private (string? category, string? subCategory, string? description, string? comment)
         ParseTextColumns(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
