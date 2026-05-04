@@ -14,6 +14,7 @@ using System.Text.Json;
 namespace SauronSheet.Frontend.Pages.Categories;
 
 [Authorize]
+[ValidateAntiForgeryToken]
 public class IndexModel : PageModel
 {
     private readonly IMediator _mediator;
@@ -50,7 +51,6 @@ public class IndexModel : PageModel
         }
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostCreateAsync()
     {
         try
@@ -97,7 +97,6 @@ public class IndexModel : PageModel
         }
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostUpdateAsync()
     {
         try
@@ -143,7 +142,6 @@ public class IndexModel : PageModel
         }
     }
 
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> OnPostDeleteAsync(Guid categoryId)
     {
         try

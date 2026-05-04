@@ -41,6 +41,16 @@ public class LoginModel : PageModel
     {
         ReturnUrl = returnUrl ?? "/Dashboard";
 
+        var email = Input?.Email;
+        var password = Input?.Password;
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            _logger.LogWarning("Login: Missing email or password");
+            ModelState.AddModelError(string.Empty, "Email and password are required.");
+            return Page();
+        }
+
         if (!ModelState.IsValid)
         {
             _logger.LogWarning("Login: ModelState is invalid");
@@ -49,10 +59,10 @@ public class LoginModel : PageModel
 
         try
         {
-            _logger.LogInformation("Login attempt for email: {Email}", Input.Email);
+            _logger.LogInformation("Login attempt for email: {Email}", email);
 
             var result = await _mediator.Send(
-                new LoginUserCommand(Input.Email, Input.Password));
+                new LoginUserCommand(email, password));
 
             // Set JWT access token cookie
             Response.Cookies.Append(
@@ -80,14 +90,14 @@ public class LoginModel : PageModel
                     Expires = DateTimeOffset.UtcNow.AddDays(7)
                 });
 
-            _logger.LogInformation("Login successful for email: {Email}", Input.Email);
+            _logger.LogInformation("Login successful for email: {Email}", email);
             return LocalRedirect(ReturnUrl);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning("Login failed for email {Email}: Unauthorized - {Message}", Input.Email, ex.Message);
+            _logger.LogWarning("Login failed for email {Email}: Unauthorized - {Message}", email, ex.Message);
             Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("auth.email", Input.Email ?? "");
+                scope.SetTag("auth.email", email ?? "");
                 scope.SetTag("auth.stage", "login");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
@@ -96,9 +106,9 @@ public class LoginModel : PageModel
         }
         catch (DomainException ex)
         {
-            _logger.LogWarning("Login failed for email {Email}: Domain error - {Message}", Input.Email, ex.Message);
+            _logger.LogWarning("Login failed for email {Email}: Domain error - {Message}", email, ex.Message);
             Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("auth.email", Input.Email ?? "");
+                scope.SetTag("auth.email", email ?? "");
                 scope.SetTag("auth.stage", "login");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
@@ -107,9 +117,9 @@ public class LoginModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Login failed for email {Email}: Unexpected error", Input.Email);
+            _logger.LogError(ex, "Login failed for email {Email}: Unexpected error", email);
             Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("auth.email", Input.Email ?? "");
+                scope.SetTag("auth.email", email ?? "");
                 scope.SetTag("auth.stage", "login");
                 scope.Level = Sentry.SentryLevel.Error;
             });
