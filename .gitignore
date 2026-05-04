@@ -27,6 +27,7 @@ venv/
 # Editors
 .vscode/
 .idea/
+.vs/
 
 # Build directories
 dist/
