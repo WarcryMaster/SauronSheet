@@ -21,6 +21,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
     <!-- Using PdfPig for PDF parsing (Apache 2.0, native .NET, no Java dependency) -->
     <PackageReference Include="PdfPig" Version="0.1.9" />
+    <!-- Override transitive vulnerable IdentityModel packages (fixed in 7.1.2) -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.1.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.1.2" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.1.2" />
   </ItemGroup>
 
 </Project>
