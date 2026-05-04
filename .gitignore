@@ -1,14 +1,51 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
+```
+# Dependencies
+node_modules/
 
-/.vs
+# Package lock file
+package-lock.json
 
-# Build and object directories
-bin/
-obj/
-Debug/
-Release/
+# Logs
+*.log
 
-# Speckit auto-generated agent file (root copilot-instructions.md is the single source)
-.github/agents/copilot-instructions.md
+# Environment variables
+.env
+.env.local
+*.env.*
+
+# IDE specific
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+target/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Testing
+.mypy_cache/
+.pytest_cache/
+.nyc_output/
+coverage.xml
+```
