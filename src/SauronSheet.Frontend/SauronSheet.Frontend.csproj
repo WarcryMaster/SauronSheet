@@ -20,5 +20,9 @@
 
   <ItemGroup>
     <PackageReference Include="Sentry.AspNetCore" Version="6.1.0" />
+    <!-- Override transitive vulnerable IdentityModel packages (fixed in 7.1.2) -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.1.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.1.2" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.1.2" />
   </ItemGroup>
 </Project>
