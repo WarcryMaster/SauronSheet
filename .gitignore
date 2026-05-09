@@ -74,6 +74,9 @@ yarn-error.log*
 .pytest_cache/
 .hypothesis/
 
+# Agent artifacts
+.atl/
+
 # Compression files
 *.zip
 *.gz
