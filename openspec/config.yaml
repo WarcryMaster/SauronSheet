@@ -1,0 +1,26 @@
+project: SauronSheet
+artifact_store:
+  mode: hybrid
+  engram: enabled
+  openspec: enabled
+strict_tdd: true
+testing:
+  runner: dotnet test
+  e2e: npx playwright test --config=e2e/playwright.config.ts
+  unit: xUnit
+  integration: xUnit + Moq
+  coverage: dotnet test --collect:"XPlat Code Coverage"
+context: |
+  SauronSheet is a .NET 10 Razor Pages application with Clean Architecture.
+  Frontend depends on Application; Application depends on Domain; Infrastructure depends on Domain.
+  Use MediatR for commands and queries.
+  Keep source code in English and specs/plans in Spanish.
+  Use Sentry for runtime logging and tracing.
+phase_rules:
+  proposal: write intent, scope, and risks before implementation.
+  spec: define requirements and acceptance criteria in Spanish.
+  design: capture architecture decisions and tradeoffs.
+  tasks: break work into reviewable units.
+  apply: implement the next dependency-ready slice.
+  verify: validate against spec, design, and tasks.
+  archive: close the change and sync final state.
