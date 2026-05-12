@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.Configure<AuthConfiguration>(options =>
         {
             options.JwtSecret = jwtSecret;
+            options.SupabaseIssuer = supabaseUrl.TrimEnd('/') + "/auth/v1";
         });
 
         // Auth services (Phase 1)
