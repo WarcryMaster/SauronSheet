@@ -263,16 +263,27 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<Dictionary<CategoryId, int>> GetCountsByCategoriesAsync(List<CategoryId> categoryIds)
     {
-        var result = new Dictionary<CategoryId, int>();
+        if (categoryIds == null || categoryIds.Count == 0)
+            return new Dictionary<CategoryId, int>();
 
+        // Single Postgrest query with IN filter instead of N individual queries.
+        // The Contains() call is translated to "category_id=in.(val1,val2,...)" by Postgrest.
+        var idStrings = categoryIds.Select(id => id.Value.ToString()).ToHashSet();
+
+        var response = await _client.From<TransactionRow>()
+            .Where(x => idStrings.Contains(x.CategoryId!))
+            .Get();
+
+        var counts = response.Models
+            .Where(r => r.CategoryId != null)
+            .GroupBy(r => r.CategoryId!)
+            .ToDictionary(g => new CategoryId(Guid.Parse(g.Key)), g => g.Count());
+
+        // Ensure all requested category IDs are in the result (with 0 for missing)
+        var result = new Dictionary<CategoryId, int>();
         foreach (var catId in categoryIds)
         {
-            var catIdStr = catId.Value.ToString();
-            var response = await _client.From<TransactionRow>()
-                .Where(x => x.CategoryId == catIdStr)
-                .Get();
-
-            result[catId] = response.Models.Count;
+            result[catId] = counts.GetValueOrDefault(catId, 0);
         }
 
         return result;
