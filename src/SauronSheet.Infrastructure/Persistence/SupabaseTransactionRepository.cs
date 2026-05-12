@@ -9,6 +9,7 @@ using Postgrest;
 using Postgrest.Attributes;
 using Postgrest.Models;
 using Sentry.Extensibility;
+using SauronSheet.Application.Common;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.ValueObjects;
@@ -113,10 +114,12 @@ internal class TransactionRow : BaseModel
 public class SupabaseTransactionRepository : ITransactionRepository
 {
     private readonly Supabase.Client _client;
+    private readonly IUserContext _userContext;
 
-    public SupabaseTransactionRepository(Supabase.Client client)
+    public SupabaseTransactionRepository(Supabase.Client client, IUserContext userContext)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        _userContext = userContext ?? throw new ArgumentNullException(nameof(userContext));
     }
 
     public async Task<Transaction?> GetByIdAsync(TransactionId id)
@@ -170,12 +173,20 @@ public class SupabaseTransactionRepository : ITransactionRepository
     public async Task<IReadOnlyList<Transaction>> FindBySpecificationAsync(
         ISpecification<Transaction> specification)
     {
-        // Fetch all user transactions from Supabase, then apply specification in-memory.
-        // The specification's Criteria expression is compiled and used as a filter.
+        // Fetch user-scoped transactions from Supabase, then apply specification in-memory.
+        // The UserId filter ensures multi-tenant isolation at the query level,
+        // complementing Supabase RLS (defense in depth).
+        // The specification's Criteria expression is compiled and used as a secondary filter.
         // This approach works for MVP scale. For large datasets, translate specs to Postgrest filters.
         try
         {
+            var userId = _userContext.UserId;
+
+            if (string.IsNullOrEmpty(userId))
+                throw new UnauthorizedAccessException("User is not authenticated.");
+
             var response = await _client.From<TransactionRow>()
+                .Where(x => x.UserId == userId)
                 .Limit(specification.MaxResults)
                 .Get();
 
