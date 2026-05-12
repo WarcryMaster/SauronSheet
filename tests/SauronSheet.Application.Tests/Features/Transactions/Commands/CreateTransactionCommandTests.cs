@@ -1,7 +1,8 @@
+using SauronSheet.Domain.Common;
 using Xunit;
 using Moq;
 using SauronSheet.Application.Features.Transactions.Commands;
-using SauronSheet.Application.Common;
+
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.ValueObjects;

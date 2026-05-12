@@ -1,6 +1,6 @@
 namespace SauronSheet.Application.Features.Auth.Queries;
 
-using Common;
+using SauronSheet.Domain.Common;
 using Domain.Services;
 using Domain.Exceptions;
 using DTOs;

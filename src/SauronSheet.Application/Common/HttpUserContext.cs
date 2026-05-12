@@ -1,10 +1,11 @@
 namespace SauronSheet.Application.Common;
 
 using Microsoft.AspNetCore.Http;
+using SauronSheet.Domain.Common;
 
 /// <summary>
 /// HTTP User Context Implementation.
-/// Implements IUserContext from Application layer.
+/// Implements IUserContext from Domain layer.
 /// Extracts current user information from HttpContext claims set by JwtCookieMiddleware.
 /// </summary>
 public class HttpUserContext : IUserContext

@@ -4,10 +4,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using MediatR;
 using SauronSheet.Infrastructure.Auth;
+using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.Repositories;
-using SauronSheet.Application.Common;
-using SauronSheet.Application.Interfaces;
 using SauronSheet.Infrastructure.Persistence;
 using SauronSheet.Infrastructure.PDF;
 using SauronSheet.Infrastructure.PDF.Parsers;
@@ -52,7 +51,6 @@ public static class DependencyInjection
                 client.BaseAddress = new Uri(baseUrl);
             });
 
-        services.AddScoped<IUserContext, HttpUserContext>();
         services.AddHttpContextAccessor();
 
         // CRITICAL FIX C-1: Supabase client registration (Phase 3)

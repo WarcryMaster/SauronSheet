@@ -1,7 +1,7 @@
 namespace SauronSheet.Application.Features.Transactions.Commands;
 
 using MediatR;
-using Common;
+using SauronSheet.Domain.Common;
 
 public record CreateTransactionCommand(
     decimal Amount,

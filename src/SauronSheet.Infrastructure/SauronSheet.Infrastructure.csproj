@@ -1,18 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <UserSecretsId>c6f03ffd-760f-4eb7-b28f-395b2ecc8f9b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SauronSheet.Domain\SauronSheet.Domain.csproj" />
-    <ProjectReference Include="..\SauronSheet.Application\SauronSheet.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.0.0" />
     <PackageReference Include="Sentry.AspNetCore" Version="6.1.0" />
     <PackageReference Include="supabase-csharp" Version="0.16.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />

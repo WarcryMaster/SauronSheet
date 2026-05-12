@@ -8,8 +8,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Sentry;
 using Sentry.Extensibility;
-using SauronSheet.Application.Common.Models;
-using SauronSheet.Application.Interfaces;
+using SauronSheet.Domain.Services;
+using SauronSheet.Domain.ValueObjects;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 

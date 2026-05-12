@@ -1,7 +1,8 @@
+using SauronSheet.Domain.Common;
+using SauronSheet.Application.Common;
 using Xunit;
 using Moq;
 using MediatR;
-using SauronSheet.Application.Common;
 using SauronSheet.Application.Common.Behaviors;
 
 namespace SauronSheet.Application.Tests.Common;
