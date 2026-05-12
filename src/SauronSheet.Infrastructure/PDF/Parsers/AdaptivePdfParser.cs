@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Sentry;
 using Sentry.Extensibility;
-using SauronSheet.Application.Common.Models;
-using SauronSheet.Application.Interfaces;
+using SauronSheet.Domain.Services;
+using SauronSheet.Domain.ValueObjects;
 
 /// <summary>
 /// Adaptive PDF parser that automatically detects the bank format and uses the appropriate parser.

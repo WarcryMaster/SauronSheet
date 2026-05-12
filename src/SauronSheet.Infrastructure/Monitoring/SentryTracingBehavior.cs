@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Sentry;
 using Sentry.Extensibility;
-using SauronSheet.Application.Common;
+using SauronSheet.Domain.Common;
 
 /// <summary>
 /// Pipeline behavior for MediatR that adds Sentry tracing (breadcrumbs and error capture) to all requests.

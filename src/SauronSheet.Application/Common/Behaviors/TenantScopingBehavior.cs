@@ -1,6 +1,7 @@
 namespace SauronSheet.Application.Common.Behaviors;
 
 using MediatR;
+using SauronSheet.Domain.Common;
 
 /// <summary>
 /// MediatR pipeline behavior for tenant scoping.

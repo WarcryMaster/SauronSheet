@@ -9,7 +9,7 @@ using Postgrest;
 using Postgrest.Attributes;
 using Postgrest.Models;
 using Sentry.Extensibility;
-using SauronSheet.Application.Common;
+using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.ValueObjects;

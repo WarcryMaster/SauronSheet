@@ -1,10 +1,10 @@
-namespace SauronSheet.Application.Common;
+namespace SauronSheet.Domain.Common;
 
 /// <summary>
 /// Contract for accessing current authenticated user context.
-/// Resolved from HTTP context in Frontend layer.
-/// Injected into handlers for tenant scoping.
-/// Implementation provided in Phase 1.
+/// Resolved from HTTP context in the presentation layer.
+/// Injected into handlers and repositories for tenant scoping.
+/// Defined in Domain layer as a cross-cutting contract.
 /// </summary>
 public interface IUserContext
 {

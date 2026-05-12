@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using SauronSheet.Application.Common;
 using SauronSheet.Application.Common.Behaviors;
+using SauronSheet.Domain.Common;
 
 namespace SauronSheet.Application;
 

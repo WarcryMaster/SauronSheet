@@ -1,6 +1,7 @@
+using SauronSheet.Domain.Common;
 using Xunit;
 using Moq;
-using SauronSheet.Application.Common;
+
 using SauronSheet.Application.Features.Budgets.Queries;
 using SauronSheet.Application.Features.Budgets.DTOs;
 using SauronSheet.Domain.Entities;

@@ -1,7 +1,8 @@
+using SauronSheet.Domain.Common;
 using Xunit;
 using Moq;
 using SauronSheet.Application.Features.Auth.Queries;
-using SauronSheet.Application.Common;
+
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Domain.Exceptions;

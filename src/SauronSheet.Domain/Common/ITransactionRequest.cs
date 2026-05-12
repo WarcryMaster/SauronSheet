@@ -1,4 +1,4 @@
-namespace SauronSheet.Application.Common;
+namespace SauronSheet.Domain.Common;
 
 /// <summary>
 /// Marker interface for transaction-related requests.

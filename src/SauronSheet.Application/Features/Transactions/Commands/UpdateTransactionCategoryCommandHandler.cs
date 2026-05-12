@@ -3,7 +3,7 @@ namespace SauronSheet.Application.Features.Transactions.Commands;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Common;
+using SauronSheet.Domain.Common;
 using Domain.Repositories;
 using Domain.ValueObjects;
 using Domain.Exceptions;

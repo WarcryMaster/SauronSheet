@@ -1,7 +1,8 @@
+using SauronSheet.Domain.Common;
 using Xunit;
 using Moq;
 using MediatR;
-using SauronSheet.Application.Common;
+
 using SauronSheet.Application.Features.Budgets.Commands;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Exceptions;

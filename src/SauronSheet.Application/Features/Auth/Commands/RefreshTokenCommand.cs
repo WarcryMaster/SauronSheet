@@ -1,6 +1,6 @@
 namespace SauronSheet.Application.Features.Auth.Commands;
 
-using Common;
+using SauronSheet.Application.Common;
 using DTOs;
 using MediatR;
 

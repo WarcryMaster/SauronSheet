@@ -1,6 +1,6 @@
 using Xunit;
 using MediatR;
-using SauronSheet.Application.Common;
+using SauronSheet.Domain.Common;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Domain.Entities;
