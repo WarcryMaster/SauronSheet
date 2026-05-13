@@ -19,14 +19,51 @@ Read it before acting, and follow the linked instruction files for file-type-spe
 
 ## Architecture Rules
 
-- Clean Architecture with unidirectional dependencies.
-- Frontend -> Application -> Domain.
+### Clean Architecture (Mandatory)
+- Unidirectional dependencies: Frontend -> Application -> Domain.
 - Infrastructure -> Domain only.
-- Domain must not reference Application, Infrastructure, or Frontend.
-- Application must not reference Infrastructure or Frontend directly.
-- Use MediatR for commands and queries.
-- Tests are mandatory before implementation in every feature.
-- Strong-typed IDs, immutability, and explicit invariants are required in the Domain.
+- Domain must NOT reference Application, Infrastructure, or Frontend.
+- Application must NOT reference Infrastructure or Frontend directly.
+
+### CQRS + MediatR
+- Commands for state-changing operations (CreateExpense, ImportTransactionsFromPdf, UpdateBudget).
+- Queries for read-only operations (GetExpensesByMonth, GetCategoryBreakdown).
+- Dispatch via `await _mediator.Send(command)`.
+- All requests routed through MediatR pipeline for consistency and middleware support.
+- Handlers are thin orchestrators — keep domain logic in Domain layer.
+
+### Domain-Driven Design
+- Strong-typed IDs mandatory (TransactionId, UserId). Never raw Guid/string.
+- Immutability and explicit invariants required in the Domain.
+- Domain services for cross-entity logic (CategoryService, BudgetService).
+- Repositories abstract persistence via specifications.
+- System defaults flagged with boolean property (`IsSystemDefault`), protected by guard methods.
+- Entities use parameterized constructors; no public setters.
+
+### Supabase Integration (Infrastructure Only)
+- Use Postgrest client in Infrastructure layer only.
+- Never expose Supabase directly to Application or Domain layers.
+- Repository implementations live ONLY in `Infrastructure/Persistence/`.
+- All queries scoped to current user's tenant (enforced in handler, not UI).
+
+### Authentication
+- Supabase Auth for multi-user login (signup, login, logout, JWT refresh).
+- JWT token stored in secure HttpOnly cookies.
+- PageModel: extract userId from `User.FindFirst("sub")`.
+- Never trust client-side userId from form inputs.
+
+## Domain Patterns Quick Reference
+
+| Pattern         | Convention                                 | Example                       |
+|----------------|--------------------------------------------|-------------------------------|
+| Aggregate Root | Base class; parameterized constructor; no public setters | Transaction, Category, Budget |
+| Value Object   | Immutable; value-based equality; validated on construction | Money, DateRange             |
+| Strong-Typed ID| Wrapper around Guid/string; prevents ID mixing at compile time | TransactionId(Guid), UserId(string) |
+| Domain Service | Cross-entity logic; depends on repository interfaces only | CategoryService               |
+| Specification  | Filtering with domain language; MaxResults default 1000 | TransactionByDateRangeSpecification |
+| Domain Exception| Thrown on invariant violation; caught in Application layer | DomainException               |
+| Guard Method   | Returns bool to prevent invalid operations  | Category.CanDelete()          |
+| System Default | Immutable seeded values; flagged with boolean property | Category.IsSystemDefault      |
 
 ## Quality Rules
 
@@ -42,8 +79,9 @@ Read it before acting, and follow the linked instruction files for file-type-spe
 ## Frontend Rules
 
 - Razor Pages should use PageModel patterns and antiforgery protection.
-- Use MDBootstrap via CDN, not Bootstrap or local alternatives.
+- Use MDBootstrap via CDN (mdb-ui-kit v9.2.0), not Bootstrap or local alternatives.
 - Keep JavaScript modern: `const` / `let`, event listeners, null checks, and server-side revalidation.
+- See `.github/instructions/razor-frontend.instructions.md` for full MDBootstrap API and PageModel patterns (auto-loaded for `.cshtml` files).
 
 ## Error Handling and Leak Prevention
 
@@ -56,6 +94,35 @@ Read it before acting, and follow the linked instruction files for file-type-spe
 - Application layer command handlers must not propagate infrastructure error messages as DomainException messages. Use fixed/translated messages.
 - Validation: before adding a new catch block or error path, verify the message cannot contain sensitive infrastructure details (hostnames, IPs, connection strings, file paths, stack traces).
 - Exception type hierarchy: catch specific types (HttpRequestException, DomainException) before the generic `Exception` fallback.
+
+## Testing Strategy
+
+### Testing Pyramid
+| Level         | Scope                                | Tools         | When                              |
+|--------------|--------------------------------------|---------------|-----------------------------------|
+| Unit Tests   | Domain entities, VOs, domain services| xUnit + Moq   | Every phase with domain changes   |
+| Integration  | Application handlers (mocked repos)  | xUnit + Moq + in-memory doubles | App layer scope phases |
+| End-to-End   | Playwright browser tests             | Playwright    | UI/UX scope phases                |
+
+### Coverage Requirements
+| Scope                | Minimum Coverage |
+|----------------------|------------------|
+| Domain Layer         | 80%              |
+| Application Layer    | 70%              |
+
+### Mandatory Rules
+- Tests are mandatory BEFORE implementation in every feature (Red-Green-Refactor).
+- Domain service tests MUST mock repository interfaces (not real databases).
+- Tests serve as executable specification and regression prevention.
+
+### Test Commands
+```bash
+# Run all .NET tests
+dotnet test
+
+# Run Playwright E2E tests (starts app automatically)
+npx playwright test --config=e2e/playwright.config.ts --project=chromium
+```
 
 ## Documentation and Review Rules
 
@@ -75,6 +142,42 @@ These files are referenced by the editor/IDE through `applyTo`-style scoping and
 | `.github/instructions/csharp-rules-reliability-and-usage.instructions.md` | on-demand | Reliability, async, disposal, usage rules |
 | `.github/instructions/csharp-rules-security-platform-and-il.instructions.md` | on-demand | Security, platform, serialization, IL rules |
 | `.github/instructions/razor-frontend.instructions.md` | `**/*.cshtml` | Razor Pages and frontend rules |
+
+## Common Pitfalls & Lessons Learned
+
+### Architecture & Code
+- ❌ Application referencing Infrastructure directly (use Domain interfaces).
+- ❌ Domain logic in MediatR handlers (handlers are thin orchestrators).
+- ❌ Mixing query/command logic (separate concerns strictly).
+- ❌ Supabase client leaking into Application layer.
+- ❌ Raw Guid or string for entity IDs (MUST use strong-typed value objects).
+- ❌ Public setters on domain entities (use parameterized constructors).
+- ❌ Never put `_ViewImports.cshtml` in `Shared/` — only in `Pages/` (breaks Tag Helpers).
+- ❌ Never use `data-mdb-button-init` on `<button type="submit">` — breaks form submission in MDBootstrap v9+.
+
+### Supabase/Postgrest C# Client
+
+#### 1. OR Conditions NOT Supported
+El cliente Postgrest C# (supabase-csharp 0.16.2) no soporta OR dentro de `.Where()`. 
+**Solución**: dos consultas separadas y combinar en memoria.
+
+#### 2. Method Calls in .Where() Lambda NOT Supported (CRITICAL)
+```csharp
+// ❌ INCORRECTO — method call inside lambda
+await _client.From<TransactionRow>()
+    .Where(x => x.Id == id.Value.ToString())
+    .Delete();
+
+// ✅ CORRECTO — convert outside
+var idString = id.Value.ToString();
+await _client.From<TransactionRow>()
+    .Where(x => x.Id == idString)
+    .Delete();
+```
+
+### PDF Parser: Dual-Format Number Normalization
+Los PDFs bancarios usan formato europeo (coma decimal) o anglo (punto decimal).
+Ver `Infrastructure/PDF/Parsers/` para la lógica de normalización.
 
 ## Priority
 
