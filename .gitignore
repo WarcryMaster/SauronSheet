@@ -100,3 +100,9 @@ yarn-error.log*
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+# Secrets and local config
+Set-TestEnv.ps1
+appsettings.Development.json
+test-results/
+e2e/results/

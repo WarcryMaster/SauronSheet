@@ -30,8 +30,8 @@ export default defineConfig({
   
   // Shared settings for all the projects below
   use: {
-    // Base URL for all tests
-    baseURL: process.env.BASE_URL || 'https://localhost:54099',
+    // Base URL for all tests (HTTP for CI compatibility — no dev cert)
+    baseURL: process.env.BASE_URL || 'http://localhost:54100',
     
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -56,32 +56,34 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     
-    // Test against branded engines
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    
-    // Mobile testing
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // Only run additional browsers locally (CI uses chromium only)
+    ...(!process.env.CI
+      ? [
+          {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+          },
+          {
+            name: 'webkit',
+            use: { ...devices['Desktop Safari'] },
+          },
+          {
+            name: 'Mobile Chrome',
+            use: { ...devices['Pixel 5'] },
+          },
+          {
+            name: 'Mobile Safari',
+            use: { ...devices['iPhone 12'] },
+          },
+        ]
+      : []),
   ],
   
-  // Web server to start before running tests (optional - for local dev)
-  // webServer: {
-  //   command: 'dotnet run --project src/SauronSheet.Frontend',
-  //   url: 'https://localhost:54099',
-  //   timeout: 120_000,
-  // },
+  // Web server to start before running tests
+  webServer: {
+    command: 'dotnet run --project ../src/SauronSheet.Frontend --urls http://localhost:54100',
+    url: 'http://localhost:54100',
+    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+  },
 });
