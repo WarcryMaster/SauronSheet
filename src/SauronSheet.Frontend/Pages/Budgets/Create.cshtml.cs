@@ -65,6 +65,11 @@ public class CreateModel : PageModel
         }
         catch (DomainException ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Create.OnPostAsync");
+                scope.SetTag("exception_type", "DomainException");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
             Categories = await _mediator.Send(new GetCategoriesQuery());
             return Page();
@@ -73,9 +78,25 @@ public class CreateModel : PageModel
         {
             return RedirectToPage("/Auth/Login");
         }
-        catch (Exception)
+        catch (HttpRequestException ex)
         {
-            ErrorMessage = "An error occurred while creating the budget.";
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Create.OnPostAsync");
+                scope.SetTag("exception_type", "HttpRequestException");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            Categories = await _mediator.Send(new GetCategoriesQuery());
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Create.OnPostAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An unexpected error occurred while creating the budget. Please try again later.";
             Categories = await _mediator.Send(new GetCategoriesQuery());
             return Page();
         }

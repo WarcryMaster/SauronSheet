@@ -59,13 +59,22 @@ public class AddModel : PageModel
             ErrorMessage = ex.Message;
             return Page();
         }
+        catch (HttpRequestException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Add.OnPostAsync");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            return Page();
+        }
         catch (Exception ex)
         {
             Sentry.SentrySdk.CaptureException(ex, scope => {
                 scope.SetTag("page", "Transactions/Add.OnPostAsync");
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            ErrorMessage = $"An error occurred: {ex.GetType().Name}: {ex.Message}";
+            ErrorMessage = "An unexpected error occurred. Please try again later.";
             return Page();
         }
     }
