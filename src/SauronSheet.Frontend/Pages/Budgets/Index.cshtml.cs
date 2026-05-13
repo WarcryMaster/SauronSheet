@@ -52,11 +52,30 @@ public class IndexModel : PageModel
         }
         catch (DomainException ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Index.OnPostDeleteAsync");
+                scope.SetTag("exception_type", "DomainException");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
         }
-        catch (Exception)
+        catch (HttpRequestException ex)
         {
-            ErrorMessage = "An error occurred while deleting the budget.";
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Index.OnPostDeleteAsync");
+                scope.SetTag("exception_type", "HttpRequestException");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Index.OnPostDeleteAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An unexpected error occurred while deleting the budget. Please try again later.";
         }
 
         Budgets = await _mediator.Send(new GetBudgetsQuery(Year, Month));

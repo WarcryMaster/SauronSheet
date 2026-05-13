@@ -58,6 +58,11 @@ public class EditModel : PageModel
         }
         catch (DomainException ex)
         {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Edit.OnPostAsync");
+                scope.SetTag("exception_type", "DomainException");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
             Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId));
             return Page();
@@ -66,9 +71,25 @@ public class EditModel : PageModel
         {
             return RedirectToPage("/Auth/Login");
         }
-        catch (Exception)
+        catch (HttpRequestException ex)
         {
-            ErrorMessage = "An error occurred while updating the budget.";
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Edit.OnPostAsync");
+                scope.SetTag("exception_type", "HttpRequestException");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            try { Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId)); } catch { }
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Budgets/Edit.OnPostAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An unexpected error occurred while updating the budget. Please try again later.";
             try { Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId)); } catch { }
             return Page();
         }

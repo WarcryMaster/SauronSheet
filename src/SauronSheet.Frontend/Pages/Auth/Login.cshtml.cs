@@ -115,6 +115,17 @@ public class LoginModel : PageModel
             ErrorMessage = ex.Message;
             return Page();
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Login failed for email {Email}: Network error", email);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("auth.email", email ?? "");
+                scope.SetTag("auth.stage", "login");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            return Page();
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for email {Email}: Unexpected error", email);

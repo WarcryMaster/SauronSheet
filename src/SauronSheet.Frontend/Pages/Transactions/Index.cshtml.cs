@@ -58,7 +58,7 @@ public class IndexModel : PageModel
                 scope.SetTag("transactionId", id.ToString());
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            TempData["ErrorMessage"] = $"Error deleting transaction: {ex.Message}";
+            TempData["ErrorMessage"] = "An unexpected error occurred while deleting the transaction. Please try again later.";
         }
 
         return RedirectToPage();
@@ -133,7 +133,7 @@ public class IndexModel : PageModel
                 scope.SetTag("action", "bulk-delete");
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            TempData["ErrorMessage"] = $"Error during bulk deletion: {ex.Message}";
+            TempData["ErrorMessage"] = "An unexpected error occurred during bulk deletion. Please try again later.";
         }
 
         return RedirectToPage();

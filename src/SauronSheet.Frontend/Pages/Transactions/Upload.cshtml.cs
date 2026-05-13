@@ -65,27 +65,41 @@ public class UploadModel : PageModel
                 Sentry.MeasurementUnit.None,
                 new KeyValuePair<string, object>[] { new("type", "skipped") });
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            // Network error (Supabase offline, timeout, etc.)
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Upload.OnPostAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             ErrorMessage = "Network error. Please check your connection and try again.";
-            // TODO Phase 6: Log exception for diagnostics
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("PDF"))
         {
-            // PDF parsing error (from GenericBankPdfParser - NC-3)
-            ErrorMessage = $"Could not parse PDF: {ex.Message}";
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Upload.OnPostAsync");
+                scope.SetTag("exception_type", "PDFParseError");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
+            ErrorMessage = "Could not parse the PDF file. Please check the file format and try again.";
         }
         catch (DomainException ex)
         {
-            // Domain validation error (future date, etc.)
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Upload.OnPostAsync");
+                scope.SetTag("exception_type", "DomainException");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
             ErrorMessage = ex.Message;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Unexpected error
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Transactions/Upload.OnPostAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
             ErrorMessage = "An unexpected error occurred. Please try again later.";
-            // TODO Phase 6: Log exception for diagnostics
         }
 
         return Page();

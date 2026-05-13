@@ -125,7 +125,7 @@ public class SupabaseAuthService : IAuthService
                 scope.SetTag("register.email", email);
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            return AuthResult.Failure($"Registration error: {ex.Message}");
+            return AuthResult.Failure("An unexpected error occurred during registration. Please try again later.");
         }
     }
 
@@ -186,7 +186,7 @@ public class SupabaseAuthService : IAuthService
                 scope.SetTag("login.email", email);
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            return AuthResult.Failure($"Login error: {ex.Message}");
+            return AuthResult.Failure("An unexpected error occurred during login. Please try again later.");
         }
     }
 

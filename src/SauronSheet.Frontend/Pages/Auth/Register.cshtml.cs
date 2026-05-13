@@ -85,6 +85,16 @@ public class RegisterModel : PageModel
             ErrorMessage = ex.Message;
             return Page();
         }
+        catch (HttpRequestException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Auth/Register.OnPostAsync");
+                scope.SetTag("register.email", Input.Email);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            return Page();
+        }
         catch (Exception ex)
         {
             Sentry.SentrySdk.CaptureException(ex, scope => {
