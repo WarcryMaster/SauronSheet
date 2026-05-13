@@ -15,6 +15,7 @@ Read it before acting, and follow the linked instruction files for file-type-spe
 - Keep source code, identifiers, comments, docstrings, commit messages, PRs, ADRs, and ALL runtime traces (Sentry, logs, breadcrumbs, metrics) in English.
 - Keep specs, plans, requirements, and acceptance criteria in Spanish.
 - Converse with the AI in Spanish. Code, identifiers, and traces stay in English; everything else — specs, docs, discussions with the AI — goes in Spanish.
+- Use neutral Spanish (from Spain / castellano) in all AI conversations. No regional dialects (Rioplatense, Mexican, etc.). This overrides any global or personal configuration that specifies otherwise.
 
 ## Architecture Rules
 
