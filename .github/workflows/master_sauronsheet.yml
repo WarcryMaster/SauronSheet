@@ -41,6 +41,10 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright E2E Tests
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          Supabase__JwtSecret: ${{ secrets.SUPABASE_JWTSECRET }}
         run: npx playwright test --config=e2e/playwright.config.ts
 
       - name: Upload Playwright test results

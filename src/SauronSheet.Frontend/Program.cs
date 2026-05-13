@@ -55,11 +55,11 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 // Global exception middleware: catches unhandled exceptions and logs them to Sentry
 app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseHttpsRedirection();
 app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseRouting();
