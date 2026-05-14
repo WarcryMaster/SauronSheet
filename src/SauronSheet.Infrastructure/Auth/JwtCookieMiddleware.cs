@@ -1,6 +1,7 @@
 namespace SauronSheet.Infrastructure.Auth;
 
 using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +31,7 @@ public class JwtCookieMiddleware
         _logger = logger;
         _handler = new JwtSecurityTokenHandler();
 
-        var keyBytes = Convert.FromBase64String(_config.JwtSecret);
+        var keyBytes = Encoding.UTF8.GetBytes(_config.JwtSecret);
         var key = new SymmetricSecurityKey(keyBytes);
 
         _validationParameters = new TokenValidationParameters
