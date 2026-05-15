@@ -1,13 +1,18 @@
 /**
  * charts.js — Chart.js initialization functions for SauronSheet analytics.
  * Phase 4: Dashboard charts (pie, line, bar).
- * Requires Chart.js 4.4.0 CDN loaded in _Layout.cshtml.
+ * Requires Chart.js (latest) CDN loaded in _Layout.cshtml.
  */
 
-const defaultColors = [
-    '#4E79A7', '#F28E2B', '#E15759', '#76B7B2',
-    '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7',
-    '#9C755F', '#BAB0AC', '#86BCB6', '#D37295'
+const designColors = [
+    '#556B2F', // primary
+    '#3b71ca', // semantic-info
+    '#14a44d', // semantic-success
+    '#e4a11b', // semantic-warning
+    '#dc4c64', // semantic-danger
+    '#435425', // primary-active
+    '#6c757d', // muted
+    '#212529'  // ink
 ];
 
 /**
@@ -21,9 +26,16 @@ function initCategoryPieChart(canvasId, categoryData) {
 
     const labels = categoryData.map(d => d.categoryName);
     const data = categoryData.map(d => d.amount);
-    const colors = categoryData.map((d, i) => d.categoryColor || defaultColors[i % defaultColors.length]);
+    
+    // Shuffle design colors randomly
+    const shuffledColors = [...designColors].sort(() => 0.5 - Math.random());
+    const colors = categoryData.map((d, i) => shuffledColors[i % shuffledColors.length]);
 
-    new Chart(canvas, {
+    const ctx = canvas.getContext('2d');
+    if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+    }
+    canvas._chartInstance = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: labels,
@@ -37,7 +49,13 @@ function initCategoryPieChart(canvasId, categoryData) {
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'bottom' },
+                legend: { 
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Spending by Category'
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -62,7 +80,11 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
 
     const labels = monthlyData.map(d => d.monthName);
 
-    new Chart(canvas, {
+    const ctx = canvas.getContext('2d');
+    if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+    }
+    canvas._chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -108,7 +130,11 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
 
     const labels = yearlyData.map(d => d.monthName);
 
-    new Chart(canvas, {
+    const ctx = canvas.getContext('2d');
+    if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+    }
+    canvas._chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
