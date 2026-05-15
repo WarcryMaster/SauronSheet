@@ -36,7 +36,12 @@ public class JwtCookieMiddleware
 
         _validationParameters = new TokenValidationParameters
         {
+            // Supabase JWTs use HS256 and do NOT include a 'kid' header claim.
+            // In Microsoft.IdentityModel 7.x, IssuerSigningKeyResolver is only invoked
+            // when the token HAS a kid. For kidless tokens, IssuerSigningKey is the
+            // only code path — so both must be set.
             IssuerSigningKey = key,
+            IssuerSigningKeyResolver = (_, _, _, _) => [key],
             ValidIssuer = _config.SupabaseIssuer,
             ValidateAudience = false,
             ValidateLifetime = true,
