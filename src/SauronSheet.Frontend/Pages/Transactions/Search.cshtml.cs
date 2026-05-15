@@ -71,7 +71,7 @@ public class SearchModel : PageModel
                 scope.SetTag("page", "Transactions/Search.OnGetAsync");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
-            return RedirectToPage("/Auth/Login");
+            return RedirectToPage("/auth/login");
         }
         catch (Exception ex)
         {

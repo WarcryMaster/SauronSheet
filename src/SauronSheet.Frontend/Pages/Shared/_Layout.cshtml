@@ -9,6 +9,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SauronSheet</title>
 
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/sauron-sheet-logo-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/sauron-sheet-logo-16x16.png" />
+
     <!-- MDBootstrap CSS via CDN (Cloudflare - allowed by CSP) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css" />
 
@@ -42,26 +46,26 @@
                     <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
                         @if (User?.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item"><a class="nav-link" href="/Dashboard">📊 Dashboard</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Transactions">💳 Transactions</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Transactions/Search">🔍 Search</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Transactions/Upload">📄 Upload</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Categories">🏷️ Categories</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Budgets">💰 Budgets</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/dashboard">📊 Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/transactions">💳 Transactions</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/transactions/search">🔍 Search</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/transactions/upload">📄 Upload</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/categories">🏷️ Categories</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/budgets">💰 Budgets</a></li>
                             <li class="nav-item d-none d-lg-flex align-items-center border-start border-secondary ps-3 ms-1">
                                 <small class="text-secondary text-truncate"
                                        style="max-width:140px">@User.FindFirst("email")?.Value</small>
                             </li>
                             <li class="nav-item">
-                                <form method="post" asp-page="/Auth/Logout" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-light ms-lg-1">Logout</button>
+                                <form method="post" asp-page="/auth/logout" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-lg-1">Logout</button>
                                 </form>
                             </li>
                         }
                         else
                         {
-                            <li class="nav-item"><a class="nav-link" href="/Auth/Login">Sign In</a></li>
-                            <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/Auth/Register">Get Started</a>
+                            <li class="nav-item"><a class="nav-link" href="/auth/login">Sign In</a></li>
+                            <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/auth/register">Get Started</a>
                             </li>
                         }
                     </ul>

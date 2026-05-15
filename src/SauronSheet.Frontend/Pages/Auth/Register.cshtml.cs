@@ -73,7 +73,7 @@ public class RegisterModel : PageModel
                     Expires = DateTimeOffset.UtcNow.AddDays(7)
                 });
 
-            return RedirectToPage("/Dashboard");
+            return RedirectToPage("/dashboard");
         }
         catch (DomainException ex)
         {

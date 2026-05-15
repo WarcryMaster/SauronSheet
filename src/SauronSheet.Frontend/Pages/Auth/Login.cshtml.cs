@@ -36,12 +36,12 @@ public class LoginModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        ReturnUrl = returnUrl ?? "/Dashboard";
+        ReturnUrl = returnUrl ?? "/dashboard";
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        ReturnUrl = returnUrl ?? "/Dashboard";
+        ReturnUrl = returnUrl ?? "/dashboard";
 
         var email = Input?.Email;
         var password = Input?.Password;

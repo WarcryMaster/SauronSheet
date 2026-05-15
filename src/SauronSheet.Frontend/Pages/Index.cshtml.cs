@@ -17,10 +17,10 @@ public class IndexModel : PageModel
         // If user is authenticated, go to Dashboard
         if (User.Identity?.IsAuthenticated == true)
         {
-            return RedirectToPage("/Dashboard");
+            return RedirectToPage("/dashboard");
         }
 
         // If not authenticated, go to Login
-        return RedirectToPage("/Auth/Login");
+        return RedirectToPage("/auth/login");
     }
 }

@@ -36,8 +36,8 @@ builder.Services.AddRazorPages()
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Auth/Login";
-        options.AccessDeniedPath = "/Auth/Login";
+        options.LoginPath = "/auth/login";
+        options.AccessDeniedPath = "/auth/login";
         // Session-only cookie; actual auth is JWT-based via JwtCookieMiddleware
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Strict;
