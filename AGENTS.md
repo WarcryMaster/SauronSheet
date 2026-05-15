@@ -82,6 +82,7 @@ Read it before acting, and follow the linked instruction files for file-type-spe
 - Use MDBootstrap via CDN (mdb-ui-kit v9.2.0), not Bootstrap or local alternatives.
 - Keep JavaScript modern: `const` / `let`, event listeners, null checks, and server-side revalidation.
 - See `.github/instructions/razor-frontend.instructions.md` for full MDBootstrap API and PageModel patterns (auto-loaded for `.cshtml` files).
+- Utilizar la metodología https://github.com/voltagent/awesome-design-md para la generación de interfaces. Todas las interfaces frontend deben crearse siguiendo esta metodología.
 
 ## Error Handling and Leak Prevention
 
