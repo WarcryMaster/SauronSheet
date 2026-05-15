@@ -1,4 +1,4 @@
-﻿@page "/Budgets/Comparison"
+﻿@page "/budgets/comparison"
 @model SauronSheet.Frontend.Pages.Budgets.ComparisonModel
 @using System.Text.Json
 @{
@@ -11,11 +11,11 @@
 <div class="d-flex flex-column gap-4">
     <div class="d-flex justify-content-between align-items-center">
         <h2 class="h3 fw-bold mb-0">📊 Budget vs Actual</h2>
-        <a href="/Budgets" class="small text-brand text-decoration-none">&larr; Back to Budgets</a>
+        <a href="/budgets" class="small text-brand text-decoration-none">&larr; Back to Budgets</a>
     </div>
 
     <!-- Month Filter -->
-    <form method="get" action="/Budgets/Comparison" class="card border-0 shadow-sm p-3">
+    <form method="get" action="/budgets/comparison" class="card border-0 shadow-sm p-3">
         <div class="d-flex flex-wrap align-items-center gap-3">
             <label class="small fw-semibold text-muted text-uppercase mb-0">Month:</label>
             <input type="month" name="month" id="monthPicker"
@@ -131,7 +131,7 @@
         <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
             <p class="h5 text-muted mb-3">No budget data for @monthName.</p>
             <p class="text-muted mb-4">Create budgets to compare them against actual spending.</p>
-            <div><a href="/Budgets/Create" class="btn btn-brand">+ Create Budget</a></div>
+            <div><a href="/budgets/create" class="btn btn-brand">+ Create Budget</a></div>
         </div>
     }
 </div>
@@ -142,9 +142,9 @@
         var val = document.getElementById('monthPicker').value;
         if (val) {
             var parts = val.split('-');
-            window.location.href = '/Budgets/Comparison?Year=' + parts[0] + '&Month=' + parseInt(parts[1]);
+            window.location.href = '/budgets/comparison?Year=' + parts[0] + '&Month=' + parseInt(parts[1]);
         } else {
-            window.location.href = '/Budgets/Comparison';
+            window.location.href = '/budgets/comparison';
         }
     });
 

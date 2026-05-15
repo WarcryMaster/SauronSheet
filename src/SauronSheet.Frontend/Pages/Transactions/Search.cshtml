@@ -1,4 +1,4 @@
-@page "/Transactions/Search"
+@page "/transactions/search"
 @model SauronSheet.Frontend.Pages.Transactions.SearchModel
 
 @{
@@ -9,7 +9,7 @@
     <h1 class="h3 fw-bold mb-0">🔍 Search Transactions</h1>
 
     <!-- Filter Panel -->
-    <form method="get" action="/Transactions/Search" class="card border-0 shadow-sm p-4">
+    <form method="get" action="/transactions/search" class="card border-0 shadow-sm p-4">
         <div class="row g-3 mb-3">
             <div class="col-12 col-sm-6 col-lg-4">
                 <label for="Keyword" class="form-label small fw-semibold text-muted text-uppercase">Keyword</label>
@@ -50,7 +50,7 @@
         </div>
         <div class="d-flex align-items-center gap-3">
             <button type="submit" class="btn btn-brand btn-sm">Search</button>
-            <a href="/Transactions/Search" class="btn btn-link btn-sm text-muted text-decoration-none">Clear all filters</a>
+            <a href="/transactions/search" class="btn btn-link btn-sm text-muted text-decoration-none">Clear all filters</a>
         </div>
     </form>
 
@@ -103,12 +103,12 @@
                         <div class="d-flex gap-2">
                             @if (Model.Results.PageNumber > 1)
                             {
-                                <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                                <a href="/transactions/search?PageNumber=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
                                    class="btn btn-outline-secondary btn-sm">&larr; Previous</a>
                             }
                             @if (Model.Results.PageNumber < Model.Results.TotalPages)
                             {
-                                <a href="/Transactions/Search?PageNumber=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
+                                <a href="/transactions/search?PageNumber=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
                                    class="btn btn-brand btn-sm">Next &rarr;</a>
                             }
                         </div>

@@ -45,7 +45,7 @@ public class ComparisonModel : PageModel
         }
         catch (UnauthorizedAccessException)
         {
-            return RedirectToPage("/Auth/Login");
+            return RedirectToPage("/auth/login");
         }
     }
 }

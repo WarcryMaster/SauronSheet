@@ -1,4 +1,4 @@
-@page "/Dashboard"
+@page "/dashboard"
 @model DashboardModel
 @using System.Text.Json
 
@@ -11,7 +11,7 @@
 
 <div class="d-flex flex-column gap-4">
     <!-- Date Range Filter -->
-    <form method="get" action="/Dashboard">
+    <form method="get" action="/dashboard">
         <partial name="Shared/Components/_DateRangeFilter" />
     </form>
 
@@ -23,8 +23,8 @@
             <p class="h5 fw-semibold mb-2">No spending data yet</p>
             <p class="text-muted mb-4">Import a PDF or add transactions to see analytics.</p>
             <div class="d-flex justify-content-center gap-3">
-                <a href="/Transactions/Upload" class="btn btn-brand">📄 Upload PDF</a>
-                <a href="/Transactions/Add" class="btn btn-outline-secondary">➕ Add Transaction</a>
+                <a href="/transactions/upload" class="btn btn-brand">📄 Upload PDF</a>
+                <a href="/transactions/add" class="btn btn-outline-secondary">➕ Add Transaction</a>
             </div>
         </div>
     }
@@ -92,7 +92,7 @@
         <div class="card border-0 shadow-sm p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="h6 fw-semibold mb-0">Recent Transactions</h3>
-                <a href="/Transactions" class="small text-brand">View all →</a>
+                <a href="/transactions" class="small text-brand">View all →</a>
             </div>
             @if (Model.RecentTransactions.Any())
             {
@@ -132,12 +132,12 @@
         <div class="card border-0 shadow-sm p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="h6 fw-semibold mb-0">💰 Budget Status</h3>
-                <a href="/Budgets" class="small text-brand">Manage &rarr;</a>
+                <a href="/budgets" class="small text-brand">Manage &rarr;</a>
             </div>
             @if (Model.BudgetSummary == null || Model.BudgetSummary.TotalBudgets == 0)
             {
                 <p class="text-muted small">No budgets set.
-                   <a href="/Budgets/Create" class="text-brand fw-semibold">Create budgets to track spending.</a>
+                   <a href="/budgets/create" class="text-brand fw-semibold">Create budgets to track spending.</a>
                 </p>
             }
             else
@@ -155,7 +155,7 @@
                 {
                     <div class="mb-3">
                         <div class="d-flex justify-content-between small mb-1">
-                            <a href="/Budgets/Detail/@budget.Id" class="text-decoration-none">@budget.CategoryName</a>
+                            <a href="/budgets/detail/@budget.Id" class="text-decoration-none">@budget.CategoryName</a>
                             <span>€@budget.CurrentSpend.ToString("N2") / €@budget.LimitAmount.ToString("N2")</span>
                         </div>
                         <partial name="Shared/_BudgetProgressBar" model="budget" />

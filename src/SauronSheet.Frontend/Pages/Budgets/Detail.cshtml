@@ -1,4 +1,4 @@
-﻿@page "/Budgets/Detail/{id:guid}"
+﻿@page "/budgets/detail/{id:guid}"
 @model SauronSheet.Frontend.Pages.Budgets.DetailModel
 @{
     ViewData["Title"] = "Budget Detail";
@@ -7,12 +7,12 @@
 <div class="d-flex flex-column gap-4">
     <div class="d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-3">
-            <a href="/Budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
+            <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
             <h2 class="h4 fw-bold mb-0">Budget Detail</h2>
         </div>
         @if (Model.Budget != null)
         {
-            <a href="/Budgets/Edit/@Model.Budget.Id" class="btn btn-brand btn-sm">Edit Budget</a>
+            <a href="/budgets/edit/@Model.Budget.Id" class="btn btn-brand btn-sm">Edit Budget</a>
         }
     </div>
 
@@ -106,7 +106,7 @@
     {
         <div class="card border-0 shadow-sm p-5 text-center">
             <p class="text-muted mb-3">Budget not found.</p>
-            <a href="/Budgets" class="btn btn-outline-secondary btn-sm">Back to Budgets</a>
+            <a href="/budgets" class="btn btn-outline-secondary btn-sm">Back to Budgets</a>
         </div>
     }
 </div>

@@ -41,7 +41,7 @@ public class CreateModel : PageModel
         }
         catch (UnauthorizedAccessException)
         {
-            return RedirectToPage("/Auth/Login");
+            return RedirectToPage("/auth/login");
         }
     }
 
@@ -61,7 +61,7 @@ public class CreateModel : PageModel
                 periodEnd));
 
             TempData["SuccessMessage"] = "Budget created successfully.";
-            return RedirectToPage("/Budgets/Index");
+            return RedirectToPage("/budgets/index");
         }
         catch (DomainException ex)
         {
@@ -76,7 +76,7 @@ public class CreateModel : PageModel
         }
         catch (UnauthorizedAccessException)
         {
-            return RedirectToPage("/Auth/Login");
+            return RedirectToPage("/auth/login");
         }
         catch (HttpRequestException ex)
         {

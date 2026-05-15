@@ -1,4 +1,4 @@
-﻿@page "/Budgets/Create"
+﻿@page "/budgets/create"
 @model SauronSheet.Frontend.Pages.Budgets.CreateModel
 @{
     ViewData["Title"] = "Create Budget";
@@ -6,7 +6,7 @@
 
 <div class="mx-auto d-flex flex-column gap-4" style="max-width:520px">
     <div class="d-flex align-items-center gap-3">
-        <a href="/Budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
+        <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
         <h2 class="h4 fw-bold mb-0">Create Budget</h2>
     </div>
 
@@ -43,7 +43,7 @@
         </div>
 
         <div class="d-flex justify-content-end gap-3">
-            <a href="/Budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
+            <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
             <button type="submit" class="btn btn-brand btn-sm">Create Budget</button>
         </div>
     </form>

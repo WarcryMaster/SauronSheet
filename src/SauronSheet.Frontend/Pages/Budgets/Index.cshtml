@@ -1,4 +1,4 @@
-﻿@page "/Budgets"
+﻿@page "/budgets"
 @model SauronSheet.Frontend.Pages.Budgets.IndexModel
 @{
     ViewData["Title"] = "Budgets";
@@ -10,11 +10,11 @@
 <div class="d-flex flex-column gap-4">
     <div class="d-flex justify-content-between align-items-center">
         <h2 class="h3 fw-bold mb-0">💰 Budgets</h2>
-        <a href="/Budgets/Create" class="btn btn-brand btn-sm">+ Create Budget</a>
+        <a href="/budgets/create" class="btn btn-brand btn-sm">+ Create Budget</a>
     </div>
 
     <!-- Month Filter -->
-    <form method="get" action="/Budgets" class="card border-0 shadow-sm p-3">
+    <form method="get" action="/budgets" class="card border-0 shadow-sm p-3">
         <div class="d-flex flex-wrap align-items-center gap-3">
             <label class="small fw-semibold text-muted text-uppercase mb-0">Month:</label>
             <input type="month" name="month" id="monthPicker"
@@ -54,7 +54,7 @@
                         {
                             <tr>
                                 <td>
-                                    <a href="/Budgets/Detail/@budget.Id" class="text-brand fw-medium text-decoration-none">
+                                    <a href="/budgets/detail/@budget.Id" class="text-brand fw-medium text-decoration-none">
                                         @if (!string.IsNullOrEmpty(budget.CategoryColor))
                                         {
                                             <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background-color:@budget.CategoryColor"></span>
@@ -73,7 +73,7 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center gap-2">
-                                        <a href="/Budgets/Edit/@budget.Id" class="small text-brand fw-medium text-decoration-none">Edit</a>
+                                        <a href="/budgets/edit/@budget.Id" class="small text-brand fw-medium text-decoration-none">Edit</a>
                                         <form method="post" asp-page-handler="Delete" class="d-inline">
                                             <input type="hidden" name="budgetId" value="@budget.Id" />
                                             <button type="submit" onclick="return confirm('Delete this budget?')"
@@ -93,7 +93,7 @@
         <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
             <p class="h5 text-muted mb-3">No budgets set for @monthName.</p>
             <p class="text-muted mb-4">Create one to start tracking your spending.</p>
-            <div><a href="/Budgets/Create" class="btn btn-brand">+ Create Budget</a></div>
+            <div><a href="/budgets/create" class="btn btn-brand">+ Create Budget</a></div>
         </div>
     }
 </div>
@@ -104,9 +104,9 @@
         var val = document.getElementById('monthPicker').value;
         if (val) {
             var parts = val.split('-');
-            window.location.href = '/Budgets?Year=' + parts[0] + '&Month=' + parseInt(parts[1]);
+            window.location.href = '/budgets?Year=' + parts[0] + '&Month=' + parseInt(parts[1]);
         } else {
-            window.location.href = '/Budgets';
+            window.location.href = '/budgets';
         }
     });
 </script>

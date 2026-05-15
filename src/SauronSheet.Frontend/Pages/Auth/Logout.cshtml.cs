@@ -40,6 +40,6 @@ public class LogoutModel : PageModel
         Response.Cookies.Delete("sb-access-token");
         Response.Cookies.Delete("sb-refresh-token");
 
-        return RedirectToPage("/Auth/Login");
+        return RedirectToPage("/auth/login");
     }
 }

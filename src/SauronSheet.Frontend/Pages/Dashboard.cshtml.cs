@@ -67,7 +67,7 @@ public class DashboardModel : PageModel
                 scope.SetTag("dashboard", "OnGetAsync");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
-            return RedirectToPage("/Auth/Login");
+            return RedirectToPage("/auth/login");
         }
         catch (Exception ex)
         {
