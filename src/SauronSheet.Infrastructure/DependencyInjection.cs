@@ -32,8 +32,9 @@ public static class DependencyInjection
         var supabaseKey = configuration["Supabase:Key"]
             ?? throw new InvalidOperationException("Configuration key 'Supabase:Key' is not set.");
 
-        var jwtSecret = configuration["Supabase:JwtSecret"]
-            ?? throw new InvalidOperationException("Configuration key 'Supabase:JwtSecret' is not set.");
+        var jwtSecret = configuration["Supabase:JwtSecret"];
+        if (string.IsNullOrEmpty(jwtSecret))
+            throw new InvalidOperationException("Configuration key 'Supabase:JwtSecret' is not set.");
 
         // Auth configuration (Phase 1)
         services.Configure<AuthConfiguration>(options =>

@@ -6,7 +6,7 @@ name: Build and deploy ASP.Net Core app to Azure Web App - SauronSheet
 on:
   push:
     branches:
-      - master
+      - 'RELEASE/Sauron.Sheet/*'
   workflow_dispatch:
 
 jobs:
