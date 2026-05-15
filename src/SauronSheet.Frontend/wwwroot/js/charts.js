@@ -11,8 +11,25 @@ const designColors = [
     '#e4a11b', // semantic-warning
     '#dc4c64', // semantic-danger
     '#435425', // primary-active
-    '#6c757d', // muted
-    '#212529'  // ink
+    '#9b59b6', // amethyst
+    '#e67e22', // carrot
+    '#1abc9c', // turquoise
+    '#e84393', // prunus avium
+    '#6c5ce7', // blurple
+    '#00b894', // mint
+    '#fdcb6e', // sun
+    '#0984e3', // electron blue
+    '#ff9f43', // bright orange
+    '#10ac84', // sea green
+    '#ff6b6b', // coral red
+    '#48dbfb', // sky blue
+    '#feca57', // bright gold
+    '#ff9ff3', // light pink
+    '#5f27cd', // deep purple
+    '#01a3a4', // aqua
+    '#ee5253', // bright red
+    '#22a6b3', // cyan
+    '#badc58'  // light lime
 ];
 
 /**
@@ -26,7 +43,7 @@ function initCategoryPieChart(canvasId, categoryData) {
 
     const labels = categoryData.map(d => d.categoryName);
     const data = categoryData.map(d => d.amount);
-    
+
     // Shuffle design colors randomly
     const shuffledColors = [...designColors].sort(() => 0.5 - Math.random());
     const colors = categoryData.map((d, i) => shuffledColors[i % shuffledColors.length]);
@@ -49,7 +66,7 @@ function initCategoryPieChart(canvasId, categoryData) {
         options: {
             responsive: true,
             plugins: {
-                legend: { 
+                legend: {
                     position: 'top',
                 },
                 title: {
@@ -58,7 +75,7 @@ function initCategoryPieChart(canvasId, categoryData) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const item = categoryData[context.dataIndex];
                             return `${item.categoryName}: €${item.amount.toFixed(2)} (${item.percentage}%)`;
                         }
