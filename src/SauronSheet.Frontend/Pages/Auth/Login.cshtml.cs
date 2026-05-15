@@ -19,6 +19,7 @@ public class LoginModel : PageModel
 {
     private readonly IMediator _mediator;
     private readonly ILogger<LoginModel> _logger;
+    private readonly IWebHostEnvironment _environment;
 
     [BindProperty]
     public LoginInputModel Input { get; set; } = new();
@@ -26,10 +27,11 @@ public class LoginModel : PageModel
     public string? ErrorMessage { get; set; }
     public string? ReturnUrl { get; set; }
 
-    public LoginModel(IMediator mediator, ILogger<LoginModel> logger)
+    public LoginModel(IMediator mediator, ILogger<LoginModel> logger, IWebHostEnvironment environment)
     {
         _mediator = mediator;
         _logger = logger;
+        _environment = environment;
     }
 
     public void OnGet(string? returnUrl = null)
@@ -64,6 +66,8 @@ public class LoginModel : PageModel
             var result = await _mediator.Send(
                 new LoginUserCommand(email, password));
 
+            bool useSecureCookies = !_environment.IsDevelopment();
+
             // Set JWT access token cookie
             Response.Cookies.Append(
                 "sb-access-token",
@@ -71,7 +75,7 @@ public class LoginModel : PageModel
                 new Microsoft.AspNetCore.Http.CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = true,
+                    Secure = useSecureCookies,
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
                     Path = "/",
                     Expires = result.ExpiresAt
@@ -84,7 +88,7 @@ public class LoginModel : PageModel
                 new Microsoft.AspNetCore.Http.CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = true,
+                    Secure = useSecureCookies,
                     SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
                     Path = "/",
                     Expires = DateTimeOffset.UtcNow.AddDays(7)
