@@ -68,7 +68,7 @@ jobs:
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
-          retention-days: 7
+          retention-days: 3
 
   deploy:
     runs-on: windows-latest
