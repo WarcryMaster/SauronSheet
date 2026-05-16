@@ -15,8 +15,7 @@ using MediatR;
 
 /// <summary>
 /// Handler for GetYearlyComparisonQuery.
-/// Compares monthly expenses between two years (12 entries).
-/// Phase 4 (US4).
+/// Compares monthly income and expenses between two years (12 entries each).
 /// </summary>
 public class GetYearlyComparisonQueryHandler
     : IRequestHandler<GetYearlyComparisonQuery, List<YearlyComparisonDto>>
@@ -54,13 +53,24 @@ public class GetYearlyComparisonQueryHandler
                 new DateTime(request.Year2, 12, 31, 23, 59, 59)));
         var year2Transactions = await _transactionRepo.FindBySpecificationAsync(year2Spec);
 
-        // Only expenses
-        var y1ByMonth = year1Transactions
+        // Separate income and expenses by month for Year 1
+        var y1IncomeByMonth = year1Transactions
+            .Where(t => t.Amount.IsPositive)
+            .GroupBy(t => t.Date.Month)
+            .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount.Amount));
+
+        var y1ExpensesByMonth = year1Transactions
             .Where(t => t.Amount.IsNegative)
             .GroupBy(t => t.Date.Month)
             .ToDictionary(g => g.Key, g => g.Sum(t => Math.Abs(t.Amount.Amount)));
 
-        var y2ByMonth = year2Transactions
+        // Separate income and expenses by month for Year 2
+        var y2IncomeByMonth = year2Transactions
+            .Where(t => t.Amount.IsPositive)
+            .GroupBy(t => t.Date.Month)
+            .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount.Amount));
+
+        var y2ExpensesByMonth = year2Transactions
             .Where(t => t.Amount.IsNegative)
             .GroupBy(t => t.Date.Month)
             .ToDictionary(g => g.Key, g => g.Sum(t => Math.Abs(t.Amount.Amount)));
@@ -68,20 +78,13 @@ public class GetYearlyComparisonQueryHandler
         var result = new List<YearlyComparisonDto>();
         for (int month = 1; month <= 12; month++)
         {
-            var y1Amount = y1ByMonth.GetValueOrDefault(month, 0m);
-            var y2Amount = y2ByMonth.GetValueOrDefault(month, 0m);
-            var difference = y2Amount - y1Amount;
-            decimal? percentageChange = y1Amount != 0
-                ? Math.Round((difference / y1Amount) * 100, 2)
-                : null;
-
             result.Add(new YearlyComparisonDto(
                 month,
                 CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month),
-                y1Amount,
-                y2Amount,
-                difference,
-                percentageChange,
+                y1IncomeByMonth.GetValueOrDefault(month, 0m),
+                y1ExpensesByMonth.GetValueOrDefault(month, 0m),
+                y2IncomeByMonth.GetValueOrDefault(month, 0m),
+                y2ExpensesByMonth.GetValueOrDefault(month, 0m),
                 "EUR"));
         }
 

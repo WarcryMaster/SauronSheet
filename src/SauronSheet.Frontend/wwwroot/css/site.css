@@ -1,16 +1,44 @@
 /* SauronSheet — Brand styles and MDBootstrap overrides */
+/* DESIGN.md v1.0 — SauronSheet Olive Design System */
 
 :root {
+    /* Brand & Accent — DESIGN.md */
     --brand: #556B2F;
     --brand-dark: #435425;
     --brand-light: #f4f7ee;
+
+    /* Surface */
+    --canvas: #f8f9fa;
+    --surface-card: #ffffff;
+
+    /* Text */
+    --ink: #212529;
+    --body-text: #4f4f4f;
+    --muted: #6c757d;
+
+    /* Hairline */
+    --hairline: #dee2e6;
+
+    /* Semantic */
+    --semantic-info: #3b71ca;
+    --semantic-success: #14a44d;
+    --semantic-warning: #e4a11b;
+    --semantic-danger: #dc4c64;
+
+    /* Rounded */
+    --rounded-sm: 0.25rem;
+    --rounded-md: 0.375rem;
+    --rounded-lg: 0.5rem;
 }
 
-/* Brand button */
+/* Brand button — DESIGN.md button-primary */
 .btn-brand {
     background-color: var(--brand);
     border-color: var(--brand);
     color: #fff;
+    border-radius: var(--rounded-md);
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 .btn-brand:hover,
 .btn-brand:active,
@@ -28,13 +56,43 @@
 /* Progress bar brand color */
 .progress-bar-brand { background-color: var(--brand); }
 
-/* Navbar text color fix */
+/* Navbar — DESIGN.md top-nav */
 .navbar-light .navbar-nav .nav-link {
     color: rgba(0, 0, 0, 0.65);
 }
 .navbar-light .navbar-nav .nav-link:hover {
     color: var(--brand);
 }
+.navbar-light .navbar-nav .nav-link.active {
+    color: var(--brand);
+    font-weight: 600;
+}
 .navbar-light .navbar-brand {
     color: rgba(0, 0, 0, 0.9);
+}
+
+/* Card — DESIGN.md card component */
+.card {
+    background-color: var(--surface-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-md);
+}
+
+/* Chart wrapper — fixes Chart.js growing height issue */
+.chart-wrapper {
+    position: relative;
+    min-height: 280px;
+    width: 100%;
+}
+
+.chart-wrapper canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Summary card hover effect */
+.card.shadow-sm:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.12) !important;
+    transition: box-shadow 0.2s ease;
 }
