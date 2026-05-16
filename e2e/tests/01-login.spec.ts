@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Login Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/Auth/Login');
+    await page.goto('/auth/login');
   });
 
   test('TC-001: Login page loads with all required elements', async ({ page }) => {
@@ -40,10 +40,10 @@ test.describe('Login Flow', () => {
     await page.click('button[type="submit"]');
     
     // Wait for navigation to dashboard
-    await page.waitForURL(/Dashboard/, { timeout: 15000 });
+    await page.waitForURL(/dashboard/i, { timeout: 15000 });
     
     // Verify we're on the dashboard
-    await expect(page).toHaveURL(/Dashboard/);
+    await expect(page).toHaveURL(/dashboard/i);
   });
 
   test('TC-003: Login with invalid credentials shows error message', async ({ page }) => {
@@ -66,7 +66,7 @@ test.describe('Login Flow', () => {
     
     // Check that browser validation fired (form was not submitted)
     // The page should still be on login (no error alert from server)
-    await expect(page).toHaveURL(/\/Auth\/Login/);
+    await expect(page).toHaveURL(/\/auth\/login/i);
   });
 
   test('TC-005: Login form validation - empty password', async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe('Login Flow', () => {
     await expect(passwordInput).toBeVisible();
     
     // Check that browser validation fired (form was not submitted)
-    await expect(page).toHaveURL(/\/Auth\/Login/);
+    await expect(page).toHaveURL(/\/auth\/login/i);
   });
 
   test('TC-007: Responsive design - mobile viewport', async ({ page }) => {
