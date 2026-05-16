@@ -34,27 +34,27 @@
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
             <div class="col">
                 <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">📈 Total Income</div>
-                    <div class="h4 fw-bold text-brand mb-0">€@Model.Summary?.TotalIncome.ToString("N2")</div>
+                    <div class="small fw-semibold text-muted text-uppercase mb-1">Total Income</div>
+                    <div class="h4 fw-bold text-success mb-0">€@Model.Summary?.TotalIncome.ToString("N2")</div>
                 </div>
             </div>
             <div class="col">
                 <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">📉 Total Expenses</div>
+                    <div class="small fw-semibold text-muted text-uppercase mb-1">Total Expenses</div>
                     <div class="h4 fw-bold text-danger mb-0">€@Model.Summary?.TotalExpenses.ToString("N2")</div>
                 </div>
             </div>
             <div class="col">
                 <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">💰 Net Amount</div>
-                    <div class="h4 fw-bold mb-0 @(Model.Summary?.NetAmount >= 0 ? "text-brand" : "text-danger")">
+                    <div class="small fw-semibold text-muted text-uppercase mb-1">Net Amount</div>
+                    <div class="h4 fw-bold mb-0 @(Model.Summary?.NetAmount >= 0 ? "text-success" : "text-danger")">
                         €@Model.Summary?.NetAmount.ToString("N2")
                     </div>
                 </div>
             </div>
             <div class="col">
                 <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">📊 Transactions</div>
+                    <div class="small fw-semibold text-muted text-uppercase mb-1">Transactions</div>
                     <div class="h4 fw-bold text-dark mb-0">@Model.Summary?.TransactionCount</div>
                 </div>
             </div>
@@ -63,29 +63,35 @@
         <!-- Charts -->
         <div class="row g-4">
             <div class="col-12 col-lg-6">
-                <div class="card border-0 shadow-sm p-4 h-100">
+                <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
                     <h3 class="h6 fw-semibold mb-3">Spending by Category</h3>
-                    @if (Model.SpendingByCategory.Any())
-                    {
-                        <canvas id="categoryPieChart"></canvas>
-                    }
-                    else
-                    {
-                        <p class="text-muted text-center py-4">No expense data for this period.</p>
-                    }
+                    <div class="chart-wrapper flex-grow-1">
+                        @if (Model.MonthlySpendingByCategory.Any())
+                        {
+                            <canvas id="categoryStackedChart"></canvas>
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4">No expense data for this period.</p>
+                        }
+                    </div>
                 </div>
             </div>
             <div class="col-12 col-lg-6">
-                <div class="card border-0 shadow-sm p-4 h-100">
+                <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
                     <h3 class="h6 fw-semibold mb-3">Monthly Trends</h3>
-                    <canvas id="monthlyTrendsChart"></canvas>
+                    <div class="chart-wrapper flex-grow-1">
+                        <canvas id="monthlyTrendsChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="card border-0 shadow-sm p-4">
             <h3 class="h6 fw-semibold mb-3">Year over Year Comparison</h3>
-            <canvas id="yearlyComparisonChart"></canvas>
+            <div class="chart-wrapper" style="height: 320px;">
+                <canvas id="yearlyComparisonChart"></canvas>
+            </div>
         </div>
 
         <!-- Recent Transactions -->
@@ -112,7 +118,7 @@
                                 <tr>
                                     <td class="text-muted small">@tx.Date.ToString("dd/MM/yyyy")</td>
                                     <td class="small">@tx.Description</td>
-                                    <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-brand" : "text-danger")">
+                                    <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-success" : "text-danger")">
                                         €@tx.Amount.ToString("N2")
                                     </td>
                                     <td class="small text-muted">@(tx.CategoryName ?? "—")</td>
@@ -131,7 +137,7 @@
         <!-- Budget Status Widget -->
         <div class="card border-0 shadow-sm p-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="h6 fw-semibold mb-0">💰 Budget Status</h3>
+                <h3 class="h6 fw-semibold mb-0">Budget Status</h3>
                 <a href="/budgets" class="small text-brand">Manage &rarr;</a>
             </div>
             @if (Model.BudgetSummary == null || Model.BudgetSummary.TotalBudgets == 0)
@@ -170,10 +176,11 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var categoryData = @Html.Raw(Json.Serialize(Model.SpendingByCategory));
+        var monthlyCategoryData = @Html.Raw(Json.Serialize(Model.MonthlySpendingByCategory));
         var monthlyData = @Html.Raw(Json.Serialize(Model.MonthlyTrends));
         var yearlyData = @Html.Raw(Json.Serialize(Model.YearlyComparison));
 
-        initCategoryPieChart('categoryPieChart', categoryData);
+        initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
         initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);
         initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(DateTime.UtcNow.Year - 1)', '@DateTime.UtcNow.Year');
     });

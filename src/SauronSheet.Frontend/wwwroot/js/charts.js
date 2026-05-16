@@ -1,11 +1,19 @@
 /**
  * charts.js — Chart.js initialization functions for SauronSheet analytics.
- * Phase 4: Dashboard charts (pie, line, bar).
+ * Phase 4: Dashboard charts (stacked area, line, bar).
  * Requires Chart.js (latest) CDN loaded in _Layout.cshtml.
+ *
+ * Color palette from DESIGN.md (SauronSheet Olive):
+ *   primary:        #556B2F
+ *   primary-active: #435425
+ *   semantic-info:    #3b71ca
+ *   semantic-success: #14a44d
+ *   semantic-warning: #e4a11b
+ *   semantic-danger:  #dc4c64
  */
 
 const designColors = [
-    '#556B2F', // primary
+    '#556B2F', // primary — Olive Green
     '#3b71ca', // semantic-info
     '#14a44d', // semantic-success
     '#e4a11b', // semantic-warning
@@ -32,52 +40,112 @@ const designColors = [
     '#badc58'  // light lime
 ];
 
+// Shared chart defaults — DESIGN.md aligned
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'bottom',
+            labels: {
+                usePointStyle: true,
+                pointStyle: 'circle',
+                padding: 16,
+                font: {
+                    size: 12
+                }
+            }
+        }
+    },
+    scales: {
+        x: {
+            grid: {
+                display: false
+            }
+        },
+        y: {
+            beginAtZero: true,
+            grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+                callback: v => '€' + v
+            }
+        }
+    }
+};
+
 /**
- * Initialize a pie chart for category spending breakdown.
+ * Initialize a stacked area chart for spending by category over months.
+ * Each category becomes a filled dataset stacked on top of others.
  * @param {string} canvasId - Canvas element ID
- * @param {Array} categoryData - Array of {categoryName, amount, percentage, categoryColor}
+ * @param {Array} monthlyCategoryData - Array of {month, monthName, categoryName, amount}
  */
-function initCategoryPieChart(canvasId, categoryData) {
+function initCategoryStackedChart(canvasId, monthlyCategoryData) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas || !categoryData || categoryData.length === 0) return;
+    if (!canvas || !monthlyCategoryData || monthlyCategoryData.length === 0) return;
 
-    const labels = categoryData.map(d => d.categoryName);
-    const data = categoryData.map(d => d.amount);
+    // Collect all unique months (sorted) and categories
+    const months = [...new Set(monthlyCategoryData.map(d => d.month))]
+        .sort((a, b) => a - b);
+    const monthLabels = months.map(m => {
+        const entry = monthlyCategoryData.find(d => d.month === m);
+        return entry ? entry.monthName : `Month ${m}`;
+    });
 
-    // Shuffle design colors randomly
-    const shuffledColors = [...designColors].sort(() => 0.5 - Math.random());
-    const colors = categoryData.map((d, i) => shuffledColors[i % shuffledColors.length]);
+    const categories = [...new Set(monthlyCategoryData.map(d => d.categoryName))];
+
+    // Build one dataset per category
+    const datasets = categories.map((cat, idx) => {
+        const color = designColors[idx % designColors.length];
+        const data = months.map(m => {
+            const entry = monthlyCategoryData.find(d => d.month === m && d.categoryName === cat);
+            return entry ? Number(entry.amount) : 0;
+        });
+
+        return {
+            label: cat,
+            data: data,
+            backgroundColor: hexToRgba(color, 0.55),
+            borderColor: color,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2,
+            pointHoverRadius: 5
+        };
+    });
 
     const ctx = canvas.getContext('2d');
     if (canvas._chartInstance) {
         canvas._chartInstance.destroy();
     }
     canvas._chartInstance = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors,
-                borderColor: '#ffffff',
-                borderWidth: 2
-            }]
-        },
+        type: 'line',
+        data: { labels: monthLabels, datasets: datasets },
         options: {
-            responsive: true,
+            ...chartDefaults,
+            scales: {
+                ...chartDefaults.scales,
+                x: {
+                    ...chartDefaults.scales.x,
+                    stacked: true
+                },
+                y: {
+                    ...chartDefaults.scales.y,
+                    stacked: true
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
             plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: 'Spending by Category'
-                },
+                ...chartDefaults.plugins,
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            const item = categoryData[context.dataIndex];
-                            return `${item.categoryName}: €${item.amount.toFixed(2)} (${item.percentage}%)`;
+                            return `${context.dataset.label}: €${context.parsed.y.toFixed(2)}`;
                         }
                     }
                 }
@@ -87,7 +155,7 @@ function initCategoryPieChart(canvasId, categoryData) {
 }
 
 /**
- * Initialize a line chart for monthly spending trends.
+ * Initialize a line chart for monthly spending trends (income vs expenses).
  * @param {string} canvasId - Canvas element ID
  * @param {Array} monthlyData - Array of {monthName, totalExpenses, totalIncome}
  */
@@ -109,26 +177,32 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
                 {
                     label: 'Expenses',
                     data: monthlyData.map(d => d.totalExpenses),
-                    borderColor: '#EF4444',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: '#dc4c64', // semantic-danger — DESIGN.md
+                    backgroundColor: hexToRgba('#dc4c64', 0.1),
                     tension: 0.3,
-                    fill: true
+                    fill: true,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
                 },
                 {
                     label: 'Income',
                     data: monthlyData.map(d => d.totalIncome),
-                    borderColor: '#10B981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderColor: '#14a44d', // semantic-success — DESIGN.md
+                    backgroundColor: hexToRgba('#14a44d', 0.1),
                     tension: 0.3,
-                    fill: true
+                    fill: true,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
                 }
             ]
         },
         options: {
-            responsive: true,
-            plugins: { legend: { position: 'bottom' } },
-            scales: {
-                y: { beginAtZero: true, ticks: { callback: v => '€' + v } }
+            ...chartDefaults,
+            interaction: {
+                mode: 'index',
+                intersect: false
             }
         }
     });
@@ -136,8 +210,10 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
 
 /**
  * Initialize a bar chart for yearly spending comparison.
+ * Shows 4 bars per month: Income Y1, Expenses Y1, Income Y2, Expenses Y2.
+ * Uses solid borders with semi-transparent fills.
  * @param {string} canvasId - Canvas element ID
- * @param {Array} yearlyData - Array of {monthName, year1Amount, year2Amount}
+ * @param {Array} yearlyData - Array of {monthName, year1Income, year1Expenses, year2Income, year2Expenses}
  * @param {string} year1Label - Label for year 1
  * @param {string} year2Label - Label for year 2
  */
@@ -151,29 +227,90 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
     if (canvas._chartInstance) {
         canvas._chartInstance.destroy();
     }
+
+    const y1 = year1Label || 'Year 1';
+    const y2 = year2Label || 'Year 2';
+
     canvas._chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 {
-                    label: year1Label || 'Year 1',
-                    data: yearlyData.map(d => d.year1Amount),
-                    backgroundColor: '#3B82F6'
+                    label: `${y1} Income`,
+                    data: yearlyData.map(d => d.year1Income),
+                    backgroundColor: 'rgba(20, 164, 77, 0.2)',
+                    borderColor: '#14a44d',
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
                 },
                 {
-                    label: year2Label || 'Year 2',
-                    data: yearlyData.map(d => d.year2Amount),
-                    backgroundColor: '#8B5CF6'
+                    label: `${y1} Expenses`,
+                    data: yearlyData.map(d => d.year1Expenses),
+                    backgroundColor: 'rgba(220, 76, 100, 0.2)',
+                    borderColor: '#dc4c64',
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: `${y2} Income`,
+                    data: yearlyData.map(d => d.year2Income),
+                    backgroundColor: 'rgba(13, 110, 53, 0.2)',
+                    borderColor: '#0d6e35',
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: `${y2} Expenses`,
+                    data: yearlyData.map(d => d.year2Expenses),
+                    backgroundColor: 'rgba(180, 50, 70, 0.2)',
+                    borderColor: '#b43246',
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
                 }
             ]
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'bottom' } },
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                        font: { size: 12 }
+                    }
+                }
+            },
             scales: {
-                y: { beginAtZero: true, ticks: { callback: v => '€' + v } }
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                    ticks: { callback: v => '€' + v }
+                }
             }
         }
     });
+}
+
+/**
+ * Convert a hex color to rgba string with given alpha.
+ * @param {string} hex — e.g. "#556B2F"
+ * @param {number} alpha — 0..1
+ * @returns {string} rgba(r, g, b, a)
+ */
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

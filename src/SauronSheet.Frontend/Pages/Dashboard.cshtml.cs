@@ -24,6 +24,7 @@ public class DashboardModel : PageModel
     public List<CategorySpendingDto> SpendingByCategory { get; set; } = new();
     public List<MonthlyTrendDto> MonthlyTrends { get; set; } = new();
     public List<YearlyComparisonDto> YearlyComparison { get; set; } = new();
+    public List<MonthlyCategorySpendingDto> MonthlySpendingByCategory { get; set; } = new();
     public List<TransactionDto> RecentTransactions { get; set; } = new();
     public BudgetDashboardSummaryDto? BudgetSummary { get; set; }
 
@@ -54,6 +55,7 @@ public class DashboardModel : PageModel
             SpendingByCategory = await _mediator.Send(new GetSpendingByCategoryQuery(FromDate, ToDate));
             MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(DateTime.UtcNow.Year));
             YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(DateTime.UtcNow.Year - 1, DateTime.UtcNow.Year));
+            MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(DateTime.UtcNow.Year));
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
 
             // Phase 5: Budget status widget

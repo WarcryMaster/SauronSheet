@@ -26,7 +26,7 @@ test.describe('Login Flow', () => {
     await expect(submitButton).toBeVisible();
     
     // Verify "Register" link exists in the form area
-    const registerLink = page.locator('.card-body a[href*="Register"]');
+    const registerLink = page.locator('.card-body a[href*="register"]');
     await expect(registerLink).toBeVisible();
   });
 
