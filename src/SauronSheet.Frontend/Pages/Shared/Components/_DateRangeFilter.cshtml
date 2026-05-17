@@ -1,12 +1,12 @@
-﻿@* _DateRangeFilter partial view - Reusable date range filter component (no Alpine.js) *@
+﻿@* _DateRangeFilter partial view - Reusable date range filter component *@
 @* Phase 4: Used on Dashboard and Transaction list pages *@
 
-<div class="d-flex flex-wrap align-items-end gap-3 card border-0 shadow-sm p-3 mb-4">
-    <div>
-        <label for="DateFilter" class="form-label small fw-semibold text-muted text-uppercase mb-1">Date Range</label>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-1">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <label for="DateFilter" class="form-label mb-0 small fw-semibold text-muted text-uppercase">Period</label>
         <select name="DateFilter" id="DateFilter"
                 onchange="document.getElementById('dateRangeCustom').style.display = (this.value === 'custom') ? 'flex' : 'none'"
-                class="form-select form-select-sm">
+                class="form-select form-select-sm" style="width: auto; min-width: 160px;">
             <option value="this-month" selected="@(ViewData["DateFilter"]?.ToString() == "this-month" ? "selected" : null)">This Month</option>
             <option value="last-month" selected="@(ViewData["DateFilter"]?.ToString() == "last-month" ? "selected" : null)">Last Month</option>
             <option value="last-3-months" selected="@(ViewData["DateFilter"]?.ToString() == "last-3-months" ? "selected" : null)">Last 3 Months</option>
@@ -15,16 +15,16 @@
         </select>
     </div>
 
-    <div id="dateRangeCustom" class="d-flex align-items-end gap-2"
+    <div id="dateRangeCustom" class="d-flex align-items-center gap-2"
          style="display:@(ViewData["DateFilter"]?.ToString() == "custom" ? "flex" : "none") !important">
         <div>
-            <label for="CustomFromDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">From</label>
+            <label for="CustomFromDate" class="form-label mb-0 small text-muted">From</label>
             <input type="date" name="CustomFromDate" id="CustomFromDate"
                    value="@ViewData["CustomFromDate"]"
                    class="form-control form-control-sm" />
         </div>
         <div>
-            <label for="CustomToDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">To</label>
+            <label for="CustomToDate" class="form-label mb-0 small text-muted">To</label>
             <input type="date" name="CustomToDate" id="CustomToDate"
                    value="@ViewData["CustomToDate"]"
                    class="form-control form-control-sm" />
