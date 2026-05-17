@@ -11,7 +11,7 @@
             <h1 class="mb-2">Manage Categories</h1>
             <p class="text-muted">Create and organize custom expense categories. System categories are read-only.</p>
         </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCategoryModal" aria-label="Add new category">
+        <button type="button" class="btn btn-primary" onclick="openCreateModal()" aria-label="Add new category">
             <i class="bi bi-plus-circle"></i> Add New Category
         </button>
     </div>
@@ -42,8 +42,8 @@
                             <div>
                                 @if (!category.IsSystemDefault)
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
-                                            onclick="loadEditForm(@Html.Raw(Json.Serialize(category)))" 
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" 
+                                            onclick="openEditModal(@Html.Raw(Json.Serialize(category)))" 
                                             aria-label="Edit @category.Name category">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
@@ -87,8 +87,8 @@
                             <div>
                                 @if (!category.IsSystemDefault)
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editCategoryModal" 
-                                            onclick="loadEditForm(@Html.Raw(Json.Serialize(category)))" 
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" 
+                                            onclick="openEditModal(@Html.Raw(Json.Serialize(category)))" 
                                             aria-label="Edit @category.Name category">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
@@ -116,7 +116,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="createCategoryLabel">Add New Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" onclick="closeModal('createCategoryModal')" aria-label="Close"></button>
             </div>
             <form id="createForm" method="post" asp-page-handler="Create" onsubmit="return validateCreateForm(event)">
                 <div class="modal-body">
@@ -161,7 +161,7 @@
                     <div id="createError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createCategoryModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="createSubmitBtn" disabled>Save Category</button>
                 </div>
             </form>
@@ -175,7 +175,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editCategoryLabel">Edit Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" onclick="closeModal('editCategoryModal')" aria-label="Close"></button>
             </div>
             <form id="editForm" method="post" asp-page-handler="Update" onsubmit="return validateEditForm(event)">
                 <div class="modal-body">
@@ -210,7 +210,7 @@
                     <div id="editError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCategoryModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="editSubmitBtn">Update Category</button>
                 </div>
             </form>
@@ -224,17 +224,17 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deleteConfirmLabel">Delete Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" onclick="closeModal('deleteConfirmModal')" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
                 <p class="text-muted small">This action cannot be undone.</p>
                 <div id="deleteError" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+                </div>
         </div>
     </div>
 </div>
@@ -259,6 +259,21 @@
 
 <script>
     let currentDeleteCategoryId = null;
+
+    function openCreateModal() {
+        const modal = new mdb.Modal(document.getElementById('createCategoryModal'));
+        modal.show();
+    }
+
+    function openEditModal(category) {
+        loadEditForm(category);
+        const modal = new mdb.Modal(document.getElementById('editCategoryModal'));
+        modal.show();
+    }
+
+    function closeModal(modalId) {
+        mdb.Modal.getInstance(document.getElementById(modalId))?.hide();
+    }
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
