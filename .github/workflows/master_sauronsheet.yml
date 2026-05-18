@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_NO_WARNINGS: 1
 
 jobs:
   build:
@@ -19,10 +19,10 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v4.2.0
         with:
           dotnet-version: '10.x'
 
@@ -33,7 +33,7 @@ jobs:
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: '22'
 
@@ -52,19 +52,20 @@ jobs:
 
       - name: Upload Playwright test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: playwright-report
           path: |
             e2e/results/
             test-results/
           retention-days: 5
+
           
       - name: dotnet publish
         run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
 
       - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
@@ -79,7 +80,7 @@ jobs:
 
     steps:
       - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: .net-app
       
