@@ -98,10 +98,16 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
                     new("exception", ex.GetType().Name)
                 });
 
-            SentrySdk.CaptureException(ex);
+            // UnauthorizedAccessException is an expected business flow (e.g., failed login),
+            // not a system error. Skip automatic capture here — let the calling handler
+            // capture it with proper context (email, stage, etc.) at Warning level.
+            if (ex is not UnauthorizedAccessException)
+            {
+                SentrySdk.CaptureException(ex);
+            }
             throw;
         }
-    }
+    }           
 
     /// <summary>
     /// Builds transaction-specific details for breadcrumb from operation requests.
