@@ -50,7 +50,7 @@ public class CreateCategoryCommandHandler
             categoryId,
             userId,
             categoryName,
-            CategoryType.Expense, // Default to Expense for user-created categories
+            request.Type,
             categoryColor,
             iconName);
 

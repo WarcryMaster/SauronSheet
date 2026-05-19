@@ -9,6 +9,7 @@ using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Infrastructure.Assets;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Text.Json;
 
 namespace SauronSheet.Frontend.Pages.Categories;
@@ -60,14 +61,23 @@ public class IndexModel : PageModel
                 return Unauthorized();
 
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            {
+                var errors = string.Join(", ", ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage));
+                return new JsonResult(new { success = false, error = errors },
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            }
 
             // Validate icon
             if (!AllowedBootstrapIcons.IsValid(CreateForm.IconName))
                 return BadRequest(new { error = "Invalid icon selection" });
 
+            var categoryType = CreateForm.Type == 0 ? CategoryType.Income : CategoryType.Expense;
+
             var command = new CreateCategoryCommand(
                 CreateForm.Name,
+                categoryType,
                 CreateForm.Color ?? "#3498DB",
                 CreateForm.IconName);
 
@@ -106,7 +116,13 @@ public class IndexModel : PageModel
                 return Unauthorized();
 
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            {
+                var errors = string.Join(", ", ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage));
+                return new JsonResult(new { success = false, error = errors },
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            }
 
             // Validate icon
             if (!AllowedBootstrapIcons.IsValid(EditForm.IconName))
