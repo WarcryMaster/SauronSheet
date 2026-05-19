@@ -27,8 +27,11 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      - name: Restore dependencies
-        run: dotnet restore -p:Configuration=Release
+      - name: Restore solution dependencies
+        run: dotnet restore
+
+      - name: Restore Frontend (win-x86 RID for self-contained publish)
+        run: dotnet restore src/SauronSheet.Frontend/SauronSheet.Frontend.csproj -r win-x86
 
       - name: Build with dotnet
         run: dotnet build --configuration Release --no-restore
@@ -70,7 +73,7 @@ jobs:
         shell: pwsh
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o ./publish --no-restore
+        run: dotnet publish src/SauronSheet.Frontend/SauronSheet.Frontend.csproj -c Release -o ./publish --no-restore
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4.6.2
