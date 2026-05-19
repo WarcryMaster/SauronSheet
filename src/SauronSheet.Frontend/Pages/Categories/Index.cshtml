@@ -125,8 +125,8 @@
                         <label for="createName" class="form-label">Category Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required 
                                aria-describedby="nameError" aria-required="true" />
-                        <div class="form-text">Max 50 characters (<span id="charCounter">0</span>/50)</div>
-                        <div id="nameError" class="invalid-feedback d-block" style="display: none;">Category name is required</div>
+                        <div id="nameError" class="invalid-feedback">Category name is required</div>
+                        <div class="form-text text-end">Max 50 characters (<span id="charCounter">0</span>/50)</div>
                     </div>
 
                     <div class="mb-3">
@@ -185,7 +185,7 @@
                     <div class="mb-3">
                         <label for="editName" class="form-label">Category Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
-                        <div class="form-text">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
+                        <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
                     </div>
 
                     <div class="mb-3">
@@ -255,6 +255,18 @@
         outline: 2px solid #0d6efd;
         outline-offset: 2px;
     }
+
+    /* Character counter styling */
+    .form-text.text-end {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+
+    /* Ensure proper spacing between error and counter */
+    .invalid-feedback {
+        margin-bottom: 0.25rem;
+    }
 </style>
 
 <script>
@@ -291,6 +303,7 @@
         if (createNameInput) {
             createNameInput.addEventListener('input', function() {
                 updateCharCounter('charCounter', this.value.length);
+                this.classList.remove('is-invalid');
                 validateCreateForm();
             });
         }
@@ -415,7 +428,12 @@
 
         if (event && event.submitter === submitBtn) {
             if (!isValid) {
-                if (!name) document.getElementById('nameError').style.display = 'block';
+                const nameInput = document.getElementById('createName');
+                if (!name) {
+                    nameInput.classList.add('is-invalid');
+                } else {
+                    nameInput.classList.remove('is-invalid');
+                }
                 return false;
             }
 
