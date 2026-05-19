@@ -63,21 +63,21 @@ jobs:
           path: |
             e2e/results/
             test-results/
-          retention-days: 5
+          retention-days: 3
 
       - name: Clean node_modules before publish
         run: Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
         shell: pwsh
 
       - name: dotnet publish
-        run: dotnet publish src/SauronSheet.Frontend/SauronSheet.Frontend.csproj -c Release -r win-x86 --self-contained true -o ./publish
+        run: dotnet publish src/SauronSheet.Frontend/SauronSheet.Frontend.csproj -c Release -o ./publish
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4.6.2
         with:
           name: dotnet-app
           path: ./publish
-          retention-days: 3
+          retention-days: 1
 
   deploy:
     runs-on: windows-latest
