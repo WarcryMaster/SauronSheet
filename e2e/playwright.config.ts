@@ -55,8 +55,12 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    
-    // Only run additional browsers locally (CI uses chromium only)
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+
+    // Only run additional browsers locally (CI uses Chromium + Mobile Chrome only)
     ...(!process.env.CI
       ? [
           {
@@ -66,10 +70,6 @@ export default defineConfig({
           {
             name: 'webkit',
             use: { ...devices['Desktop Safari'] },
-          },
-          {
-            name: 'Mobile Chrome',
-            use: { ...devices['Pixel 5'] },
           },
           {
             name: 'Mobile Safari',
