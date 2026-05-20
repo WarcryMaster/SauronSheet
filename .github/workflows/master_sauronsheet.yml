@@ -82,7 +82,7 @@ jobs:
         shell: pwsh
 
       - name: Login to Azure
-        uses: azure/login@1384c340ab2dda50fed2bee3041d1d87018aa5e8
+        uses: azure/login@v3.0.0
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8867D19E64C14277B9A587E51C54AF91 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_FFC00761C530482A9034710664410AB9 }}
@@ -90,7 +90,7 @@ jobs:
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@b686016b4de8820a23519503685d03fbfa03a6
+        uses: azure/webapps-deploy@v2.2.19
         with:
           app-name: 'SauronSheet'
           slot-name: 'Production'
