@@ -81,4 +81,14 @@ jspm_packages/
 *.userosscache
 *.sln.docstates
 **/.DS_Store
+# Local agent and IDE caches (no deben subirse)
+.atl/
+.vs/
+*.csproj.lscache
+*.lscache
+
+# Test / CI outputs (artefactos temporales)
+test-results/
+results/
+e2e/results/
 ```
