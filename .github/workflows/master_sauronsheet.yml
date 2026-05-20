@@ -70,7 +70,15 @@ jobs:
         shell: pwsh
 
       - name: dotnet publish
-        run: dotnet publish src/SauronSheet.Frontend/SauronSheet.Frontend.csproj -c Release -o ./publish
+        run: dotnet publish src/SauronSheet.Frontend/SauronSheet.Frontend.csproj -c Release -o ./publish --self-contained false
+
+      - name: Clean publish output before upload
+        run: |
+          # Eliminar archivos innecesarios para reducir tamaño del artifact
+          Remove-Item -Recurse -Force ./publish/wwwroot/**/*.map -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/bin/Debug -ErrorAction SilentlyContinue
+          Get-ChildItem -Path ./publish -Include *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+        shell: pwsh
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4.6.2
@@ -78,6 +86,9 @@ jobs:
           name: dotnet-app
           path: ./publish
           retention-days: 1
+          if-no-files-found: error
+          compression-level: 9 # Máxima compresión para reducir tamaño
+          overwrite: true # Permite sobrescribir artifacts existentes con el mismo nombre
 
   deploy:
     runs-on: windows-latest
