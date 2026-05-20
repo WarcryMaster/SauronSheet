@@ -18,6 +18,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read #This is required for actions/checkout
+      id-token: write #This is required for requesting the JWT (Azure OIDC)
 
     steps:
       - uses: actions/checkout@v5
@@ -80,29 +81,6 @@ jobs:
           Get-ChildItem -Path ./publish -Include *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
         shell: pwsh
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: dotnet-app
-          path: ./publish
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 9 # Máxima compresión para reducir tamaño
-          overwrite: true # Permite sobrescribir artifacts existentes con el mismo nombre
-
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4.3.0
-        with:
-          name: dotnet-app
-      
       - name: Login to Azure
         uses: azure/login@1384c340ab2dda50fed2bee3041d1d87018aa5e8
         with:
@@ -116,4 +94,4 @@ jobs:
         with:
           app-name: 'SauronSheet'
           slot-name: 'Production'
-          package: .
+          package: ./publish
