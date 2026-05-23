@@ -29,7 +29,7 @@ public class DashboardModel : PageModel
     public BudgetDashboardSummaryDto? BudgetSummary { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string DateFilter { get; set; } = "last-3-months";
+    public string DateFilter { get; set; } = "all";
 
     [BindProperty(SupportsGet = true)]
     public DateTime? CustomFromDate { get; set; }
@@ -59,7 +59,9 @@ public class DashboardModel : PageModel
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
 
             // Phase 5: Budget status widget
-            BudgetSummary = await _mediator.Send(new GetBudgetSummaryForDashboardQuery(FromDate.Year, FromDate.Month));
+            // Budget widget always shows current month status regardless of date filter
+            var now = DateTime.UtcNow;
+            BudgetSummary = await _mediator.Send(new GetBudgetSummaryForDashboardQuery(now.Year, now.Month));
 
             return Page();
         }
@@ -87,13 +89,14 @@ public class DashboardModel : PageModel
         var now = DateTime.UtcNow;
         (FromDate, ToDate) = DateFilter switch
         {
+            "all" => (DateTime.MinValue, now.Date),
             "last-month" => (new DateTime(now.Year, now.Month, 1).AddMonths(-1),
                              new DateTime(now.Year, now.Month, 1).AddDays(-1)),
             "this-month" => (new DateTime(now.Year, now.Month, 1), now.Date),
             "this-year" => (new DateTime(now.Year, 1, 1), now.Date),
             "custom" when CustomFromDate.HasValue && CustomToDate.HasValue
                 => (CustomFromDate.Value, CustomToDate.Value),
-            _ => (now.AddMonths(-3).Date, now.Date) // last-3-months default
+            _ => (now.AddMonths(-3).Date, now.Date) // last-3-months fallback
         };
     }
 }
