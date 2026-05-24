@@ -9,7 +9,6 @@ using Domain.Repositories;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
-using Commands;
 
 public class GetCategoriesQueryHandler
     : IRequestHandler<GetCategoriesQuery, List<CategoryDto>>
@@ -17,18 +16,15 @@ public class GetCategoriesQueryHandler
     private readonly ICategoryRepository _categoryRepo;
     private readonly ITransactionRepository _transactionRepo;
     private readonly IUserContext _userContext;
-    private readonly IMediator _mediator;
 
     public GetCategoriesQueryHandler(
         ICategoryRepository categoryRepo,
         ITransactionRepository transactionRepo,
-        IUserContext userContext,
-        IMediator mediator)
+        IUserContext userContext)
     {
         _categoryRepo = categoryRepo;
         _transactionRepo = transactionRepo;
         _userContext = userContext;
-        _mediator = mediator;
     }
 
     public async Task<List<CategoryDto>> Handle(
@@ -36,9 +32,6 @@ public class GetCategoriesQueryHandler
         CancellationToken cancellationToken)
     {
         var userId = new UserId(_userContext.UserId);
-
-        // CLARIFICATION A-1: Seed system defaults via MediatR (idempotent)
-        await _mediator.Send(new SeedSystemDefaultsCommand(), cancellationToken);
 
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
 
@@ -53,10 +46,9 @@ public class GetCategoriesQueryHandler
             c.UpdatedAt ?? DateTime.UtcNow
         )).ToList();
 
-        // Sort: system defaults first, then user-defined alphabetically by name
+        // Sort alphabetically by name (system defaults removed in Chunk 3)
         return result
-            .OrderByDescending(c => c.IsSystemDefault)
-            .ThenBy(c => c.Name)
+            .OrderBy(c => c.Name)
             .ToList();
     }
 }

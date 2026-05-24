@@ -64,19 +64,16 @@ public class CategoryServiceTests
     }
 
     [Fact]
-    public async Task ValidateUniqueName_WithSystemDefaultName_ThrowsDomainException()
+    public async Task ValidateUniqueName_WithPreviouslySystemDefaultName_NoLongerThrows()
     {
         // Arrange
-        var systemDefaultName = "Salary";
+        var previouslyReservedName = "Salary";
         _mockRepository
-            .Setup(r => r.FindByNameAndUserAsync(_testUserId, systemDefaultName))
+            .Setup(r => r.FindByNameAndUserAsync(_testUserId, previouslyReservedName))
             .ReturnsAsync((Category?)null);
 
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<DomainException>(
-            () => _service.ValidateUniqueName(_testUserId, systemDefaultName));
-
-        Assert.Contains("reserved", ex.Message, StringComparison.OrdinalIgnoreCase);
+        // Act & Assert - System defaults removed, so "Salary" is no longer reserved
+        await _service.ValidateUniqueName(_testUserId, previouslyReservedName);
     }
 
     [Fact]
@@ -146,141 +143,4 @@ public class CategoryServiceTests
         Assert.Equal("category", ex.ParamName);
     }
 
-    [Fact]
-    public void GetSystemDefaults_ReturnsExactly24Categories()
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert
-        Assert.Equal(24, defaults.Count);
-    }
-
-    [Fact]
-    public void GetSystemDefaults_ReturnsAllMarkedAsSystemDefault()
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert
-        Assert.All(defaults, c => Assert.True(c.IsSystemDefault));
-    }
-
-    [Theory]
-    [InlineData(CategoryType.Income, 5)]  // 5 income categories
-    [InlineData(CategoryType.Expense, 19)] // 19 expense categories
-    public void GetSystemDefaults_HasCorrectCategoryTypeDistribution(CategoryType type, int expectedCount)
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert
-        var count = defaults.Count(c => c.Type == type);
-        Assert.Equal(expectedCount, count);
-    }
-
-    [Theory]
-    [InlineData("Salary")]
-    [InlineData("Sales")]
-    [InlineData("Investments")]
-    [InlineData("Gifts")]
-    [InlineData("Other Income")]
-    [InlineData("Housing")]
-    [InlineData("Utilities")]
-    [InlineData("Insurance")]
-    [InlineData("Subscription")]
-    [InlineData("Education")]
-    [InlineData("Groceries")]
-    [InlineData("Transportation")]
-    [InlineData("Entertainment")]
-    [InlineData("Dining Out")]
-    [InlineData("Shopping")]
-    [InlineData("Coffee")]
-    [InlineData("Fitness")]
-    [InlineData("Healthcare")]
-    [InlineData("Hobbies")]
-    [InlineData("Gifts Given")]
-    [InlineData("Phone")]
-    [InlineData("Internet")]
-    [InlineData("Gas")]
-    [InlineData("Other Expense")]
-    public void GetSystemDefaults_ContainsExpectedCategories(string categoryName)
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert
-        Assert.Contains(defaults, c => c.Name.Value == categoryName);
-    }
-
-    [Fact]
-    public void GetSystemDefaults_AllCategoriesHaveValidProperties()
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert
-        Assert.All(defaults, c =>
-        {
-            Assert.NotEqual(Guid.Empty, c.Id.Value);
-            Assert.Null(c.UserId); // Feature 3: System categories have NULL user_id
-            Assert.NotNull(c.Name);
-            Assert.NotEmpty(c.Name.Value);
-            Assert.NotNull(c.Color);
-            Assert.NotEmpty(c.Color.Value);
-            Assert.NotNull(c.IconName);
-            Assert.NotEmpty(c.IconName);
-            Assert.True(c.IsSystemDefault);
-        });
-    }
-
-    [Fact]
-    public void GetSystemDefaults_AllCategoriesHaveValidColors()
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert
-        var colorRegex = new System.Text.RegularExpressions.Regex(@"^#[0-9A-F]{6}$");
-        Assert.All(defaults, c =>
-        {
-            Assert.Matches(colorRegex, c.Color.Value);
-        });
-    }
-
-    [Fact]
-    public void GetSystemDefaults_IncomeAndExpenseGroupsHaveCorrectColors()
-    {
-        // Feature 3: GetSystemDefaults no longer takes userId parameter
-        // Act
-        var defaults = _service.GetSystemDefaults();
-
-        // Assert Income categories (green)
-        var incomeCategories = defaults.Where(c => c.Type == CategoryType.Income);
-        Assert.All(incomeCategories, c => Assert.Equal("#27AE60", c.Color.Value));
-
-        // Assert Expense categories by color groups
-        var fixedExpenseColors = new[] { "#E74C3C" };
-        var variableExpenseColors = new[] { "#F39C12" };
-        var lifestyleColors = new[] { "#9B59B6" };
-        var financeColors = new[] { "#3498DB" };
-
-        var allValidExpenseColors = fixedExpenseColors
-            .Concat(variableExpenseColors)
-            .Concat(lifestyleColors)
-            .Concat(financeColors)
-            .ToList();
-
-        var expenseCategories = defaults.Where(c => c.Type == CategoryType.Expense);
-        Assert.All(expenseCategories, c =>
-        {
-            Assert.Contains(c.Color.Value, allValidExpenseColors);
-        });
-    }
 }

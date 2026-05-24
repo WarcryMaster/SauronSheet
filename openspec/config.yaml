@@ -6,16 +6,20 @@ artifact_store:
 strict_tdd: true
 testing:
   runner: dotnet test
-  e2e: npx playwright test --config=e2e/playwright.config.ts
-  unit: xUnit
-  integration: xUnit + Moq
+  e2e: npx playwright test --config=e2e/playwright.config.ts --project=chromium
+  unit: xUnit + Moq
+  integration: xUnit + Moq + in-memory doubles
+  infrastructure: xUnit + Moq
   coverage: dotnet test --collect:"XPlat Code Coverage"
+  coverage_tool: coverlet.collector 6.0.0
+  linter: dotnet build (TreatWarningsAsErrors)
+  formatter: dotnet format
+  type_checker: C# nullable enabled (Roslyn)
+  spell_check: cspell 10.0.0
 context: |
-  SauronSheet is a .NET 10 Razor Pages application with Clean Architecture.
-  Frontend depends on Application; Application depends on Domain; Infrastructure depends on Domain.
-  Use MediatR for commands and queries.
-  Keep source code in English and specs/plans in Spanish.
-  Use Sentry for runtime logging and tracing.
+  SauronSheet is a .NET 10 / C# Razor Pages expense tracker with Clean Architecture (Domain → Application → Infrastructure → Frontend), CQRS + MediatR 12, DDD (strong-typed IDs, value objects, domain services, specification pattern), Supabase backend (supabase-csharp 0.16.2 / Postgrest), Razor Pages + MDBootstrap v9.2.0, and Sentry 6.x for observability.
+  Code/identifiers/traces → English. Specs/plans/requirements → Spanish. AI conversation → neutral Spanish (castellano).
+  Domain layer: zero NuGet dependencies. Four test projects: Unit (Domain), Application, Infrastructure, Integration xUnit+Moq. E2E: Playwright 1.59.1 (Chromium, Firefox, WebKit, mobile views).
 phase_rules:
   proposal: write intent, scope, and risks before implementation.
   spec: define requirements and acceptance criteria in Spanish.

@@ -105,7 +105,11 @@ public class SearchTransactionsQueryHandler
                     ? categoryLookup[t.CategoryId]
                     : null,
                 t.ImportedFrom,
-                t.CreatedAt))
+                t.CreatedAt,
+                BankCategory: t.BankCategory,
+                BankSubcategory: t.BankSubcategory,
+                SubcategoryId: t.SubcategoryId?.Value.ToString(),
+                CategorySource: t.CategorySource.ToString()))
             .ToList();
 
         return new PaginatedResultDto<TransactionDto>(
