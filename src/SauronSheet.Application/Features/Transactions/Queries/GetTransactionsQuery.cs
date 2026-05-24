@@ -8,4 +8,5 @@ public record GetTransactionsQuery(
     int PageSize = 50,
     Guid? CategoryId = null,
     DateTime? StartDate = null,
-    DateTime? EndDate = null) : IRequest<PaginatedResultDto<TransactionDto>>;
+    DateTime? EndDate = null,
+    string? ImportedFrom = null) : IRequest<PaginatedResultDto<TransactionDto>>;

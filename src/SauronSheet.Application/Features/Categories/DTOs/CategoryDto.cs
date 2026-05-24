@@ -10,7 +10,6 @@ public record CategoryDto(
     string Type,
     string Color,
     string IconName,
-    bool IsSystemDefault,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     int TransactionCount = 0);

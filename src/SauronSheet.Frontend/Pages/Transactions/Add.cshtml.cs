@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Categories.Queries;
+using SauronSheet.Application.Features.Categories.Commands;
 using SauronSheet.Application.Features.Categories.DTOs;
 using SauronSheet.Domain.Exceptions;
+using SauronSheet.Domain.ValueObjects;
 using System.ComponentModel.DataAnnotations;
 
 namespace SauronSheet.Frontend.Pages.Transactions;
@@ -26,6 +28,21 @@ public class AddModel : PageModel
         _mediator = mediator;
     }
 
+    internal async Task<Guid?> ResolveCategoryIdAsync(string? categoryName)
+    {
+        if (string.IsNullOrWhiteSpace(categoryName))
+            return null;
+
+        var match = Categories.FirstOrDefault(c =>
+            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+
+        if (match is not null)
+            return match.Id;
+
+        var type = Input.Amount >= 0 ? CategoryType.Income : CategoryType.Expense;
+        return await _mediator.Send(new CreateCategoryCommand(categoryName, type));
+    }
+
     public async Task OnGetAsync()
     {
         Categories = await _mediator.Send(new GetCategoriesQuery());
@@ -40,12 +57,13 @@ public class AddModel : PageModel
 
         try
         {
+            var categoryId = await ResolveCategoryIdAsync(Input.CategoryName);
             var transactionId = await _mediator.Send(new CreateTransactionCommand(
                 Input.Amount,
                 Input.Currency ?? "EUR",
                 Input.Date,
                 Input.Description,
-                Input.CategoryId));
+                categoryId));
 
             TempData["SuccessMessage"] = "Transaction added successfully.";
             return RedirectToPage("/Transactions/Index");
@@ -94,5 +112,6 @@ public class AddTransactionInputModel
 
     public string? Currency { get; set; } = "EUR";
 
-    public Guid? CategoryId { get; set; }
+    [StringLength(500)]
+    public string? CategoryName { get; set; }
 }
