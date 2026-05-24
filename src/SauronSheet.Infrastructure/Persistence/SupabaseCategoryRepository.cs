@@ -153,9 +153,11 @@ public class SupabaseCategoryRepository : ICategoryRepository
                 .Where(x => x.UserId == userId.Value)
                 .Get();
 
+            // Order BEFORE converting to domain — CategoryRow.Name is a string (IComparable),
+            // while Category.Name is a CategoryName value object that does not implement IComparable.
             return response.Models
-                .Select(r => r.ToDomain())
                 .OrderBy(r => r.Name)
+                .Select(r => r.ToDomain())
                 .ToList()
                 .AsReadOnly();
         }
