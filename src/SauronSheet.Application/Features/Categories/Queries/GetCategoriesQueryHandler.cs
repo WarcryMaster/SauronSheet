@@ -35,6 +35,9 @@ public class GetCategoriesQueryHandler
 
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
 
+        var categoryIds = categories.Select(c => c.Id).ToList();
+        var counts = await _transactionRepo.GetCountsByCategoriesAsync(categoryIds);
+
         var result = categories.Select(c => new CategoryDto(
             c.Id.Value,
             c.Name.Value,
@@ -42,7 +45,8 @@ public class GetCategoriesQueryHandler
             c.Color.Value,
             c.IconName,
             c.CreatedAt,
-            c.UpdatedAt ?? DateTime.UtcNow
+            c.UpdatedAt ?? DateTime.UtcNow,
+            TransactionCount: counts.GetValueOrDefault(c.Id, 0)
         )).ToList();
 
         // Sort alphabetically by name (system defaults removed in Chunk 3)
