@@ -46,6 +46,18 @@ internal class TransactionRow : BaseModel
     [Column("imported_from")]
     public string? ImportedFrom { get; set; }
 
+    [Column("bank_category")]
+    public string? BankCategory { get; set; }
+
+    [Column("bank_subcategory")]
+    public string? BankSubcategory { get; set; }
+
+    [Column("subcategory_id")]
+    public string? SubcategoryId { get; set; }
+
+    [Column("category_source")]
+    public string? CategorySourceColumn { get; set; }
+
     [Column("created_at")]
     [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     public DateTime? CreatedAt { get; set; }
@@ -56,6 +68,14 @@ internal class TransactionRow : BaseModel
 
     public Transaction ToDomain()
     {
+        SubcategoryId? subcategoryId = null;
+        if (!string.IsNullOrEmpty(SubcategoryId) && Guid.TryParse(SubcategoryId, out var subGuid))
+        {
+            subcategoryId = new SubcategoryId(subGuid);
+        }
+
+        var categorySource = ParseCategorySource(CategorySourceColumn);
+
         return new Transaction(
             new TransactionId(Guid.Parse(Id)),
             new UserId(UserId),
@@ -63,7 +83,35 @@ internal class TransactionRow : BaseModel
             Date,
             Description,
             string.IsNullOrEmpty(CategoryId) ? null : new CategoryId(Guid.Parse(CategoryId)),
-            ImportedFrom);
+            ImportedFrom,
+            BankCategory,
+            BankSubcategory,
+            subcategoryId,
+            categorySource);
+    }
+
+    private static CategorySource ParseCategorySource(string? source)
+    {
+        return source switch
+        {
+            "Legacy" => CategorySource.Legacy,
+            "RawOnly" => CategorySource.RawOnly,
+            "AutoMatched" => CategorySource.AutoMatched,
+            "UserOverride" => CategorySource.UserOverride,
+            _ => CategorySource.Legacy
+        };
+    }
+
+    private static string? SerializeCategorySource(CategorySource source)
+    {
+        return source switch
+        {
+            CategorySource.Legacy => "Legacy",
+            CategorySource.RawOnly => "RawOnly",
+            CategorySource.AutoMatched => "AutoMatched",
+            CategorySource.UserOverride => "UserOverride",
+            _ => "Legacy"
+        };
     }
 
     public static TransactionRow FromDomain(Transaction t)
@@ -78,6 +126,10 @@ internal class TransactionRow : BaseModel
             Description = t.Description,
             CategoryId = t.CategoryId?.Value.ToString(),
             ImportedFrom = t.ImportedFrom,
+            BankCategory = t.BankCategory,
+            BankSubcategory = t.BankSubcategory,
+            SubcategoryId = t.SubcategoryId?.Value.ToString(),
+            CategorySourceColumn = SerializeCategorySource(t.CategorySource),
             CreatedAt = t.CreatedAt,
             UpdatedAt = t.UpdatedAt
         };
@@ -100,6 +152,10 @@ internal class TransactionRow : BaseModel
             Description = t.Description,
             CategoryId = t.CategoryId?.Value.ToString(),
             ImportedFrom = t.ImportedFrom,
+            BankCategory = t.BankCategory,
+            BankSubcategory = t.BankSubcategory,
+            SubcategoryId = t.SubcategoryId?.Value.ToString(),
+            CategorySourceColumn = SerializeCategorySource(t.CategorySource),
             CreatedAt = DateTime.UtcNow
         };
         return row;

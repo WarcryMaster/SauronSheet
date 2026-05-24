@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using SauronSheet.Application.Common;
 using SauronSheet.Application.Common.Behaviors;
+using SauronSheet.Application.Services;
 using SauronSheet.Domain.Common;
 
 namespace SauronSheet.Application;
@@ -28,6 +29,9 @@ public static class DependencyInjection
 
         // Register HttpUserContext implementation (Phase 1)
         services.AddScoped<IUserContext, HttpUserContext>();
+
+        // Bank category resolution service (Phase 2)
+        services.AddScoped<IBankCategoryResolutionService, BankCategoryResolutionService>();
 
         return services;
     }

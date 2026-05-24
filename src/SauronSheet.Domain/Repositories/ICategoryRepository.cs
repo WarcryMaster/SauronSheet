@@ -9,15 +9,14 @@ using ValueObjects;
 /// <summary>
 /// Repository interface for Category aggregate.
 /// Defined in Domain layer as contract; implemented in Infrastructure.
-/// Feature 3: GetSystemDefaultsAsync no longer requires userId parameter (system categories shared globally).
+/// System defaults have been removed — only user-created categories remain.
 /// </summary>
 public interface ICategoryRepository
 {
     Task<Category?> GetByIdAsync(CategoryId id);
     Task<IReadOnlyList<Category>> GetByUserIdAsync(UserId userId);
     Task<Category?> FindByNameAndUserAsync(UserId userId, string name);
-    Task<Category?> FindByNameAsync(string name); // Feature 3: New method for global name search
-    Task<IReadOnlyList<Category>> GetSystemDefaultsAsync(); // Feature 3: No userId parameter
+    Task<Category?> FindByNameAsync(string name);
     Task AddAsync(Category category);
     Task UpdateAsync(Category category);
     Task DeleteAsync(CategoryId id);

@@ -1,6 +1,5 @@
 namespace SauronSheet.Application.Features.Transactions.Commands;
 
-using Categories.Commands;
 using Domain.Common;
 using Domain.Entities;
 using Domain.Exceptions;
@@ -10,6 +9,7 @@ using Domain.ValueObjects;
 using DTOs;
 using MediatR;
 using Sentry;
+using SauronSheet.Application.Services;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ public class ImportTransactionsFromPdfCommandHandler
     private readonly IPdfImportRepository _pdfImportRepo;
     private readonly IUserProfileRepository _userProfileRepo;
     private readonly IUserContext _userContext;
-    private readonly IMediator _mediator;
+    private readonly IBankCategoryResolutionService _resolutionService;
 
     public ImportTransactionsFromPdfCommandHandler(
         IPdfParser pdfParser,
@@ -32,7 +32,7 @@ public class ImportTransactionsFromPdfCommandHandler
         IPdfImportRepository pdfImportRepo,
         IUserProfileRepository userProfileRepo,
         IUserContext userContext,
-        IMediator mediator)
+        IBankCategoryResolutionService resolutionService)
     {
         _pdfParser = pdfParser;
         _transactionRepo = transactionRepo;
@@ -40,7 +40,7 @@ public class ImportTransactionsFromPdfCommandHandler
         _pdfImportRepo = pdfImportRepo;
         _userProfileRepo = userProfileRepo;
         _userContext = userContext;
-        _mediator = mediator;
+        _resolutionService = resolutionService;
     }
 
     public async Task<ImportResultDto> Handle(
@@ -66,9 +66,6 @@ public class ImportTransactionsFromPdfCommandHandler
         // Ensure user profile exists in public.users before FK-constrained inserts.
         // Guards against the case where the Supabase trigger did not fire for this user.
         await _userProfileRepo.EnsureExistsAsync(userId, _userContext.UserEmail);
-
-        // CLARIFICATION A-1: Seed system defaults via MediatR (NOT inline check)
-        await _mediator.Send(new SeedSystemDefaultsCommand(), cancellationToken);
 
         // Parse PDF
         var rawRows = await _pdfParser.ParseAsync(request.PdfStream);
@@ -162,15 +159,23 @@ public class ImportTransactionsFromPdfCommandHandler
                     continue;
                 }
 
-                // Create transaction
+                // Resolve bank category to user category
+                var resolution = await _resolutionService.ResolveAsync(
+                    userId, row.Category, row.SubCategory, cancellationToken);
+
+                // Create transaction with resolution data
                 var transaction = new Transaction(
                     new TransactionId(Guid.NewGuid()),
                     userId,
                     new Money(amount, currency),
                     date,
                     description,
-                    categoryId: null,
-                    importedFrom: request.Filename);
+                    categoryId: resolution.CategoryId,
+                    importedFrom: request.Filename,
+                    bankCategory: row.Category,
+                    bankSubcategory: row.SubCategory,
+                    subcategoryId: resolution.SubcategoryId,
+                    categorySource: resolution.CategorySource);
 
                 await _transactionRepo.AddAsync(transaction);
                 importedCount++;

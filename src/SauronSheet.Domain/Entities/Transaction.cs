@@ -17,6 +17,24 @@ public class Transaction : AggregateRoot<TransactionId>
     public CategoryId? CategoryId { get; private set; }
     public string? ImportedFrom { get; private set; }
 
+    /// <summary>Raw bank category from PDF parser, unmodified.</summary>
+    public string? BankCategory { get; private set; }
+
+    /// <summary>Raw bank subcategory from PDF parser, unmodified.</summary>
+    public string? BankSubcategory { get; private set; }
+
+    /// <summary>Resolved subcategory, if any.</summary>
+    public SubcategoryId? SubcategoryId { get; private set; }
+
+    /// <summary>Source of the category assignment (Legacy, RawOnly, AutoMatched, UserOverride).</summary>
+    public CategorySource CategorySource { get; private set; }
+
+    /// <summary>
+    /// Constructor for Transaction aggregate root.
+    /// The first 6 params match the original signature for backward compatibility.
+    /// New params (bankCategory, bankSubcategory, subcategoryId, categorySource) default
+    /// to null/Legacy so existing call sites continue to work without changes.
+    /// </summary>
     public Transaction(
         TransactionId id,
         UserId userId,
@@ -24,7 +42,11 @@ public class Transaction : AggregateRoot<TransactionId>
         DateTime date,
         string description,
         CategoryId? categoryId = null,
-        string? importedFrom = null)
+        string? importedFrom = null,
+        string? bankCategory = null,
+        string? bankSubcategory = null,
+        SubcategoryId? subcategoryId = null,
+        CategorySource categorySource = CategorySource.Legacy)
         : base(id)
     {
         if (userId == null)
@@ -40,14 +62,35 @@ public class Transaction : AggregateRoot<TransactionId>
         Description = description;
         CategoryId = categoryId;
         ImportedFrom = importedFrom;
+        BankCategory = bankCategory;
+        BankSubcategory = bankSubcategory;
+        SubcategoryId = subcategoryId;
+        CategorySource = categorySource;
     }
 
     /// <summary>
-    /// Categorize or uncategorize the transaction.
+    /// Categorize or uncategorize the transaction from user action (UI).
+    /// When assigning a category, source is set to UserOverride.
+    /// When clearing (null), the existing source is preserved.
     /// </summary>
     public void Categorize(CategoryId? categoryId)
     {
         CategoryId = categoryId;
+        if (categoryId != null)
+            CategorySource = CategorySource.UserOverride;
+        // When categoryId is null, keep existing CategorySource
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Categorize with full resolution data (used by the resolution service).
+    /// Sets category, subcategory, and source in one call.
+    /// </summary>
+    public void Categorize(CategoryId? categoryId, SubcategoryId? subcategoryId, CategorySource source)
+    {
+        CategoryId = categoryId;
+        SubcategoryId = subcategoryId;
+        CategorySource = source;
         UpdatedAt = DateTime.UtcNow;
     }
 

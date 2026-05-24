@@ -91,6 +91,10 @@ public static class DependencyInjection
         // Domain services (NEW in Phase 3)
         services.AddScoped<CategoryService>();
 
+        // Bank category resolution (Phase 2)
+        services.AddScoped<ISubcategoryRepository, SupabaseSubcategoryRepository>();
+        services.AddScoped<IBankCategoryTranslationRepository, SupabaseBankCategoryTranslationRepository>();
+
         // Budget persistence and domain service (NEW in Phase 5)
         services.AddScoped<IBudgetRepository, SupabaseBudgetRepository>();
         services.AddScoped<BudgetService>();

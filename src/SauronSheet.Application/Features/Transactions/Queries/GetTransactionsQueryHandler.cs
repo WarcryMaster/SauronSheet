@@ -98,7 +98,11 @@ public class GetTransactionsQueryHandler
                 ? categories[t.CategoryId]
                 : null,
             t.ImportedFrom,
-            t.CreatedAt
+            t.CreatedAt,
+            BankCategory: t.BankCategory,
+            BankSubcategory: t.BankSubcategory,
+            SubcategoryId: t.SubcategoryId?.Value.ToString(),
+            CategorySource: t.CategorySource.ToString()
         )).ToList();
 
         // CLARIFICATION A-4: TotalPages calculation
