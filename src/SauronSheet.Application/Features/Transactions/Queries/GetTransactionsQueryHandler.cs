@@ -60,6 +60,12 @@ public class GetTransactionsQueryHandler
             spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, dateSpec);
         }
 
+        if (!string.IsNullOrEmpty(request.ImportedFrom))
+        {
+            var sourceSpec = new TransactionByImportedFromSpecification(request.ImportedFrom);
+            spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, sourceSpec);
+        }
+
         var filtered = await _transactionRepo.FindBySpecificationAsync(spec);
 
         // Sort by date descending

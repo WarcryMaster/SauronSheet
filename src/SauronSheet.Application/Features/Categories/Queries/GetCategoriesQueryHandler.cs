@@ -41,7 +41,6 @@ public class GetCategoriesQueryHandler
             c.Type.ToString(),
             c.Color.Value,
             c.IconName,
-            c.IsSystemDefault,
             c.CreatedAt,
             c.UpdatedAt ?? DateTime.UtcNow
         )).ToList();

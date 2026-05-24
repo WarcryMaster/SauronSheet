@@ -47,14 +47,17 @@
             </div>
 
             <div>
-                <label for="CategoryId" class="form-label fw-semibold">Category <span class="text-muted fw-normal">(optional)</span></label>
-                <select id="CategoryId" name="Input.CategoryId" asp-for="Input.CategoryId" class="form-select">
-                    <option value="">-- Uncategorized --</option>
+                <label for="CategoryName" class="form-label fw-semibold">Category <span class="text-muted fw-normal">(optional — type to search or create)</span></label>
+                <input type="text" id="CategoryName" name="Input.CategoryName"
+                       list="categories" asp-for="Input.CategoryName"
+                       class="form-control" placeholder="Search existing or type new category..." />
+                <datalist id="categories">
+                    <option value="" />
                     @foreach (var category in Model.Categories)
                     {
-                        <option value="@category.Id">@(category.IsSystemDefault ? "🔒 " : "")@category.Name</option>
+                        <option value="@category.Name" />
                     }
-                </select>
+                </datalist>
             </div>
 
             <div class="d-flex justify-content-end gap-2 mt-2">

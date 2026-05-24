@@ -33,6 +33,11 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DateTime? EndDate { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public string? ImportedFrom { get; set; }
+
+    public List<string> AvailableSources { get; set; } = new();
+
     public IndexModel(IMediator mediator)
     {
         _mediator = mediator;
@@ -40,8 +45,10 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
+        AvailableSources = await _mediator.Send(new GetDistinctImportedSourcesQuery());
+
         Transactions = await _mediator.Send(
-            new GetTransactionsQuery(PageNumber, PageSize, CategoryId, StartDate, EndDate));
+            new GetTransactionsQuery(PageNumber, PageSize, CategoryId, StartDate, EndDate, ImportedFrom));
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid id)
