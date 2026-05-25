@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using MediatR;
@@ -118,7 +119,9 @@ public static class DependencyInjection
         {
             o.Dsn = configuration["Sentry:Dsn"];
             o.EnableLogs = true;
-            o.Debug = true;
+            o.Debug = false;
+            o.MinimumBreadcrumbLevel = LogLevel.Warning;
+            o.MinimumEventLevel = LogLevel.Warning;
             o.TracesSampleRate = 1.0;
             o.Experimental.EnableMetrics = true;
         });
