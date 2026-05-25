@@ -5,8 +5,7 @@
       "name": "Launch SauronSheet.Frontend",
       "type": "dotnet",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/src/SauronSheet.Frontend/SauronSheet.Frontend.csproj",
-      "launchConfigurationId": "SauronSheet.Frontend"
+      "projectPath": "${workspaceFolder}/src/SauronSheet.Frontend/SauronSheet.Frontend.csproj"
     },
     {
       "name": "Attach to Process",
