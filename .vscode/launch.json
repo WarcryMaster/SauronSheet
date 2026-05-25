@@ -3,14 +3,24 @@
   "configurations": [
     {
       "name": "Launch SauronSheet.Frontend",
-      "type": "dotnet",
+      "type": "coreclr",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/src/SauronSheet.Frontend/SauronSheet.Frontend.csproj"
-    },
-    {
-      "name": "Attach to Process",
-      "type": "dotnet",
-      "request": "attach"
+      "program": "${workspaceFolder}/src/SauronSheet.Frontend/bin/Debug/net10.0/SauronSheet.Frontend.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/SauronSheet.Frontend",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:54099;http://localhost:54100",
+        "Logging__LogLevel__Microsoft.Hosting.Lifetime": "Information"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "preLaunchTask": "build",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      }
     }
   ]
 }

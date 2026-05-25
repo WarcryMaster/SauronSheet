@@ -7,15 +7,11 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/SauronSheet.slnx",
+        "${workspaceFolder}/src/SauronSheet.Frontend/SauronSheet.Frontend.csproj",
         "--configuration",
         "Debug"
       ],
-      "problemMatcher": "$msCompile",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
+      "problemMatcher": "$msCompile"
     }
   ]
 }
