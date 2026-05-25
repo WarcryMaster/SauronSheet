@@ -9,6 +9,7 @@ using Domain.Repositories;
 using Domain.Services;
 using Domain.ValueObjects;
 using MediatR;
+using Services;
 
 public class CreateCategoryCommandHandler
     : IRequestHandler<CreateCategoryCommand, Guid>
@@ -54,7 +55,12 @@ public class CreateCategoryCommandHandler
             categoryColor,
             iconName);
 
-        await _categoryRepo.AddAsync(category);
+        // Compute the normalized deduplication key (single source of truth: CategoryNormalizer).
+        // This key is stored in the normalized_name column (NOT NULL after migration 011).
+        var normalizedName = CategoryNormalizer.Normalize(request.Name)
+            ?? throw new Domain.Exceptions.DomainException("Category name cannot be normalized to a valid key.");
+
+        await _categoryRepo.AddAsync(category, normalizedName);
         return categoryId.Value;
     }
 }

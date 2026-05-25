@@ -16,5 +16,18 @@ public interface ISubcategoryRepository
     Task<IReadOnlyList<Subcategory>> GetByUserIdAsync(UserId userId);
     Task<IReadOnlyList<Subcategory>> GetByCategoryIdAsync(CategoryId categoryId);
     Task<Subcategory?> FindByNameAsync(UserId userId, CategoryId categoryId, string name);
-    Task AddAsync(Subcategory subcategory);
+
+    /// <summary>
+    /// Find a subcategory by its normalized deduplication key within a category scope.
+    /// Used by PDF import resolver. normalizedName via CategoryNormalizer.Normalize().
+    /// Scoped to (userId, categoryId) — not global.
+    /// </summary>
+    Task<Subcategory?> FindByNormalizedNameAsync(UserId userId, CategoryId categoryId, string normalizedName);
+
+    /// <summary>
+    /// Insert a new subcategory and its pre-computed normalized name.
+    /// normalizedName is mandatory — the DB column is NOT NULL after migration 011.
+    /// Caller must use CategoryNormalizer.Normalize(subcategory.Name.Value).
+    /// </summary>
+    Task AddAsync(Subcategory subcategory, string normalizedName);
 }

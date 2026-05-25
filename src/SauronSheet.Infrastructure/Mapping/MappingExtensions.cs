@@ -33,8 +33,10 @@ internal static class MappingExtensions
 
     /// <summary>
     /// Maps a Subcategory domain entity to a SubcategoryRow (Postgrest DTO).
+    /// normalizedName must be pre-computed by the caller (CategoryNormalizer.Normalize).
+    /// Required because Infrastructure must not depend on Application services.
     /// </summary>
-    public static SubcategoryRow FromDomain(this Subcategory subcategory)
+    public static SubcategoryRow FromDomain(this Subcategory subcategory, string normalizedName)
     {
         return new SubcategoryRow
         {
@@ -42,6 +44,7 @@ internal static class MappingExtensions
             UserId = subcategory.UserId?.Value,
             CategoryId = subcategory.CategoryId.Value.ToString(),
             Name = subcategory.Name.Value,
+            NormalizedName = normalizedName,
             IsAutoCreated = subcategory.IsAutoCreated
         };
     }

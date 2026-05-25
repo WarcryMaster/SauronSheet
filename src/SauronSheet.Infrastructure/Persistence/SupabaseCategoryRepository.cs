@@ -39,6 +39,14 @@ internal class CategoryRow : BaseModel
     [Column("is_system_default")]
     public bool IsSystemDefault { get; set; }
 
+    /// <summary>
+    /// Normalized deduplication key for this category name.
+    /// Computed by CategoryNormalizer.Normalize(Name); stored via migration 011.
+    /// NOT NULL in DB after migration 011.
+    /// </summary>
+    [Column("normalized_name")]
+    public string? NormalizedName { get; set; }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
@@ -96,17 +104,18 @@ internal class CategoryRow : BaseModel
     }
 
     /// <summary>
-    /// Converts category to insert-safe DTO (excludes server-managed timestamps).
+    /// Converts category to insert-safe DTO with normalized name.
     /// Timestamps are assigned by database triggers, not by client.
-    /// Feature 3: Handles nullable UserId for system categories.
+    /// normalizedName is pre-computed by the caller (CategoryNormalizer.Normalize).
     /// </summary>
-    public static CategoryRow FromDomainForInsert(Category c)
+    public static CategoryRow FromDomainForInsert(Category c, string normalizedName)
     {
         return new CategoryRow
         {
             Id = c.Id.Value.ToString(),
             UserId = c.UserId?.Value,
             Name = c.Name.Value,
+            NormalizedName = normalizedName,
             Type = c.Type.ToString(),
             Color = c.Color.Value,
             IconName = c.IconName,
@@ -248,9 +257,35 @@ public class SupabaseCategoryRepository : ICategoryRepository
         }
     }
 
-    public async Task AddAsync(Category category)
+    public async Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName)
     {
-        var row = CategoryRow.FromDomainForInsert(category);
+        try
+        {
+            var userIdString = userId.Value;
+            var response = await _client.From<CategoryRow>()
+                .Where(x => x.UserId == userIdString)
+                .Where(x => x.NormalizedName == normalizedName)
+                .Limit(1)
+                .Get();
+
+            var row = response.Models.FirstOrDefault();
+            return row?.ToDomain();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseCategoryRepository.FindByNormalizedNameAndUserAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.SetTag("normalizedName", normalizedName);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
+    public async Task AddAsync(Category category, string normalizedName)
+    {
+        var row = CategoryRow.FromDomainForInsert(category, normalizedName);
         await _client.From<CategoryRow>().Insert(row);
     }
 

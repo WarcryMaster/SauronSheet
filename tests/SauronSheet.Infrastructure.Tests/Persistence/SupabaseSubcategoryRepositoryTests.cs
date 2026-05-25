@@ -115,17 +115,58 @@ public class SupabaseSubcategoryRepositoryTests
     }
 
     [Fact]
-    public void AddAsync_AcceptsSubcategory()
+    public void AddAsync_AcceptsSubcategoryAndNormalizedName()
     {
-        // Arrange & Act
+        // After task 1.8: AddAsync MUST require normalizedName so the NOT NULL
+        // DB column gets a value on every subcategory insert.
         var method = _interfaceType.GetMethod("AddAsync");
         Assert.NotNull(method);
 
         var parameters = method!.GetParameters();
 
-        // Assert
-        Assert.Single(parameters);
+        // Assert: 2 parameters — Subcategory + normalizedName string
+        Assert.Equal(2, parameters.Length);
         Assert.Equal(typeof(Subcategory), parameters[0].ParameterType);
+        Assert.Equal(typeof(string), parameters[1].ParameterType);
+    }
+
+    // ── FindByNormalizedNameAsync (task 1.7 / PCE-4 contract) ────────────────
+
+    [Fact]
+    public void FindByNormalizedNameAsync_IsDefinedOnInterface()
+    {
+        var method = _interfaceType.GetMethod("FindByNormalizedNameAsync",
+            new[] { typeof(UserId), typeof(CategoryId), typeof(string) });
+
+        Assert.NotNull(method);
+        Assert.Equal(typeof(Task<Subcategory?>), method!.ReturnType);
+    }
+
+    [Fact]
+    public void FindByNormalizedNameAsync_AcceptsCorrectParameters()
+    {
+        var method = _interfaceType.GetMethod("FindByNormalizedNameAsync",
+            new[] { typeof(UserId), typeof(CategoryId), typeof(string) });
+        Assert.NotNull(method);
+
+        var parameters = method!.GetParameters();
+
+        Assert.Equal(3, parameters.Length);
+        Assert.Equal(typeof(UserId), parameters[0].ParameterType);
+        Assert.Equal(typeof(CategoryId), parameters[1].ParameterType);
+        Assert.Equal(typeof(string), parameters[2].ParameterType);
+    }
+
+    [Fact]
+    public void FindByNormalizedNameAsync_IsImplementedInRepository()
+    {
+        var method = _implType.GetMethod("FindByNormalizedNameAsync",
+            BindingFlags.Public | BindingFlags.Instance,
+            null,
+            new[] { typeof(UserId), typeof(CategoryId), typeof(string) },
+            null);
+
+        Assert.NotNull(method);
     }
 
     [Fact]
