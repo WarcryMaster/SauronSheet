@@ -2,6 +2,28 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "stop-frontend-debug",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Get-CimInstance Win32_Process | Where-Object { ($_.Name -eq 'dotnet.exe' -and $_.CommandLine -like '*SauronSheet.Frontend.dll*') -or $_.Name -eq 'SauronSheet.Frontend.exe' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "prepare-debug",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "stop-frontend-debug",
+        "build"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "build",
       "command": "dotnet",
       "type": "process",
