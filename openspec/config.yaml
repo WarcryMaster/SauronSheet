@@ -1,30 +1,58 @@
+schema: spec-driven
 project: SauronSheet
 artifact_store:
   mode: hybrid
   engram: enabled
   openspec: enabled
 strict_tdd: true
+context: |
+  Stack: .NET 10 / C# Razor Pages with MediatR 12, Supabase, PdfPig, and Playwright.
+  Architecture: Clean Architecture + CQRS + DDD with strong-typed IDs, value objects, domain services, and specifications.
+  Frontend: Razor Pages + MDBootstrap 9.2.0 via CDN; observability is Sentry-only.
+  Language: code/identifiers/traces in English; specs and AI collaboration in neutral Spanish.
+  Testing: xUnit + Moq test suite plus Playwright E2E; red-green-refactor is mandatory.
 testing:
   runner: dotnet test
+  framework: xUnit
+  projects:
+    - tests/SauronSheet.Domain.Tests
+    - tests/SauronSheet.Application.Tests
+    - tests/SauronSheet.Infrastructure.Tests
+    - tests/SauronSheet.Integration.Tests
+    - tests/SauronSheet.Frontend.Tests
   e2e: npx playwright test --config=e2e/playwright.config.ts --project=chromium
   unit: xUnit + Moq
   integration: xUnit + Moq + in-memory doubles
-  infrastructure: xUnit + Moq
+  frontend: xUnit + Moq
   coverage: dotnet test --collect:"XPlat Code Coverage"
-  coverage_tool: coverlet.collector 6.0.0
-  linter: dotnet build (TreatWarningsAsErrors)
+  coverage_tool: coverlet.collector 6.0.0 (installed in Domain/Application/Frontend test projects)
+  linter: dotnet build
+  linter_notes: TreatWarningsAsErrors defaults to true in Directory.Build.props; Infrastructure and Frontend override it to false
   formatter: dotnet format
   type_checker: C# nullable enabled (Roslyn)
-  spell_check: cspell 10.0.0
-context: |
-  SauronSheet is a .NET 10 / C# Razor Pages expense tracker with Clean Architecture (Domain → Application → Infrastructure → Frontend), CQRS + MediatR 12, DDD (strong-typed IDs, value objects, domain services, specification pattern), Supabase backend (supabase-csharp 0.16.2 / Postgrest), Razor Pages + MDBootstrap v9.2.0, and Sentry 6.x for observability.
-  Code/identifiers/traces → English. Specs/plans/requirements → Spanish. AI conversation → neutral Spanish (castellano).
-  Domain layer: zero NuGet dependencies. Four test projects: Unit (Domain), Application, Infrastructure, Integration xUnit+Moq. E2E: Playwright 1.59.1 (Chromium, Firefox, WebKit, mobile views).
-phase_rules:
-  proposal: write intent, scope, and risks before implementation.
-  spec: define requirements and acceptance criteria in Spanish.
-  design: capture architecture decisions and tradeoffs.
-  tasks: break work into reviewable units.
-  apply: implement the next dependency-ready slice.
-  verify: validate against spec, design, and tasks.
-  archive: close the change and sync final state.
+  spell_check: npx cspell
+rules:
+  proposal:
+    - Write intent, scope, rollback, and risk summary before implementation.
+  specs:
+    - Write requirements and scenarios in Spanish.
+    - Use Given/When/Then and RFC 2119 language where applicable.
+  design:
+    - Lead with the decision, architecture rationale, and key tradeoffs.
+  tasks:
+    - Keep work slices reviewable and preferably under 400 changed lines.
+    - Use chained PRs when a change is forecast to exceed the 400-line review budget.
+  apply:
+    - Follow existing Clean Architecture, CQRS, DDD, and Sentry-only observability rules.
+    tdd: true
+    test_command: dotnet test
+  verify:
+    test_command: dotnet test
+    build_command: dotnet build
+    e2e_command: npx playwright test --config=e2e/playwright.config.ts --project=chromium
+    coverage_threshold:
+      domain: 80
+      application: 70
+  archive:
+    - Preserve archived changes as an audit trail under openspec/changes/archive.
+    - Sync approved delta specs back into openspec/specs before closing the change.

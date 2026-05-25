@@ -253,6 +253,101 @@ public class ImportTransactionsFromPdfCommandTests
             Times.Never);
     }
 
+    /// <summary>
+    /// CR-1c: whitespace-padded category and subcategory must be trimmed
+    /// before the transaction is persisted. This prevents storing " Compras "
+    /// (with spaces) instead of "Compras" in bank_category / bank_subcategory.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ImportPdf_WhitespacePaddedCategoryAndSubcategory_TrimmedBeforePersistence()
+    {
+        // Arrange — CR-1c: both category and subcategory carry surrounding whitespace
+        var handler = new ImportTransactionsFromPdfCommandHandler(
+            _mockPdfParser.Object,
+            _mockTransactionRepo.Object,
+            _mockCategoryRepo.Object,
+            _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
+            _mockUserContext.Object,
+            _mockResolutionService.Object);
+
+        var rawRows = new List<RawTransactionRow>
+        {
+            new RawTransactionRow(1, "01/01/2024", "  Compras  ", " Ropa ", "Coffee shop", null, "-5.50", null, "EUR")
+        };
+
+        _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>()))
+            .ReturnsAsync(rawRows);
+
+        _mockTransactionRepo.Setup(x => x.ExistsDuplicateAsync(
+            It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        Transaction? capturedTransaction = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => capturedTransaction = t)
+            .Returns(Task.CompletedTask);
+
+        var command = new ImportTransactionsFromPdfCommand(new MemoryStream(), "test.pdf");
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — CR-1c: leading and trailing whitespace stripped before storing
+        Assert.NotNull(capturedTransaction);
+        Assert.Equal("Compras", capturedTransaction.BankCategory);
+        Assert.Equal("Ropa", capturedTransaction.BankSubcategory);
+    }
+
+    /// <summary>
+    /// CR-1c triangulation: when subcategory is null, trim must not throw.
+    /// Verifies the ?. null-safe operator is used, and category is still trimmed.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ImportPdf_WhitespacePaddedCategoryWithNullSubcategory_TrimmedAndNullPreserved()
+    {
+        // Arrange — CR-1c: category has whitespace, subcategory is null
+        var handler = new ImportTransactionsFromPdfCommandHandler(
+            _mockPdfParser.Object,
+            _mockTransactionRepo.Object,
+            _mockCategoryRepo.Object,
+            _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
+            _mockUserContext.Object,
+            _mockResolutionService.Object);
+
+        var rawRows = new List<RawTransactionRow>
+        {
+            new RawTransactionRow(1, "01/01/2024", " Transferencia ", null, "Salary", null, "1000.00", null, "EUR")
+        };
+
+        _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>()))
+            .ReturnsAsync(rawRows);
+
+        _mockTransactionRepo.Setup(x => x.ExistsDuplicateAsync(
+            It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        Transaction? capturedTransaction = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => capturedTransaction = t)
+            .Returns(Task.CompletedTask);
+
+        var command = new ImportTransactionsFromPdfCommand(new MemoryStream(), "test.pdf");
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — category trimmed; null subcategory stays null (not NullReferenceException)
+        Assert.NotNull(capturedTransaction);
+        Assert.Equal("Transferencia", capturedTransaction.BankCategory);
+        Assert.Null(capturedTransaction.BankSubcategory);
+    }
+
     [Fact]
     [Trait("Category", "Application")]
     public async Task ImportPdf_ResolutionResult_MapsToTransaction()

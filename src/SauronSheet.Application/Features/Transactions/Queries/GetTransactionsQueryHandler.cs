@@ -17,15 +17,18 @@ public class GetTransactionsQueryHandler
 {
     private readonly ITransactionRepository _transactionRepo;
     private readonly ICategoryRepository _categoryRepo;
+    private readonly ISubcategoryRepository _subcategoryRepo;
     private readonly IUserContext _userContext;
 
     public GetTransactionsQueryHandler(
         ITransactionRepository transactionRepo,
         ICategoryRepository categoryRepo,
+        ISubcategoryRepository subcategoryRepo,
         IUserContext userContext)
     {
         _transactionRepo = transactionRepo;
         _categoryRepo = categoryRepo;
+        _subcategoryRepo = subcategoryRepo;
         _userContext = userContext;
     }
 
@@ -78,20 +81,15 @@ public class GetTransactionsQueryHandler
         var skip = (request.PageNumber - 1) * request.PageSize;
         var paginated = sorted.Skip(skip).Take(request.PageSize).ToList();
 
-        // Map to DTOs
-        var categoryIds = paginated
-            .Where(t => t.CategoryId != null)
-            .Select(t => t.CategoryId!.Value)
-            .Distinct()
-            .ToList();
+        // DT-1d: batch-fetch categories once; build in-memory dict to avoid N+1.
+        // Identical pattern to GetRecentTransactionsQueryHandler (L51-52).
+        var categories = await _categoryRepo.GetByUserIdAsync(userId);
+        var categoryLookup = categories.ToDictionary(c => c.Id, c => c.Name.Value);
 
-        var categories = new Dictionary<CategoryId, string>();
-        foreach (var catId in categoryIds)
-        {
-            var category = await _categoryRepo.GetByIdAsync(new CategoryId(catId));
-            if (category != null)
-                categories[new CategoryId(catId)] = category.Name.Value;
-        }
+        // DT-1b: batch-fetch subcategories once; build in-memory dict to avoid N+1.
+        // TryGetValue used at mapping time — null-safe for DT-1c (SubcategoryId == null).
+        var subcategories = await _subcategoryRepo.GetByUserIdAsync(userId);
+        var subcategoryLookup = subcategories.ToDictionary(s => s.Id, s => s.Name.Value);
 
         var dtos = paginated.Select(t => new TransactionDto(
             t.Id.Value,
@@ -100,14 +98,17 @@ public class GetTransactionsQueryHandler
             t.Date,
             t.Description,
             t.CategoryId?.Value,
-            t.CategoryId != null && categories.ContainsKey(t.CategoryId)
-                ? categories[t.CategoryId]
+            t.CategoryId is CategoryId catId && categoryLookup.TryGetValue(catId, out var catName)
+                ? catName
                 : null,
             t.ImportedFrom,
             t.CreatedAt,
             BankCategory: t.BankCategory,
             BankSubcategory: t.BankSubcategory,
             SubcategoryId: t.SubcategoryId?.Value.ToString(),
+            SubcategoryName: t.SubcategoryId != null && subcategoryLookup.TryGetValue(t.SubcategoryId, out var subName)
+                ? subName
+                : null,
             CategorySource: t.CategorySource.ToString()
         )).ToList();
 
