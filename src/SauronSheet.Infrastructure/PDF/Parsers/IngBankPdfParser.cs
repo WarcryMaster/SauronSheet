@@ -30,22 +30,6 @@ public class IngBankPdfParser : IPdfParser
         @"^-?[\d]+[.,\d]*$",
         RegexOptions.Compiled);
 
-    private static readonly string[] KnownCategories =
-    [
-        "Compras", "Vehículo y transporte", "Alimentación",
-        "Otros gastos", "Movimientos excluidos", "Otros ingresos",
-        "Educación y salud", "Hogar"
-    ];
-
-    private static readonly string[] KnownSubCategories =
-    [
-        "Belleza, peluquería y perfumería", "Gasolina y combustible",
-        "Supermercados y alimentación", "ONG", "Traspaso entre cuentas",
-        "Otros ingresos (otros)", "Transferencias", "Ropa y complementos",
-        "Mantenimiento de vehículo", "Farmacia, herbolario y nutrición",
-        "Luz y gas", "Agua", "Suscripciones", "Teléfono e internet"
-    ];
-
     public Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream)
     {
         var rows = new List<RawTransactionRow>();
@@ -365,35 +349,11 @@ public class IngBankPdfParser : IPdfParser
                 }
             }
 
-            string? category = null;
-            string? subCategory = null;
-            string? description = null;
-            int descriptionStart = 0;
-
-            for (int i = 0; i < textLines.Count; i++)
-            {
-                if (category == null && KnownCategories.Any(c => string.Equals(c, textLines[i], StringComparison.OrdinalIgnoreCase)))
-                {
-                    category = textLines[i];
-                    descriptionStart = i + 1;
-                }
-                else if (category != null && subCategory == null && KnownSubCategories.Any(s => string.Equals(s, textLines[i], StringComparison.OrdinalIgnoreCase)))
-                {
-                    subCategory = textLines[i];
-                    descriptionStart = i + 1;
-                }
-                else
-                {
-                    descriptionStart = i;
-                    break;
-                }
-            }
-
-            if (descriptionStart < textLines.Count)
-            {
-                string desc = string.Join(" ", textLines.Skip(descriptionStart)).Trim();
-                description = string.IsNullOrWhiteSpace(desc) ? null : desc;
-            }
+            // Position-first extraction (design D5): no closed KnownCategories list.
+            // textLines[0] → category, textLines[1] → subcategory, textLines[2+] → description.
+            // Any literal from the PDF is preserved as-is (PCE-1a).
+            var (category, subCategory, description) =
+                IngTransactionLineParser.ExtractFromMultiLine(textLines);
 
             return new RawTransactionRow(
                 rowNumber, date, category, subCategory, description, null,
@@ -517,7 +477,17 @@ public class IngBankPdfParser : IPdfParser
     }
 
     /// <summary>
-    /// Intenta separar las columnas de texto (Categoría, Subcategoría, Descripción, Comentario).
+    /// Extracts text content from a single-line transaction string (after date and
+    /// trailing numbers have been removed).
+    ///
+    /// Single-line format merges all PDF columns (category, subcategory, description)
+    /// into one flat string without position markers. Without the original column-width
+    /// data from the PDF renderer, column boundaries cannot be reliably determined.
+    ///
+    /// Design D5 (position-first, no closed lists): the entire remainder is returned
+    /// as description. Category and subcategory are left null; they will be resolved by
+    /// BankCategoryResolutionService for transactions that previously carried a known
+    /// category in this path.
     /// </summary>
     private (string? category, string? subCategory, string? description, string? comment)
         ParseTextColumns(string? text)
@@ -525,42 +495,10 @@ public class IngBankPdfParser : IPdfParser
         if (string.IsNullOrWhiteSpace(text))
             return (null, null, null, null);
 
-        string? category = null;
-        string? subCategory = null;
-        string? description = null;
-        string? comment = null;
-
-        // Intentar encontrar la categoría conocida
-        foreach (var cat in KnownCategories.OrderByDescending(c => c.Length))
-        {
-            if (text.Contains(cat, StringComparison.OrdinalIgnoreCase))
-            {
-                category = cat;
-                var catIndex = text.IndexOf(cat, StringComparison.OrdinalIgnoreCase);
-                text = text.Remove(catIndex, cat.Length).Trim();
-                break;
-            }
-        }
-
-        // Intentar encontrar la subcategoría conocida
-        foreach (var sub in KnownSubCategories.OrderByDescending(s => s.Length))
-        {
-            if (text.Contains(sub, StringComparison.OrdinalIgnoreCase))
-            {
-                subCategory = sub;
-                var subIndex = text.IndexOf(sub, StringComparison.OrdinalIgnoreCase);
-                text = text.Remove(subIndex, sub.Length).Trim();
-                break;
-            }
-        }
-
-        // Lo que queda es Descripción + posible Comentario
-        // La descripción suele empezar con "Pago en", "Recibo", "Traspaso", "Transferencia"
-        description = text.Trim();
-        if (string.IsNullOrEmpty(description))
-            description = null;
-
-        return (category, subCategory, description, comment);
+        // Single-line: all columns merged — return full text as description.
+        // Category/subcategory cannot be separated without column-position data.
+        var description = text.Trim();
+        return (null, null, string.IsNullOrEmpty(description) ? null : description, null);
     }
 
     /// <summary>

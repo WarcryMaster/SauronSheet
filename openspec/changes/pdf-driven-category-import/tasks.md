@@ -43,15 +43,15 @@ Chain strategy: feature-branch-chain
 **⚠️ RISK system default** — 2.4 RED test PCE-3c BEFORE implementation.
 **⚠️ RISK parser regression** — 2.6 golden test BEFORE removing KnownCategories.
 
-- [ ] 2.1 Add `ResolveOrCreateAsync` to `IBankCategoryResolutionService`
-- [ ] 2.2 RED: PCE-3a (exists→reuse), PCE-3b (missing→create), PCE-3d (null→RawOnly), PCE-3e (23505→retry-get)
-- [ ] 2.3 GREEN: `BankCategoryResolutionService.ResolveOrCreateAsync` — normalized lookup → INSERT → catch 23505 → retry-get
-- [ ] 2.4 RED: PCE-3c — `IsSystemDefault=true` bypassed; new user category created
-- [ ] 2.5 GREEN: `IsSystemDefault` guard in resolver
-- [ ] 2.6 RED: golden regression — former KnownCategories row returns literal (PCE-1a)
-- [ ] 2.7 GREEN: remove `KnownCategories`/`KnownSubCategories` from `IngBankPdfParser`; position-first extraction in both parse methods
-- [ ] 2.8 RED+GREEN: subcategory get-or-add PCE-4a/4b/4c/4d, scoped `(userId, categoryId, normalizedKey)`, `IsAutoCreated=true`
-- [ ] 2.9 REFACTOR: `ResolveAsync` tests + `AmountNormalizationTests` still green
+- [x] 2.1 Add `ResolveOrCreateAsync` to `IBankCategoryResolutionService`
+- [x] 2.2 RED: PCE-3a (exists→reuse), PCE-3b (missing→create), PCE-3d (null→RawOnly), PCE-3e (23505→retry-get)
+- [x] 2.3 GREEN: `BankCategoryResolutionService.ResolveOrCreateAsync` — normalized lookup → INSERT → catch 23505 → retry-get
+- [x] 2.4 RED: PCE-3c — `IsSystemDefault=true` bypassed; new user category created
+- [x] 2.5 GREEN: `IsSystemDefault` guard in resolver
+- [x] 2.6 RED: golden regression — former KnownCategories row returns literal (PCE-1a)
+- [x] 2.7 GREEN: remove `KnownCategories`/`KnownSubCategories` from `IngBankPdfParser`; position-first extraction in both parse methods
+- [x] 2.8 RED+GREEN: subcategory get-or-add PCE-4a/4b/4c/4d, scoped `(userId, categoryId, normalizedKey)`, `IsAutoCreated=true`
+- [x] 2.9 REFACTOR: `ResolveAsync` tests + `AmountNormalizationTests` still green
 
 ## Phase 3: Handler + Display [PR3]
 
