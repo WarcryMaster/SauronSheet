@@ -15,7 +15,6 @@ public class ImportTransactionsFromPdfCommandTests
 {
     private readonly Mock<IPdfParser> _mockPdfParser;
     private readonly Mock<ITransactionRepository> _mockTransactionRepo;
-    private readonly Mock<ICategoryRepository> _mockCategoryRepo;
     private readonly Mock<IPdfImportRepository> _mockPdfImportRepo;
     private readonly Mock<IUserProfileRepository> _mockUserProfileRepo;
     private readonly Mock<IUserContext> _mockUserContext;
@@ -25,7 +24,6 @@ public class ImportTransactionsFromPdfCommandTests
     {
         _mockPdfParser = new Mock<IPdfParser>();
         _mockTransactionRepo = new Mock<ITransactionRepository>();
-        _mockCategoryRepo = new Mock<ICategoryRepository>();
         _mockPdfImportRepo = new Mock<IPdfImportRepository>();
         _mockUserProfileRepo = new Mock<IUserProfileRepository>();
         _mockUserContext = new Mock<IUserContext>();
@@ -36,9 +34,9 @@ public class ImportTransactionsFromPdfCommandTests
         _mockUserProfileRepo.Setup(x => x.EnsureExistsAsync(It.IsAny<UserId>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        // Default: resolution returns RawOnly (no match found)
+        // Default: get-or-add returns RawOnly for rows without a recognisable category
         _mockResolutionService
-            .Setup(x => x.ResolveAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResolutionResult(null, null, CategorySource.RawOnly));
     }
 
@@ -50,7 +48,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -82,9 +79,9 @@ public class ImportTransactionsFromPdfCommandTests
         _mockTransactionRepo.Verify(x => x.AddAsync(It.IsAny<Transaction>()), Times.Exactly(2));
         _mockPdfImportRepo.Verify(x => x.AddAsync(It.IsAny<ImportBatch>(), It.IsAny<UserId>()), Times.Once);
 
-        // Resolution service called once per row
+        // Resolution service called once per row (get-or-add path)
         _mockResolutionService.Verify(
-            x => x.ResolveAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
 
@@ -96,7 +93,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -120,12 +116,12 @@ public class ImportTransactionsFromPdfCommandTests
         // Act
         await handler.Handle(command, CancellationToken.None);
 
-        // Assert — resolution called with raw category/subcategory values
+        // Assert — get-or-add called with raw category/subcategory values
         _mockResolutionService.Verify(
-            x => x.ResolveAsync(
+            x => x.ResolveOrCreateAsync(
                 It.IsAny<UserId>(),
-                It.Is<string>(v => v == "Compras"),
-                It.Is<string>(v => v == "Ropa"),
+                It.Is<string?>(v => v == "Compras"),
+                It.Is<string?>(v => v == "Ropa"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -138,7 +134,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -172,7 +167,7 @@ public class ImportTransactionsFromPdfCommandTests
 
         // Resolution called only once (for the non-duplicate row)
         _mockResolutionService.Verify(
-            x => x.ResolveAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -184,7 +179,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -214,7 +208,7 @@ public class ImportTransactionsFromPdfCommandTests
 
         // Resolution NOT called for invalid rows (skipped before resolution)
         _mockResolutionService.Verify(
-            x => x.ResolveAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -226,7 +220,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -249,7 +242,7 @@ public class ImportTransactionsFromPdfCommandTests
 
         // Resolution never called for empty PDF
         _mockResolutionService.Verify(
-            x => x.ResolveAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -266,7 +259,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -313,7 +305,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -356,7 +347,6 @@ public class ImportTransactionsFromPdfCommandTests
         var handler = new ImportTransactionsFromPdfCommandHandler(
             _mockPdfParser.Object,
             _mockTransactionRepo.Object,
-            _mockCategoryRepo.Object,
             _mockPdfImportRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
@@ -365,12 +355,12 @@ public class ImportTransactionsFromPdfCommandTests
         var categoryId = new CategoryId(Guid.NewGuid());
         var subcategoryId = new SubcategoryId(Guid.NewGuid());
 
-        // Resolution matches "Compras" → AutoMatched
+        // ResolveOrCreateAsync finds/creates "Compras" → AutoMatched
         _mockResolutionService
-            .Setup(x => x.ResolveAsync(
+            .Setup(x => x.ResolveOrCreateAsync(
                 It.IsAny<UserId>(),
-                It.Is<string>(v => v == "Compras"),
-                It.Is<string>(v => v == "Ropa"),
+                It.Is<string?>(v => v == "Compras"),
+                It.Is<string?>(v => v == "Ropa"),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResolutionResult(categoryId, subcategoryId, CategorySource.AutoMatched));
 
@@ -405,5 +395,135 @@ public class ImportTransactionsFromPdfCommandTests
         Assert.Equal("Compras", capturedTransaction.BankCategory);
         Assert.Equal("Ropa", capturedTransaction.BankSubcategory);
         Assert.Equal(CategorySource.AutoMatched, capturedTransaction.CategorySource);
+    }
+
+    // ─── IH-1 RED: Handler MUST call ResolveOrCreateAsync (get-or-add), NOT ResolveAsync ───────
+    // Spec: MODIFIED IH-1 — handler wired to IBankCategoryResolutionService.ResolveOrCreateAsync
+    // RED STATE: Currently the handler calls ResolveAsync → _mockResolutionService returns the
+    // default RawOnly result set up in the constructor, so the AutoMatched assertion fails.
+
+    /// <summary>
+    /// IH-1: When a PDF row has a new category not yet in the user's list,
+    /// the handler MUST call ResolveOrCreateAsync (get-or-add), persist the raw PDF literals
+    /// in BankCategory/BankSubcategory, and store CategorySource=AutoMatched.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ImportPdf_IH1_NewPdfCategory_CallsResolveOrCreateAndPersistsAutoMatchedTransaction()
+    {
+        // Arrange
+        var categoryId = new CategoryId(Guid.NewGuid());
+        var subcategoryId = new SubcategoryId(Guid.NewGuid());
+
+        // IH-1: ResolveOrCreateAsync creates/resolves category → AutoMatched
+        _mockResolutionService
+            .Setup(x => x.ResolveOrCreateAsync(
+                It.IsAny<UserId>(),
+                It.Is<string?>(v => v == "Viajes y turismo"),
+                It.Is<string?>(v => v == "Hoteles"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolutionResult(categoryId, subcategoryId, CategorySource.AutoMatched));
+
+        var rawRows = new List<RawTransactionRow>
+        {
+            new RawTransactionRow(1, "15/03/2024", "Viajes y turismo", "Hoteles", "Hotel Majestic BCN", null, "-250.00", null, "EUR")
+        };
+
+        var handler = new ImportTransactionsFromPdfCommandHandler(
+            _mockPdfParser.Object,
+            _mockTransactionRepo.Object,
+            _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
+            _mockUserContext.Object,
+            _mockResolutionService.Object);
+
+        _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>())).ReturnsAsync(rawRows);
+        _mockTransactionRepo.Setup(x => x.ExistsDuplicateAsync(
+            It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        Transaction? captured = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => captured = t)
+            .Returns(Task.CompletedTask);
+
+        var command = new ImportTransactionsFromPdfCommand(new MemoryStream(), "statement.pdf");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert — IH-1: raw PDF values preserved + AutoMatched source
+        Assert.Equal(1, result.ImportedCount);
+        Assert.NotNull(captured);
+        Assert.Equal("Viajes y turismo", captured.BankCategory);
+        Assert.Equal("Hoteles", captured.BankSubcategory);
+        Assert.Equal(categoryId, captured.CategoryId);
+        Assert.Equal(subcategoryId, captured.SubcategoryId);
+        Assert.Equal(CategorySource.AutoMatched, captured.CategorySource);
+
+        // Verify get-or-add path (not lookup-only ResolveAsync)
+        _mockResolutionService.Verify(
+            x => x.ResolveOrCreateAsync(
+                It.IsAny<UserId>(),
+                "Viajes y turismo",
+                "Hoteles",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // IH-1 triangulation: null category → RawOnly, no get-or-add creation needed
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ImportPdf_IH1_NullCategory_CallsResolveOrCreateAndPersistsRawOnly()
+    {
+        // Arrange — PCE-3d: null rawCategory → RawOnly, nothing created
+        _mockResolutionService
+            .Setup(x => x.ResolveOrCreateAsync(
+                It.IsAny<UserId>(),
+                null,
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolutionResult(null, null, CategorySource.RawOnly));
+
+        var rawRows = new List<RawTransactionRow>
+        {
+            new RawTransactionRow(1, "20/03/2024", null, null, "Salary deposit", null, "3000.00", null, "EUR")
+        };
+
+        var handler = new ImportTransactionsFromPdfCommandHandler(
+            _mockPdfParser.Object,
+            _mockTransactionRepo.Object,
+            _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
+            _mockUserContext.Object,
+            _mockResolutionService.Object);
+
+        _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>())).ReturnsAsync(rawRows);
+        _mockTransactionRepo.Setup(x => x.ExistsDuplicateAsync(
+            It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        Transaction? captured = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => captured = t)
+            .Returns(Task.CompletedTask);
+
+        var command = new ImportTransactionsFromPdfCommand(new MemoryStream(), "statement.pdf");
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — transaction stored with RawOnly, no IDs
+        Assert.NotNull(captured);
+        Assert.Null(captured.BankCategory);
+        Assert.Null(captured.CategoryId);
+        Assert.Equal(CategorySource.RawOnly, captured.CategorySource);
+
+        // Verify ResolveOrCreateAsync called (not ResolveAsync)
+        _mockResolutionService.Verify(
+            x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), null, null, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
