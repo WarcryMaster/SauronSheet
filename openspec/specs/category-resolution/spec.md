@@ -1,6 +1,6 @@
 # Especificación: Bank Category Resolution
 
-Compara valores brutos del PDF contra categorías del usuario (case-insensitive), con override vía `bank_category_translations`. Sin IA ni auto-creación.
+Resolución de categorías y subcategorías para imports PDF: get-or-add automático sin listas cerradas. Los valores literales del PDF se preservan; el display prioriza raw values para imports automáticos pero respeta overrides manuales. Las categorías de sistema se excluyen del flujo de import.
 
 ---
 
@@ -86,14 +86,16 @@ Compara valores brutos del PDF contra categorías del usuario (case-insensitive)
 
 | ID | Requisito | Escenarios |
 |----|-----------|------------|
-| IH-1 | Handler MUST llamar a ResolutionService tras parsear cada row, ANTES de crear la transacción | IH-1 (flujo completo) |
+| IH-1 | Handler MUST llamar a `IPdfCategoryResolverService.ResolveOrCreateAsync` (get-or-add) tras parsear cada row, ANTES de crear la transacción. MUST NOT llamar a `ICategoryResolutionService` en el flujo de import PDF. `ICategoryResolutionService` se reserva exclusivamente para el path de recategorización manual. | IH-1 (flujo pdf-driven) |
 | IH-2 | Constructor de Transaction MUST aceptar bankCategory, bankSubcategory, categorySource, subcategoryId (nullable) | — |
 | IH-3 | Si source=RawOnly, CategoryId MUST ser null | Integrado en CR-2c |
 
-#### IH-1: Flujo completo de importación
+#### IH-1: Flujo de importación PDF-driven
 - GIVEN RawTransactionRow(Category="Compras", SubCategory="Ropa")
 - WHEN el handler procesa el row
-- THEN llama a ResolutionService → asigna CategoryId+SubcategoryId+source, crea Transaction
+- THEN llama a `IPdfCategoryResolverService.ResolveOrCreateAsync`
+- AND CategoryId y SubcategoryId quedan resueltos o recién creados
+- AND Transaction se crea con BankCategory="Compras", BankSubcategory="Ropa", source=AutoMatched
 
 ---
 
@@ -162,3 +164,31 @@ Compara valores brutos del PDF contra categorías del usuario (case-insensitive)
 - WHEN `Handle` es ejecutado
 - THEN `ICategoryRepository.GetByUserIdAsync(userId)` es llamado exactamente una vez
 - AND `ICategoryRepository.GetByIdAsync` no es llamado para resolución de nombres de categoría
+
+---
+
+## 7. Display Helper — Prioridad de Literal del PDF
+
+| ID | Requisito | Escenarios |
+|----|-----------|------------|
+| DH-1 | `TransactionCategoryDisplayHelper` MUST retornar el literal `BankCategory` como nombre de display para transacciones donde `CategorySource != UserOverride` y `BankCategory != null`. Para `CategorySource = UserOverride`, MUST retornar `CategoryName` (nombre de la categoría asignada manualmente). Para `Legacy` sin `BankCategory`, MUST retornar `CategoryName`. | DH-1a (AutoMatched), DH-1b (RawOnly), DH-1c (UserOverride), DH-1d (Legacy) |
+
+#### DH-1a: AutoMatched → muestra BankCategory (literal PDF)
+- GIVEN Transaction(BankCategory="Compras", CategoryName="Compras", source=AutoMatched)
+- WHEN `GetDisplayCategory` es invocado
+- THEN retorna "Compras" (el literal bruto del PDF, no el nombre resuelto)
+
+#### DH-1b: RawOnly → muestra BankCategory aunque no haya CategoryId
+- GIVEN Transaction(BankCategory="ING Direct", CategoryName=null, source=RawOnly)
+- WHEN `GetDisplayCategory` es invocado
+- THEN retorna "ING Direct"
+
+#### DH-1c: UserOverride → muestra CategoryName resuelto (respeta override manual)
+- GIVEN Transaction(BankCategory="Compras", CategoryName="Ropa", source=UserOverride)
+- WHEN `GetDisplayCategory` es invocado
+- THEN retorna "Ropa" (nombre de la categoría asignada por el usuario)
+
+#### DH-1d: Legacy sin BankCategory → muestra CategoryName
+- GIVEN Transaction(BankCategory=null, CategoryName="Alimentación", source=Legacy)
+- WHEN `GetDisplayCategory` es invocado
+- THEN retorna "Alimentación"
