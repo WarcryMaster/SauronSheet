@@ -65,3 +65,31 @@ Chain strategy: feature-branch-chain
 - [x] 3.5 REFACTOR: run `IndexModelTests`; no regression
 - [x] 3.6 DI audit: resolver wired; no stale injections
 - [x] 3.7 `dotnet build` + `dotnet test` (5 projects) — coverage ≥80% Domain, ≥70% Application
+
+## Phase 4: Post-Verify Remediation [PR4 — hotfix slice]
+
+> **Origen**: verify report PASS WITH WARNINGS (2026-05-25). Tres advertencias pendientes.
+> Sin cambios funcionales; solo test faltante + correcciones de artefactos.
+
+### Remediation Workload Forecast
+
+| Field | Value |
+|-------|-------|
+| Estimated changed lines | ~30–50 (1 clase de test ≈30–40 líneas; resto son artefactos) |
+| 400-line budget risk | Low |
+| Chained PRs recommended | No |
+| Suggested split | Single PR4 hotfix |
+| Delivery strategy | auto-chain |
+| Chain strategy | feature-branch-chain (PR4 base = PR3 branch) |
+
+Decision needed before apply: No
+Chained PRs recommended: No
+Chain strategy: feature-branch-chain
+400-line budget risk: Low
+
+- [x] 4.1 Actualizar artefacto apply-progress (Engram): expandir tabla TDD con columnas TRIANGULATE y SAFETY NET; mapear evidencia existente a las 5 columnas por cada fila de tarea.
+- [x] 4.2 Actualizar artefacto design (Engram): sustituir texto "ADD CONSTRAINT UNIQUE" por "partial UNIQUE INDEX (WHERE user_id IS NOT NULL)" para reflejar implementación real de migration 011.
+- [x] 4.3 RED: `IngBankPdfParserSingleLineTests` — assert que `ParseTextColumns` en path single-line retorna `(null, null, description, null)`; categoría y subcategoría siempre null (PCE-1a single-line guard).
+- [x] 4.4 GREEN: confirmar test pasa sin cambios de producción (comportamiento ya existe; solo faltaba el test).
+- [x] 4.5 `dotnet test` — ≥456 tests green (455 previos + ≥1 nuevo); sin regresión.
+- [ ] 4.6 Re-ejecutar sdd-verify → confirmar PASS sin advertencias.
