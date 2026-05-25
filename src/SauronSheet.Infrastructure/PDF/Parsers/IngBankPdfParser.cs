@@ -43,7 +43,7 @@ public class IngBankPdfParser : IPdfParser
             var pdfBytes = memoryStream.ToArray();
 
             using var document = PdfDocument.Open(pdfBytes);
-            var allLines = new List<string>();
+            var allLines = new List<IngLineData>();
             var pageCount = document.NumberOfPages;
 
             SentrySdk.AddBreadcrumb(
@@ -51,7 +51,7 @@ public class IngBankPdfParser : IPdfParser
                 "pdf.parse",
                 data: new Dictionary<string, string> { ["pages"] = pageCount.ToString() });
 
-            // 1. Extraer todo el texto línea por línea
+            // 1. Extraer todas las líneas con sus posiciones X por página
             var pageNumber = 0;
             foreach (var page in document.GetPages())
             {
@@ -83,8 +83,11 @@ public class IngBankPdfParser : IPdfParser
             var failedLines = 0;
             var dateLineCount = 0;
 
+            // Umbrales X del header de la página actual (re-calibrado en cada header detectado)
+            IngColumnThresholds? pageThresholds = null;
+
             // Buffer para filas multi-línea
-            List<string> rowBuffer = new();
+            List<IngLineData> rowBuffer = new();
 
             void FlushRowBuffer()
             {
@@ -95,7 +98,8 @@ public class IngBankPdfParser : IPdfParser
 
                 if (rowBuffer.Count == 1)
                 {
-                    var singleLine = rowBuffer[0].Trim();
+                    var lineData = rowBuffer[0];
+                    var singleLine = lineData.Text.Trim();
                     rawLineForLog = singleLine;
 
                     // Skip bare date-only lines (F. OPERACIÓN date with no transaction data)
@@ -111,11 +115,11 @@ public class IngBankPdfParser : IPdfParser
                     }
 
                     rowNumber++;
-                    parsed = ParseIngTransactionLine(singleLine, rowNumber);
+                    parsed = ParseIngTransactionLine(lineData, rowNumber, pageThresholds);
                 }
                 else
                 {
-                    rawLineForLog = string.Join(" | ", rowBuffer.Take(3));
+                    rawLineForLog = string.Join(" | ", rowBuffer.Take(3).Select(x => x.Text));
                     rowNumber++;
                     parsed = ParseMultiLineTransaction(rowBuffer, rowNumber);
                 }
@@ -151,15 +155,16 @@ public class IngBankPdfParser : IPdfParser
                 rowBuffer.Clear();
             }
 
-            foreach (var line in allLines)
+            foreach (var lineData in allLines)
             {
-                var trimmed = line.Trim();
+                var trimmed = lineData.Text.Trim();
 
-                // Detectar inicio de la sección de datos (después del header)
+                // Detectar inicio de la sección de datos (después del header) y capturar umbrales X
                 if (trimmed.Contains("F. VALOR") && trimmed.Contains("CATEGORÍA"))
                 {
                     SentrySdk.Logger?.LogDebug("IngBankPdfParser: detected ING header section");
                     SentrySdk.AddBreadcrumb("Header section detected", "pdf.parse");
+                    pageThresholds = IngColumnThresholds.FromHeaderWords(lineData.Words);
                     isDataSection = true;
                     continue;
                 }
@@ -176,12 +181,12 @@ public class IngBankPdfParser : IPdfParser
                     // Si hay buffer, procesar la fila anterior
                     FlushRowBuffer();
                     dateLineCount++;
-                    rowBuffer.Add(trimmed);
+                    rowBuffer.Add(lineData);
                 }
                 else if (rowBuffer.Count > 0)
                 {
-                    // Si ya hay una fila en buffer, agregar líneas adicionales (categoría, subcategoría, descripción, importe, saldo)
-                    rowBuffer.Add(trimmed);
+                    // Si ya hay una fila en buffer, agregar líneas adicionales
+                    rowBuffer.Add(lineData);
                 }
                 // Si no hay buffer y la línea no empieza con fecha, ignorar
             }
@@ -212,11 +217,13 @@ public class IngBankPdfParser : IPdfParser
     /// <summary>
     /// Reconstruye líneas a partir de las palabras y sus posiciones Y en la página.
     /// Las palabras con la misma coordenada Y (±tolerancia) pertenecen a la misma línea.
+    /// Devuelve <see cref="IngLineData"/> que lleva tanto el texto como las posiciones X
+    /// de cada palabra para permitir segmentación posterior de columnas.
     /// </summary>
-    private List<string> ReconstructLinesFromWords(List<Word> words)
+    private List<IngLineData> ReconstructLinesFromWords(List<Word> words)
     {
         if (!words.Any())
-            return new List<string>();
+            return new List<IngLineData>();
 
         const double yTolerance = 3.0; // Tolerancia en puntos para agrupar en la misma línea
 
@@ -245,12 +252,16 @@ public class IngBankPdfParser : IPdfParser
         }
 
         // Ordenar palabras dentro de cada línea por posición X (izquierda a derecha)
-        var result = new List<string>();
+        // y construir IngLineData con texto + words posicionadas
+        var result = new List<IngLineData>();
         foreach (var group in lineGroups)
         {
-            var orderedWords = group.OrderBy(w => w.BoundingBox.Left);
+            var orderedWords = group.OrderBy(w => w.BoundingBox.Left).ToList();
             var lineText = string.Join(" ", orderedWords.Select(w => w.Text));
-            result.Add(lineText);
+            var positionedWords = orderedWords
+                .Select(w => new PositionedWord(w.Text, w.BoundingBox.Left))
+                .ToArray();
+            result.Add(new IngLineData(lineText, positionedWords));
         }
 
         return result;
@@ -261,12 +272,15 @@ public class IngBankPdfParser : IPdfParser
     /// Maneja dos casos:
     /// 1. Línea 0 con datos completos: [0]=Fecha+Categoría+Subcategoría+Descripción+Importe+Saldo, [1+]=Descripción adicional
     /// 2. Línea 0 con solo fecha: [0]=Fecha, [1]=Categoría, [2]=Subcategoría, [3..n-2]=Descripción, [n-1]=Importe, [n]=Saldo
+    ///
+    /// PCE-SLd: el path multi-línea usa únicamente el texto de cada línea (.Text).
+    /// No se propagan coordenadas X ni umbrales al extractor multi-línea.
     /// </summary>
-    private RawTransactionRow? ParseMultiLineTransaction(List<string> lines, int rowNumber)
+    private RawTransactionRow? ParseMultiLineTransaction(List<IngLineData> lines, int rowNumber)
     {
         try
         {
-            var firstLine = lines[0].Trim();
+            var firstLine = lines[0].Text.Trim();
             var dateMatch = DatePattern.Match(firstLine);
             if (!dateMatch.Success) return null;
 
@@ -282,16 +296,17 @@ public class IngBankPdfParser : IPdfParser
 
             if (firstLineNumbers.Count >= 2)
             {
-                // Línea 0 contiene importe y saldo: usar ParseIngTransactionLine para procesarla
-                RawTransactionRow? result = ParseIngTransactionLine(firstLine, rowNumber);
-                
+                // Línea 0 contiene importe y saldo: delegar al path single-line
+                // PCE-SLd: multi-line path no propaga posiciones — thresholds: null
+                RawTransactionRow? result = ParseIngTransactionLine(lines[0], rowNumber, thresholds: null);
+
                 if (result != null && lines.Count > 1)
                 {
                     // Si hay líneas adicionales, concatenarlas a la descripción
                     List<string> additionalLines = new();
                     for (int i = 1; i < lines.Count; i++)
                     {
-                        string trimmedAdditional = lines[i].Trim();
+                        string trimmedAdditional = lines[i].Text.Trim();
                         if (!string.IsNullOrWhiteSpace(trimmedAdditional))
                         {
                             additionalLines.Add(trimmedAdditional);
@@ -317,7 +332,7 @@ public class IngBankPdfParser : IPdfParser
 
             for (int i = lines.Count - 1; i >= 1; i--)
             {
-                string trimmed = lines[i].Trim();
+                string trimmed = lines[i].Text.Trim();
                 if (NumericLinePattern.IsMatch(trimmed))
                 {
                     if (balance == null)
@@ -342,16 +357,15 @@ public class IngBankPdfParser : IPdfParser
             List<string> textLines = new();
             for (int i = 1; i < firstNumericIndex; i++)
             {
-                string trimmedLine = lines[i].Trim();
+                string trimmedLine = lines[i].Text.Trim();
                 if (!string.IsNullOrWhiteSpace(trimmedLine))
                 {
                     textLines.Add(trimmedLine);
                 }
             }
 
-            // Position-first extraction (design D5): no closed KnownCategories list.
+            // PCE-SLd: multi-line extraction — position-first by line order, no X coordinates.
             // textLines[0] → category, textLines[1] → subcategory, textLines[2+] → description.
-            // Any literal from the PDF is preserved as-is (PCE-1a).
             var (category, subCategory, description) =
                 IngTransactionLineParser.ExtractFromMultiLine(textLines);
 
@@ -375,13 +389,18 @@ public class IngBankPdfParser : IPdfParser
     }
 
     /// <summary>
-    /// Parsea una línea de transacción del formato ING.
+    /// Parsea una línea de transacción del formato ING (path single-line).
     /// Formato esperado: DD/MM/YYYY Categoría Subcategoría Descripción [Comentario] Importe Saldo
     /// </summary>
-    private RawTransactionRow? ParseIngTransactionLine(string line, int rowNumber)
+    private RawTransactionRow? ParseIngTransactionLine(
+        IngLineData lineData,
+        int rowNumber,
+        IngColumnThresholds? thresholds = null)
     {
         try
         {
+            var line = lineData.Text;
+
             // Extraer la fecha (primeros 10 caracteres)
             var dateMatch = DatePattern.Match(line);
             if (!dateMatch.Success)
@@ -391,7 +410,6 @@ public class IngBankPdfParser : IPdfParser
             var remainder = line.Substring(dateMatch.Length).Trim();
 
             // Extraer los números del final (Importe y Saldo)
-            // Buscamos los últimos dos números con formato -?X,XXX.XX o -?X.XXX,XX
             var numbers = ExtractTrailingNumbers(remainder);
 
             string? amount = null;
@@ -423,9 +441,9 @@ public class IngBankPdfParser : IPdfParser
             }
 
             // Intentar separar Categoría, Subcategoría, Descripción del texto
-            // Esto es heurístico ya que depende de cómo PdfPig extraiga el texto
+            // usando coordenadas X cuando están disponibles (PCE-SL)
             var (category, subCategory, description, comment) =
-                ParseTextColumns(textPart);
+                ParseTextColumns(textPart, lineData.Words, thresholds);
 
             return new RawTransactionRow(
                 rowNumber,
@@ -448,7 +466,7 @@ public class IngBankPdfParser : IPdfParser
                 {
                     ["row"] = rowNumber.ToString(),
                     ["error"] = ex.Message,
-                    ["rawLine"] = line.Length > 200 ? line[..200] : line
+                    ["rawLine"] = lineData.Text.Length > 200 ? lineData.Text[..200] : lineData.Text
                 });
             return null;
         }
@@ -477,26 +495,42 @@ public class IngBankPdfParser : IPdfParser
     }
 
     /// <summary>
-    /// Extracts text content from a single-line transaction string (after date and
-    /// trailing numbers have been removed).
+    /// Extrae categoría, subcategoría, descripción y comentario del texto de la
+    /// parte central de una línea single-line (después de quitar fecha y números finales).
     ///
-    /// Single-line format merges all PDF columns (category, subcategory, description)
-    /// into one flat string without position markers. Without the original column-width
-    /// data from the PDF renderer, column boundaries cannot be reliably determined.
-    ///
-    /// Design D5 (position-first, no closed lists): the entire remainder is returned
-    /// as description. Category and subcategory are left null; they will be resolved by
-    /// BankCategoryResolutionService for transactions that previously carried a known
-    /// category in this path.
+    /// Cuando se proporcionan <paramref name="words"/> y <paramref name="thresholds"/>,
+    /// intenta segmentar las columnas usando las coordenadas X de las palabras (PCE-SL).
+    /// Si la segmentación no produce señal de categoría (PCE-SLb) o los parámetros de
+    /// posición no están disponibles, aplica el fallback conservador: todo el texto se
+    /// devuelve como descripción y categoría/subcategoría quedan en null.
     /// </summary>
     private (string? category, string? subCategory, string? description, string? comment)
-        ParseTextColumns(string? text)
+        ParseTextColumns(string? text, PositionedWord[]? words = null, IngColumnThresholds? thresholds = null)
     {
         if (string.IsNullOrWhiteSpace(text))
             return (null, null, null, null);
 
-        // Single-line: all columns merged — return full text as description.
-        // Category/subcategory cannot be separated without column-position data.
+        // Intentar segmentación por geometría X cuando ambos parámetros están disponibles
+        if (words is { Length: > 0 } && thresholds is not null)
+        {
+            var split = thresholds.SplitWords(words);
+            if (split is not null)
+            {
+                // PCE-SLa / PCE-SLc: segmentación geométrica exitosa
+                return (split.Value.Category, split.Value.SubCategory, split.Value.Description, null);
+            }
+
+            // PCE-SLb: señal X insuficiente — fallback conservador
+            SentrySdk.AddBreadcrumb(
+                "ParseTextColumns: X-signal insufficient — fallback to full-text description",
+                "pdf.parse",
+                data: new Dictionary<string, string>
+                {
+                    ["text"] = text.Length > 100 ? text[..100] : text
+                });
+        }
+
+        // Fallback: texto completo como descripción (comportamiento anterior)
         var description = text.Trim();
         return (null, null, string.IsNullOrEmpty(description) ? null : description, null);
     }
