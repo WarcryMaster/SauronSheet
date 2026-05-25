@@ -323,11 +323,11 @@ public class SupabaseTransactionRepository : ITransactionRepository
             return new Dictionary<CategoryId, int>();
 
         // Single Postgrest query with IN filter instead of N individual queries.
-        // The Contains() call is translated to "category_id=in.(val1,val2,...)" by Postgrest.
-        var idStrings = categoryIds.Select(id => id.Value.ToString()).ToHashSet();
+        // Using .Filter() with Operator.In avoids the "method calls in lambda" bug in supabase-csharp 0.16.2.
+        var categoryIdValues = categoryIds.Select(id => (object)id.Value.ToString()).ToList();
 
         var response = await _client.From<TransactionRow>()
-            .Where(x => idStrings.Contains(x.CategoryId!))
+            .Filter("category_id", Constants.Operator.In, categoryIdValues)
             .Get();
 
         var counts = response.Models
