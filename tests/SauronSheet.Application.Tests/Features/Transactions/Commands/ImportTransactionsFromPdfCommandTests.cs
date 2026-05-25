@@ -526,4 +526,85 @@ public class ImportTransactionsFromPdfCommandTests
             x => x.ResolveOrCreateAsync(It.IsAny<UserId>(), null, null, It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    // ─── PCE-SLa integration path: single-line row WITH category → NOT RawOnly ───────────────
+    // Spec: PCE-SLa — when parser returns a RawTransactionRow with Category populated,
+    //       the handler must call ResolveOrCreateAsync with that category value,
+    //       which produces a non-RawOnly CategorySource.
+    // Verifies that the IngBankPdfParser refactor propagates correctly through the pipeline.
+
+    /// <summary>
+    /// PCE-SLa integration guard: when the parser emits a single-line row with
+    /// Category = "Compras" and SubCategory = "Ropa y complementos" (as produced by
+    /// the new position-aware path), the import handler must pass those values to
+    /// ResolveOrCreateAsync — and the resulting transaction must NOT have
+    /// CategorySource.RawOnly.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task ImportPdf_SingleLineRowWithCategory_DoesNotProduceRawOnly()
+    {
+        // Arrange — PCE-SLa: parser returns row with category extracted from X positions
+        var categoryId    = new CategoryId(Guid.NewGuid());
+        var subcategoryId = new SubcategoryId(Guid.NewGuid());
+
+        // Mock resolution service: "Compras" + "Ropa y complementos" → AutoMatched
+        _mockResolutionService
+            .Setup(x => x.ResolveOrCreateAsync(
+                It.IsAny<UserId>(),
+                It.Is<string?>(v => v == "Compras"),
+                It.Is<string?>(v => v == "Ropa y complementos"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolutionResult(categoryId, subcategoryId, CategorySource.AutoMatched));
+
+        // Parser returns a single-line row with category populated (PCE-SLa outcome)
+        var rawRows = new List<RawTransactionRow>
+        {
+            new RawTransactionRow(
+                1, "15/01/2025", "Compras", "Ropa y complementos",
+                "Pago en Zara Online", null, "-29.95", null, "EUR")
+        };
+
+        var handler = new ImportTransactionsFromPdfCommandHandler(
+            _mockPdfParser.Object,
+            _mockTransactionRepo.Object,
+            _mockPdfImportRepo.Object,
+            _mockUserProfileRepo.Object,
+            _mockUserContext.Object,
+            _mockResolutionService.Object);
+
+        _mockPdfParser.Setup(x => x.ParseAsync(It.IsAny<Stream>()))
+            .ReturnsAsync(rawRows);
+        _mockTransactionRepo.Setup(x => x.ExistsDuplicateAsync(
+            It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        Transaction? captured = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => captured = t)
+            .Returns(Task.CompletedTask);
+
+        var command = new ImportTransactionsFromPdfCommand(new MemoryStream(), "ing-jan2025.pdf");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert — PCE-SLa integration: single-line row must NOT produce RawOnly
+        Assert.Equal(1, result.ImportedCount);
+        Assert.NotNull(captured);
+        Assert.Equal("Compras", captured.BankCategory);
+        Assert.Equal("Ropa y complementos", captured.BankSubcategory);
+        Assert.NotEqual(CategorySource.RawOnly, captured.CategorySource);
+        Assert.Equal(CategorySource.AutoMatched, captured.CategorySource);
+
+        // Verify handler forwarded the parser's category to the resolution service
+        _mockResolutionService.Verify(
+            x => x.ResolveOrCreateAsync(
+                It.IsAny<UserId>(),
+                "Compras",
+                "Ropa y complementos",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }
