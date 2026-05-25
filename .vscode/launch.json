@@ -2,31 +2,6 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "C# Dev Tools: Launch SauronSheet.Frontend",
-      "type": "devtools",
-      "request": "launch",
-      "projectPath": "src/SauronSheet.Frontend/SauronSheet.Frontend.csproj",
-      "projectType": "web",
-      "withDebug": true,
-      "launchProfile": "SauronSheet.Frontend",
-      "cwd": "src/SauronSheet.Frontend",
-      "console": "internalConsole",
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_CONTENTROOT": "src/SauronSheet.Frontend",
-        "ASPNETCORE_URLS": "https://localhost:54099;http://localhost:54100",
-        "Logging__LogLevel__Microsoft.Hosting.Lifetime": "Information"
-      },
-      "url": "https://localhost:54099",
-      "launchBrowser": true,
-      "configuration": "Debug",
-      "skipBuild": false,
-      "enableHotReload": false,
-      "logging": {
-        "moduleLoad": true
-      }
-    },
-    {
       "name": "Launch SauronSheet.Frontend",
       "type": "coreclr",
       "request": "launch",
@@ -43,9 +18,6 @@
       "console": "internalConsole",
       "internalConsoleOptions": "openOnSessionStart",
       "logging": {
-        "diagnosticsLog": {
-          "protocolMessages": true
-        },
         "programOutput": true
       },
       "justMyCode": true,
