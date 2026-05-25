@@ -1,5 +1,6 @@
 ﻿@page
 @model SauronSheet.Frontend.Pages.Transactions.IndexModel
+@using SauronSheet.Frontend.Helpers
 @{
     ViewData["Title"] = "Transactions";
 }
@@ -114,14 +115,21 @@
                                     @transaction.Amount.ToString("F2") @transaction.Currency
                                 </td>
                                 <td>
-                                    @if (string.IsNullOrEmpty(transaction.CategoryName))
-                                    {
-                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill">Uncategorized</span>
+                                    @{
+                                        TransactionCategoryDisplay display = TransactionCategoryDisplayHelper.Build(transaction);
+                                        string badgeClass = display.IsUncategorized
+                                            ? "badge bg-secondary-subtle text-secondary rounded-pill"
+                                            : display.UsesRawCategoryFallback
+                                                ? "badge bg-warning-subtle text-warning rounded-pill"
+                                                : "badge bg-primary-subtle text-primary rounded-pill";
                                     }
-                                    else
-                                    {
-                                        <span class="badge bg-primary-subtle text-primary rounded-pill">@transaction.CategoryName</span>
-                                    }
+                                    <div class="d-flex flex-column align-items-start gap-1">
+                                        <span class="@badgeClass">@display.PrimaryText</span>
+                                        @if (!string.IsNullOrEmpty(display.SecondaryText))
+                                        {
+                                            <span class="small text-muted">@display.SecondaryText</span>
+                                        }
+                                    </div>
                                 </td>
                                 <td>
                                     <form method="post" asp-page-handler="Delete" asp-route-id="@transaction.Id" class="d-inline">
