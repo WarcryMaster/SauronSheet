@@ -79,13 +79,14 @@ public class MappingExtensionsTests
         var subcategory = new Subcategory(id, userId, categoryId, name, false);
 
         // Act
-        var row = MappingExtensions.FromDomain(subcategory);
+        var row = MappingExtensions.FromDomain(subcategory, "alimentacion");
 
         // Assert
         Assert.Equal(id.Value.ToString(), row.Id);
         Assert.Equal(userId.Value, row.UserId);
         Assert.Equal(categoryId.Value.ToString(), row.CategoryId);
         Assert.Equal("Alimentación", row.Name);
+        Assert.Equal("alimentacion", row.NormalizedName);
         Assert.False(row.IsAutoCreated);
     }
 

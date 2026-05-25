@@ -125,11 +125,41 @@ public class SupabaseSubcategoryRepository : ISubcategoryRepository
         }
     }
 
-    public async Task AddAsync(Subcategory subcategory)
+    public async Task<Subcategory?> FindByNormalizedNameAsync(UserId userId, CategoryId categoryId, string normalizedName)
     {
         try
         {
-            var row = MappingExtensions.FromDomain(subcategory);
+            var userIdString = userId.Value;
+            var categoryIdString = categoryId.Value.ToString();
+            var response = await _client.From<SubcategoryRow>()
+                .Where(x => x.UserId == userIdString)
+                .Where(x => x.CategoryId == categoryIdString)
+                .Where(x => x.NormalizedName == normalizedName)
+                .Limit(1)
+                .Get();
+
+            var row = response.Models.FirstOrDefault();
+            return row?.ToDomain();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseSubcategoryRepository.FindByNormalizedNameAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.SetTag("categoryId", categoryId.Value.ToString());
+                scope.SetTag("normalizedName", normalizedName);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
+    public async Task AddAsync(Subcategory subcategory, string normalizedName)
+    {
+        try
+        {
+            var row = MappingExtensions.FromDomain(subcategory, normalizedName);
             await _client.From<SubcategoryRow>().Insert(row);
         }
         catch (Exception ex)
