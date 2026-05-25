@@ -12,7 +12,7 @@ Evolucionar `BankCategoryResolutionService` de lookup-only a **get-or-add**, eli
 |---|----------|------------------------|-----------|
 | D1 | Evolucionar `IBankCategoryResolutionService` con método `ResolveOrCreateAsync` en lugar de crear interfaz nueva | Nueva interfaz `IPdfCategoryResolverService` | El handler ya inyecta este servicio; añadir método mantiene cohesión y evita nueva inyección. La interfaz vieja (`ResolveAsync`) permanece para posible uso futuro sin creación. |
 | D2 | Normalización como método estático `CategoryNormalizer` en Application | Value Object en Domain / Extension method | Es lógica de deduplicación (Application concern); Domain no la necesita. Método estático puro = testable sin dependencias. |
-| D3 | Columna `normalized_name` (application-owned) + UNIQUE constraint | Functional index `lower(unaccent(name))` / RPC SQL | (a) `unaccent` no está instalado en Supabase y su comportamiento podría no coincidir exactamente con C# `RemoveDiacritics`; (b) columna explícita = single source of truth para normalización (solo `CategoryNormalizer`); (c) queries directas WHERE normalized_name = ? sin funciones SQL. |
+| D3 | Columna `normalized_name` (application-owned) + partial UNIQUE INDEX (`WHERE user_id IS NOT NULL`) | Functional index `lower(unaccent(name))` / `ADD CONSTRAINT UNIQUE` / RPC SQL | (a) `unaccent` no está instalado en Supabase y su comportamiento podría no coincidir exactamente con C# `RemoveDiacritics`; (b) columna explícita = single source of truth para normalización (solo `CategoryNormalizer`); (c) queries directas WHERE normalized_name = ? sin funciones SQL; (d) partial index excluye system defaults (`user_id IS NULL`) de forma explícita, más correcto que UNIQUE constraint global para el esquema multi-tenant. |
 | D4 | Catch `PostgrestException` con code 23505 para retry-get tras insert conflict | Función SQL `get_or_create_category` | El UNIQUE constraint sobre `normalized_name` lo protege; Postgrest .NET no soporta ON CONFLICT nativamente. Insert + catch + fetch es portable y no requiere función RPC. |
 | D5 | Parser ING usa posición-first heuristic: línea 1=Category, línea 2=SubCategory (tras fecha) | Mantener KnownCategories como fallback | La estructura del PDF es fija (ING layout); posición es determinista y no pierde valores desconocidos. KnownCategories eliminado completamente. |
 | D6 | Display helper usa `CategorySource` para decidir qué mostrar | Solo presencia de BankCategory | CategorySource es semánticamente correcto; ya está en TransactionDto. Permite distinguir UserOverride de AutoMatched sin ambigüedad. |
@@ -57,7 +57,7 @@ TransactionCategoryDisplayHelper (Frontend)
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/SauronSheet.Infrastructure/Persistence/Migrations/011_AddNormalizedNameColumns.sql` | Create | Migración: columna `normalized_name`, backfill, drop old UNIQUE, crear nuevo UNIQUE |
+| `src/SauronSheet.Infrastructure/Persistence/Migrations/011_AddNormalizedNameColumns.sql` | Create | Migración: columna `normalized_name`, backfill, drop old UNIQUE, crear `CREATE UNIQUE INDEX ... WHERE user_id IS NOT NULL` (partial index, not ADD CONSTRAINT UNIQUE) |
 | `src/SauronSheet.Application/Services/CategoryNormalizer.cs` | Create | Clase estática: `Normalize(string?) → string?` — lowercase, remove diacritics, trim |
 | `src/SauronSheet.Application/Services/IBankCategoryResolutionService.cs` | Modify | Añadir `ResolveOrCreateAsync(UserId, string?, string?, CancellationToken)` |
 | `src/SauronSheet.Application/Services/BankCategoryResolutionService.cs` | Modify | Implementar `ResolveOrCreateAsync` con get-or-add via `normalized_name` + conflict handling |
@@ -73,6 +73,7 @@ TransactionCategoryDisplayHelper (Frontend)
 | `tests/SauronSheet.Application.Tests/Services/CategoryNormalizerTests.cs` | Create | Tests para normalización: diacríticos, casing, whitespace |
 | `tests/SauronSheet.Application.Tests/Services/BankCategoryResolutionServiceTests.cs` | Modify | Tests para flujo get-or-add, concurrencia, system default exclusion, normalized dedup |
 | `tests/SauronSheet.Frontend.Tests/Helpers/TransactionCategoryDisplayHelperTests.cs` | Create/Modify | Tests para los 4 escenarios de display |
+| `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngBankPdfParserSingleLineTests.cs` | Create | Tests para PCE-1a single-line guard: `ParseTextColumns` retorna `(null, null, description, null)` — categoría/subcategoría siempre null en path single-line (3 métodos / 5 casos) |
 
 ## Interfaces / Contracts
 
@@ -173,30 +174,20 @@ catch (PostgrestException ex) when (ex.StatusCode == 409 || /* 23505 */)
 ### SQL Migration: `011_AddNormalizedNameColumns.sql`
 
 ```sql
--- 1. Add normalized_name columns (nullable initially for backfill)
-ALTER TABLE public.categories ADD COLUMN normalized_name VARCHAR(50);
-ALTER TABLE public.subcategories ADD COLUMN normalized_name VARCHAR(100);
+-- 5. Create new partial UNIQUE INDEXes on normalized_name
+--    WHERE user_id IS NOT NULL: consistent with existing DB design.
+--    System defaults have NULL user_id; partial index makes the intent explicit.
+--    NOTE: Implemented as CREATE UNIQUE INDEX ... WHERE user_id IS NOT NULL
+--    instead of ADD CONSTRAINT UNIQUE — functionally equivalent and more
+--    precise for the multi-tenant schema (system defaults with NULL user_id
+--    are intentionally excluded from uniqueness enforcement).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_user_normalized_name
+    ON public.categories(user_id, normalized_name)
+    WHERE user_id IS NOT NULL;
 
--- 2. Backfill existing rows (lower + trim only; diacritics handled by app on next access)
--- NOTE: Without unaccent extension, DB-only backfill uses lower(trim(name)).
--- Full normalization (diacritics) will be applied by the application on first get-or-add hit.
--- For safety with existing data, use a simple lower+trim as initial backfill:
-UPDATE public.categories SET normalized_name = lower(trim(name)) WHERE normalized_name IS NULL;
-UPDATE public.subcategories SET normalized_name = lower(trim(name)) WHERE normalized_name IS NULL;
-
--- 3. Make NOT NULL after backfill
-ALTER TABLE public.categories ALTER COLUMN normalized_name SET NOT NULL;
-ALTER TABLE public.subcategories ALTER COLUMN normalized_name SET NOT NULL;
-
--- 4. Drop old UNIQUE constraints
-ALTER TABLE public.categories DROP CONSTRAINT IF EXISTS categories_user_id_name_key;
-ALTER TABLE public.subcategories DROP CONSTRAINT IF EXISTS uq_subcategory_name;
-
--- 5. Create new UNIQUE constraints on normalized_name
-ALTER TABLE public.categories 
-  ADD CONSTRAINT uq_categories_user_normalized_name UNIQUE (user_id, normalized_name);
-ALTER TABLE public.subcategories 
-  ADD CONSTRAINT uq_subcategories_user_category_normalized_name UNIQUE (user_id, category_id, normalized_name);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_subcategories_user_category_normalized_name
+    ON public.subcategories(user_id, category_id, normalized_name)
+    WHERE user_id IS NOT NULL;
 
 -- 6. Index for lookup performance
 CREATE INDEX IF NOT EXISTS idx_categories_user_normalized 
