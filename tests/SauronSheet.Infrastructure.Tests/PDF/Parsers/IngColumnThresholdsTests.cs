@@ -8,7 +8,7 @@ using Xunit;
 /// for ING Bank single-line PDF rows.
 ///
 /// Real ING January 2025 header X-positions used as the fixture:
-///   CATEGORÍA ~175, SUBCATEGORÍA ~275, CONCEPTO ~375
+///   CATEGORÍA ~175, SUBCATEGORÍA ~275, DESCRIPCIÓN ~375
 ///
 /// Covers:
 ///   FromHeaderWords happy-path (task 1.1)
@@ -26,7 +26,7 @@ public class IngColumnThresholdsTests
 
     /// <summary>
     /// Builds a header-words array that mirrors a real ING Jan-2025 PDF header line:
-    ///   "F. VALOR   F. OPERACIÓN   CATEGORÍA   SUBCATEGORÍA   CONCEPTO   IMPORTE   SALDO"
+    ///   "F. VALOR   F. OPERACIÓN   CATEGORÍA   SUBCATEGORÍA   DESCRIPCIÓN   IMPORTE   SALDO"
     /// with approximate X positions used to calibrate column thresholds.
     /// </summary>
     private static PositionedWord[] Jan2025HeaderWords() => new[]
@@ -37,7 +37,20 @@ public class IngColumnThresholdsTests
         new PositionedWord("OPERACIÓN", 90.0),
         new PositionedWord("CATEGORÍA", 175.0),      // CategoryStart
         new PositionedWord("SUBCATEGORÍA", 275.0),   // SubCategoryStart
-        new PositionedWord("CONCEPTO", 375.0),       // DescriptionStart
+        new PositionedWord("DESCRIPCIÓN", 375.0),    // DescriptionStart
+        new PositionedWord("IMPORTE", 465.0),
+        new PositionedWord("SALDO", 510.0),
+    };
+
+    private static PositionedWord[] HeaderWordsWithConcepto() => new[]
+    {
+        new PositionedWord("F.", 10.0),
+        new PositionedWord("VALOR", 25.0),
+        new PositionedWord("F.", 75.0),
+        new PositionedWord("OPERACIÓN", 90.0),
+        new PositionedWord("CATEGORÍA", 175.0),
+        new PositionedWord("SUBCATEGORÍA", 275.0),
+        new PositionedWord("CONCEPTO", 375.0),
         new PositionedWord("IMPORTE", 465.0),
         new PositionedWord("SALDO", 510.0),
     };
@@ -62,6 +75,22 @@ public class IngColumnThresholdsTests
         Assert.Equal(375.0, thresholds.DescriptionStart);
     }
 
+    [Fact]
+    public void FromHeaderWords_HeaderWithConceptoVariant_ReturnsCorrectThresholds()
+    {
+        // Arrange
+        var headerWords = HeaderWordsWithConcepto();
+
+        // Act
+        var thresholds = IngColumnThresholds.FromHeaderWords(headerWords);
+
+        // Assert
+        Assert.NotNull(thresholds);
+        Assert.Equal(175.0, thresholds.CategoryStart);
+        Assert.Equal(275.0, thresholds.SubCategoryStart);
+        Assert.Equal(375.0, thresholds.DescriptionStart);
+    }
+
     // ════════════════════════════════════════════════════════════════════════
     // Task 1.2: FromHeaderWords missing column headers → null
     // ════════════════════════════════════════════════════════════════════════
@@ -69,7 +98,7 @@ public class IngColumnThresholdsTests
     [Fact]
     public void FromHeaderWords_MissingHeaderWords_ReturnsNull()
     {
-        // Arrange — header does NOT contain CATEGORÍA / SUBCATEGORÍA / CONCEPTO
+        // Arrange — header does NOT contain CATEGORÍA / SUBCATEGORÍA / DESCRIPCIÓN-CONCEPTO
         var headerWords = new[]
         {
             new PositionedWord("F.", 10.0),

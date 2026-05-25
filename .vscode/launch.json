@@ -6,11 +6,7 @@
       "type": "dotnet",
       "request": "launch",
       "projectPath": "${workspaceFolder}/src/SauronSheet.Frontend/SauronSheet.Frontend.csproj",
-      "launchConfigurationId": "",
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "https://localhost:54099;http://localhost:54100"
-      }
+      "launchConfigurationId": "SauronSheet.Frontend"
     },
     {
       "name": "Attach to Process",

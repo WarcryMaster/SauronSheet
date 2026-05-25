@@ -25,10 +25,10 @@ internal readonly record struct IngLineData(string Text, PositionedWord[] Words)
 ///
 ///   [CategoryStart .. SubCategoryStart)    →  Categoría column
 ///   [SubCategoryStart .. DescriptionStart) →  Subcategoría column
-///   [DescriptionStart .. )                 →  Concepto / Descripción column
+///   [DescriptionStart .. )                 →  Descripción / Concepto column
 ///
 /// Thresholds are derived dynamically from the header line of each page
-/// (words "CATEGORÍA" / "SUBCATEGORÍA" / "CONCEPTO") so the parser is
+/// (words "CATEGORÍA" / "SUBCATEGORÍA" / "DESCRIPCIÓN" or "CONCEPTO") so the parser is
 /// resilient to minor rendering differences across PDF batches.
 ///
 /// All types in this file are <c>internal</c> and must not leak to the
@@ -40,9 +40,14 @@ internal sealed class IngColumnThresholds
     // Header word identifiers (case-insensitive comparison)
     // ────────────────────────────────────────────────────────────────────────
 
-    private const string HeaderCategory    = "CATEGORÍA";
+    private const string HeaderCategory = "CATEGORÍA";
     private const string HeaderSubCategory = "SUBCATEGORÍA";
-    private const string HeaderDescription = "CONCEPTO";
+    private static readonly string[] HeaderDescriptionVariants =
+    [
+        "DESCRIPCIÓN",
+        "DESCRIPCION",
+        "CONCEPTO"
+    ];
 
     // ────────────────────────────────────────────────────────────────────────
     // Properties
@@ -54,7 +59,7 @@ internal sealed class IngColumnThresholds
     /// <summary>Left X boundary of the Subcategoría column.</summary>
     public double SubCategoryStart { get; }
 
-    /// <summary>Left X boundary of the Concepto/Descripción column.</summary>
+    /// <summary>Left X boundary of the Descripción/Concepto column.</summary>
     public double DescriptionStart { get; }
 
     private IngColumnThresholds(double categoryStart, double subCategoryStart, double descriptionStart)
@@ -72,8 +77,9 @@ internal sealed class IngColumnThresholds
     /// Builds an <see cref="IngColumnThresholds"/> instance from the positioned
     /// words of an ING Bank header line.
     ///
-    /// The words "CATEGORÍA", "SUBCATEGORÍA", and "CONCEPTO" (case-insensitive)
-    /// are located; their Left X coordinates become the column boundaries.
+    /// The words "CATEGORÍA", "SUBCATEGORÍA", and one of the accepted description
+    /// header variants (case-insensitive) are located; their Left X coordinates
+    /// become the column boundaries.
     /// Returns <c>null</c> when any of the three header words is absent —
     /// the conservative fallback will apply for all rows on that page.
     /// </summary>
@@ -97,7 +103,7 @@ internal sealed class IngColumnThresholds
                 subCategoryX = word.Left;
             }
             else if (descriptionX is null
-                && text.Equals(HeaderDescription, StringComparison.OrdinalIgnoreCase))
+                && HeaderDescriptionVariants.Any(x => text.Equals(x, StringComparison.OrdinalIgnoreCase)))
             {
                 descriptionX = word.Left;
             }
