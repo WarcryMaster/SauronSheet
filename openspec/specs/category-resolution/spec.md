@@ -8,13 +8,23 @@ Compara valores brutos del PDF contra categorías del usuario (case-insensitive)
 
 | ID | Requisito | Escenarios |
 |----|-----------|------------|
-| CR-1 | Toda transacción MUST guardar bank_category y bank_subcategory del PDF parser sin transformación (excepto whitespace trim) | CR-1a (literales), CR-1b (null) |
-| CR-2 | ICategoryResolutionService MUST aceptar (userId, bankCategory, bankSubcategory) y retornar (CategoryId?, SubcategoryId?, CategorySource). MUST NOT crear nada | CR-2a (match traducción), CR-2b (match directo), CR-2c (sin match), CR-2d (subcat anidada) |
+| CR-1 | Toda transacción MUST guardar bank_category y bank_subcategory del PDF parser sin transformación (excepto whitespace trim) | CR-1a (literales), CR-1b (null), CR-1c (regresión trim) |
+| CR-2 | ICategoryResolutionService MUST aceptar (userId, bankCategory, bankSubcategory) y retornar (CategoryId?, SubcategoryId?, CategorySource). MUST NOT crear nada. La búsqueda de traducción MUST evaluar la coincidencia exacta (bank_category + bank_subcategory) ANTES del fallback genérico (bank_category, null). El repositorio de traducciones MUST exponer seams `protected internal virtual` para que los tests de infraestructura puedan verificar el orden de ejecución de las queries sin depender del cliente Supabase real. | CR-2a (match traducción), CR-2b (match directo), CR-2c (sin match), CR-2d (subcat anidada), CR-2e (regresión exacta antes genérica), CR-2e-infra (seam repositorio), CR-2e-infra-fallback (fallback genérico) |
 
 #### CR-1a: Valores literales preservados
 - GIVEN RawTransactionRow(Category="Compras", SubCategory="Ropa y complementos")
 - WHEN se crea la transacción importada
 - THEN BankCategory="Compras" Y BankSubcategory="Ropa y complementos"
+
+#### CR-1b: Subcategoría nula
+- GIVEN RawTransactionRow(Category="Compras", SubCategory=null)
+- WHEN se crea la transacción importada
+- THEN BankCategory="Compras" Y BankSubcategory=null
+
+#### CR-1c: Whitespace trimmed en persistencia (regresión)
+- GIVEN RawTransactionRow(Category="  Compras  ", SubCategory=" Ropa ")
+- WHEN el import handler persiste la transacción
+- THEN BankCategory="Compras" Y BankSubcategory="Ropa"
 
 #### CR-2a: Match vía traducción
 - GIVEN bank_category_translations con (bank_category="Aliment.", resolved_category_name="Alimentación") Y Category("Alimentación") existe
@@ -35,6 +45,25 @@ Compara valores brutos del PDF contra categorías del usuario (case-insensitive)
 - GIVEN Category("Compras") con Subcategory("Ropa y complementos")
 - WHEN ResolutionService.Resolve(userId, "Compras", "Ropa y complementos")
 - THEN CategoryId Y SubcategoryId asignados, source=AutoMatched
+
+#### CR-2e: Traducción exacta prevalece sobre genérica (regresión)
+- GIVEN translations: fila-A (bank_category="Compras", bank_subcategory="Ropa", resolved="Moda") Y fila-B (bank_category="Compras", bank_subcategory=null, resolved="General")
+- WHEN Resolve(userId, "Compras", "Ropa")
+- THEN resolved_category_name="Moda" (exacta gana; fila-B ignorada)
+
+#### CR-2e-infra: Seam de repositorio — exacta ejecutada antes que genérica
+
+- GIVEN `TestableSupabaseBankCategoryTranslationRepository` con fila-A exacta (category="Compras", subcategory="Ropa") y fila-B genérica (category="Compras", subcategory=null)
+- WHEN `GetTranslationAsync(userId, "Compras", "Ropa")` es invocado
+- THEN `ExecuteExactMatchQueryAsync` es llamado ANTES que `ExecuteGenericMatchQueryAsync`
+- AND el resultado devuelve fila-A (exacta)
+
+#### CR-2e-infra-fallback: Seam de repositorio — fallback genérico cuando no hay exacta
+
+- GIVEN `TestableSupabaseBankCategoryTranslationRepository` con solo fila-B genérica (category="Compras", subcategory=null)
+- WHEN `GetTranslationAsync(userId, "Compras", "Roja")` es invocado
+- THEN `ExecuteExactMatchQueryAsync` devuelve vacío
+- AND `ExecuteGenericMatchQueryAsync` devuelve fila-B
 
 ---
 
@@ -108,7 +137,7 @@ Compara valores brutos del PDF contra categorías del usuario (case-insensitive)
 
 | ID | Requisito | Escenarios |
 |----|-----------|------------|
-| DT-1 | TransactionDto MUST añadir BankCategory, BankSubcategory, SubcategoryId, SubcategoryName, CategorySource | DT-1 |
+| DT-1 | TransactionDto MUST añadir BankCategory, BankSubcategory, SubcategoryId, SubcategoryName, CategorySource. Los query handlers MUST poblar SubcategoryName cuando SubcategoryId != null; MUST NOT devolver null en ese caso. `GetTransactionsQueryHandler` MUST resolver los nombres de categoría mediante una única llamada batch a `GetByUserIdAsync`; MUST NOT llamar a `GetByIdAsync` por categoría individual durante la resolución de nombres. | DT-1 (completo), DT-1b (regresión poblada), DT-1c (regresión null), DT-1d (batch de categorías) |
 | DT-2 | TransactionRow MUST añadir bank_category, bank_subcategory, subcategory_id, category_source | — |
 | DT-3 | ToDomain/FromDomain MUST mapear todos los nuevos campos | — |
 
@@ -116,3 +145,20 @@ Compara valores brutos del PDF contra categorías del usuario (case-insensitive)
 - GIVEN Transaction con bankCategory="Compras", source=AutoMatched
 - WHEN se mapea a TransactionDto
 - THEN BankCategory="Compras" Y CategorySource=AutoMatched
+
+#### DT-1b: SubcategoryName poblada en lectura (regresión)
+- GIVEN Transaction con SubcategoryId=X Y Subcategory(id=X, name="Ropa") en repositorio
+- WHEN un query handler construye TransactionDto
+- THEN SubcategoryName="Ropa" (NOT null)
+
+#### DT-1c: SubcategoryName null cuando sin subcategoría
+- GIVEN Transaction con SubcategoryId=null
+- WHEN un query handler construye TransactionDto
+- THEN SubcategoryName=null
+
+#### DT-1d: GetTransactionsQueryHandler resuelve categorías en batch
+
+- GIVEN `GetTransactionsQuery` para userId con N transacciones de M categorías distintas (M > 1)
+- WHEN `Handle` es ejecutado
+- THEN `ICategoryRepository.GetByUserIdAsync(userId)` es llamado exactamente una vez
+- AND `ICategoryRepository.GetByIdAsync` no es llamado para resolución de nombres de categoría

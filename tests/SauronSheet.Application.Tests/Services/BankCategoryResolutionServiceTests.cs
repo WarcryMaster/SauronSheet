@@ -262,4 +262,73 @@ public class BankCategoryResolutionServiceTests
         Assert.Null(result.SubcategoryId);
         Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
     }
+
+    // ── CR-2e: Exact translation wins over generic (regression) ──────────────
+
+    [Fact]
+    public async Task ResolveAsync_ExactTranslationExists_WinsOverGenericTranslation_ReturnsModa()
+    {
+        // Arrange
+        // Spec CR-2e: fila-A exact (bank_category="Compras", bank_subcategory="Ropa" → resolved="Moda")
+        //             fila-B generic (bank_category="Compras", bank_subcategory=null → resolved="General")
+        // Repository MUST return the exact translation ("Moda") when called with ("Compras", "Ropa").
+        // If the repository incorrectly returns the generic result first, the service would
+        // resolve to "General" instead of "Moda" — this assertion would then fail.
+        var modaCat = MakeCategory("Moda");
+        var generalCat = MakeCategory("General");
+
+        _translationRepo
+            .Setup(r => r.FindByBankCategoryAsync("Compras", "Ropa"))
+            .ReturnsAsync(new BankCategoryTranslation("Compras", "Ropa", "Moda", null));
+
+        _categoryRepo
+            .Setup(r => r.GetByUserIdAsync(_userId))
+            .ReturnsAsync(new List<Category> { modaCat, generalCat }.AsReadOnly());
+
+        // No subcategory "Ropa" exists under "Moda" — service will return SubcategoryId=null
+        _subcategoryRepo
+            .Setup(r => r.GetByCategoryIdAsync(modaCat.Id))
+            .ReturnsAsync(new List<Subcategory>().AsReadOnly());
+
+        // Act
+        var result = await _service.ResolveAsync(_userId, "Compras", "Ropa", _ct);
+
+        // Assert: resolved category is "Moda" (exact match wins), NOT "General" (generic fallback)
+        Assert.NotNull(result.CategoryId);
+        Assert.Equal(modaCat.Id.Value, result.CategoryId!.Value);
+        Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
+    }
+
+    // ── CR-2e triangulation: different pair, exact still wins ────────────────
+
+    [Fact]
+    public async Task ResolveAsync_ExactTranslationWithDifferentPair_WinsOverGenericTranslation()
+    {
+        // Triangulation for CR-2e: verifies exact-before-generic logic is general, not hardcoded.
+        // "Alimentación"+"Frutas" → "Fruta y Verdura" (exact) must win over
+        // "Alimentación"+null → "Alimentación General" (generic).
+        var frutaVerduraCat = MakeCategory("Fruta y Verdura");
+        var alimentacionGeneralCat = MakeCategory("Alimentación General");
+
+        _translationRepo
+            .Setup(r => r.FindByBankCategoryAsync("Alimentación", "Frutas"))
+            .ReturnsAsync(new BankCategoryTranslation("Alimentación", "Frutas", "Fruta y Verdura", null));
+
+        _categoryRepo
+            .Setup(r => r.GetByUserIdAsync(_userId))
+            .ReturnsAsync(new List<Category> { frutaVerduraCat, alimentacionGeneralCat }.AsReadOnly());
+
+        // No subcategory "Frutas" under "Fruta y Verdura" — service will return SubcategoryId=null
+        _subcategoryRepo
+            .Setup(r => r.GetByCategoryIdAsync(frutaVerduraCat.Id))
+            .ReturnsAsync(new List<Subcategory>().AsReadOnly());
+
+        // Act
+        var result = await _service.ResolveAsync(_userId, "Alimentación", "Frutas", _ct);
+
+        // Assert: exact translation ("Fruta y Verdura") wins, not the generic fallback
+        Assert.NotNull(result.CategoryId);
+        Assert.Equal(frutaVerduraCat.Id.Value, result.CategoryId!.Value);
+        Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
+    }
 }

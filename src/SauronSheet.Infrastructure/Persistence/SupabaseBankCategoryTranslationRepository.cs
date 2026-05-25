@@ -21,6 +21,16 @@ public class SupabaseBankCategoryTranslationRepository : IBankCategoryTranslatio
         _client = client ?? throw new ArgumentNullException(nameof(client));
     }
 
+    /// <summary>
+    /// Protected no-arg constructor for test subclasses that override all database methods.
+    /// The client field is null — safe only when ExecuteExactMatchQueryAsync and
+    /// ExecuteGenericMatchQueryAsync are overridden so they never reach the Supabase client.
+    /// </summary>
+    protected SupabaseBankCategoryTranslationRepository()
+    {
+        _client = null!;
+    }
+
     public async Task<BankCategoryTranslation?> FindByBankCategoryAsync(string bankCategory, string? bankSubcategory)
     {
         try
@@ -32,28 +42,22 @@ public class SupabaseBankCategoryTranslationRepository : IBankCategoryTranslatio
             // 1. Exact match on both bank_category AND bank_subcategory
             // 2. Match on bank_category with bank_subcategory IS NULL
             // Since OR is unsupported, use separate queries and combine.
+            //
+            // CR-2e: exact match (bank_category + bank_subcategory) MUST be evaluated FIRST.
+            // Generic (bank_subcategory IS NULL) is used ONLY as a fallback when no exact match exists.
 
-            // Query 1: Match on bank_category only, with bank_subcategory IS NULL
-            var nullSubResponse = await _client.From<BankCategoryTranslationRow>()
-                .Where(x => x.BankCategory == bankCat)
-                .Where(x => x.BankSubcategory == null)
-                .Get();
-
-            if (nullSubResponse.Models.Count > 0)
-                return nullSubResponse.Models.First().ToDomain();
-
-            // Query 2: If bankSubcategory is specified, try exact match
+            // Query 1: Exact match — if bankSubcategory provided, try bank_category + bank_subcategory first
             if (!string.IsNullOrEmpty(bankSubcategory))
             {
-                var bankSub = bankSubcategory;
-                var exactResponse = await _client.From<BankCategoryTranslationRow>()
-                    .Where(x => x.BankCategory == bankCat)
-                    .Where(x => x.BankSubcategory == bankSub)
-                    .Get();
-
-                if (exactResponse.Models.Count > 0)
-                    return exactResponse.Models.First().ToDomain();
+                var exactRow = await ExecuteExactMatchQueryAsync(bankCat, bankSubcategory);
+                if (exactRow != null)
+                    return exactRow.ToDomain();
             }
+
+            // Query 2: Generic fallback — bank_category only, bank_subcategory IS NULL
+            var genericRow = await ExecuteGenericMatchQueryAsync(bankCat);
+            if (genericRow != null)
+                return genericRow.ToDomain();
 
             return null;
         }
@@ -67,5 +71,35 @@ public class SupabaseBankCategoryTranslationRepository : IBankCategoryTranslatio
             });
             throw;
         }
+    }
+
+    /// <summary>
+    /// Executes the exact-match query (bank_category + bank_subcategory).
+    /// Internal virtual to allow test subclasses (via InternalsVisibleTo) to substitute
+    /// in-memory data without requiring a live Supabase client.
+    /// </summary>
+    internal virtual async Task<BankCategoryTranslationRow?> ExecuteExactMatchQueryAsync(
+        string bankCategory, string bankSubcategory)
+    {
+        var bankSub = bankSubcategory;
+        var response = await _client.From<BankCategoryTranslationRow>()
+            .Where(x => x.BankCategory == bankCategory)
+            .Where(x => x.BankSubcategory == bankSub)
+            .Get();
+        return response.Models.Count > 0 ? response.Models.First() : null;
+    }
+
+    /// <summary>
+    /// Executes the generic-fallback query (bank_category only, bank_subcategory IS NULL).
+    /// Internal virtual to allow test subclasses (via InternalsVisibleTo) to substitute in-memory data.
+    /// </summary>
+    internal virtual async Task<BankCategoryTranslationRow?> ExecuteGenericMatchQueryAsync(
+        string bankCategory)
+    {
+        var response = await _client.From<BankCategoryTranslationRow>()
+            .Where(x => x.BankCategory == bankCategory)
+            .Where(x => x.BankSubcategory == null)
+            .Get();
+        return response.Models.Count > 0 ? response.Models.First() : null;
     }
 }

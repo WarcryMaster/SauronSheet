@@ -163,7 +163,9 @@ public class ImportTransactionsFromPdfCommandHandler
                 var resolution = await _resolutionService.ResolveAsync(
                     userId, row.Category, row.SubCategory, cancellationToken);
 
-                // Create transaction with resolution data
+                // Create transaction with resolution data.
+                // CR-1c: trim bank category/subcategory to remove whitespace introduced
+                // by some PDF parsers before storing in the database.
                 var transaction = new Transaction(
                     new TransactionId(Guid.NewGuid()),
                     userId,
@@ -172,8 +174,8 @@ public class ImportTransactionsFromPdfCommandHandler
                     description,
                     categoryId: resolution.CategoryId,
                     importedFrom: request.Filename,
-                    bankCategory: row.Category,
-                    bankSubcategory: row.SubCategory,
+                    bankCategory: row.Category?.Trim(),
+                    bankSubcategory: row.SubCategory?.Trim(),
                     subcategoryId: resolution.SubcategoryId,
                     categorySource: resolution.CategorySource);
 
