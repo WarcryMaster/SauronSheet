@@ -1,6 +1,7 @@
 @page "/dashboard"
 @model DashboardModel
 @using System.Text.Json
+@using SauronSheet.Frontend.Helpers
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -116,12 +117,21 @@
                             @foreach (var tx in Model.RecentTransactions)
                             {
                                 <tr>
+                                    @{ TransactionCategoryDisplay display = TransactionCategoryDisplayHelper.Build(tx); }
                                     <td class="text-muted small">@tx.Date.ToString("dd/MM/yyyy")</td>
                                     <td class="small">@tx.Description</td>
                                     <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-success" : "text-danger")">
                                         €@tx.Amount.ToString("N2")
                                     </td>
-                                    <td class="small text-muted">@(tx.CategoryName ?? "—")</td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1 small">
+                                            <span class="text-muted">@display.PrimaryText</span>
+                                            @if (!string.IsNullOrEmpty(display.SecondaryText))
+                                            {
+                                                <span class="text-muted">@display.SecondaryText</span>
+                                            }
+                                        </div>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
