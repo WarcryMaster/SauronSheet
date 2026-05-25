@@ -16,11 +16,14 @@ public class IndexModelTests
     [Trait("Category", "Frontend")]
     public void Build_ResolvedCategoryAndSubcategory_ReturnsResolvedValues()
     {
+        // CategorySource=UserOverride: user has manually assigned a category.
+        // Per DH-1c the user's override (CategoryName) MUST take precedence over BankCategory.
         TransactionDto transaction = CreateTransaction(
             categoryName: "Food",
             subcategoryName: "Dining Out",
             bankCategory: "Compras",
-            bankSubcategory: "Restaurantes");
+            bankSubcategory: "Restaurantes",
+            categorySource: "UserOverride");
         TransactionCategoryDisplay result = TransactionCategoryDisplayHelper.Build(transaction);
 
         Assert.Equal("Food", result.PrimaryText);
@@ -33,11 +36,14 @@ public class IndexModelTests
     [Trait("Category", "Frontend")]
     public void Build_ResolvedCategoryWithoutSubcategory_UsesBankSubcategoryFallbackIndependently()
     {
+        // CategorySource=UserOverride: per DH-1c, CategoryName shown.
+        // Subcategory: resolvedSubcategory=null → bankSubcategory used (DH-1 only covers primary).
         TransactionDto transaction = CreateTransaction(
             categoryName: "Food",
             subcategoryName: null,
             bankCategory: "Compras",
-            bankSubcategory: "Restaurantes");
+            bankSubcategory: "Restaurantes",
+            categorySource: "UserOverride");
         TransactionCategoryDisplay result = TransactionCategoryDisplayHelper.Build(transaction);
 
         Assert.Equal("Food", result.PrimaryText);
@@ -187,11 +193,14 @@ public class IndexModelTests
     [Trait("Category", "Frontend")]
     public void Build_ResolvedCategoryExists_DoesNotMarkRawCategoryFallback()
     {
+        // CategorySource=UserOverride: user has explicitly assigned a category.
+        // Per DH-1c, CategoryName is shown → UsesRawCategoryFallback MUST be false.
         TransactionDto transaction = CreateTransaction(
             categoryName: "Food",
             subcategoryName: "Dining Out",
             bankCategory: "Compras",
-            bankSubcategory: "Restaurantes");
+            bankSubcategory: "Restaurantes",
+            categorySource: "UserOverride");
         TransactionCategoryDisplay result = TransactionCategoryDisplayHelper.Build(transaction);
 
         Assert.False(result.UsesRawCategoryFallback);
@@ -201,7 +210,8 @@ public class IndexModelTests
         string? categoryName,
         string? subcategoryName,
         string? bankCategory,
-        string? bankSubcategory)
+        string? bankSubcategory,
+        string categorySource = "RawOnly")
     {
         return new TransactionDto(
             Id: TransactionId,
@@ -217,6 +227,6 @@ public class IndexModelTests
             BankSubcategory: bankSubcategory,
             SubcategoryId: null,
             SubcategoryName: subcategoryName,
-            CategorySource: "RawOnly");
+            CategorySource: categorySource);
     }
 }

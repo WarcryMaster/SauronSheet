@@ -19,7 +19,6 @@ public class ImportTransactionsFromPdfCommandHandler
 {
     private readonly IPdfParser _pdfParser;
     private readonly ITransactionRepository _transactionRepo;
-    private readonly ICategoryRepository _categoryRepo;
     private readonly IPdfImportRepository _pdfImportRepo;
     private readonly IUserProfileRepository _userProfileRepo;
     private readonly IUserContext _userContext;
@@ -28,7 +27,6 @@ public class ImportTransactionsFromPdfCommandHandler
     public ImportTransactionsFromPdfCommandHandler(
         IPdfParser pdfParser,
         ITransactionRepository transactionRepo,
-        ICategoryRepository categoryRepo,
         IPdfImportRepository pdfImportRepo,
         IUserProfileRepository userProfileRepo,
         IUserContext userContext,
@@ -36,7 +34,6 @@ public class ImportTransactionsFromPdfCommandHandler
     {
         _pdfParser = pdfParser;
         _transactionRepo = transactionRepo;
-        _categoryRepo = categoryRepo;
         _pdfImportRepo = pdfImportRepo;
         _userProfileRepo = userProfileRepo;
         _userContext = userContext;
@@ -159,8 +156,10 @@ public class ImportTransactionsFromPdfCommandHandler
                     continue;
                 }
 
-                // Resolve bank category to user category
-                var resolution = await _resolutionService.ResolveAsync(
+                // Resolve bank category via get-or-add (PDF import path — spec IH-1 / PCE-3 / PCE-4)
+                // ResolveOrCreateAsync creates the category/subcategory if not already present,
+                // guaranteeing AutoMatched source for every row with a non-null raw category.
+                var resolution = await _resolutionService.ResolveOrCreateAsync(
                     userId, row.Category, row.SubCategory, cancellationToken);
 
                 // Create transaction with resolution data.

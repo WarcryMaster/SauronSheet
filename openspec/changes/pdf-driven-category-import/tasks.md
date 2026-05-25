@@ -58,10 +58,10 @@ Chain strategy: feature-branch-chain
 **⚠️ RISK UserOverride regression** — 3.3 RED for DH-1c BEFORE touching DisplayHelper; 3.5 runs `IndexModelTests`.
 **⚠️ RISK import path isolation** — `ICategoryResolutionService` (manual path) must not be modified.
 
-- [ ] 3.1 `ImportTransactionsFromPdfCommandHandler`: swap `ResolveAsync` → `ResolveOrCreateAsync`; remove unused `_categoryRepo`
-- [ ] 3.2 RED+GREEN: handler test IH-1 — new PDF category → category created + AutoMatched transaction
-- [ ] 3.3 RED: DisplayHelper tests DH-1a/1b/1c (UserOverride→CategoryName)/1d (legacy null)
-- [ ] 3.4 GREEN: `TransactionCategoryDisplayHelper.Build()` — `UserOverride→CategoryName`; `BankCat!=null→BankCat`; else `CategoryName`; else Uncategorized
-- [ ] 3.5 REFACTOR: run `IndexModelTests`; no regression
-- [ ] 3.6 DI audit: resolver wired; no stale injections
-- [ ] 3.7 `dotnet build` + `dotnet test` (5 projects) — coverage ≥80% Domain, ≥70% Application
+- [x] 3.1 `ImportTransactionsFromPdfCommandHandler`: swap `ResolveAsync` → `ResolveOrCreateAsync`; remove unused `_categoryRepo`
+- [x] 3.2 RED+GREEN: handler test IH-1 — new PDF category → category created + AutoMatched transaction
+- [x] 3.3 RED: DisplayHelper tests DH-1a/1b/1c (UserOverride→CategoryName)/1d (legacy null)
+- [x] 3.4 GREEN: `TransactionCategoryDisplayHelper.Build()` — `UserOverride→CategoryName`; `BankCat!=null→BankCat`; else `CategoryName`; else Uncategorized
+- [x] 3.5 REFACTOR: run `IndexModelTests`; no regression
+- [x] 3.6 DI audit: resolver wired; no stale injections
+- [x] 3.7 `dotnet build` + `dotnet test` (5 projects) — coverage ≥80% Domain, ≥70% Application
