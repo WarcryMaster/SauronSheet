@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.ValueObjects;
 using Mapping;
@@ -161,6 +162,21 @@ public class SupabaseSubcategoryRepository : ISubcategoryRepository
         {
             var row = MappingExtensions.FromDomain(subcategory, normalizedName);
             await _client.From<SubcategoryRow>().Insert(row);
+        }
+        catch (Postgrest.Exceptions.PostgrestException ex)
+            when (ex.Content?.Contains("23505", StringComparison.Ordinal) == true)
+        {
+            // Translate UNIQUE constraint violation into a domain exception
+            // so the Application layer can perform a retry-get without referencing Postgrest directly.
+            Sentry.SentrySdk.AddBreadcrumb(
+                $"23505 duplicate on subcategory insert (normalized: {normalizedName})",
+                "repo.subcategory",
+                data: new System.Collections.Generic.Dictionary<string, string>
+                {
+                    ["normalizedName"] = normalizedName,
+                    ["subcategoryId"]  = subcategory.Id.Value.ToString()
+                });
+            throw new DuplicateEntityException("subcategory", normalizedName);
         }
         catch (Exception ex)
         {

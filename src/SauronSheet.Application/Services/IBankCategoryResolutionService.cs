@@ -26,4 +26,22 @@ public interface IBankCategoryResolutionService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>ResolutionResult with resolved IDs and source type.</returns>
     Task<ResolutionResult> ResolveAsync(UserId userId, string? bankCategory, string? bankSubcategory, CancellationToken ct);
+
+    /// <summary>
+    /// Get-or-add: resolves a raw bank category/subcategory to an existing user category,
+    /// creating one if it does not exist. System defaults are never reused — a user-owned
+    /// category is always created for PDF-imported data.
+    ///
+    /// Spec: PCE-3 / PCE-4. Deduplication via CategoryNormalizer.Normalize() key.
+    /// Concurrent inserts are handled via catch-23505 + retry-get.
+    /// </summary>
+    /// <param name="userId">The current user's ID.</param>
+    /// <param name="rawCategory">Raw category literal from PDF (e.g. "Viajes y turismo").</param>
+    /// <param name="rawSubcategory">Optional raw subcategory literal from PDF.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// ResolutionResult with CategoryId + SubcategoryId resolved/created (AutoMatched),
+    /// or RawOnly when rawCategory is null/whitespace.
+    /// </returns>
+    Task<ResolutionResult> ResolveOrCreateAsync(UserId userId, string? rawCategory, string? rawSubcategory, CancellationToken ct);
 }

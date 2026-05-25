@@ -8,6 +8,7 @@ using Postgrest;
 using Postgrest.Attributes;
 using Postgrest.Models;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.ValueObjects;
 
@@ -285,8 +286,26 @@ public class SupabaseCategoryRepository : ICategoryRepository
 
     public async Task AddAsync(Category category, string normalizedName)
     {
-        var row = CategoryRow.FromDomainForInsert(category, normalizedName);
-        await _client.From<CategoryRow>().Insert(row);
+        try
+        {
+            var row = CategoryRow.FromDomainForInsert(category, normalizedName);
+            await _client.From<CategoryRow>().Insert(row);
+        }
+        catch (Postgrest.Exceptions.PostgrestException ex)
+            when (ex.Content?.Contains("23505", StringComparison.Ordinal) == true)
+        {
+            // Translate UNIQUE constraint violation into a domain exception
+            // so the Application layer can perform a retry-get without referencing Postgrest directly.
+            Sentry.SentrySdk.AddBreadcrumb(
+                $"23505 duplicate on category insert (normalized: {normalizedName})",
+                "repo.category",
+                data: new System.Collections.Generic.Dictionary<string, string>
+                {
+                    ["normalizedName"] = normalizedName,
+                    ["categoryId"]     = category.Id.Value.ToString()
+                });
+            throw new DuplicateEntityException("category", normalizedName);
+        }
     }
 
     public async Task UpdateAsync(Category category)
