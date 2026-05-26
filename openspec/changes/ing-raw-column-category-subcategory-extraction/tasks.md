@@ -48,6 +48,6 @@ Chain strategy: feature-branch-chain
 
 ## Fase 3: Limpieza — Eliminar IngControlledTaxonomy (PR 3, size:exception)
 
-- [ ] 3.1 Eliminar `src/SauronSheet.Infrastructure/PDF/Parsers/IngControlledTaxonomy.cs`; verificar que `IngBankPdfParser.cs` no contiene ningún `using`, instancia ni referencia a la clase
-- [ ] 3.2 Eliminar `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngControlledTaxonomyTests.cs`
-- [ ] 3.3 `dotnet build && dotnet test` — compilación limpia, 0 referencias a `IngControlledTaxonomy`, todos los tests verdes
+- [x] 3.1 Eliminar `src/SauronSheet.Infrastructure/PDF/Parsers/IngControlledTaxonomy.cs`; verificar que `IngBankPdfParser.cs` no contiene ningún `using`, instancia ni referencia a la clase
+- [x] 3.2 Eliminar `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngControlledTaxonomyTests.cs`
+- [x] 3.3 `dotnet build && dotnet test` — compilación limpia, 0 referencias a `IngControlledTaxonomy`, todos los tests verdes
