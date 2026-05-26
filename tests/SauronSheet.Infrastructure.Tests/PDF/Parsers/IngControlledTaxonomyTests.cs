@@ -9,20 +9,20 @@ using SauronSheet.Infrastructure.PDF.Parsers;
 using Xunit;
 
 /// <summary>
-/// Unit tests for <see cref="IngControlledTaxonomy"/> and taxonomy-wired
-/// <see cref="IngBankPdfParser.ProcessBlocks"/> scenarios.
+/// Unit tests for <see cref="IngControlledTaxonomy"/> and pipeline integration
+/// via <see cref="IngBankPdfParser.ProcessBlocks"/>.
+///
+/// Phase 2 update: ProcessBlocks no longer uses IngControlledTaxonomy for
+/// category/subcategory extraction. The direct ExtractLeftToRight unit tests
+/// remain valid (they test the taxonomy function in isolation and will be used
+/// for Phase 3 cleanup verification). Pipeline tests are updated to reflect the
+/// new geometry-first / conservative fallback behavior (IBR-3e): text-only lines
+/// with no X-position words produce null/null category/subcategory.
 ///
 /// Covers:
-///   IBR-3a — Known category+subcategory extracted correctly (L→R match).
-///   IBR-3b — Unrecognized prefix → RawOnly with raw category preserved.
-///   IBR-3c — Full pipeline: description does not contain amount/date/cat/subcat.
-///   PCE-1a — PDF category absent from taxonomy → preserved as RawOnly.
-///   PCE-1b — No detectable category field → Category = null.
-///   PCE-1c — Category matched but no subcategory → SubCategory = null.
+///   ExtractLeftToRight unit tests — unchanged (taxonomy function still exists in PR2).
+///   ProcessBlocks pipeline tests — updated to IBR-3e conservative null/null behavior.
 ///   PCE-1d — Non-ING parser path does not restrict categories via closed list.
-///
-/// Strategy: direct unit tests on IngControlledTaxonomy.ExtractLeftToRight +
-/// ProcessBlocks integration via IngBankPdfParser reflection for pipeline cases.
 /// </summary>
 [Trait("Category", "Infrastructure")]
 public class IngControlledTaxonomyTests
@@ -35,21 +35,24 @@ public class IngControlledTaxonomyTests
 
     static IngControlledTaxonomyTests()
     {
+        // Phase 2: ProcessBlocks now accepts an optional IngColumnThresholds? second parameter.
+        // We pass null (no geometry) so these tests exercise the IBR-3e conservative fallback.
         ProcessBlocksMethod = typeof(IngBankPdfParser)
             .GetMethod(
                 "ProcessBlocks",
                 BindingFlags.NonPublic | BindingFlags.Static,
                 null,
-                [typeof(IReadOnlyList<IngLineData>)],
+                [typeof(IReadOnlyList<IngLineData>), typeof(IngColumnThresholds)],
                 null)
             ?? throw new InvalidOperationException(
-                "IngBankPdfParser.ProcessBlocks(IReadOnlyList<IngLineData>) not found.");
+                "IngBankPdfParser.ProcessBlocks(IReadOnlyList<IngLineData>, IngColumnThresholds?) not found.");
     }
 
     private static IReadOnlyList<RawTransactionRow> InvokeProcessBlocks(
         IReadOnlyList<IngLineData> dataLines)
     {
-        var result = ProcessBlocksMethod.Invoke(null, [dataLines]);
+        // Pass null thresholds → IBR-3e conservative fallback (null/null/cleanText)
+        var result = ProcessBlocksMethod.Invoke(null, [dataLines, null]);
         return (IReadOnlyList<RawTransactionRow>)result!;
     }
 
@@ -113,13 +116,14 @@ public class IngControlledTaxonomyTests
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // IBR-3c: Pipeline completo — descripción no contiene campos extraídos
+    // IBR-3e: conservative fallback — null/null/cleanText when no geometry
     // ════════════════════════════════════════════════════════════════════════
 
     [Fact]
     public void ProcessBlocks_DaznBlock_DescriptionContainsOnlyMerchantName()
     {
-        // Arrange — IBR-3c: full pipeline block; after extraction only "DAZN" should remain
+        // Arrange — IBR-3e: text-only line (no word X-positions); conservative fallback applies.
+        // In Phase 2, category and subcategory are null; description = full clean text.
         IReadOnlyList<IngLineData> dataLines =
         [
             Line("15/01/2025 Compras Online DAZN -12,99 1.234,56"),
@@ -128,24 +132,26 @@ public class IngControlledTaxonomyTests
         // Act
         IReadOnlyList<RawTransactionRow> rows = InvokeProcessBlocks(dataLines);
 
-        // Assert — description = "DAZN" only; no amount, date, category or subcategory leaked
+        // Assert — IBR-3e: category=null, subCategory=null; description = clean block text
         Assert.Single(rows);
         RawTransactionRow row = rows[0];
-        Assert.Equal("DAZN", row.Description);
-        Assert.DoesNotContain("-12,99", row.Description ?? string.Empty, StringComparison.Ordinal);
-        Assert.DoesNotContain("15/01/2025", row.Description ?? string.Empty, StringComparison.Ordinal);
-        Assert.DoesNotContain("Compras", row.Description ?? string.Empty, StringComparison.Ordinal);
-        Assert.DoesNotContain("Online", row.Description ?? string.Empty, StringComparison.Ordinal);
+        Assert.Null(row.Category);
+        Assert.Null(row.SubCategory);
+        Assert.NotNull(row.Description);
+        Assert.Contains("DAZN", row.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("-12,99", row.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("15/01/2025", row.Description, StringComparison.Ordinal);
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // PCE-1a: Categoría ausente en taxonomía → preservada como RawOnly
+    // PCE-1a / IBR-3e: sin geometría → category=null; texto íntegro en description
     // ════════════════════════════════════════════════════════════════════════
 
     [Fact]
     public void ProcessBlocks_CategoryAbsentFromTaxonomy_PreservedAsRawCategory()
     {
-        // Arrange — PCE-1a: "Inversiones Fondos" absent from taxonomy; must NOT be discarded
+        // Arrange — PCE-1a / IBR-3e: conservative fallback (no X-positions).
+        // Phase 2: category is null (not "Inversiones Fondos"); full clean text goes to description.
         IReadOnlyList<IngLineData> dataLines =
         [
             Line("18/01/2025 Inversiones Fondos Pago especial -500,00 731,57"),
@@ -154,12 +160,15 @@ public class IngControlledTaxonomyTests
         // Act
         IReadOnlyList<RawTransactionRow> rows = InvokeProcessBlocks(dataLines);
 
-        // Assert — row created (not null), category preserved, source=RawOnly (implicit in non-null cat)
+        // Assert — row created (not null); category=null; description = full clean text
         Assert.Single(rows);
         RawTransactionRow row = rows[0];
         Assert.NotNull(row);
-        Assert.Equal("Inversiones Fondos", row.Category);   // PCE-1a: raw preserved
-        Assert.Equal("Pago especial", row.Description);
+        Assert.Null(row.Category);
+        Assert.Null(row.SubCategory);
+        Assert.NotNull(row.Description);
+        Assert.Contains("Inversiones Fondos", row.Description, StringComparison.Ordinal);
+        Assert.Contains("Pago especial", row.Description, StringComparison.Ordinal);
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -249,13 +258,15 @@ public class IngControlledTaxonomyTests
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // Triangulation: nómina (payroll) → known single-token category + description
+    // Triangulation: nómina (payroll) multiline — IBR-3e fallback, amount parsed
     // ════════════════════════════════════════════════════════════════════════
 
     [Fact]
     public void ProcessBlocks_NominaBlock_ReturnsCategoryNominaAndMerchantDescription()
     {
-        // Arrange — payroll split across two physical lines
+        // Arrange — payroll split across two physical lines; no geometry (text-only).
+        // IBR-3e: category=null; description = full clean text ("Nómina Empresa SA").
+        // Monetary amounts come from the continuation line and are still parsed correctly.
         IReadOnlyList<IngLineData> dataLines =
         [
             Line("15/01/2025 Nómina Empresa SA"),
@@ -265,24 +276,26 @@ public class IngControlledTaxonomyTests
         // Act
         IReadOnlyList<RawTransactionRow> rows = InvokeProcessBlocks(dataLines);
 
-        // Assert — category = Nómina; description = "Empresa SA"
+        // Assert — category=null (IBR-3e); description contains the payroll text; amounts parsed
         Assert.Single(rows);
         RawTransactionRow row = rows[0];
-        Assert.Equal("Nómina", row.Category);
+        Assert.Null(row.Category);
         Assert.Null(row.SubCategory);
-        Assert.Equal("Empresa SA", row.Description);
+        Assert.NotNull(row.Description);
+        Assert.Contains("Nómina", row.Description, StringComparison.Ordinal);
         Assert.Equal("3200.00", row.Amount);
         Assert.Equal("4500.00", row.Balance);
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // Triangulation: parking (Ocio Parking) → subcategory extracted
+    // Triangulation: parking — IBR-3e fallback, full text in description
     // ════════════════════════════════════════════════════════════════════════
 
     [Fact]
     public void ProcessBlocks_ParkingBlock_ReturnsCategoryOcioAndSubcategoryParking()
     {
-        // Arrange — parking fixture (single physical line)
+        // Arrange — parking fixture (single physical line); no geometry (text-only).
+        // IBR-3e: conservative fallback; category and subcategory are null.
         IReadOnlyList<IngLineData> dataLines =
         [
             Line("16/01/2025 Ocio Parking Auditorio -3,00 1.231,56"),
@@ -291,23 +304,26 @@ public class IngControlledTaxonomyTests
         // Act
         IReadOnlyList<RawTransactionRow> rows = InvokeProcessBlocks(dataLines);
 
-        // Assert — cat = Ocio, subcat = Parking, desc = Auditorio
+        // Assert — IBR-3e: category=null, subCategory=null; description = full clean text
         Assert.Single(rows);
         RawTransactionRow row = rows[0];
-        Assert.Equal("Ocio", row.Category);
-        Assert.Equal("Parking", row.SubCategory);
-        Assert.Equal("Auditorio", row.Description);
+        Assert.Null(row.Category);
+        Assert.Null(row.SubCategory);
+        Assert.NotNull(row.Description);
+        Assert.Contains("Ocio", row.Description, StringComparison.Ordinal);
+        Assert.Contains("Parking", row.Description, StringComparison.Ordinal);
         Assert.Equal("-3.00", row.Amount);
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // RawOnly fallback: IBR-4b preserved — block with amount but unrecognized category
+    // IBR-3e / IBR-4b: unrecognized text — conservative fallback, row emitted
     // ════════════════════════════════════════════════════════════════════════
 
     [Fact]
     public void ProcessBlocks_RawOnlyFallback_RowCreatedWithRawCategoryNotNull()
     {
-        // Arrange — IBR-4b: extractable amount + category NOT in taxonomy → RawOnly row (not null)
+        // Arrange — IBR-3e / IBR-4b: no thresholds (text-only lines).
+        // Phase 2: row is emitted (not null) with category=null, description = full clean text.
         IReadOnlyList<IngLineData> dataLines =
         [
             Line("22/01/2025 UnknownBank Transfer Wire -100,00 500,00"),
@@ -316,11 +332,13 @@ public class IngControlledTaxonomyTests
         // Act
         IReadOnlyList<RawTransactionRow> rows = InvokeProcessBlocks(dataLines);
 
-        // Assert — IBR-4b: row created (not null); category preserved from raw text (first 2 tokens)
+        // Assert — IBR-3e: row created; category=null; description contains original text; amount ok
         Assert.Single(rows);
         RawTransactionRow row = rows[0];
         Assert.NotNull(row);
-        Assert.Equal("UnknownBank Transfer", row.Category);  // raw first-2-tokens fallback
+        Assert.Null(row.Category);
+        Assert.NotNull(row.Description);
+        Assert.Contains("UnknownBank", row.Description, StringComparison.Ordinal);
         Assert.Equal("-100.00", row.Amount);
     }
 

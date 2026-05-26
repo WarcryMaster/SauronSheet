@@ -7,15 +7,14 @@ using SauronSheet.Infrastructure.PDF.Parsers;
 /// <summary>
 /// Tests for the single-line path of IngBankPdfParser.ParseTextColumns.
 ///
-/// This file REPLACES the previous IngBankPdfParserSingleLineTests that documented
-/// the old D5/W3 null-category limitation. That limitation has been revoked.
-///
-/// The refactored ParseTextColumns signature is:
-///   ParseTextColumns(string? text, PositionedWord[]? words, IngColumnThresholds? thresholds)
+/// Phase 2 addition: PCE-SLd — verifies that words at or beyond MonetaryZoneStart
+/// are excluded from the description column. This test is RED until SplitWords
+/// in IngColumnThresholds is updated to respect MonetaryZoneStart (task 2.3/2.4).
 ///
 /// Scenarios covered:
 ///   PCE-SLa — Jan-2025 positioned words + calibrated thresholds → Category + SubCategory extracted
 ///   PCE-SLb — All words in description X zone → fallback: Category=null, full text in Description
+///   PCE-SLd — Word at MonetaryZoneStart excluded from Description (NEW — task 2.2 RED)
 ///   Boundary guard — null / whitespace text → all null (kept from previous contract)
 /// </summary>
 [Trait("Category", "Infrastructure")]
@@ -24,8 +23,6 @@ public class IngBankPdfParserSingleLineTests
     // ────────────────────────────────────────────────────────────────────────
     // Reflection bootstrap
     // Looks for the THREE-argument overload of ParseTextColumns.
-    // If it does not exist yet, the static constructor throws → all tests in
-    // this class fail with TypeInitializationException (RED state).
     // ────────────────────────────────────────────────────────────────────────
 
     private static readonly MethodInfo ParseTextColumnsMethod;
@@ -56,7 +53,7 @@ public class IngBankPdfParserSingleLineTests
     // Shared fixture helpers
     // ────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Real ING Jan-2025 header thresholds.</summary>
+    /// <summary>Real ING Jan-2025 header thresholds (no MonetaryZoneStart).</summary>
     private static IngColumnThresholds Jan2025Thresholds()
     {
         var headerWords = new[]
@@ -64,6 +61,19 @@ public class IngBankPdfParserSingleLineTests
             new PositionedWord("CATEGORÍA",   175.0),
             new PositionedWord("SUBCATEGORÍA", 275.0),
             new PositionedWord("CONCEPTO",     375.0),
+        };
+        return IngColumnThresholds.FromHeaderWords(headerWords)!;
+    }
+
+    /// <summary>Jan-2025 thresholds WITH MonetaryZoneStart=465 (IMPORTE column).</summary>
+    private static IngColumnThresholds Jan2025ThresholdsWithImporte()
+    {
+        var headerWords = new[]
+        {
+            new PositionedWord("CATEGORÍA",    175.0),
+            new PositionedWord("SUBCATEGORÍA", 275.0),
+            new PositionedWord("CONCEPTO",     375.0),
+            new PositionedWord("IMPORTE",      465.0),
         };
         return IngColumnThresholds.FromHeaderWords(headerWords)!;
     }
@@ -76,10 +86,6 @@ public class IngBankPdfParserSingleLineTests
     public void ParseTextColumns_Jan2025PositionedWords_ExtractsCategoryAndSubCategory()
     {
         // Arrange — PCE-SLa fixture: real Jan-2025 ING transaction row
-        //   "Compras  Ropa y complementos  Pago en Zara Online"
-        //   Category zone    : X 175–274
-        //   SubCategory zone : X 275–374
-        //   Description zone : X 375+
         const string text = "Compras Ropa y complementos Pago en Zara Online";
 
         var words = new[]
@@ -114,19 +120,18 @@ public class IngBankPdfParserSingleLineTests
     public void ParseTextColumns_InsufficientXSignal_FallsBackToDescription()
     {
         // Arrange — PCE-SLb: ALL words clustered in description X zone (≥375)
-        // — no X signal to split category / subcategory
         const string text = "Compras Ropa y complementos Pago en Zara Online";
 
         var words = new[]
         {
-            new PositionedWord("Compras",      380.0),   // all in description zone
+            new PositionedWord("Compras",      380.0),
             new PositionedWord("Ropa",         400.0),
             new PositionedWord("y",            418.0),
             new PositionedWord("complementos", 432.0),
             new PositionedWord("Pago",         450.0),
-            new PositionedWord("en",           465.0),
-            new PositionedWord("Zara",         480.0),
-            new PositionedWord("Online",       495.0),
+            new PositionedWord("en",           462.0),
+            new PositionedWord("Zara",         478.0),
+            new PositionedWord("Online",       492.0),
         };
 
         var thresholds = Jan2025Thresholds();
@@ -138,8 +143,38 @@ public class IngBankPdfParserSingleLineTests
         // Assert — PCE-SLb: conservative fallback — full text preserved as description
         Assert.Null(category);
         Assert.Null(subCategory);
-        Assert.Contains("Compras", description);   // full text content preserved
+        Assert.Contains("Compras", description);
         Assert.Null(comment);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PCE-SLd: word at MonetaryZoneStart excluded from description (task 2.2 RED)
+    // RED until SplitWords is updated to respect MonetaryZoneStart (task 2.3/2.4).
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ParseTextColumns_WordAtMonetaryZoneStart_IsExcludedFromDescription()
+    {
+        // Arrange — word at X=470 (≥ MonetaryZoneStart=465) must NOT appear in Description
+        // This is a monetary token that leaked into the text input; SplitWords must exclude it.
+        const string text = "Compras DAZN -12,99";
+
+        var words = new[]
+        {
+            new PositionedWord("Compras", 180.0),   // category zone [175, 275)
+            new PositionedWord("DAZN",    380.0),   // description zone [375, 465)
+            new PositionedWord("-12,99",  470.0),   // monetary zone ≥465 — must be excluded
+        };
+
+        var thresholds = Jan2025ThresholdsWithImporte(); // MonetaryZoneStart = 465
+
+        // Act
+        var (category, _, description, _) = InvokeParseTextColumns(text, words, thresholds);
+
+        // Assert — PCE-SLd: "-12,99" at monetary X zone excluded from description
+        Assert.Equal("Compras", category);
+        Assert.Equal("DAZN",    description);
+        Assert.DoesNotContain("-12,99", description ?? string.Empty); // monetary word excluded
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -152,11 +187,11 @@ public class IngBankPdfParserSingleLineTests
     [InlineData("   ")]
     public void ParseTextColumns_NullOrWhitespace_ReturnsAllNull(string? input)
     {
-        // Act — with null/whitespace, positions are irrelevant
+        // Act
         var (category, subCategory, description, comment) =
             InvokeParseTextColumns(input, null, null);
 
-        // Assert — boundary guard unchanged from previous contract
+        // Assert — boundary guard unchanged
         Assert.Null(category);
         Assert.Null(subCategory);
         Assert.Null(description);

@@ -38,11 +38,11 @@ Chain strategy: feature-branch-chain
 
 ## Fase 2: Integración — IngBankPdfParser (PR 2)
 
-- [ ] 2.1 [RED] `IngBankPdfParserBlockTests.cs`: actualizar escenarios DAZN, parking, nómina, Bizum y traspaso para esperar literales exactos del PDF en `Category`, `SubCategory` y `Description`; eliminar toda expectativa de valores de taxonomy controlada
-- [ ] 2.2 [RED] `IngBankPdfParserSingleLineTests.cs`: ajustar los tests afectados por la eliminación del path taxonomy (campo `Category` y `SubCategory` ahora puede ser `null` en casos sin geometría)
-- [ ] 2.3 [GREEN] `IngBankPdfParser.cs` — `ProcessBlocks()`: añadir parámetro `IngColumnThresholds thresholds`; derivar umbrales (con `MonetaryZoneStart`) desde la cabecera detectada en `ParseAsync`; reemplazar la llamada a `IngControlledTaxonomy.ExtractLeftToRight()` por `IngRawColumnExtractor.Extract(anchorWords, continuations, thresholds)`
-- [ ] 2.4 [GREEN] `IngBankPdfParser.cs`: implementar fallback conservador — cuando `Extract()` devuelve geometría insuficiente: `Category=null`, `SubCategory=null`, `Description=fullText`; la transacción nunca se descarta solo por falta de categoría
-- [ ] 2.5 [REFACTOR] `IngBankPdfParser.cs`: confirmar que los fixes de multiline y repeated-header permanecen intactos; dejar `IngControlledTaxonomy` como dead code (no instanciado) hasta PR 3
+- [x] 2.1 [RED] `IngBankPdfParserBlockTests.cs`: actualizar escenarios DAZN, parking, nómina, Bizum y traspaso para esperar literales exactos del PDF en `Category`, `SubCategory` y `Description`; eliminar toda expectativa de valores de taxonomy controlada
+- [x] 2.2 [RED] `IngBankPdfParserSingleLineTests.cs`: ajustar los tests afectados por la eliminación del path taxonomy (campo `Category` y `SubCategory` ahora puede ser `null` en casos sin geometría)
+- [x] 2.3 [GREEN] `IngBankPdfParser.cs` — `ProcessBlocks()`: añadir parámetro `IngColumnThresholds thresholds`; derivar umbrales (con `MonetaryZoneStart`) desde la cabecera detectada en `ParseAsync`; reemplazar la llamada a `IngControlledTaxonomy.ExtractLeftToRight()` por `IngRawColumnExtractor.Extract(anchorWords, continuations, thresholds)`
+- [x] 2.4 [GREEN] `IngBankPdfParser.cs`: implementar fallback conservador — cuando `Extract()` devuelve geometría insuficiente: `Category=null`, `SubCategory=null`, `Description=fullText`; la transacción nunca se descarta solo por falta de categoría
+- [x] 2.5 [REFACTOR] `IngBankPdfParser.cs`: confirmar que los fixes de multiline y repeated-header permanecen intactos; dejar `IngControlledTaxonomy` como dead code (no instanciado) hasta PR 3
 
 ---
 

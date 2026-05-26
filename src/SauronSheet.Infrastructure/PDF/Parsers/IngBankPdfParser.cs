@@ -78,13 +78,19 @@ public class IngBankPdfParser : IPdfParser
 
             // 2. Locate the ING header line to find the start of the data section
             var headerLineIndex = -1;
+            IngColumnThresholds? thresholds = null;
+
             for (var i = 0; i < allLines.Count; i++)
             {
                 if (HasIngHeaderInLines([allLines[i]]))
                 {
                     headerLineIndex = i;
+                    // Derive column thresholds from the header line's positioned words
+                    thresholds = IngColumnThresholds.FromHeaderWords(allLines[i].Words);
                     SentrySdk.Logger?.LogDebug("IngBankPdfParser: detected ING header at line {0}", i);
-                    SentrySdk.AddBreadcrumb("Header section detected", "pdf.parse");
+                    SentrySdk.AddBreadcrumb(
+                        $"Header detected at line {i}; thresholds derived: {(thresholds is not null ? "yes" : "no")}",
+                        "pdf.parse");
                     break;
                 }
             }
@@ -97,13 +103,13 @@ public class IngBankPdfParser : IPdfParser
             }
 
             // 3. Wire the block-first pipeline for all data lines after the first header.
-            // Repeated per-page headers are stripped during per-page extraction so they
-            // cannot contaminate the previous open block as continuation text.
+            // Thresholds are passed to ProcessBlocks so IngRawColumnExtractor can classify
+            // words by X-zone for geometry-first category/subcategory extraction (IBR-3).
             IReadOnlyList<IngLineData> dataLines = allLines
                 .Skip(headerLineIndex + 1)
                 .ToArray();
 
-            rows.AddRange(ProcessBlocks(dataLines));
+            rows.AddRange(ProcessBlocks(dataLines, thresholds));
 
             SentrySdk.Logger?.LogDebug(
                 "IngBankPdfParser complete: {0} rows parsed", rows.Count);
@@ -134,22 +140,29 @@ public class IngBankPdfParser : IPdfParser
     /// <list type="number">
     ///   <item><see cref="IngBlockAssembler.Assemble"/> — groups lines into logical blocks.</item>
     ///   <item><see cref="IngMonetaryExtractor.ExtractRightToLeft"/> — R→L monetary extraction.</item>
-    ///   <item><see cref="IngControlledTaxonomy.ExtractLeftToRight"/> — L→R taxonomy extraction
-    ///         for category, subcategory and clean description (IBR-3).</item>
-    ///   <item>Emits <see cref="RawTransactionRow"/> for each block with two isolated monetary tokens.</item>
+    ///   <item><see cref="IngRawColumnExtractor.Extract"/> — geometry-first category/subcategory/
+    ///         description extraction from the anchor line's X-positioned words (IBR-3).
+    ///         When <paramref name="thresholds"/> is <see langword="null"/> or the anchor line
+    ///         has no positioned words, the conservative fallback applies: category and subcategory
+    ///         are <see langword="null"/> and description is the clean block text (IBR-3e).</item>
+    ///   <item>Emits <see cref="RawTransactionRow"/> for each block with two isolated monetary
+    ///         tokens. Blocks without two monetary tokens are silently skipped (IBR-4a).</item>
     /// </list>
-    /// When the taxonomy does not recognise the category prefix, the raw leading tokens are
-    /// preserved as the category literal (<see cref="IngTaxonomyResult.IsRawOnly"/> = true; IBR-3b, PCE-1a).
     /// </summary>
     /// <param name="dataLines">
     /// Physical PDF lines from the data section (all lines <em>after</em> the ING header line).
+    /// </param>
+    /// <param name="thresholds">
+    /// Column X-position thresholds derived from the detected page header. When <see langword="null"/>,
+    /// the conservative fallback (null/null/fullText) is used for every block (IBR-3e / IBR-4b).
     /// </param>
     /// <returns>
     /// Ordered list of successfully parsed rows. Blocks without two monetary tokens are silently
     /// skipped (IBR-4a conservador fallback).
     /// </returns>
     internal static IReadOnlyList<RawTransactionRow> ProcessBlocks(
-        IReadOnlyList<IngLineData> dataLines)
+        IReadOnlyList<IngLineData> dataLines,
+        IngColumnThresholds? thresholds = null)
     {
         ArgumentNullException.ThrowIfNull(dataLines);
 
@@ -174,44 +187,85 @@ public class IngBankPdfParser : IPdfParser
                 continue;
             }
 
-            // Strip the date prefix from CleanText to isolate the taxonomy/description text.
-            // CleanText = everything before the amount token.
-            // When buffer lines are prepended before the anchor (IBR-1d/IBR-1e), the date may
-            // not be at position 0 of cleanText — search for it rather than slicing blindly.
+            // Clean text (date + monetary stripped) — used as fallback description (IBR-3e)
             string cleanText = monetary.Value.CleanText;
             string? taxonomyInput = ExtractTaxonomyInput(cleanText, block.Date);
 
-            // IBR-3: L→R taxonomy extraction — category, subcategory, description.
-            // When no prefix matches (IsRawOnly=true), raw leading tokens are preserved as
-            // the category literal (IBR-3b, PCE-1a). Taxonomy never returns null for a
-            // non-empty input — it always produces at least a RawOnly result.
-            IngTaxonomyResult taxonomy =
-                IngControlledTaxonomy.ExtractLeftToRight(taxonomyInput);
+            // IBR-3: geometry-first extraction of category, subcategory, description.
+            // When thresholds are available and the anchor line has positioned words, use
+            // IngRawColumnExtractor to classify words by X zone (IBR-3a–3d).
+            // Conservative fallback (IBR-3e / IBR-4b): null/null + clean text as description
+            // when thresholds are null or the anchor has no word geometry.
+            string? category;
+            string? subCategory;
+            string? description;
+
+            if (thresholds is not null)
+            {
+                // Find the anchor line (the date-carrying line) within the block.
+                // Buffer lines may be prepended before it (IBR-1d/IBR-1e).
+                var (anchorLine, anchorIdx) = FindAnchorLine(block.Lines, block.Date);
+                PositionedWord[] anchorWords = anchorLine?.Words ?? [];
+
+                if (anchorWords.Length > 0)
+                {
+                    // Geometry available — extract via X-position zones
+                    IngLineData[] continuationLines = anchorIdx >= 0 && anchorIdx < block.Lines.Length - 1
+                        ? block.Lines[(anchorIdx + 1)..]
+                        : [];
+
+                    IngRawColumnResult extracted =
+                        IngRawColumnExtractor.Extract(anchorWords, continuationLines, thresholds);
+
+                    category    = extracted.Category;
+                    subCategory = extracted.SubCategory;
+                    // Prefer geometry description; fall back to clean text when zones yield nothing
+                    description = extracted.Description ?? taxonomyInput;
+                }
+                else
+                {
+                    // IBR-3e: thresholds present but anchor has no word geometry → conservative fallback
+                    category    = null;
+                    subCategory = null;
+                    description = taxonomyInput;
+
+                    SentrySdk.AddBreadcrumb(
+                        $"Block {block.Date}: no anchor geometry — conservative null/null fallback (IBR-3e)",
+                        "pdf.row",
+                        data: new Dictionary<string, string> { ["date"] = block.Date });
+                }
+            }
+            else
+            {
+                // IBR-3e / IBR-4b: no thresholds → conservative fallback for every block
+                category    = null;
+                subCategory = null;
+                description = taxonomyInput;
+            }
 
             var row = new RawTransactionRow(
                 rowNumber++,
                 block.Date,
-                taxonomy.Category,
-                taxonomy.SubCategory,
-                taxonomy.Description,
-                null,                        // Comment — IBR-2b: always null for ING
+                category,
+                subCategory,
+                description,
+                null,                          // Comment — IBR-2b: always null for ING
                 monetary.Value.Amount,
                 monetary.Value.Balance);
 
             rows.Add(row);
 
             SentrySdk.AddBreadcrumb(
-                $"Row {rowNumber - 1} parsed: {block.Date} | {taxonomy.Description} | {monetary.Value.Amount} (rawOnly={taxonomy.IsRawOnly})",
+                $"Row {rowNumber - 1} parsed: {block.Date} | {description} | {monetary.Value.Amount}",
                 "pdf.row",
                 data: new Dictionary<string, string>
                 {
-                    ["row"] = (rowNumber - 1).ToString(CultureInfo.InvariantCulture),
-                    ["date"] = block.Date,
-                    ["category"] = taxonomy.Category ?? string.Empty,
-                    ["subCategory"] = taxonomy.SubCategory ?? string.Empty,
-                    ["description"] = taxonomy.Description ?? string.Empty,
-                    ["amount"] = monetary.Value.Amount,
-                    ["rawOnly"] = taxonomy.IsRawOnly.ToString()
+                    ["row"]         = (rowNumber - 1).ToString(CultureInfo.InvariantCulture),
+                    ["date"]        = block.Date,
+                    ["category"]    = category    ?? string.Empty,
+                    ["subCategory"] = subCategory ?? string.Empty,
+                    ["description"] = description ?? string.Empty,
+                    ["amount"]      = monetary.Value.Amount,
                 });
         }
 
@@ -231,9 +285,6 @@ public class IngBankPdfParser : IPdfParser
     /// Returns <see langword="true"/> when any line in <paramref name="lines"/> contains
     /// both <c>"F. VALOR"</c> and <c>"CATEGORÍA"</c> — the two tokens that uniquely identify
     /// an ING Bank statement header (IBR-5a/5b).
-    ///
-    /// This method is used by <see cref="AdaptivePdfParser"/> for O(1-page) format detection
-    /// without requiring a full parse attempt.
     /// </summary>
     internal static bool HasIngHeaderInLines(IReadOnlyList<IngLineData> lines)
     {
@@ -254,11 +305,7 @@ public class IngBankPdfParser : IPdfParser
 
     /// <summary>
     /// Removes the repeated ING page-header section from a page-local line list.
-    ///
-    /// Repeated headers can span multiple non-date lines around the ING column-header
-    /// row. The parser strips the whole leading section and stops at the first line
-    /// that looks like transaction data so continuation rows can still flow into block
-    /// assembly.
+    /// Repeated headers can span multiple non-date lines around the ING column-header row.
     /// </summary>
     internal static IReadOnlyList<IngLineData> StripLeadingRepeatedPageHeaderSection(
         IReadOnlyList<IngLineData> pageLines)
@@ -414,14 +461,9 @@ public class IngBankPdfParser : IPdfParser
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Line reconstruction (unchanged from original — supports single-line tests)
+    // Line reconstruction (unchanged — supports single-line tests)
     // ────────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Reconstructs lines from the positioned words on a PDF page.
-    /// Words with the same Y coordinate (within a tolerance) belong to the same line.
-    /// Returns <see cref="IngLineData"/> carrying both text and X-positioned words.
-    /// </summary>
     private List<IngLineData> ReconstructLinesFromWords(List<Word> words)
     {
         if (!words.Any())
@@ -466,21 +508,16 @@ public class IngBankPdfParser : IPdfParser
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Taxonomy input extraction
+    // Taxonomy input extraction (retained for conservative fallback description)
     // ────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Extracts the taxonomy input text by stripping the date token from
-    /// <paramref name="cleanText"/> at whatever position it occurs.
+    /// Extracts the clean description text by stripping the date token from
+    /// <paramref name="cleanText"/> (which already has monetary tokens removed).
     ///
-    /// The standard case is that the date is at position 0 (no prepended buffer).
-    /// When the anchor-line assembler (IBR-1d/IBR-1e) prepends buffer lines,
-    /// the date token appears after the buffer content and must be found by
-    /// <see cref="string.IndexOf"/> rather than a fixed offset.
-    ///
-    /// Joining the <c>beforeDate</c> and <c>afterDate</c> fragments preserves
-    /// the buffer description so downstream taxonomy can classify the full
-    /// transaction context.
+    /// Used as the conservative fallback description (IBR-3e) when anchor geometry
+    /// is unavailable. When buffer lines were prepended before the anchor (IBR-1d/IBR-1e),
+    /// both the before-date and after-date fragments are joined.
     /// </summary>
     private static string? ExtractTaxonomyInput(string cleanText, string date)
     {
@@ -506,6 +543,43 @@ public class IngBankPdfParser : IPdfParser
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // Anchor line resolution (Task 2.3)
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Finds the anchor line (the line carrying the transaction date) within a block's
+    /// physical lines. Buffer lines prepended before the anchor (IBR-1d/IBR-1e) are
+    /// skipped until the date-bearing line is found.
+    ///
+    /// Detection order:
+    /// 1. Words-based: first word text equals <paramref name="date"/> (precise X geometry).
+    /// 2. Text-based fallback: trimmed line text starts with <paramref name="date"/>.
+    /// </summary>
+    /// <returns>
+    /// The anchor line and its index within <paramref name="lines"/>, or
+    /// (<see langword="null"/>, -1) when not found.
+    /// </returns>
+    private static (IngLineData? Line, int Index) FindAnchorLine(IngLineData[] lines, string date)
+    {
+        // Words-based: more reliable — checks the exact first word token
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Words.Length > 0 && lines[i].Words[0].Text == date)
+                return (lines[i], i);
+        }
+
+        // Text-based fallback: covers lines created without word geometry
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Text.TrimStart().StartsWith(date, StringComparison.Ordinal))
+                return (lines[i], i);
+        }
+
+        return (null, -1);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Single-line column segmentation (unchanged — used by the single-line path)
     // ────────────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -548,10 +622,6 @@ public class IngBankPdfParser : IPdfParser
     // Amount normalization (kept — tested via reflection by AmountNormalizationTests)
     // ────────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Normalizes a raw monetary string to dot-decimal, no-thousands format.
-    /// Supports both European (<c>1.234,56</c>) and Anglo (<c>1,234.56</c>) formats.
-    /// </summary>
     private static string? NormalizeAmount(string? amount)
     {
         if (string.IsNullOrWhiteSpace(amount))
@@ -587,5 +657,4 @@ public class IngBankPdfParser : IPdfParser
 
         return amount;
     }
-
 }

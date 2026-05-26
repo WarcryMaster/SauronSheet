@@ -166,7 +166,8 @@ internal sealed class IngColumnThresholds
     /// returned as a non-null tuple (PCE-SLc).
     ///
     /// Words with Left &lt; <see cref="CategoryStart"/> (date / auxiliary columns)
-    /// are silently ignored.
+    /// are silently ignored. Words with Left ≥ <see cref="MonetaryZoneStart"/> (when set)
+    /// are excluded so that monetary tokens never contaminate text columns (PCE-SLd).
     /// </summary>
     public (string? Category, string? SubCategory, string? Description)?
         SplitWords(PositionedWord[] words)
@@ -182,11 +183,13 @@ internal sealed class IngColumnThresholds
         {
             var x = word.Left;
 
+            // Pre-category zone (date / F.VALOR column) — ignore
             if (x < CategoryStart)
-            {
-                // Pre-category zone (date / F.VALOR column) — ignore
                 continue;
-            }
+
+            // Monetary zone — exclude (same boundary as IngRawColumnExtractor, PCE-SLd)
+            if (MonetaryZoneStart.HasValue && x >= MonetaryZoneStart.Value)
+                continue;
 
             if (x < SubCategoryStart)
             {
