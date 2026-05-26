@@ -23,15 +23,17 @@ public class GenericBankPdfParser : IPdfParser
 
     public async Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream)
     {
-        var rows = new List<RawTransactionRow>();
+        ArgumentNullException.ThrowIfNull(pdfStream);
 
-        // PdfPig requires a byte array — read stream fully first
-        byte[] pdfBytes;
-        using (var ms = new MemoryStream())
-        {
-            await pdfStream.CopyToAsync(ms);
-            pdfBytes = ms.ToArray();
-        }
+        using MemoryStream memoryStream = new();
+        await pdfStream.CopyToAsync(memoryStream).ConfigureAwait(false);
+        return await ParseAsync(memoryStream.ToArray()).ConfigureAwait(false);
+    }
+
+    internal Task<List<RawTransactionRow>> ParseAsync(byte[] pdfBytes)
+    {
+        var rows = new List<RawTransactionRow>();
+        ArgumentNullException.ThrowIfNull(pdfBytes);
 
         SentrySdk.Logger?.LogInfo("GenericBankPdfParser: parsing PDF ({0} bytes)", pdfBytes.Length);
 
@@ -120,7 +122,7 @@ public class GenericBankPdfParser : IPdfParser
         }
 
         SentrySdk.Logger?.LogInfo("GenericBankPdfParser: parsed {0} raw rows from PDF", rows.Count);
-        return rows;
+        return Task.FromResult(rows);
     }
 
     private static bool IsCurrencyCode(string value) =>

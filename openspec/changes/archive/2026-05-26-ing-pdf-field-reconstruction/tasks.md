@@ -40,19 +40,19 @@ Chain strategy: feature-branch-chain
 ## Phase 2 — Cableado del Pipeline + Detección (PR 2)
 > Base: branch `slice/ing-pdf-field-reconstruction-pr1`
 
-- [ ] 2.1 [RED] Crear `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngBankPdfParserBlockTests.cs`: fixtures DAZN, parking, nómina, fila multilinea; caso IBR-4b (fallback conservador) en rojo
-- [ ] 2.2 [RED] Añadir tests de detección por cabecera en `AdaptivePdfParser` (IBR-5a, IBR-5b) en rojo
-- [ ] 2.3 [GREEN] Modificar `src/SauronSheet.Infrastructure/PDF/Parsers/IngBankPdfParser.cs`: eliminar `FlushRowBuffer`, `ParseMultiLineTransaction`, `ParseIngTransactionLine`; cablear pipeline `IngBlockAssembler → IngMonetaryExtractor`
-- [ ] 2.4 [GREEN] Modificar `src/SauronSheet.Infrastructure/PDF/Parsers/AdaptivePdfParser.cs`: añadir `HasIngHeader(Stream)`, reemplazar detección por row-count con header-scan O(1 páginas)
-- [ ] 2.5 [REFACTOR] Eliminar `src/SauronSheet.Infrastructure/PDF/Parsers/IngTransactionLineParser.cs` y `tests/SauronSheet.Infrastructure.Tests/PDF/IngTransactionLineParserTests.cs`; `dotnet test` en verde
+- [x] 2.1 [RED] Crear `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngBankPdfParserBlockTests.cs`: fixtures DAZN, parking, nómina, fila multilinea; caso IBR-4b (fallback conservador) en rojo
+- [x] 2.2 [RED] Añadir tests de detección por cabecera en `AdaptivePdfParser` (IBR-5a, IBR-5b) en rojo
+- [x] 2.3 [GREEN] Modificar `src/SauronSheet.Infrastructure/PDF/Parsers/IngBankPdfParser.cs`: eliminar `FlushRowBuffer`, `ParseMultiLineTransaction`, `ParseIngTransactionLine`; cablear pipeline `IngBlockAssembler → IngMonetaryExtractor`
+- [x] 2.4 [GREEN] Modificar `src/SauronSheet.Infrastructure/PDF/Parsers/AdaptivePdfParser.cs`: añadir `HasIngHeader(Stream)`, reemplazar detección por row-count con header-scan O(1 páginas)
+- [x] 2.5 [REFACTOR] Eliminar `src/SauronSheet.Infrastructure/PDF/Parsers/IngTransactionLineParser.cs` y `tests/SauronSheet.Infrastructure.Tests/PDF/IngTransactionLineParserTests.cs`; `dotnet test` en verde
 
 ---
 
 ## Phase 3 — Taxonomía + Delta Spec (PR 3)
 > Base: branch `slice/ing-pdf-field-reconstruction-pr2`
 
-- [ ] 3.1 [RED] Crear `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngControlledTaxonomyTests.cs` con casos IBR-3a, IBR-3b, IBR-3c, PCE-1a, PCE-1b, PCE-1c, PCE-1d en rojo
-- [ ] 3.2 [GREEN] Crear `src/SauronSheet.Infrastructure/PDF/Parsers/IngControlledTaxonomy.cs` (ordered dict L→R; `ExtractLeftToRight(text)` → `(cat?, subCat?, description)`; initial seed desde fixture enero 2025)
-- [ ] 3.3 [GREEN] Cablear `IngControlledTaxonomy.ExtractLeftToRight` en `IngBankPdfParser.cs` pipeline (tras `IngMonetaryExtractor`; source `RawOnly` si categoría no reconocida)
-- [ ] 3.4 [REFACTOR] Validar cobertura Infrastructure ≥ 70 %; revisar todos los paths `RawOnly` vs. null; `dotnet test` verde
-- [ ] 3.5 Modificar `openspec/specs/pdf-category-extraction/spec.md`: aplicar delta PCE-1 (path ING usa `IngControlledTaxonomy`; path no-ING sin lista cerrada)
+- [x] 3.1 [RED] Crear `tests/SauronSheet.Infrastructure.Tests/PDF/Parsers/IngControlledTaxonomyTests.cs` con casos IBR-3a, IBR-3b, IBR-3c, PCE-1a, PCE-1b, PCE-1c, PCE-1d en rojo
+- [x] 3.2 [GREEN] Crear `src/SauronSheet.Infrastructure/PDF/Parsers/IngControlledTaxonomy.cs` (ordered dict L→R; `ExtractLeftToRight(text)` → `(cat?, subCat?, description)`; initial seed desde fixture enero 2025)
+- [x] 3.3 [GREEN] Cablear `IngControlledTaxonomy.ExtractLeftToRight` en `IngBankPdfParser.cs` pipeline (tras `IngMonetaryExtractor`; source `RawOnly` si categoría no reconocida)
+- [x] 3.4 [REFACTOR] Validar cobertura Infrastructure ≥ 70 %; revisar todos los paths `RawOnly` vs. null; `dotnet test` verde
+- [x] 3.5 Modificar `openspec/specs/pdf-category-extraction/spec.md`: aplicar delta PCE-1 (path ING usa `IngControlledTaxonomy`; path no-ING sin lista cerrada)
