@@ -175,14 +175,11 @@ public class IngBankPdfParser : IPdfParser
             }
 
             // Strip the date prefix from CleanText to isolate the taxonomy/description text.
-            // CleanText = everything before the amount token, including "dd/mm/yyyy ".
+            // CleanText = everything before the amount token.
+            // When buffer lines are prepended before the anchor (IBR-1d/IBR-1e), the date may
+            // not be at position 0 of cleanText — search for it rather than slicing blindly.
             string cleanText = monetary.Value.CleanText;
-            string? taxonomyInput = cleanText.Length > block.Date.Length
-                ? cleanText[block.Date.Length..].Trim()
-                : null;
-
-            if (string.IsNullOrWhiteSpace(taxonomyInput))
-                taxonomyInput = null;
+            string? taxonomyInput = ExtractTaxonomyInput(cleanText, block.Date);
 
             // IBR-3: L→R taxonomy extraction — category, subcategory, description.
             // When no prefix matches (IsRawOnly=true), raw leading tokens are preserved as
@@ -469,7 +466,46 @@ public class IngBankPdfParser : IPdfParser
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // ParseTextColumns — kept for single-line tests (PCE-SLa/PCE-SLb)
+    // Taxonomy input extraction
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Extracts the taxonomy input text by stripping the date token from
+    /// <paramref name="cleanText"/> at whatever position it occurs.
+    ///
+    /// The standard case is that the date is at position 0 (no prepended buffer).
+    /// When the anchor-line assembler (IBR-1d/IBR-1e) prepends buffer lines,
+    /// the date token appears after the buffer content and must be found by
+    /// <see cref="string.IndexOf"/> rather than a fixed offset.
+    ///
+    /// Joining the <c>beforeDate</c> and <c>afterDate</c> fragments preserves
+    /// the buffer description so downstream taxonomy can classify the full
+    /// transaction context.
+    /// </summary>
+    private static string? ExtractTaxonomyInput(string cleanText, string date)
+    {
+        if (string.IsNullOrWhiteSpace(cleanText))
+            return null;
+
+        int dateIdx = cleanText.IndexOf(date, StringComparison.Ordinal);
+        if (dateIdx < 0)
+            return cleanText.Trim();
+
+        string afterDate = cleanText[(dateIdx + date.Length)..].Trim();
+
+        if (dateIdx == 0)
+            return string.IsNullOrWhiteSpace(afterDate) ? null : afterDate;
+
+        // Buffer lines were prepended before the anchor date (IBR-1d/IBR-1e)
+        string beforeDate = cleanText[..dateIdx].Trim();
+
+        if (string.IsNullOrWhiteSpace(afterDate))
+            return string.IsNullOrWhiteSpace(beforeDate) ? null : beforeDate;
+
+        return string.IsNullOrWhiteSpace(beforeDate) ? afterDate : $"{beforeDate} {afterDate}";
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // ────────────────────────────────────────────────────────────────────────
 
     /// <summary>

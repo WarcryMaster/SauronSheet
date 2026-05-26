@@ -12,7 +12,7 @@ con extracción numérica R→L y resolución de taxonomía L→R via `IngContro
 
 | ID    | Requisito | Escenarios |
 |-------|-----------|------------|
-| IBR-1 | El sistema MUST ensamblar exactamente un bloque lógico por transacción. Una transacción SÓLO comienza cuando la primera columna contiene una fecha `dd/mm/yyyy`. Las líneas sin fecha inicial MUST adjuntarse al bloque previo. | IBR-1a, IBR-1b, IBR-1c |
+| IBR-1 | El sistema MUST ensamblar exactamente un bloque lógico por transacción. Una transacción SÓLO comienza cuando la primera columna contiene una fecha `dd/mm/yyyy`. El tratamiento de las líneas sin fecha depende del estado del bloque abierto: (a) **bloque incompleto** (sin par importe/saldo aislable en la línea de fecha): las líneas sin fecha MUST adjuntarse al bloque previo (backward); (b) **bloque completo** (ancla fuerte: fecha + par importe/saldo aislable en la misma línea): las líneas sin fecha MUST acumularse en un buffer ambiguo que se antepone al siguiente bloque o se reaneja al actual en EOF. | IBR-1a, IBR-1b, IBR-1c, IBR-1d, IBR-1e, IBR-1f |
 | IBR-2 | El sistema MUST extraer importe y saldo mediante recorrido R→L sobre el bloque completo: el último token numérico es saldo, el penúltimo es importe. `COMENTARIO` MUST ser siempre `null`. | IBR-2a, IBR-2b |
 | IBR-3 | Sobre el texto limpio de importe y saldo, `IngControlledTaxonomy` MUST consumir categoría y subcategoría L→R. El texto restante MUST ser la descripción final. Categoría no reconocida MUST preservarse como `RawOnly` sin descartar la transacción. | IBR-3a, IBR-3b, IBR-3c |
 | IBR-4 | Si el bloque no permite aislar importe y fecha de valor, el parser MUST retornar `null` para esa transacción (fallback conservador). Taxonomía no reconocida NO activa fallback. | IBR-4a, IBR-4b |
@@ -37,6 +37,28 @@ con extracción numérica R→L y resolución de taxonomía L→R via `IngContro
 - GIVEN línea 1 con fecha `15/01/2025` y línea 2 con fecha `16/01/2025`
 - WHEN `IngBankPdfParser` ensambla bloques
 - THEN cada línea produce un bloque independiente
+
+### IBR-1d: Nómina — ancla fuerte en medio
+
+- GIVEN bloque previo completo seguido de (1) línea sin fecha `NÓMINA EMPRESA S.L.`, (2) línea `15/01/2025 Nominas 2.500,00 3.200,00` con ancla fuerte, (3) línea sin fecha `ENERO 2025`
+- WHEN `IngBlockAssembler` ensambla los bloques
+- THEN la línea (1) se antepone al bloque de la línea (2) mediante buffer ambiguo
+- AND la línea (3) se adjunta al mismo bloque en EOF
+- AND el bloque previo NO contiene las líneas (1) ni (3)
+
+### IBR-1e: Buffer ambiguo reasignado hacia delante
+
+- GIVEN bloque A con ancla fuerte completa, seguido de línea `FRAGMENTO` sin fecha, seguido de bloque B con nueva ancla fuerte
+- WHEN `IngBlockAssembler` ensambla los bloques
+- THEN `FRAGMENTO` se antepone al bloque B
+- AND el bloque A no contiene `FRAGMENTO`
+
+### IBR-1f: Regresión repeated-page-header — backward preservado
+
+- GIVEN bloque incompleto abierto (sin par importe/saldo aislable en la línea de fecha)
+- WHEN llega una línea sin fecha (p. ej. continuación de página 2 tras eliminar cabecera repetida)
+- THEN la línea sin fecha se adjunta al bloque previo (backward)
+- AND no se crea ningún bloque nuevo erróneo
 
 ---
 
