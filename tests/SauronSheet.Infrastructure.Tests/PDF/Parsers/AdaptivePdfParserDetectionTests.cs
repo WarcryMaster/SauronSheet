@@ -72,6 +72,36 @@ public class AdaptivePdfParserDetectionTests
         Assert.Equal("EUR", rows[0].Currency);
     }
 
+    /// <summary>
+    /// PCE-1f: a non-ING document must be routed to the generic parser and must NOT
+    /// have ING geometry-based column extraction applied — Category and SubCategory
+    /// must be null because GenericBankPdfParser has no column-zone logic.
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_IngHeaderAbsent_CategoryAndSubCategoryAreNull_PCE1f()
+    {
+        // Arrange — no ING header ("F. VALOR CATEGORÍA") present in the document
+        var ingParser    = new IngBankPdfParser();
+        var genericParser = new GenericBankPdfParser();
+        var parser = new AdaptivePdfParser(ingParser, genericParser);
+
+        using MemoryStream pdfStream = CreatePdfWithLines(
+        [
+            "EXTRACTO",
+            "15/01/2025 Pago nomina empresa -1500.00 EUR",
+        ]);
+
+        // Act
+        List<RawTransactionRow> rows = await parser.ParseAsync(pdfStream);
+
+        // Assert — PCE-1f: generic parser dispatched; no ING column-zone logic applied
+        Assert.Single(rows);
+        Assert.Equal("15/01/2025", rows[0].Date);
+        Assert.Null(rows[0].Category);    // PCE-1f: GenericBankPdfParser never sets Category
+        Assert.Null(rows[0].SubCategory); // PCE-1f: GenericBankPdfParser never sets SubCategory
+        Assert.NotNull(rows[0].Description); // generic parser populates description from text
+    }
+
     private static MemoryStream CreatePdfWithLines(IReadOnlyList<string> lines)
     {
         ArgumentNullException.ThrowIfNull(lines);

@@ -271,6 +271,8 @@ public class IngBankPdfParserBlockTests
         Assert.Equal("15/01/2025", rows[0].Date);
         Assert.Equal("-12.99",     rows[0].Amount);
         Assert.Equal("1234.56",    rows[0].Balance);
+        Assert.Null(rows[0].Category);    // IBR-3e: no X geometry → conservative null
+        Assert.Null(rows[0].SubCategory); // IBR-3e: no X geometry → conservative null
         Assert.Null(rows[0].Comment);
     }
 
@@ -291,6 +293,8 @@ public class IngBankPdfParserBlockTests
         Assert.Equal("16/01/2025", rows[0].Date);
         Assert.Equal("-3.00",      rows[0].Amount);
         Assert.Equal("1231.56",    rows[0].Balance);
+        Assert.Null(rows[0].Category);    // IBR-3e: no X geometry → conservative null
+        Assert.Null(rows[0].SubCategory); // IBR-3e: no X geometry → conservative null
         Assert.Null(rows[0].Comment);
     }
 
@@ -312,6 +316,8 @@ public class IngBankPdfParserBlockTests
         Assert.Equal("15/01/2025", rows[0].Date);
         Assert.Equal("3200.00",    rows[0].Amount);
         Assert.Equal("4500.00",    rows[0].Balance);
+        Assert.Null(rows[0].Category);    // IBR-3e: no X geometry → conservative null
+        Assert.Null(rows[0].SubCategory); // IBR-3e: no X geometry → conservative null
         Assert.Null(rows[0].Comment);
     }
 
@@ -333,7 +339,10 @@ public class IngBankPdfParserBlockTests
         Assert.Equal("20/01/2025", rows[0].Date);
         Assert.Equal("-12.99",     rows[0].Amount);
         Assert.Equal("1221.57",    rows[0].Balance);
-        Assert.NotNull(rows[0].Description); // description populated from clean text
+        Assert.NotNull(rows[0].Description);
+        // Concrete content: anchor line contributes "DAZN"; continuation contributes "Suscripción mensual"
+        Assert.Contains("DAZN",                rows[0].Description, StringComparison.Ordinal);
+        Assert.Contains("Suscripción mensual", rows[0].Description, StringComparison.Ordinal);
     }
 
     [Fact]

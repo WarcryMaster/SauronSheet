@@ -16,7 +16,7 @@ using System.Linq;
 ///         continuation lines; null when the description zone is empty.</item>
 /// </list>
 ///
-/// Unlike <see cref="IngTaxonomyResult"/>, this struct never invents category values:
+/// Unlike the deleted taxonomy-based approach, this struct never invents category values:
 /// it preserves PDF literals exactly or returns null (conservative fallback — IBR-3e).
 /// </summary>
 internal readonly record struct IngRawColumnResult(
