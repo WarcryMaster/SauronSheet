@@ -15,33 +15,28 @@ using UglyToad.PdfPig.Content;
 
 public class IngBankPdfParser : IPdfParser
 {
-    // Regex para detectar líneas que empiezan con una fecha DD/MM/YYYY
-    private static readonly Regex DatePattern = new(
-        @"^\d{2}/\d{2}/\d{4}",
+    private static readonly Regex MonetaryTokenPattern = new(
+        @"^-?\d[\d.,]*[,\.]\d{2}$",
         RegexOptions.Compiled);
 
-    // Regex para extraer importes (positivos y negativos, con decimales)
-    private static readonly Regex AmountPattern = new(
-        @"-?[\d.,]+",
-        RegexOptions.Compiled);
-
-    // Regex para detectar si una línea completa es un número (importe o saldo en formato multi-línea)
-    private static readonly Regex NumericLinePattern = new(
-        @"^-?[\d]+[.,\d]*$",
-        RegexOptions.Compiled);
-
-    public Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream)
+    public async Task<List<RawTransactionRow>> ParseAsync(Stream pdfStream)
     {
+        ArgumentNullException.ThrowIfNull(pdfStream);
+
+        using MemoryStream memoryStream = new();
+        await pdfStream.CopyToAsync(memoryStream).ConfigureAwait(false);
+        return await ParseAsync(memoryStream.ToArray()).ConfigureAwait(false);
+    }
+
+    internal Task<List<RawTransactionRow>> ParseAsync(byte[] pdfBytes)
+    {
+        ArgumentNullException.ThrowIfNull(pdfBytes);
+
         var rows = new List<RawTransactionRow>();
 
         SentrySdk.Logger?.LogInfo("IngBankPdfParser: attempting to parse ING Bank PDF format");
         try
         {
-            // PdfPig necesita un byte array o un file path
-            using var memoryStream = new MemoryStream();
-            pdfStream.CopyTo(memoryStream);
-            var pdfBytes = memoryStream.ToArray();
-
             using var document = PdfDocument.Open(pdfBytes);
             var allLines = new List<IngLineData>();
             var pageCount = document.NumberOfPages;
@@ -51,23 +46,28 @@ public class IngBankPdfParser : IPdfParser
                 "pdf.parse",
                 data: new Dictionary<string, string> { ["pages"] = pageCount.ToString() });
 
-            // 1. Extraer todas las líneas con sus posiciones X por página
+            // 1. Extract all lines with positions from every page
             var pageNumber = 0;
             foreach (var page in document.GetPages())
             {
                 pageNumber++;
                 var words = page.GetWords().ToList();
                 var reconstructedLines = ReconstructLinesFromWords(words);
-                allLines.AddRange(reconstructedLines);
+                IReadOnlyList<IngLineData> sanitizedLines = pageNumber == 1
+                    ? reconstructedLines
+                    : StripLeadingRepeatedPageHeaderSection(reconstructedLines);
+
+                allLines.AddRange(sanitizedLines);
 
                 SentrySdk.AddBreadcrumb(
-                    $"Page {pageNumber}: {words.Count} words → {reconstructedLines.Count} lines",
+                    $"Page {pageNumber}: {words.Count} words → {reconstructedLines.Count} lines ({sanitizedLines.Count} kept)",
                     "pdf.parse",
                     data: new Dictionary<string, string>
                     {
                         ["page"] = pageNumber.ToString(),
                         ["words"] = words.Count.ToString(),
-                        ["lines"] = reconstructedLines.Count.ToString()
+                        ["lines"] = reconstructedLines.Count.ToString(),
+                        ["keptLines"] = sanitizedLines.Count.ToString()
                     });
             }
 
@@ -76,126 +76,37 @@ public class IngBankPdfParser : IPdfParser
                 "pdf.parse",
                 data: new Dictionary<string, string> { ["totalLines"] = allLines.Count.ToString() });
 
-            // 2. Parsear las líneas extraídas (soportar filas multi-línea)
-            var rowNumber = 0;
-            var isDataSection = false;
-            var skippedLines = 0;
-            var failedLines = 0;
-            var dateLineCount = 0;
-
-            // Umbrales X del header de la página actual (re-calibrado en cada header detectado)
-            IngColumnThresholds? pageThresholds = null;
-
-            // Buffer para filas multi-línea
-            List<IngLineData> rowBuffer = new();
-
-            void FlushRowBuffer()
+            // 2. Locate the ING header line to find the start of the data section
+            var headerLineIndex = -1;
+            for (var i = 0; i < allLines.Count; i++)
             {
-                if (rowBuffer.Count == 0) return;
-
-                RawTransactionRow? parsed;
-                string rawLineForLog;
-
-                if (rowBuffer.Count == 1)
+                if (HasIngHeaderInLines([allLines[i]]))
                 {
-                    var lineData = rowBuffer[0];
-                    var singleLine = lineData.Text.Trim();
-                    rawLineForLog = singleLine;
-
-                    // Skip bare date-only lines (F. OPERACIÓN date with no transaction data)
-                    var dateOnlyRemainder = singleLine.Substring(Math.Min(10, singleLine.Length)).Trim();
-                    if (singleLine.Length <= 10 || string.IsNullOrWhiteSpace(dateOnlyRemainder))
-                    {
-                        SentrySdk.AddBreadcrumb(
-                            "Skipping date-only line (operation date without transaction data)",
-                            "pdf.row",
-                            data: new Dictionary<string, string> { ["line"] = singleLine });
-                        rowBuffer.Clear();
-                        return;
-                    }
-
-                    rowNumber++;
-                    parsed = ParseIngTransactionLine(lineData, rowNumber, pageThresholds);
-                }
-                else
-                {
-                    rawLineForLog = string.Join(" | ", rowBuffer.Take(3).Select(x => x.Text));
-                    rowNumber++;
-                    parsed = ParseMultiLineTransaction(rowBuffer, rowNumber);
-                }
-
-                if (parsed != null)
-                {
-                    rows.Add(parsed);
-                    SentrySdk.AddBreadcrumb(
-                        $"Row {rowNumber} parsed: {parsed.Date} | {parsed.Description} | {parsed.Amount}",
-                        "pdf.row",
-                        data: new Dictionary<string, string>
-                        {
-                            ["row"] = rowNumber.ToString(),
-                            ["date"] = parsed.Date ?? "",
-                            ["description"] = parsed.Description ?? "",
-                            ["amount"] = parsed.Amount ?? "",
-                            ["rawLine"] = rawLineForLog.Length > 200 ? rawLineForLog[..200] : rawLineForLog
-                        });
-                }
-                else
-                {
-                    failedLines++;
-                    SentrySdk.AddBreadcrumb(
-                        $"Row {rowNumber} FAILED to parse",
-                        "pdf.row",
-                        level: BreadcrumbLevel.Warning,
-                        data: new Dictionary<string, string>
-                        {
-                            ["row"] = rowNumber.ToString(),
-                            ["rawLine"] = rawLineForLog.Length > 200 ? rawLineForLog[..200] : rawLineForLog
-                        });
-                }
-                rowBuffer.Clear();
-            }
-
-            foreach (var lineData in allLines)
-            {
-                var trimmed = lineData.Text.Trim();
-
-                // Detectar inicio de la sección de datos (después del header) y capturar umbrales X
-                if (trimmed.Contains("F. VALOR") && trimmed.Contains("CATEGORÍA"))
-                {
-                    SentrySdk.Logger?.LogDebug("IngBankPdfParser: detected ING header section");
+                    headerLineIndex = i;
+                    SentrySdk.Logger?.LogDebug("IngBankPdfParser: detected ING header at line {0}", i);
                     SentrySdk.AddBreadcrumb("Header section detected", "pdf.parse");
-                    pageThresholds = IngColumnThresholds.FromHeaderWords(lineData.Words);
-                    isDataSection = true;
-                    continue;
+                    break;
                 }
-
-                if (!isDataSection)
-                {
-                    skippedLines++;
-                    continue;
-                }
-
-                // Si la línea empieza con fecha, es inicio de nueva transacción
-                if (DatePattern.IsMatch(trimmed))
-                {
-                    // Si hay buffer, procesar la fila anterior
-                    FlushRowBuffer();
-                    dateLineCount++;
-                    rowBuffer.Add(lineData);
-                }
-                else if (rowBuffer.Count > 0)
-                {
-                    // Si ya hay una fila en buffer, agregar líneas adicionales
-                    rowBuffer.Add(lineData);
-                }
-                // Si no hay buffer y la línea no empieza con fecha, ignorar
             }
-            // Procesar la última fila en buffer
-            FlushRowBuffer();
 
-            SentrySdk.Logger?.LogDebug("IngBankPdfParser complete: {0} parsed, {1} failed, {2} date-lines found, {3} pre-header lines skipped", rows.Count, failedLines, dateLineCount, skippedLines);
+            if (headerLineIndex < 0)
+            {
+                SentrySdk.Logger?.LogDebug(
+                    "IngBankPdfParser: ING header not found — returning empty result");
+                return Task.FromResult(rows);
+            }
 
-            SentrySdk.Logger?.LogDebug("IngBankPdfParser: parsed {0} transactions from ING PDF", rows.Count);
+            // 3. Wire the block-first pipeline for all data lines after the first header.
+            // Repeated per-page headers are stripped during per-page extraction so they
+            // cannot contaminate the previous open block as continuation text.
+            IReadOnlyList<IngLineData> dataLines = allLines
+                .Skip(headerLineIndex + 1)
+                .ToArray();
+
+            rows.AddRange(ProcessBlocks(dataLines));
+
+            SentrySdk.Logger?.LogDebug(
+                "IngBankPdfParser complete: {0} rows parsed", rows.Count);
         }
         catch (Exception ex) when (ex.Message.Contains("password") ||
                                     ex.Message.Contains("encrypted"))
@@ -214,20 +125,313 @@ public class IngBankPdfParser : IPdfParser
         return Task.FromResult(rows);
     }
 
+    // ────────────────────────────────────────────────────────────────────────
+    // Block-first pipeline (IBR-1 → IBR-2 → IBR-3 → IBR-4)
+    // ────────────────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Reconstruye líneas a partir de las palabras y sus posiciones Y en la página.
-    /// Las palabras con la misma coordenada Y (±tolerancia) pertenecen a la misma línea.
-    /// Devuelve <see cref="IngLineData"/> que lleva tanto el texto como las posiciones X
-    /// de cada palabra para permitir segmentación posterior de columnas.
+    /// Processes a flat list of physical data lines through the block-first pipeline:
+    /// <list type="number">
+    ///   <item><see cref="IngBlockAssembler.Assemble"/> — groups lines into logical blocks.</item>
+    ///   <item><see cref="IngMonetaryExtractor.ExtractRightToLeft"/> — R→L monetary extraction.</item>
+    ///   <item><see cref="IngControlledTaxonomy.ExtractLeftToRight"/> — L→R taxonomy extraction
+    ///         for category, subcategory and clean description (IBR-3).</item>
+    ///   <item>Emits <see cref="RawTransactionRow"/> for each block with two isolated monetary tokens.</item>
+    /// </list>
+    /// When the taxonomy does not recognise the category prefix, the raw leading tokens are
+    /// preserved as the category literal (<see cref="IngTaxonomyResult.IsRawOnly"/> = true; IBR-3b, PCE-1a).
+    /// </summary>
+    /// <param name="dataLines">
+    /// Physical PDF lines from the data section (all lines <em>after</em> the ING header line).
+    /// </param>
+    /// <returns>
+    /// Ordered list of successfully parsed rows. Blocks without two monetary tokens are silently
+    /// skipped (IBR-4a conservador fallback).
+    /// </returns>
+    internal static IReadOnlyList<RawTransactionRow> ProcessBlocks(
+        IReadOnlyList<IngLineData> dataLines)
+    {
+        ArgumentNullException.ThrowIfNull(dataLines);
+
+        var rows = new List<RawTransactionRow>();
+        int rowNumber = 1;
+
+        IReadOnlyList<IngBlock> blocks = IngBlockAssembler.Assemble(dataLines);
+
+        foreach (IngBlock block in blocks)
+        {
+            // IBR-4a: no two monetary tokens → skip (fallback conservador)
+            IngMonetaryResult? monetary =
+                IngMonetaryExtractor.ExtractRightToLeft(block.FullText);
+
+            if (monetary is null)
+            {
+                SentrySdk.AddBreadcrumb(
+                    $"Block {block.Date} skipped: fewer than 2 monetary tokens (IBR-4a)",
+                    "pdf.row",
+                    level: BreadcrumbLevel.Warning,
+                    data: new Dictionary<string, string> { ["date"] = block.Date });
+                continue;
+            }
+
+            // Strip the date prefix from CleanText to isolate the taxonomy/description text.
+            // CleanText = everything before the amount token, including "dd/mm/yyyy ".
+            string cleanText = monetary.Value.CleanText;
+            string? taxonomyInput = cleanText.Length > block.Date.Length
+                ? cleanText[block.Date.Length..].Trim()
+                : null;
+
+            if (string.IsNullOrWhiteSpace(taxonomyInput))
+                taxonomyInput = null;
+
+            // IBR-3: L→R taxonomy extraction — category, subcategory, description.
+            // When no prefix matches (IsRawOnly=true), raw leading tokens are preserved as
+            // the category literal (IBR-3b, PCE-1a). Taxonomy never returns null for a
+            // non-empty input — it always produces at least a RawOnly result.
+            IngTaxonomyResult taxonomy =
+                IngControlledTaxonomy.ExtractLeftToRight(taxonomyInput);
+
+            var row = new RawTransactionRow(
+                rowNumber++,
+                block.Date,
+                taxonomy.Category,
+                taxonomy.SubCategory,
+                taxonomy.Description,
+                null,                        // Comment — IBR-2b: always null for ING
+                monetary.Value.Amount,
+                monetary.Value.Balance);
+
+            rows.Add(row);
+
+            SentrySdk.AddBreadcrumb(
+                $"Row {rowNumber - 1} parsed: {block.Date} | {taxonomy.Description} | {monetary.Value.Amount} (rawOnly={taxonomy.IsRawOnly})",
+                "pdf.row",
+                data: new Dictionary<string, string>
+                {
+                    ["row"] = (rowNumber - 1).ToString(CultureInfo.InvariantCulture),
+                    ["date"] = block.Date,
+                    ["category"] = taxonomy.Category ?? string.Empty,
+                    ["subCategory"] = taxonomy.SubCategory ?? string.Empty,
+                    ["description"] = taxonomy.Description ?? string.Empty,
+                    ["amount"] = monetary.Value.Amount,
+                    ["rawOnly"] = taxonomy.IsRawOnly.ToString()
+                });
+        }
+
+        SentrySdk.Logger?.LogDebug(
+            "IngBankPdfParser.ProcessBlocks: {0} blocks assembled, {1} rows emitted",
+            blocks.Count,
+            rows.Count);
+
+        return rows;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Header detection (IBR-5)
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns <see langword="true"/> when any line in <paramref name="lines"/> contains
+    /// both <c>"F. VALOR"</c> and <c>"CATEGORÍA"</c> — the two tokens that uniquely identify
+    /// an ING Bank statement header (IBR-5a/5b).
+    ///
+    /// This method is used by <see cref="AdaptivePdfParser"/> for O(1-page) format detection
+    /// without requiring a full parse attempt.
+    /// </summary>
+    internal static bool HasIngHeaderInLines(IReadOnlyList<IngLineData> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+
+        foreach (IngLineData line in lines)
+        {
+            string trimmed = line.Text.Trim();
+            if (trimmed.Contains("F. VALOR", StringComparison.Ordinal) &&
+                trimmed.Contains("CATEGORÍA", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Removes the repeated ING page-header section from a page-local line list.
+    ///
+    /// Repeated headers can span multiple non-date lines around the ING column-header
+    /// row. The parser strips the whole leading section and stops at the first line
+    /// that looks like transaction data so continuation rows can still flow into block
+    /// assembly.
+    /// </summary>
+    internal static IReadOnlyList<IngLineData> StripLeadingRepeatedPageHeaderSection(
+        IReadOnlyList<IngLineData> pageLines)
+    {
+        ArgumentNullException.ThrowIfNull(pageLines);
+
+        var headerLineIndex = -1;
+        for (var i = 0; i < pageLines.Count; i++)
+        {
+            if (HasIngHeaderInLines([pageLines[i]]))
+            {
+                headerLineIndex = i;
+                break;
+            }
+        }
+
+        if (headerLineIndex < 0)
+            return pageLines.ToArray();
+
+        int searchStartIndex = headerLineIndex + 1;
+        int firstTransactionDateIndex = -1;
+        int firstMonetaryLineIndex = -1;
+
+        for (int index = searchStartIndex; index < pageLines.Count; index++)
+        {
+            string trimmed = pageLines[index].Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(trimmed))
+                continue;
+
+            if (StartsWithTransactionDate(trimmed))
+            {
+                firstTransactionDateIndex = index;
+                break;
+            }
+
+            if (firstMonetaryLineIndex < 0 && ContainsMonetaryToken(trimmed))
+                firstMonetaryLineIndex = index;
+        }
+
+        if (firstTransactionDateIndex >= 0)
+        {
+            int contentStartIndex = FindLeadingContentStartIndex(
+                pageLines,
+                firstTransactionDateIndex,
+                searchStartIndex);
+
+            return pageLines.Skip(contentStartIndex).ToArray();
+        }
+
+        if (firstMonetaryLineIndex >= 0)
+        {
+            int contentStartIndex = FindLeadingContentStartIndex(
+                pageLines,
+                firstMonetaryLineIndex,
+                searchStartIndex);
+
+            return pageLines.Skip(contentStartIndex).ToArray();
+        }
+
+        int firstContinuationContentIndex = FindFirstContinuationContentIndex(pageLines, searchStartIndex);
+        return firstContinuationContentIndex >= 0
+            ? pageLines.Skip(firstContinuationContentIndex).ToArray()
+            : [];
+    }
+
+    private static int FindLeadingContentStartIndex(
+        IReadOnlyList<IngLineData> pageLines,
+        int anchorIndex,
+        int minimumIndex)
+    {
+        int contentStartIndex = anchorIndex;
+
+        for (int index = FindPreviousNonEmptyLineIndex(pageLines, anchorIndex - 1, minimumIndex);
+             index >= minimumIndex;
+             index = FindPreviousNonEmptyLineIndex(pageLines, index - 1, minimumIndex))
+        {
+            string trimmed = pageLines[index].Text.Trim();
+            if (IsRepeatedPageHeaderLine(trimmed) || StartsWithTransactionDate(trimmed))
+                break;
+
+            contentStartIndex = index;
+        }
+
+        return contentStartIndex;
+    }
+
+    private static int FindFirstContinuationContentIndex(
+        IReadOnlyList<IngLineData> pageLines,
+        int startIndex)
+    {
+        for (int index = startIndex; index < pageLines.Count; index++)
+        {
+            string trimmed = pageLines[index].Text.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed) || IsRepeatedPageHeaderLine(trimmed))
+                continue;
+
+            return index;
+        }
+
+        return -1;
+    }
+
+    private static int FindPreviousNonEmptyLineIndex(
+        IReadOnlyList<IngLineData> pageLines,
+        int startIndex,
+        int minimumIndex)
+    {
+        for (int index = startIndex; index >= minimumIndex; index--)
+        {
+            if (string.IsNullOrWhiteSpace(pageLines[index].Text))
+                continue;
+
+            return index;
+        }
+
+        return -1;
+    }
+
+    private static bool ContainsMonetaryToken(string text)
+    {
+        string[] tokens = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string token in tokens)
+        {
+            if (MonetaryTokenPattern.IsMatch(token))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsRepeatedPageHeaderLine(string text)
+    {
+        return text.StartsWith("Página ", StringComparison.Ordinal) ||
+               text.StartsWith("Saldo anterior", StringComparison.Ordinal) ||
+               text.Contains("Cuenta NARANJA", StringComparison.Ordinal) ||
+               text.Contains("Resumen de movimientos", StringComparison.Ordinal);
+    }
+
+    private static bool StartsWithTransactionDate(string text)
+    {
+        return text.Length >= 10 &&
+               char.IsDigit(text[0]) &&
+               char.IsDigit(text[1]) &&
+               text[2] == '/' &&
+               char.IsDigit(text[3]) &&
+               char.IsDigit(text[4]) &&
+               text[5] == '/' &&
+               char.IsDigit(text[6]) &&
+               char.IsDigit(text[7]) &&
+               char.IsDigit(text[8]) &&
+               char.IsDigit(text[9]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Line reconstruction (unchanged from original — supports single-line tests)
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Reconstructs lines from the positioned words on a PDF page.
+    /// Words with the same Y coordinate (within a tolerance) belong to the same line.
+    /// Returns <see cref="IngLineData"/> carrying both text and X-positioned words.
     /// </summary>
     private List<IngLineData> ReconstructLinesFromWords(List<Word> words)
     {
         if (!words.Any())
             return new List<IngLineData>();
 
-        const double yTolerance = 3.0; // Tolerancia en puntos para agrupar en la misma línea
+        const double yTolerance = 3.0;
 
-        // Agrupar palabras por su posición Y (de arriba a abajo)
         var lineGroups = new List<List<Word>>();
         var sortedByY = words.OrderByDescending(w => w.BoundingBox.Bottom).ToList();
 
@@ -240,7 +444,6 @@ public class IngBankPdfParser : IPdfParser
 
             if (currentLine == null || Math.Abs(wordY - currentY) > yTolerance)
             {
-                // Nueva línea
                 currentLine = new List<Word> { word };
                 lineGroups.Add(currentLine);
                 currentY = wordY;
@@ -251,8 +454,6 @@ public class IngBankPdfParser : IPdfParser
             }
         }
 
-        // Ordenar palabras dentro de cada línea por posición X (izquierda a derecha)
-        // y construir IngLineData con texto + words posicionadas
         var result = new List<IngLineData>();
         foreach (var group in lineGroups)
         {
@@ -267,242 +468,18 @@ public class IngBankPdfParser : IPdfParser
         return result;
     }
 
+    // ────────────────────────────────────────────────────────────────────────
+    // ParseTextColumns — kept for single-line tests (PCE-SLa/PCE-SLb)
+    // ────────────────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Parsea un bloque multi-línea de transacción ING.
-    /// Maneja dos casos:
-    /// 1. Línea 0 con datos completos: [0]=Fecha+Categoría+Subcategoría+Descripción+Importe+Saldo, [1+]=Descripción adicional
-    /// 2. Línea 0 con solo fecha: [0]=Fecha, [1]=Categoría, [2]=Subcategoría, [3..n-2]=Descripción, [n-1]=Importe, [n]=Saldo
+    /// Extracts category, subcategory, description, and comment from the text of a
+    /// single-line ING row when X-position geometry is available.
     ///
-    /// PCE-SLd: el path multi-línea usa únicamente el texto de cada línea (.Text).
-    /// No se propagan coordenadas X ni umbrales al extractor multi-línea.
-    /// </summary>
-    private RawTransactionRow? ParseMultiLineTransaction(List<IngLineData> lines, int rowNumber)
-    {
-        try
-        {
-            var firstLine = lines[0].Text.Trim();
-            var dateMatch = DatePattern.Match(firstLine);
-            if (!dateMatch.Success) return null;
-
-            string? date = dateMatch.Value;
-
-            // Intenta parsear línea 0 como una línea completa (contiene fecha + datos + números)
-            string? amount = null;
-            string? balance = null;
-            string? textPart = firstLine.Substring(dateMatch.Length).Trim();
-
-            // Buscar números al final de la primera línea
-            List<string> firstLineNumbers = ExtractTrailingNumbers(textPart);
-
-            if (firstLineNumbers.Count >= 2)
-            {
-                // Línea 0 contiene importe y saldo: delegar al path single-line
-                // PCE-SLd: multi-line path no propaga posiciones — thresholds: null
-                RawTransactionRow? result = ParseIngTransactionLine(lines[0], rowNumber, thresholds: null);
-
-                if (result != null && lines.Count > 1)
-                {
-                    // Si hay líneas adicionales, concatenarlas a la descripción
-                    List<string> additionalLines = new();
-                    for (int i = 1; i < lines.Count; i++)
-                    {
-                        string trimmedAdditional = lines[i].Text.Trim();
-                        if (!string.IsNullOrWhiteSpace(trimmedAdditional))
-                        {
-                            additionalLines.Add(trimmedAdditional);
-                        }
-                    }
-
-                    if (additionalLines.Count > 0)
-                    {
-                        string additionalDesc = string.Join(" ", additionalLines);
-                        string combinedDesc = string.IsNullOrEmpty(result.Description)
-                            ? additionalDesc
-                            : $"{result.Description} {additionalDesc}";
-
-                        result = result with { Description = combinedDesc };
-                    }
-                }
-
-                return result;
-            }
-
-            // Caso 2: Línea 0 solo contiene fecha; buscar números en líneas posteriores
-            int firstNumericIndex = lines.Count;
-
-            for (int i = lines.Count - 1; i >= 1; i--)
-            {
-                string trimmed = lines[i].Text.Trim();
-                if (NumericLinePattern.IsMatch(trimmed))
-                {
-                    if (balance == null)
-                    {
-                        balance = trimmed;
-                        firstNumericIndex = i;
-                    }
-                    else if (amount == null)
-                    {
-                        amount = trimmed;
-                        firstNumericIndex = i;
-                        break;
-                    }
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            // Líneas de texto: desde índice 1 hasta firstNumericIndex (exclusive)
-            List<string> textLines = new();
-            for (int i = 1; i < firstNumericIndex; i++)
-            {
-                string trimmedLine = lines[i].Text.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmedLine))
-                {
-                    textLines.Add(trimmedLine);
-                }
-            }
-
-            // PCE-SLd: multi-line extraction — position-first by line order, no X coordinates.
-            // textLines[0] → category, textLines[1] → subcategory, textLines[2+] → description.
-            var (category, subCategory, description) =
-                IngTransactionLineParser.ExtractFromMultiLine(textLines);
-
-            return new RawTransactionRow(
-                rowNumber, date, category, subCategory, description, null,
-                NormalizeAmount(amount), NormalizeAmount(balance));
-        }
-        catch (Exception ex)
-        {
-            SentrySdk.AddBreadcrumb(
-                $"Row {rowNumber} multi-line exception: {ex.Message}",
-                "pdf.row",
-                level: BreadcrumbLevel.Error,
-                data: new Dictionary<string, string>
-                {
-                    ["row"] = rowNumber.ToString(),
-                    ["error"] = ex.Message
-                });
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Parsea una línea de transacción del formato ING (path single-line).
-    /// Formato esperado: DD/MM/YYYY Categoría Subcategoría Descripción [Comentario] Importe Saldo
-    /// </summary>
-    private RawTransactionRow? ParseIngTransactionLine(
-        IngLineData lineData,
-        int rowNumber,
-        IngColumnThresholds? thresholds = null)
-    {
-        try
-        {
-            var line = lineData.Text;
-
-            // Extraer la fecha (primeros 10 caracteres)
-            var dateMatch = DatePattern.Match(line);
-            if (!dateMatch.Success)
-                return null;
-
-            var date = dateMatch.Value;
-            var remainder = line.Substring(dateMatch.Length).Trim();
-
-            // Extraer los números del final (Importe y Saldo)
-            var numbers = ExtractTrailingNumbers(remainder);
-
-            string? amount = null;
-            string? balance = null;
-            string? textPart = remainder;
-
-            if (numbers.Count >= 2)
-            {
-                balance = numbers[^1];
-                amount = numbers[^2];
-
-                // Remover los números del texto
-                var lastNumberIndex = remainder.LastIndexOf(numbers[^1]);
-                if (lastNumberIndex > 0)
-                {
-                    var secondLastIndex = remainder.LastIndexOf(numbers[^2], lastNumberIndex - 1);
-                    if (secondLastIndex > 0)
-                    {
-                        textPart = remainder.Substring(0, secondLastIndex).Trim();
-                    }
-                }
-            }
-            else if (numbers.Count == 1)
-            {
-                amount = numbers[0];
-                var lastIndex = remainder.LastIndexOf(numbers[0]);
-                if (lastIndex > 0)
-                    textPart = remainder.Substring(0, lastIndex).Trim();
-            }
-
-            // Intentar separar Categoría, Subcategoría, Descripción del texto
-            // usando coordenadas X cuando están disponibles (PCE-SL)
-            var (category, subCategory, description, comment) =
-                ParseTextColumns(textPart, lineData.Words, thresholds);
-
-            return new RawTransactionRow(
-                rowNumber,
-                date,
-                category,
-                subCategory,
-                description,
-                comment,
-                NormalizeAmount(amount),
-                NormalizeAmount(balance)
-            );
-        }
-        catch (Exception ex)
-        {
-            SentrySdk.AddBreadcrumb(
-                $"Row {rowNumber} exception: {ex.Message}",
-                "pdf.row",
-                level: BreadcrumbLevel.Error,
-                data: new Dictionary<string, string>
-                {
-                    ["row"] = rowNumber.ToString(),
-                    ["error"] = ex.Message,
-                    ["rawLine"] = lineData.Text.Length > 200 ? lineData.Text[..200] : lineData.Text
-                });
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Extrae los números del final de la cadena (importe y saldo).
-    /// </summary>
-    private List<string> ExtractTrailingNumbers(string text)
-    {
-        // Patrón para números con formato europeo: -1.000,00 o 1,000.00
-        var numberPattern = new Regex(@"-?[\d]+[.,\d]*");
-        var matches = numberPattern.Matches(text);
-
-        var numbers = new List<string>();
-        foreach (Match match in matches)
-        {
-            // Verificar que parece un número válido (tiene al menos un dígito)
-            if (match.Value.Any(char.IsDigit))
-            {
-                numbers.Add(match.Value);
-            }
-        }
-
-        return numbers;
-    }
-
-    /// <summary>
-    /// Extrae categoría, subcategoría, descripción y comentario del texto de la
-    /// parte central de una línea single-line (después de quitar fecha y números finales).
-    ///
-    /// Cuando se proporcionan <paramref name="words"/> y <paramref name="thresholds"/>,
-    /// intenta segmentar las columnas usando las coordenadas X de las palabras (PCE-SL).
-    /// Si la segmentación no produce señal de categoría (PCE-SLb) o los parámetros de
-    /// posición no están disponibles, aplica el fallback conservador: todo el texto se
-    /// devuelve como descripción y categoría/subcategoría quedan en null.
+    /// When <paramref name="words"/> and <paramref name="thresholds"/> are both provided,
+    /// the method segments columns by X coordinate (PCE-SLa/PCE-SLc).
+    /// When the X signal is insufficient (PCE-SLb), the conservative fallback applies:
+    /// all text is returned as description and category/subcategory are null.
     /// </summary>
     private (string? category, string? subCategory, string? description, string? comment)
         ParseTextColumns(string? text, PositionedWord[]? words = null, IngColumnThresholds? thresholds = null)
@@ -510,17 +487,14 @@ public class IngBankPdfParser : IPdfParser
         if (string.IsNullOrWhiteSpace(text))
             return (null, null, null, null);
 
-        // Intentar segmentación por geometría X cuando ambos parámetros están disponibles
         if (words is { Length: > 0 } && thresholds is not null)
         {
             var split = thresholds.SplitWords(words);
             if (split is not null)
             {
-                // PCE-SLa / PCE-SLc: segmentación geométrica exitosa
                 return (split.Value.Category, split.Value.SubCategory, split.Value.Description, null);
             }
 
-            // PCE-SLb: señal X insuficiente — fallback conservador
             SentrySdk.AddBreadcrumb(
                 "ParseTextColumns: X-signal insufficient — fallback to full-text description",
                 "pdf.parse",
@@ -530,15 +504,17 @@ public class IngBankPdfParser : IPdfParser
                 });
         }
 
-        // Fallback: texto completo como descripción (comportamiento anterior)
         var description = text.Trim();
         return (null, null, string.IsNullOrEmpty(description) ? null : description, null);
     }
 
+    // ────────────────────────────────────────────────────────────────────────
+    // Amount normalization (kept — tested via reflection by AmountNormalizationTests)
+    // ────────────────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Normaliza el formato del importe: soporta ambos formatos (europeo con coma decimal y anglo con punto decimal).
-    /// Convierte a formato estándar con punto decimal y sin separadores de miles.
-    /// Ejemplos: "1,246.74" → "1246.74", "1.246,74" → "1246.74", "0.82" → "0.82", "0,82" → "0.82"
+    /// Normalizes a raw monetary string to dot-decimal, no-thousands format.
+    /// Supports both European (<c>1.234,56</c>) and Anglo (<c>1,234.56</c>) formats.
     /// </summary>
     private static string? NormalizeAmount(string? amount)
     {
@@ -547,42 +523,33 @@ public class IngBankPdfParser : IPdfParser
 
         amount = amount.Trim();
 
-        // Si no tiene punto ni coma, retornar como está
         if (!amount.Contains(',') && !amount.Contains('.'))
             return amount;
 
-        // Si tiene ambos separadores, detectar cuál es decimal y cuál es de miles
         if (amount.Contains(',') && amount.Contains('.'))
         {
-            // El último separador (más a la derecha) es el decimal
             var lastCommaIndex = amount.LastIndexOf(',');
             var lastDotIndex = amount.LastIndexOf('.');
 
             string normalized;
             if (lastCommaIndex > lastDotIndex)
             {
-                // Coma es decimal: "1.246,74" → "1246.74"
                 normalized = amount
-                    .Replace(".", string.Empty)  // Quitar separador de miles
-                    .Replace(",", ".");          // Coma a punto decimal
+                    .Replace(".", string.Empty)
+                    .Replace(",", ".");
             }
             else
             {
-                // Punto es decimal: "1,246.74" → "1246.74"
-                normalized = amount.Replace(",", string.Empty);  // Quitar separador de miles
+                normalized = amount.Replace(",", string.Empty);
             }
 
             return normalized;
         }
 
-        // Si solo tiene coma, es probablemente decimal (formato europeo)
         if (amount.Contains(',') && !amount.Contains('.'))
-        {
             return amount.Replace(",", ".");
-        }
 
-        // Si solo tiene punto, es probablemente decimal o parte de "1.234" sin decimales
-        // Retornar como está (ya tiene punto decimal)
         return amount;
     }
+
 }

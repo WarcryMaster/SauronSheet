@@ -1,6 +1,6 @@
 # Especificación: PDF Category Extraction
 
-Extracción sin listas cerradas de categoría/subcategoría del PDF ING Bank; literal del PDF como única fuente de verdad; normalización solo para lookup/deduplicación; get-or-add para resolución de IDs antes de persistir.
+Extracción de categoría/subcategoría del PDF; path ING usa `IngControlledTaxonomy` (lista controlada, extracción L→R, RawOnly fallback); path no-ING extrae literales sin lista cerrada; normalización solo para lookup/deduplicación; get-or-add para resolución de IDs antes de persistir.
 
 ---
 
@@ -8,14 +8,14 @@ Extracción sin listas cerradas de categoría/subcategoría del PDF ING Bank; li
 
 ### PCE-1: Extracción de literales sin listas cerradas
 
-| ID | Requisito | Escenarios |
-|----|-----------|------------|
-| PCE-1 | `IngBankPdfParser` MUST extraer categoría y subcategoría como literales del PDF sin comparar contra ninguna lista predefinida ni enum cerrado. Valores no reconocidos MUST preservarse. Solo se aplica whitespace trim. | PCE-1a (valor fuera de lista anterior), PCE-1b (categoría null), PCE-1c (subcategoría null) |
+| ID    | Requisito | Escenarios |
+|-------|-----------|------------|
+| PCE-1 | Para el path ING, `IngBankPdfParser` MUST usar `IngControlledTaxonomy` como fuente primaria de categoría/subcategoría (extracción L→R sobre texto limpio). Valores no reconocidos MUST preservarse como `RawOnly`. Para el path no-ING, el parser MUST continuar extrayendo literales del PDF sin comparar contra ninguna lista cerrada. Solo se aplica whitespace trim en ambos paths. | PCE-1a (valor fuera de taxonomía → RawOnly), PCE-1b (categoría null), PCE-1c (subcategoría null), PCE-1d (path no-ING sin lista cerrada) |
 
-#### PCE-1a: Valor no contemplado en lista anterior → preservado
-- GIVEN PDF con categoría "Inversiones Fondos" (ausente en `KnownCategories` previas)
+#### PCE-1a: Valor no contemplado en taxonomía ING → preservado como RawOnly
+- GIVEN PDF ING con categoría `"Inversiones Fondos"` (ausente en `IngControlledTaxonomy`)
 - WHEN `IngBankPdfParser` procesa la fila
-- THEN `RawTransactionRow.Category = "Inversiones Fondos"` (no descartado ni nulificado)
+- THEN `RawTransactionRow.Category = "Inversiones Fondos"`, `source = RawOnly` (no descartado ni nulificado)
 
 #### PCE-1b: Categoría vacía en el PDF
 - GIVEN fila del PDF sin campo de categoría detectable
@@ -23,9 +23,14 @@ Extracción sin listas cerradas de categoría/subcategoría del PDF ING Bank; li
 - THEN `RawTransactionRow.Category = null`
 
 #### PCE-1c: Subcategoría vacía en el PDF
-- GIVEN PDF con categoría "Compras" y sin subcategoría
+- GIVEN PDF con categoría `"Compras"` y sin subcategoría
 - WHEN `IngBankPdfParser` procesa la fila
 - THEN `RawTransactionRow.SubCategory = null`
+
+#### PCE-1d: Path no-ING no usa lista cerrada
+- GIVEN PDF de otro banco procesado por parser genérico
+- WHEN el parser procesa la fila
+- THEN categoría y subcategoría se extraen como literales del PDF sin comparar contra ninguna lista
 
 ---
 

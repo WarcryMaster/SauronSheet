@@ -27,6 +27,15 @@ internal static class IngBlockAssembler
         @"^\d{2}/\d{2}/\d{4}",
         RegexOptions.Compiled);
 
+    // Exact date token used by the positioned-word path.
+    private static readonly Regex ExactDatePattern = new(
+        @"^\d{2}/\d{2}/\d{4}$",
+        RegexOptions.Compiled);
+
+    // ING Jan-2025 layouts place the date/value columns well to the left of the
+    // category column (~175pt). Keep the first-column check conservative.
+    private const double FirstColumnMaxLeft = 120.0;
+
     /// <summary>
     /// Assembles logical transaction blocks from an ordered list of physical
     /// PDF lines.
@@ -52,15 +61,13 @@ internal static class IngBlockAssembler
 
         foreach (IngLineData lineData in lines)
         {
-            string trimmed = lineData.Text.Trim();
-
-            if (DatePrefixPattern.IsMatch(trimmed))
+            if (TryGetBlockStartDate(lineData, out string? blockDate))
             {
                 // Flush the open block (if any) before starting a new one
                 FlushBlock(blocks, currentDate, currentLines);
 
                 // Start a new block
-                currentDate = trimmed[..10];   // always "dd/mm/yyyy" (10 chars)
+                currentDate = blockDate;
                 currentLines = [lineData];
             }
             else if (currentDate is not null)
@@ -80,6 +87,34 @@ internal static class IngBlockAssembler
     // ────────────────────────────────────────────────────────────────────────
     // Private helpers
     // ────────────────────────────────────────────────────────────────────────
+
+    private static bool TryGetBlockStartDate(IngLineData lineData, out string? date)
+    {
+        PositionedWord[] words = lineData.Words;
+        if (words.Length > 0)
+        {
+            PositionedWord firstWord = words[0];
+            if (firstWord.Left <= FirstColumnMaxLeft
+                && ExactDatePattern.IsMatch(firstWord.Text))
+            {
+                date = firstWord.Text;
+                return true;
+            }
+
+            date = null;
+            return false;
+        }
+
+        string trimmed = lineData.Text.Trim();
+        if (DatePrefixPattern.IsMatch(trimmed))
+        {
+            date = trimmed[..10];
+            return true;
+        }
+
+        date = null;
+        return false;
+    }
 
     private static void FlushBlock(
         List<IngBlock> blocks,

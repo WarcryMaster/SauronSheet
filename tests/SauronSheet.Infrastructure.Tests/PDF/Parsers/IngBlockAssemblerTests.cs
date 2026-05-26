@@ -23,11 +23,10 @@ public class IngBlockAssemblerTests
     // ────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Builds a minimal <see cref="IngLineData"/> for a text line with no
-    /// positioned words (sufficient for block-assembly which only uses Text).
+    /// Builds a minimal <see cref="IngLineData"/> for a text line.
     /// </summary>
-    private static IngLineData Line(string text)
-        => new(text, []);
+    private static IngLineData Line(string text, params PositionedWord[] words)
+        => new(text, words);
 
     // ════════════════════════════════════════════════════════════════════════
     // IBR-1a: Single-line row → exactly one block
@@ -98,6 +97,44 @@ public class IngBlockAssemblerTests
         Assert.Equal("16/01/2025", blocks[1].Date);
         Assert.Contains("DAZN", blocks[0].FullText, StringComparison.Ordinal);
         Assert.Contains("Parking", blocks[1].FullText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Assemble_DateLikeContinuationOutsideFirstColumn_DoesNotOpenNewBlock()
+    {
+        // Arrange — line 1 starts with a date-like token in description X space,
+        // so it is a continuation, not a new transaction row.
+        IReadOnlyList<IngLineData> lines =
+        [
+            Line(
+                "15/01/2025 Compras Online DAZN",
+                new PositionedWord("15/01/2025", 10.0),
+                new PositionedWord("Compras", 178.0),
+                new PositionedWord("Online", 278.0),
+                new PositionedWord("DAZN", 378.0)),
+            Line(
+                "16/01/2025 referencia interna",
+                new PositionedWord("16/01/2025", 378.0),
+                new PositionedWord("referencia", 430.0),
+                new PositionedWord("interna", 505.0)),
+            Line(
+                "17/01/2025 Ocio Parking Auditorio -3,00 1.231,56",
+                new PositionedWord("17/01/2025", 10.0),
+                new PositionedWord("Ocio", 178.0),
+                new PositionedWord("Parking", 278.0),
+                new PositionedWord("Auditorio", 378.0),
+                new PositionedWord("-3,00", 465.0),
+                new PositionedWord("1.231,56", 520.0)),
+        ];
+
+        // Act
+        IReadOnlyList<IngBlock> blocks = IngBlockAssembler.Assemble(lines);
+
+        // Assert — the middle line stays attached to the first block.
+        Assert.Equal(2, blocks.Count);
+        Assert.Equal("15/01/2025", blocks[0].Date);
+        Assert.Contains("16/01/2025 referencia interna", blocks[0].FullText, StringComparison.Ordinal);
+        Assert.Equal("17/01/2025", blocks[1].Date);
     }
 
     // ════════════════════════════════════════════════════════════════════════
