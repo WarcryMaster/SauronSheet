@@ -366,4 +366,48 @@ public class IngBankPdfParserBlockTests
         Assert.Equal("Concepto ampliado de la transferencia", sanitizedPageLines[0].Text);
         Assert.Equal("Detalle adicional del emisor", sanitizedPageLines[1].Text);
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // IBR-1d integration — nómina anchor-in-middle produces correct rows
+    // RED: currently "NÓMINA EMPRESA S.L." is misassigned to the previous block,
+    //      breaking its R→L extraction → DAZN row is dropped (rows.Count=1 not 2)
+    // GREEN: assembler fix keeps DAZN clean + nómina produces Amount=2500.00
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ProcessBlocks_NominaWithAnchor_ProducesCorrectRawTransaction()
+    {
+        // Arrange — IBR-1d integration fixture:
+        //   Line 0: previous complete DAZN block (strong anchor)
+        //   Line 1: "NÓMINA EMPRESA S.L." description before the nómina anchor (no date)
+        //   Line 2: "31/01/2025 Nominas 2.500,00 3.200,00" — strong anchor for the payroll
+        //
+        // Without fix: "NÓMINA EMPRESA S.L." attaches to DAZN block → DAZN ExtractRightToLeft
+        //              fails (last token "S.L." is not monetary) → DAZN row dropped → 1 row total.
+        // With fix: DAZN block stays clean → 2 rows; nómina block has prepended description.
+        IReadOnlyList<IngLineData> dataLines =
+        [
+            Line("15/01/2025 Compras Online DAZN -12,99 1.234,56"),
+            Line("NÓMINA EMPRESA S.L."),
+            Line("31/01/2025 Nominas 2.500,00 3.200,00"),
+        ];
+
+        // Act
+        IReadOnlyList<RawTransactionRow> rows = InvokeProcessBlocks(dataLines);
+
+        // Assert — two rows: DAZN preserved + nómina correct
+        Assert.Equal(2, rows.Count);
+
+        // Row 0: DAZN block must be clean (uncontaminated by nómina description)
+        Assert.Equal("15/01/2025", rows[0].Date);
+        Assert.Equal("-12.99", rows[0].Amount);
+        Assert.Equal("1234.56", rows[0].Balance);
+        Assert.DoesNotContain("EMPRESA", rows[0].Description ?? string.Empty, StringComparison.Ordinal);
+
+        // Row 1: nómina block — correct amount; taxonomy resolved "Nominas" → "Nómina"
+        Assert.Equal("31/01/2025", rows[1].Date);
+        Assert.Equal("2500.00", rows[1].Amount);
+        Assert.Equal("3200.00", rows[1].Balance);
+        Assert.Equal("Nómina", rows[1].Category);
+    }
 }

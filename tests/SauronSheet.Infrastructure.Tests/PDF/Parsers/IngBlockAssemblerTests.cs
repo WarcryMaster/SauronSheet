@@ -10,6 +10,10 @@ using Xunit;
 ///   IBR-1a — Single-line row: produces exactly one block with the full text.
 ///   IBR-1b — Multi-line row (continuation without date): both lines become one block.
 ///   IBR-1c — Two adjacent rows each starting with a date: two independent blocks.
+///   IBR-1d — Anchor in middle: description-before-anchor goes to buffer, prepended to new block.
+///   IBR-1e — Ambiguous buffer forwarded to next strong anchor.
+///   IBR-1f — Incomplete block: backward behavior preserved (regression).
+///   EOF    — Non-empty buffer at EOF re-appended to current block.
 ///
 /// Strategy: pure unit tests — no PDF I/O, no mocks.
 /// Input is manually constructed <see cref="IngLineData"/> lists;
@@ -178,5 +182,123 @@ public class IngBlockAssemblerTests
         Assert.Contains("Nómina", blocks[0].FullText, StringComparison.Ordinal);
         Assert.Contains("Empresa S.A.", blocks[0].FullText, StringComparison.Ordinal);
         Assert.Contains("3.200,00", blocks[0].FullText, StringComparison.Ordinal);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // IBR-1d: Anchor in middle — description-before-anchor prepended via buffer
+    // RED: fails until IngBlockAssembler gains isComplete + ambiguousBuffer logic
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Assemble_AnchorInMiddle_PrependsToPrecedingDescription_IBR1d()
+    {
+        // Arrange — IBR-1d:
+        //   Line 0: previous complete transaction (strong anchor — has monetary pair)
+        //   Line 1: description-only (no date) → after complete block → ambiguousBuffer
+        //   Line 2: anchor line (date + monetary pair) → strong anchor → flush prev, prepend buffer
+        //   Line 3: description-only (no date) → after complete block → ambiguousBuffer (EOF re-append)
+        IReadOnlyList<IngLineData> lines =
+        [
+            Line("15/01/2025 Compras Online DAZN -12,99 1.234,56"),
+            Line("NÓMINA EMPRESA S.L."),
+            Line("31/01/2025 Nominas 2.500,00 3.200,00"),
+            Line("ENERO 2025"),
+        ];
+
+        // Act
+        IReadOnlyList<IngBlock> blocks = IngBlockAssembler.Assemble(lines);
+
+        // Assert — 2 blocks; previous DAZN block uncontaminated; nómina block has all 3 nómina lines
+        Assert.Equal(2, blocks.Count);
+
+        // Block 0 (DAZN): must NOT contain the nómina description or the after-anchor line
+        Assert.Equal("15/01/2025", blocks[0].Date);
+        Assert.DoesNotContain("NÓMINA", blocks[0].FullText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ENERO 2025", blocks[0].FullText, StringComparison.Ordinal);
+
+        // Block 1 (nómina): must contain the pre-anchor description AND the after-anchor description
+        Assert.Equal("31/01/2025", blocks[1].Date);
+        Assert.Contains("NÓMINA EMPRESA S.L.", blocks[1].FullText, StringComparison.Ordinal);
+        Assert.Contains("ENERO 2025", blocks[1].FullText, StringComparison.Ordinal);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // IBR-1e: Ambiguous buffer reassigned forward to the next strong anchor
+    // RED: fails until IngBlockAssembler gains isComplete + ambiguousBuffer logic
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Assemble_AmbiguousBufferForwardToNextAnchor_IBR1e()
+    {
+        // Arrange — IBR-1e:
+        //   Block A: complete strong anchor (DAZN)
+        //   FRAGMENTO: no date → ambiguousBuffer (block A is complete)
+        //   Block B: new strong anchor → FRAGMENTO prepended to block B, not block A
+        IReadOnlyList<IngLineData> lines =
+        [
+            Line("10/01/2025 Compras Online DAZN -12,99 1.234,56"),   // block A (complete)
+            Line("FRAGMENTO"),                                           // ambiguousBuffer
+            Line("20/01/2025 Nómina Empresa SA 3.200,00 4.500,00"),   // block B (strong anchor)
+        ];
+
+        // Act
+        IReadOnlyList<IngBlock> blocks = IngBlockAssembler.Assemble(lines);
+
+        // Assert — 2 blocks; FRAGMENTO must be in block B, not block A
+        Assert.Equal(2, blocks.Count);
+        Assert.DoesNotContain("FRAGMENTO", blocks[0].FullText, StringComparison.Ordinal);
+        Assert.Contains("FRAGMENTO", blocks[1].FullText, StringComparison.Ordinal);
+        Assert.Equal("20/01/2025", blocks[1].Date);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // EOF buffer: non-empty ambiguous buffer at EOF re-appended to current block
+    // RED: fails until IngBlockAssembler gains EOF buffer flush logic
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Assemble_EofBufferNonEmpty_ReappendsToCurrentBlock()
+    {
+        // Arrange — complete block followed by a non-date line (no new anchor arrives)
+        //   The ambiguous buffer must be flushed into the same block at EOF.
+        IReadOnlyList<IngLineData> lines =
+        [
+            Line("10/01/2025 Compras Online DAZN -12,99 1.234,56"),   // complete (isComplete=true)
+            Line("Texto adicional EOF"),                                 // ambiguousBuffer → EOF flush
+        ];
+
+        // Act
+        IReadOnlyList<IngBlock> blocks = IngBlockAssembler.Assemble(lines);
+
+        // Assert — single block containing both lines
+        Assert.Single(blocks);
+        Assert.Equal("10/01/2025", blocks[0].Date);
+        Assert.Contains("Texto adicional EOF", blocks[0].FullText, StringComparison.Ordinal);
+        Assert.Contains("DAZN", blocks[0].FullText, StringComparison.Ordinal);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // IBR-1f: Incomplete block — backward behavior preserved (regression)
+    // GREEN even before the fix (existing backward behavior); kept to prevent regression.
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Assemble_IncompleteBlock_BackwardBehaviorPreserved_IBR1f()
+    {
+        // Arrange — IBR-1f: block opened with a date-line that has NO monetary pair
+        //   → isComplete=false → continuation lines must go backward (not to buffer)
+        IReadOnlyList<IngLineData> lines =
+        [
+            Line("15/01/2025 Nómina Empresa SA"),   // incomplete (no monetary pair on this line)
+            Line("Continuacion backward"),           // no date → must join the block above
+        ];
+
+        // Act
+        IReadOnlyList<IngBlock> blocks = IngBlockAssembler.Assemble(lines);
+
+        // Assert — single block; continuation was joined backward
+        Assert.Single(blocks);
+        Assert.Equal("15/01/2025", blocks[0].Date);
+        Assert.Contains("Continuacion backward", blocks[0].FullText, StringComparison.Ordinal);
     }
 }
