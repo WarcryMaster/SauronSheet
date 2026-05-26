@@ -8,7 +8,7 @@ using Xunit;
 /// for ING Bank single-line PDF rows.
 ///
 /// Real ING January 2025 header X-positions used as the fixture:
-///   CATEGORÍA ~175, SUBCATEGORÍA ~275, DESCRIPCIÓN ~375
+///   CATEGORÍA ~175, SUBCATEGORÍA ~275, DESCRIPCIÓN ~375, IMPORTE ~465
 ///
 /// Covers:
 ///   FromHeaderWords happy-path (task 1.1)
@@ -16,6 +16,9 @@ using Xunit;
 ///   SplitWords three-bucket happy-path — PCE-SLa (task 1.3)
 ///   SplitWords all-words-in-description fallback → null — PCE-SLb (task 1.4)
 ///   SplitWords category-only partial result — PCE-SLc (task 1.5)
+///   MonetaryZoneStart from IMPORTE header word (task 1.1-monetary)
+///   MonetaryZoneStart from COMENTARIO header word (task 1.1-comentario)
+///   MonetaryZoneStart null when neither IMPORTE nor COMENTARIO present (task 1.1-absent)
 /// </summary>
 [Trait("Category", "Infrastructure")]
 public class IngColumnThresholdsTests
@@ -28,6 +31,7 @@ public class IngColumnThresholdsTests
     /// Builds a header-words array that mirrors a real ING Jan-2025 PDF header line:
     ///   "F. VALOR   F. OPERACIÓN   CATEGORÍA   SUBCATEGORÍA   DESCRIPCIÓN   IMPORTE   SALDO"
     /// with approximate X positions used to calibrate column thresholds.
+    /// Includes IMPORTE at 465.0 for MonetaryZoneStart derivation.
     /// </summary>
     private static PositionedWord[] Jan2025HeaderWords() => new[]
     {
@@ -38,7 +42,7 @@ public class IngColumnThresholdsTests
         new PositionedWord("CATEGORÍA", 175.0),      // CategoryStart
         new PositionedWord("SUBCATEGORÍA", 275.0),   // SubCategoryStart
         new PositionedWord("DESCRIPCIÓN", 375.0),    // DescriptionStart
-        new PositionedWord("IMPORTE", 465.0),
+        new PositionedWord("IMPORTE", 465.0),        // MonetaryZoneStart
         new PositionedWord("SALDO", 510.0),
     };
 
@@ -209,5 +213,79 @@ public class IngColumnThresholdsTests
         Assert.Equal("Compras", result.Value.Category);
         Assert.Null(result.Value.SubCategory);
         Assert.Equal("Pago en Zara", result.Value.Description);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Task 1.1-monetary: MonetaryZoneStart from IMPORTE header word
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void FromHeaderWords_Jan2025WithImporte_ReturnsMonetaryZoneStartFromImporte()
+    {
+        // Arrange — header with IMPORTE at 465.0 (real Jan-2025 fixture)
+        var headerWords = Jan2025HeaderWords();
+
+        // Act
+        var thresholds = IngColumnThresholds.FromHeaderWords(headerWords)!;
+
+        // Assert — MonetaryZoneStart derived from IMPORTE X position
+        Assert.NotNull(thresholds);
+        Assert.Equal(465.0, thresholds.MonetaryZoneStart);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Task 1.1-comentario: MonetaryZoneStart from COMENTARIO header word
+    // (COMENTARIO appears between DESCRIPCIÓN and IMPORTE; it is the true
+    // right boundary of the description column in some ING PDF variants)
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void FromHeaderWords_HeaderWithComentario_ReturnsMonetaryZoneStartFromComentario()
+    {
+        // Arrange — header that includes COMENTARIO at 430.0 (before IMPORTE at 475.0)
+        var headerWords = new[]
+        {
+            new PositionedWord("F.", 10.0),
+            new PositionedWord("VALOR", 25.0),
+            new PositionedWord("CATEGORÍA", 175.0),
+            new PositionedWord("SUBCATEGORÍA", 275.0),
+            new PositionedWord("DESCRIPCIÓN", 375.0),
+            new PositionedWord("COMENTARIO", 430.0),   // right boundary of description
+            new PositionedWord("IMPORTE", 475.0),
+            new PositionedWord("SALDO", 520.0),
+        };
+
+        // Act
+        var thresholds = IngColumnThresholds.FromHeaderWords(headerWords)!;
+
+        // Assert — COMENTARIO X used as MonetaryZoneStart (description zone ends before COMENTARIO)
+        Assert.NotNull(thresholds);
+        Assert.Equal(430.0, thresholds.MonetaryZoneStart);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Task 1.1-absent: MonetaryZoneStart null when neither IMPORTE nor COMENTARIO
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void FromHeaderWords_NoImporteOrComentario_MonetaryZoneStartIsNull()
+    {
+        // Arrange — header with CATEGORÍA / SUBCATEGORÍA / DESCRIPCIÓN but no IMPORTE or COMENTARIO
+        var headerWords = new[]
+        {
+            new PositionedWord("F.", 10.0),
+            new PositionedWord("VALOR", 25.0),
+            new PositionedWord("CATEGORÍA", 175.0),
+            new PositionedWord("SUBCATEGORÍA", 275.0),
+            new PositionedWord("DESCRIPCIÓN", 375.0),
+            new PositionedWord("SALDO", 510.0),
+        };
+
+        // Act — thresholds still derived from the three core header words
+        var thresholds = IngColumnThresholds.FromHeaderWords(headerWords)!;
+
+        // Assert — MonetaryZoneStart is null; no right boundary for description
+        Assert.NotNull(thresholds);
+        Assert.Null(thresholds.MonetaryZoneStart);
     }
 }

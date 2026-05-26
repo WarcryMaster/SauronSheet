@@ -48,6 +48,8 @@ internal sealed class IngColumnThresholds
         "DESCRIPCION",
         "CONCEPTO"
     ];
+    private const string HeaderComentario = "COMENTARIO";
+    private const string HeaderImporte = "IMPORTE";
 
     // ────────────────────────────────────────────────────────────────────────
     // Properties
@@ -62,11 +64,25 @@ internal sealed class IngColumnThresholds
     /// <summary>Left X boundary of the Descripción/Concepto column.</summary>
     public double DescriptionStart { get; }
 
-    private IngColumnThresholds(double categoryStart, double subCategoryStart, double descriptionStart)
+    /// <summary>
+    /// Left X boundary of the monetary zone — the first column that is NOT part of
+    /// the transaction text (COMENTARIO if present, otherwise IMPORTE).
+    /// Words with Left ≥ MonetaryZoneStart are excluded from description extraction.
+    /// <c>null</c> when neither COMENTARIO nor IMPORTE was found in the header
+    /// (conservative fallback: no right boundary applied).
+    /// </summary>
+    public double? MonetaryZoneStart { get; }
+
+    private IngColumnThresholds(
+        double categoryStart,
+        double subCategoryStart,
+        double descriptionStart,
+        double? monetaryZoneStart)
     {
         CategoryStart = categoryStart;
         SubCategoryStart = subCategoryStart;
         DescriptionStart = descriptionStart;
+        MonetaryZoneStart = monetaryZoneStart;
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -88,6 +104,8 @@ internal sealed class IngColumnThresholds
         double? categoryX    = null;
         double? subCategoryX = null;
         double? descriptionX = null;
+        double? comentarioX  = null;
+        double? importeX     = null;
 
         foreach (var word in headerWords)
         {
@@ -107,12 +125,30 @@ internal sealed class IngColumnThresholds
             {
                 descriptionX = word.Left;
             }
+            else if (comentarioX is null
+                && text.Equals(HeaderComentario, StringComparison.OrdinalIgnoreCase))
+            {
+                comentarioX = word.Left;
+            }
+            else if (importeX is null
+                && text.Equals(HeaderImporte, StringComparison.OrdinalIgnoreCase))
+            {
+                importeX = word.Left;
+            }
         }
 
         if (categoryX is null || subCategoryX is null || descriptionX is null)
             return null;
 
-        return new IngColumnThresholds(categoryX.Value, subCategoryX.Value, descriptionX.Value);
+        // MonetaryZoneStart: prefer COMENTARIO (it immediately follows the description column
+        // in some ING PDF variants); fall back to IMPORTE; null if neither is present.
+        double? monetaryZoneStart = comentarioX ?? importeX;
+
+        return new IngColumnThresholds(
+            categoryX.Value,
+            subCategoryX.Value,
+            descriptionX.Value,
+            monetaryZoneStart);
     }
 
     // ────────────────────────────────────────────────────────────────────────
