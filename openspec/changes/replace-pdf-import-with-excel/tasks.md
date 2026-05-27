@@ -28,15 +28,15 @@ Chain strategy: feature-branch-chain
 
 ## Fase 1 — Contrato de dominio + Parser Excel [PR 1]
 
-- [ ] 1.1 [RED] Crear `tests/SauronSheet.Infrastructure.Tests/Excel/IngExcelStatementParserTests.cs` — ESP-1a: hoja `Movimientos` + cabecera válida → filas parseadas desde row 5
-- [ ] 1.2 [RED] Test ESP-1b: hoja ausente → `ParseResult.Error`; ESP-1c: cabecera fila 4 incorrecta → `ParseResult.Error`
-- [ ] 1.3 [RED] Test ESP-2a: fila completa → `ValueDate`, `Amount`, `Description`, `BankCategory`, `BankSubCategory` mapeados correctamente
-- [ ] 1.4 [RED] Test ESP-3a: `IMPORTE="N/A"` → fila descartada, `errors+1`; ESP-3b: hash duplicado → `skipped+1`
-- [ ] 1.5 [GREEN] Crear `Domain/Services/IStatementParser.cs` — `ParseAsync(Stream stream, string filename)`
-- [ ] 1.6 [GREEN] Crear `Domain/Repositories/IImportBatchRepository.cs` — `AddAsync` + `GetByUserIdAsync`
-- [ ] 1.7 [GREEN] Añadir `ExcelDataReader` (MIT) a `SauronSheet.Infrastructure.csproj`; no eliminar PdfPig en este PR
-- [ ] 1.8 [GREEN] Crear `Infrastructure/Excel/IngExcelStatementParser.cs` — detección hoja, validación cabecera fila 4, mapeo fila→`RawTransactionRow`, manejo de error por fila sin detener el lote
-- [ ] 1.9 [REFACTOR] Actualizar XML-doc `Domain/ValueObjects/RawTransactionRow.cs` — quitar toda referencia a PDF
+- [x] 1.1 [RED] Crear `tests/SauronSheet.Infrastructure.Tests/Excel/IngExcelStatementParserTests.cs` — ESP-1a: hoja `Movimientos` + cabecera válida → filas parseadas desde row 5
+- [x] 1.2 [RED] Test ESP-1b: hoja ausente → `ParseResult.Error`; ESP-1c: cabecera fila 4 incorrecta → `ParseResult.Error`
+- [x] 1.3 [RED] Test ESP-2a: fila completa → `ValueDate`, `Amount`, `Description`, `BankCategory`, `BankSubCategory` mapeados correctamente
+- [x] 1.4 [RED] Test ESP-3a: `IMPORTE="N/A"` → fila descartada, `errors+1`; ESP-3b: hash duplicado → `skipped+1`
+- [x] 1.5 [GREEN] Crear `Domain/Services/IStatementParser.cs` — `ParseAsync(Stream stream, string filename)`
+- [x] 1.6 [GREEN] Crear `Domain/Repositories/IImportBatchRepository.cs` — `AddAsync` + `GetByUserIdAsync`
+- [x] 1.7 [GREEN] Añadir `ExcelDataReader` (MIT) a `SauronSheet.Infrastructure.csproj`; no eliminar PdfPig en este PR
+- [x] 1.8 [GREEN] Crear `Infrastructure/Excel/IngExcelStatementParser.cs` — detección hoja, validación cabecera fila 4, mapeo fila→`RawTransactionRow`, manejo de error por fila sin detener el lote
+- [x] 1.9 [REFACTOR] Actualizar XML-doc `Domain/ValueObjects/RawTransactionRow.cs` — quitar toda referencia a PDF
 
 ---
 
