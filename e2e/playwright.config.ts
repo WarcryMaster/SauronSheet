@@ -39,8 +39,8 @@ export default defineConfig({
     // Screenshot on failure
     screenshot: 'only-on-failure',
     
-    // Video on failure
-    video: 'retain-on-failure',
+    // Video on failure (requires ffmpeg — only on CI where browser packages include it)
+    video: process.env.CI ? 'retain-on-failure' : 'off',
     
     // Browser context options
     viewport: { width: 1280, height: 720 },
@@ -53,7 +53,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      // Use installed Edge/Chrome as fallback when the Playwright headless shell
+      // is not available locally (e.g. fresh checkout without `playwright install`).
+      // On CI, the channel is left unset so the downloaded headless shell is used.
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.CI ? {} : { channel: 'msedge' }),
+      },
     },
     {
       name: 'Mobile Chrome',

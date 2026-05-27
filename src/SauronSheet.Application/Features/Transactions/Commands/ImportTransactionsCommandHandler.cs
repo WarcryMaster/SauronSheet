@@ -13,6 +13,7 @@ using Domain.ValueObjects;
 using DTOs;
 using MediatR;
 using Sentry;
+using Sentry.Extensibility;
 using SauronSheet.Application.Services;
 
 /// <summary>
@@ -74,6 +75,27 @@ public class ImportTransactionsCommandHandler
                 !request.Filename.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
                 throw new DomainException("Only Excel files (.xls, .xlsx) are accepted.");
 
+            // ── Sentry observability: import started ──────────────────────────────
+            var fileExt = Path.GetExtension(request.Filename).ToLowerInvariant();
+
+            SentrySdk.Logger?.LogDebug(
+                "ImportTransactionsCommandHandler: starting import for {0}", request.Filename);
+
+            SentrySdk.AddBreadcrumb(
+                $"Excel import started: {request.Filename}",
+                "import",
+                data: new Dictionary<string, string>
+                {
+                    { "filename", request.Filename },
+                    { "ext", fileExt }
+                });
+
+            SentrySdk.Experimental.Metrics.EmitCounter(
+                "app.import.started",
+                1.0,
+                new KeyValuePair<string, object>[] { new("ext", fileExt) });
+            // ─────────────────────────────────────────────────────────────────────
+
             var userId = new UserId(_userContext.UserId);
 
             // Ensure user profile exists before FK-constrained inserts.
@@ -99,6 +121,14 @@ public class ImportTransactionsCommandHandler
                     scope.SetTag("filename", request.Filename);
                     scope.Level = SentryLevel.Error;
                 });
+                SentrySdk.Experimental.Metrics.EmitCounter(
+                    "app.import.failed",
+                    1.0,
+                    new KeyValuePair<string, object>[]
+                    {
+                        new("ext", fileExt),
+                        new("reason", "parse_error")
+                    });
                 throw new DomainException(
                     "Could not parse the uploaded file. Please check the format and try again.");
             }
@@ -202,6 +232,41 @@ public class ImportTransactionsCommandHandler
                 DateTime.UtcNow);
 
             await _importBatchRepo.AddAsync(importBatch, userId);
+
+            // ── Sentry observability: import completed ────────────────────────────
+            SentrySdk.Logger?.LogInfo(
+                "ImportTransactionsCommandHandler: import completed — {0}: {1} imported, {2} skipped, {3} errors",
+                request.Filename, importedCount, skippedCount, errors.Count);
+
+            SentrySdk.AddBreadcrumb(
+                $"Excel import completed: {importedCount} imported, {skippedCount} skipped",
+                "import",
+                level: BreadcrumbLevel.Info,
+                data: new Dictionary<string, string>
+                {
+                    { "filename", request.Filename },
+                    { "imported", importedCount.ToString() },
+                    { "skipped", skippedCount.ToString() },
+                    { "errors", errors.Count.ToString() }
+                });
+
+            SentrySdk.Experimental.Metrics.EmitCounter(
+                "app.import.completed",
+                1.0,
+                new KeyValuePair<string, object>[]
+                {
+                    new("ext", fileExt),
+                    new("result", errors.Count == 0 ? "success" : "partial_success")
+                });
+
+            if (importedCount > 0)
+            {
+                SentrySdk.Experimental.Metrics.EmitCounter(
+                    "app.import.rows_imported",
+                    importedCount,
+                    new KeyValuePair<string, object>[] { new("ext", fileExt) });
+            }
+            // ─────────────────────────────────────────────────────────────────────
 
             return new ImportResultDto(
                 importedCount,
