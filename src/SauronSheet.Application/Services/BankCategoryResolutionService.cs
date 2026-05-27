@@ -76,7 +76,7 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // ResolveOrCreateAsync — PDF-driven get-or-add (PCE-3 / PCE-4)
+    // ResolveOrCreateAsync — get-or-add for bank statement import (PCE-3 / PCE-4)
     // ════════════════════════════════════════════════════════════════════════
 
     /// <inheritdoc />

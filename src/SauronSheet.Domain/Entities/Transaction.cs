@@ -17,10 +17,10 @@ public class Transaction : AggregateRoot<TransactionId>
     public CategoryId? CategoryId { get; private set; }
     public string? ImportedFrom { get; private set; }
 
-    /// <summary>Raw bank category from PDF parser, unmodified.</summary>
+    /// <summary>Raw bank category from bank statement parser, unmodified.</summary>
     public string? BankCategory { get; private set; }
 
-    /// <summary>Raw bank subcategory from PDF parser, unmodified.</summary>
+    /// <summary>Raw bank subcategory from bank statement parser, unmodified.</summary>
     public string? BankSubcategory { get; private set; }
 
     /// <summary>Resolved subcategory, if any.</summary>

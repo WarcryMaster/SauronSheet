@@ -12,21 +12,21 @@ using Domain.Repositories;
 using Domain.ValueObjects;
 
 /// <summary>
-/// Postgrest DTO for the pdf_imports table.
-/// CRITICAL FIX I-2: Table name is pdf_imports (NOT import_batches).
+/// Postgrest DTO for the <c>import_batches</c> table.
+/// Table was renamed from <c>pdf_imports</c> via migration 012_RenamePdfImportsToImportBatches.sql.
 /// </summary>
-[Table("pdf_imports")]
-internal class PdfImportRow : BaseModel
+[Table("import_batches")]
+internal class ImportBatchRow : BaseModel
 {
     [PrimaryKey("id", false)]
     [Column("id")]
-    public string Id { get; set; } = "";
+    public string Id { get; set; } = string.Empty;
 
     [Column("user_id")]
-    public string UserId { get; set; } = "";
+    public string UserId { get; set; } = string.Empty;
 
     [Column("filename")]
-    public string Filename { get; set; } = "";
+    public string Filename { get; set; } = string.Empty;
 
     [Column("imported_count")]
     public int ImportedCount { get; set; }
@@ -37,54 +37,47 @@ internal class PdfImportRow : BaseModel
     [Column("imported_at")]
     public DateTime ImportedAt { get; set; }
 
-    public ImportBatch ToDomain()
-    {
-        return new ImportBatch(
-            Guid.Parse(Id),
-            Filename,
-            ImportedCount,
-            SkippedCount,
-            ImportedAt);
-    }
+    public ImportBatch ToDomain() =>
+        new(Guid.Parse(Id), Filename, ImportedCount, SkippedCount, ImportedAt);
 
-    public static PdfImportRow FromDomain(ImportBatch batch, string userId)
-    {
-        return new PdfImportRow
+    public static ImportBatchRow FromDomain(ImportBatch batch, string userId) =>
+        new()
         {
             Id = batch.Id.ToString(),
             UserId = userId,
             Filename = batch.Filename,
             ImportedCount = batch.ImportedCount,
             SkippedCount = batch.SkippedCount,
-            ImportedAt = batch.ImportedAt
+            ImportedAt = batch.ImportedAt,
         };
-    }
 }
 
 /// <summary>
-/// Supabase implementation of IPdfImportRepository.
-/// CRITICAL FIX C-2: Interface defined in Domain layer.
+/// Supabase implementation of <see cref="IImportBatchRepository"/>.
+/// Persists import-batch metadata to the <c>import_batches</c> table (scoped per user via RLS).
 /// </summary>
-public class SupabasePdfImportRepository : IPdfImportRepository
+public class SupabaseImportBatchRepository : IImportBatchRepository
 {
     private readonly Supabase.Client _client;
 
-    public SupabasePdfImportRepository(Supabase.Client client)
+    public SupabaseImportBatchRepository(Supabase.Client client)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
     }
 
+    /// <inheritdoc />
     public async Task AddAsync(ImportBatch importBatch, UserId userId)
     {
         try
         {
-            var row = PdfImportRow.FromDomain(importBatch, userId.Value);
-            await _client.From<PdfImportRow>().Insert(row);
+            var row = ImportBatchRow.FromDomain(importBatch, userId.Value);
+            await _client.From<ImportBatchRow>().Insert(row);
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabasePdfImportRepository.AddAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseImportBatchRepository.AddAsync");
                 scope.SetTag("userId", userId.Value);
                 scope.Level = Sentry.SentryLevel.Error;
             });
@@ -92,11 +85,12 @@ public class SupabasePdfImportRepository : IPdfImportRepository
         }
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<ImportBatch>> GetByUserIdAsync(UserId userId)
     {
         try
         {
-            var response = await _client.From<PdfImportRow>()
+            var response = await _client.From<ImportBatchRow>()
                 .Where(x => x.UserId == userId.Value)
                 .Order("imported_at", Constants.Ordering.Descending)
                 .Get();
@@ -105,8 +99,9 @@ public class SupabasePdfImportRepository : IPdfImportRepository
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabasePdfImportRepository.GetByUserIdAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseImportBatchRepository.GetByUserIdAsync");
                 scope.SetTag("userId", userId.Value);
                 scope.Level = Sentry.SentryLevel.Error;
             });

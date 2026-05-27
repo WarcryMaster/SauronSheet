@@ -304,7 +304,7 @@ public class SupabaseTransactionRepository : ITransactionRepository
         UserId userId, DateTime date, decimal amount, string description)
     {
         // CRITICAL FIX C-3: Duplicate detection ignores currency
-        // Note: Thread culture is set to InvariantCulture in ImportTransactionsFromPdfCommandHandler
+        // Note: Thread culture is set to InvariantCulture in ImportTransactionsCommandHandler
         // to ensure decimal serialization uses dot, not comma
         var dateStr = date.ToString("yyyy-MM-dd");
         var response = await _client.From<TransactionRow>()

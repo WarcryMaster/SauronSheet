@@ -1,7 +1,7 @@
 @page
 @model SauronSheet.Frontend.Pages.Transactions.UploadModel
 @{
-    ViewData["Title"] = "Upload PDF";
+    ViewData["Title"] = "Upload Bank Statement";
 }
 
 <div class="mx-auto d-flex flex-column gap-4" style="max-width: 640px;">
@@ -40,21 +40,34 @@
         </div>
     }
 
+    <!-- Excel Format Guide — ESP-4b: visible above the fold -->
+    <div class="card border-0 bg-light p-3 rounded-3" data-testid="excel-format-guide">
+        <h2 class="h6 fw-semibold mb-2">📋 Required Excel Format (ING Bank)</h2>
+        <ul class="mb-2 small ps-3">
+            <li>Sheet name: <strong>Movimientos</strong></li>
+            <li>Row 4 must contain this exact header:</li>
+        </ul>
+        <code class="small d-block bg-white border rounded p-2 mb-2" style="overflow-x: auto; white-space: nowrap;">
+            F. VALOR | CATEGORÍA | SUBCATEGORÍA | DESCRIPCIÓN | COMENTARIO | IMPORTE (€) | SALDO (€)
+        </code>
+        <p class="small text-muted mb-0">Transaction data starts at row 5. Only <strong>.xls</strong> and <strong>.xlsx</strong> files are accepted.</p>
+    </div>
+
     <div class="card border-0 shadow-sm p-4">
         <form method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4">
             <div>
-                <label for="pdfFile" class="form-label fw-semibold">Select PDF Bank Statement</label>
+                <label for="excelFile" class="form-label fw-semibold">Select Excel Bank Statement</label>
                 <div class="border border-2 border-dashed rounded-3 p-5 text-center" id="dropZone"
                      style="cursor: pointer; border-color: #ced4da !important;">
-                    <div class="fs-1 mb-2">📄</div>
+                    <div class="fs-1 mb-2">📊</div>
                     <p class="mb-1 small">
-                        <label for="pdfFile" class="fw-semibold text-brand" style="cursor: pointer;">
-                            Choose PDF file
+                        <label for="excelFile" class="fw-semibold text-brand" style="cursor: pointer;">
+                            Choose Excel file
                         </label>
                         <span class="text-muted"> or drag and drop</span>
                     </p>
-                    <p class="text-muted small mb-2">PDF up to 10MB</p>
-                    <input id="pdfFile" name="PdfFile" type="file" accept=".pdf" class="visually-hidden" />
+                    <p class="text-muted small mb-2">Excel (.xls / .xlsx) up to 10MB</p>
+                    <input id="excelFile" name="ExcelFile" type="file" accept=".xls,.xlsx" class="visually-hidden" />
                     <p class="text-muted small mb-0" id="fileNameDisplay"></p>
                 </div>
             </div>
@@ -66,10 +79,10 @@
 </div>
 
 <script>
-    document.getElementById('pdfFile')?.addEventListener('change', function() {
+    document.getElementById('excelFile')?.addEventListener('change', function() {
         document.getElementById('fileNameDisplay').textContent = this.files[0]?.name ?? '';
     });
     document.getElementById('dropZone')?.addEventListener('click', function(e) {
-        if (e.target.tagName !== 'LABEL') document.getElementById('pdfFile').click();
+        if (e.target.tagName !== 'LABEL') document.getElementById('excelFile').click();
     });
 </script>
