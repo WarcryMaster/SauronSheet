@@ -26,9 +26,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
-    <!-- Using PdfPig for PDF parsing (Apache 2.0, native .NET, no Java dependency) -->
-    <!-- NOTE: PdfPig kept in PR 1 — removed in PR 3 after PDF code cleanup -->
-    <PackageReference Include="PdfPig" Version="0.1.9" />
     <!-- ExcelDataReader (MIT): read-only parsing of ING .xls and .xlsx bank statement exports -->
     <PackageReference Include="ExcelDataReader" Version="3.7.0" />
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.7.0" />

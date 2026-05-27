@@ -14,7 +14,7 @@ public class UploadModel : PageModel
     private readonly IMediator _mediator;
 
     [BindProperty]
-    public IFormFile? PdfFile { get; set; }
+    public IFormFile? ExcelFile { get; set; }
 
     public ImportResultDto? ImportResult { get; set; }
     public string? ErrorMessage { get; set; }
@@ -28,64 +28,46 @@ public class UploadModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (PdfFile == null || PdfFile.Length == 0)
+        if (ExcelFile == null || ExcelFile.Length == 0)
         {
-            ErrorMessage = "Please select a PDF file.";
+            ErrorMessage = "Please select an Excel file.";
             return Page();
         }
 
-        if (PdfFile.Length > 10 * 1024 * 1024) // 10MB
+        if (ExcelFile.Length > 10 * 1024 * 1024) // 10MB
         {
             ErrorMessage = "File size exceeds 10MB limit.";
             return Page();
         }
 
-        if (!PdfFile.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        var filename = ExcelFile.FileName;
+        if (!filename.EndsWith(".xls", StringComparison.OrdinalIgnoreCase) &&
+            !filename.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            ErrorMessage = "Only PDF files are accepted.";
+            ErrorMessage = "Only Excel files (.xls, .xlsx) are accepted.";
             return Page();
         }
 
-        // CRITICAL FIX NC-2: Add comprehensive error handling
         try
         {
-            using var stream = PdfFile.OpenReadStream();
+            using var stream = ExcelFile.OpenReadStream();
             ImportResult = await _mediator.Send(
-                new ImportTransactionsFromPdfCommand(stream, PdfFile.FileName));
-
-            // Metrics: PDF import results
-            Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.pdf.import.count", 1.0,
-                new KeyValuePair<string, object>[] { new("result", "success") });
-            Sentry.SentrySdk.Experimental.Metrics.EmitDistribution("app.pdf.import.rows_imported",
-                ImportResult.ImportedCount,
-                Sentry.MeasurementUnit.None,
-                new KeyValuePair<string, object>[] { new("type", "imported") });
-            Sentry.SentrySdk.Experimental.Metrics.EmitDistribution("app.pdf.import.rows_skipped",
-                ImportResult.SkippedCount,
-                Sentry.MeasurementUnit.None,
-                new KeyValuePair<string, object>[] { new("type", "skipped") });
+                new ImportTransactionsCommand(stream, filename));
         }
         catch (HttpRequestException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("page", "Transactions/Upload.OnPostAsync");
                 scope.SetTag("exception_type", ex.GetType().Name);
                 scope.Level = Sentry.SentryLevel.Error;
             });
             ErrorMessage = "Network error. Please check your connection and try again.";
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("PDF"))
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Transactions/Upload.OnPostAsync");
-                scope.SetTag("exception_type", "PDFParseError");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
-            ErrorMessage = "Could not parse the PDF file. Please check the file format and try again.";
-        }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("page", "Transactions/Upload.OnPostAsync");
                 scope.SetTag("exception_type", "DomainException");
                 scope.Level = Sentry.SentryLevel.Warning;
@@ -94,7 +76,8 @@ public class UploadModel : PageModel
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("page", "Transactions/Upload.OnPostAsync");
                 scope.SetTag("exception_type", ex.GetType().Name);
                 scope.Level = Sentry.SentryLevel.Error;

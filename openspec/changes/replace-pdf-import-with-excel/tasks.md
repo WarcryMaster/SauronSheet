@@ -42,23 +42,23 @@ Chain strategy: feature-branch-chain
 
 ## Fase 2 — Application + Persistence + DI + Migración [PR 2]
 
-- [ ] 2.1 [RED] Crear `tests/SauronSheet.Application.Tests/Commands/ImportTransactionsCommandHandlerTests.cs` — happy path con `IStatementParser` + `IImportBatchRepository` mockeados → `ImportResultDto` correcto
-- [ ] 2.2 [RED] Test handler: `IStatementParser` falla → `DomainException` con mensaje genérico; Sentry captura la excepción de infra
-- [ ] 2.3 [GREEN] Crear `Application/Commands/ImportTransactionsCommand.cs` + `ImportTransactionsCommandHandler.cs` (deduplicación, categorías, métricas `app.import.*`)
-- [ ] 2.4 [GREEN] Crear `Infrastructure/Persistence/SupabaseImportBatchRepository.cs` — DTO mapeado a tabla `import_batches`
-- [ ] 2.5 [GREEN] Crear migración `Infrastructure/Persistence/Migrations/{ts}_rename_pdf_imports.sql` — `ALTER TABLE pdf_imports RENAME TO import_batches`
-- [ ] 2.6 [GREEN] Actualizar `Infrastructure/DependencyInjection.cs` — registrar `IStatementParser → IngExcelStatementParser` y `IImportBatchRepository → SupabaseImportBatchRepository`; quitar PdfPig de `SauronSheet.Infrastructure.csproj`
-- [ ] 2.7 [REFACTOR] Test integración DI en `SauronSheet.Integration.Tests` — `IStatementParser` e `IImportBatchRepository` resuelven sin excepción
+- [x] 2.1 [RED] Crear `tests/SauronSheet.Application.Tests/Commands/ImportTransactionsCommandHandlerTests.cs` — happy path con `IStatementParser` + `IImportBatchRepository` mockeados → `ImportResultDto` correcto
+- [x] 2.2 [RED] Test handler: `IStatementParser` falla → `DomainException` con mensaje genérico; Sentry captura la excepción de infra
+- [x] 2.3 [GREEN] Crear `Application/Commands/ImportTransactionsCommand.cs` + `ImportTransactionsCommandHandler.cs` (deduplicación, categorías, métricas `app.import.*`)
+- [x] 2.4 [GREEN] Crear `Infrastructure/Persistence/SupabaseImportBatchRepository.cs` — DTO mapeado a tabla `import_batches`
+- [x] 2.5 [GREEN] Crear migración `Infrastructure/Persistence/Migrations/{ts}_rename_pdf_imports.sql` — `ALTER TABLE pdf_imports RENAME TO import_batches`
+- [x] 2.6 [GREEN] Actualizar `Infrastructure/DependencyInjection.cs` — registrar `IStatementParser → IngExcelStatementParser` y `IImportBatchRepository → SupabaseImportBatchRepository`; quitar PdfPig de `SauronSheet.Infrastructure.csproj`
+- [x] 2.7 [REFACTOR] Test integración DI en `SauronSheet.Integration.Tests` — `IStatementParser` e `IImportBatchRepository` resuelven sin excepción
 
 ---
 
 ## Fase 3 — Frontend Excel-only + Eliminación PDF [PR 3]
 
-- [ ] 3.1 [RED] Test Playwright `e2e/` — Upload page: input no acepta `.pdf`; bloque de guía visible sin scroll (hoja `Movimientos`, 7 columnas, datos desde fila 5)
-- [ ] 3.2 [GREEN] Actualizar `Frontend/Pages/Transactions/Upload.cshtml` — `accept=".xls,.xlsx"` + bloque de instrucciones de formato requerido
-- [ ] 3.3 [GREEN] Actualizar `Frontend/Pages/Transactions/Upload.cshtml.cs` — despachar `ImportTransactionsCommand` vía MediatR
-- [ ] 3.4 [GREEN] Actualizar `Frontend/Pages/Transactions/Index.cshtml` y `Dashboard.cshtml` — copy neutral, eliminar toda mención PDF
-- [ ] 3.5 [CLEANUP] Eliminar `Infrastructure/PDF/` completo (8 archivos) + `Infrastructure/Persistence/SupabasePdfImportRepository.cs`
-- [ ] 3.6 [CLEANUP] Eliminar `Application/Commands/ImportTransactionsFromPdf*.cs` + `Domain/Services/IPdfParser.cs` + `Domain/Repositories/IPdfImportRepository.cs`
-- [ ] 3.7 [CLEANUP] Eliminar tests PDF obsoletos (3 archivos en `tests/`)
-- [ ] 3.8 [VERIFY] `dotnet test` verde; cobertura Domain ≥ 80%, Application ≥ 70%; `dotnet build` limpio sin warnings
+- [x] 3.1 [RED] Test Playwright `e2e/` — Upload page: input no acepta `.pdf`; bloque de guía visible sin scroll (hoja `Movimientos`, 7 columnas, datos desde fila 5)
+- [x] 3.2 [GREEN] Actualizar `Frontend/Pages/Transactions/Upload.cshtml` — `accept=".xls,.xlsx"` + bloque de instrucciones de formato requerido
+- [x] 3.3 [GREEN] Actualizar `Frontend/Pages/Transactions/Upload.cshtml.cs` — despachar `ImportTransactionsCommand` vía MediatR
+- [x] 3.4 [GREEN] Actualizar `Frontend/Pages/Transactions/Index.cshtml` y `Dashboard.cshtml` — copy neutral, eliminar toda mención PDF
+- [x] 3.5 [CLEANUP] Eliminar `Infrastructure/PDF/` completo (8 archivos) + `Infrastructure/Persistence/SupabasePdfImportRepository.cs`
+- [x] 3.6 [CLEANUP] Eliminar `Application/Commands/ImportTransactionsFromPdf*.cs` + `Domain/Services/IPdfParser.cs` + `Domain/Repositories/IPdfImportRepository.cs`
+- [x] 3.7 [CLEANUP] Eliminar tests PDF obsoletos (3 archivos en `tests/`)
+- [x] 3.8 [VERIFY] `dotnet test` verde; cobertura Domain ≥ 80%, Application ≥ 70%; `dotnet build` limpio sin warnings

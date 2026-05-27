@@ -4,7 +4,7 @@ using Common;
 using Exceptions;
 
 /// <summary>
-/// Represents metadata about a PDF import batch.
+/// Represents metadata about a bank statement import batch.
 /// NOTE: This is an Entity (not a Value Object) because it has database identity and lifecycle.
 /// </summary>
 public class ImportBatch : Entity<Guid>

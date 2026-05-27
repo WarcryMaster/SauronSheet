@@ -8,9 +8,8 @@ using SauronSheet.Infrastructure.Auth;
 using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.Repositories;
+using SauronSheet.Infrastructure.Excel;
 using SauronSheet.Infrastructure.Persistence;
-using SauronSheet.Infrastructure.PDF;
-using SauronSheet.Infrastructure.PDF.Parsers;
 using SauronSheet.Infrastructure.Monitoring;
 
 namespace SauronSheet.Infrastructure;
@@ -18,7 +17,7 @@ namespace SauronSheet.Infrastructure;
 /// <summary>
 /// Extension methods for registering Infrastructure layer services.
 /// Validates Supabase configuration on startup (fast-fail).
-/// Registers auth services, repositories, and PDF parsing (Phase 3).
+/// Registers auth services, repositories, and statement parsing.
 /// </summary>
 public static class DependencyInjection
 {
@@ -77,19 +76,18 @@ public static class DependencyInjection
             return new Supabase.Client(supabaseUrl, supabaseKey, options);
         });
 
-        // Repository implementations (NEW in Phase 3)
+        // Repository implementations
         services.AddScoped<ITransactionRepository, SupabaseTransactionRepository>();
         services.AddScoped<ICategoryRepository, SupabaseCategoryRepository>();
-        services.AddScoped<IPdfImportRepository, SupabasePdfImportRepository>();
         services.AddScoped<IUserProfileRepository, SupabaseUserRepository>();
 
-        // PDF parsing (NEW in Phase 3)
-        // Support multiple bank formats: ING-specific and generic fallback
-        services.AddScoped<GenericBankPdfParser>();
-        services.AddScoped<IngBankPdfParser>();
-        services.AddScoped<IPdfParser, AdaptivePdfParser>();
+        // Excel statement parser — IStatementParser → IngExcelStatementParser (ExcelDataReader, reads .xls/.xlsx)
+        services.AddScoped<IStatementParser, IngExcelStatementParser>();
 
-        // Domain services (NEW in Phase 3)
+        // Import-batch repository — persists to import_batches (renamed from pdf_imports via migration 012)
+        services.AddScoped<IImportBatchRepository, SupabaseImportBatchRepository>();
+
+        // Domain services
         services.AddScoped<CategoryService>();
 
         // Bank category resolution (Phase 2)
