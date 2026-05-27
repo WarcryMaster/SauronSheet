@@ -1,8 +1,8 @@
 namespace SauronSheet.Domain.ValueObjects;
 
 /// <summary>
-/// Raw transaction row extracted from a PDF bank statement.
-/// All fields are strings because they come from unparsed PDF text.
+/// Raw transaction row extracted from a bank statement file (Excel or other supported formats).
+/// All fields are strings because they come from unparsed statement data.
 /// The handler is responsible for converting to domain types with proper validation.
 /// </summary>
 public record RawTransactionRow(

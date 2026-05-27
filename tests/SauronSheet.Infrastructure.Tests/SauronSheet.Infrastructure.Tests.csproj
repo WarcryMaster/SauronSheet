@@ -16,12 +16,21 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Moq" Version="4.20.70"/>
+        <!-- ClosedXML: test-fixture creation only — write .xlsx in-memory for parser unit tests -->
+        <PackageReference Include="ClosedXML" Version="0.105.0"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../src/SauronSheet.Infrastructure/SauronSheet.Infrastructure.csproj"/>
         <ProjectReference Include="../../src/SauronSheet.Domain/SauronSheet.Domain.csproj"/>
         <ProjectReference Include="../../src/SauronSheet.Application/SauronSheet.Application.csproj"/>
+    </ItemGroup>
+
+    <!-- Real ING .xls sample files copied to output for parser integration tests -->
+    <ItemGroup>
+        <Content Include="..\..\src\SauronSheet.Infrastructure\Excel\*.xls"
+                 Link="TestFixtures\%(Filename)%(Extension)"
+                 CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>
