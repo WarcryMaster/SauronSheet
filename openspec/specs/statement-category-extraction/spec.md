@@ -1,56 +1,10 @@
-# Especificación: PDF Category Extraction
+# Especificación: Statement Category Extraction
 
-Extracción de categoría/subcategoría del PDF; path ING usa `IngControlledTaxonomy` (lista controlada, extracción L→R, RawOnly fallback); path no-ING extrae literales sin lista cerrada; normalización solo para lookup/deduplicación; get-or-add para resolución de IDs antes de persistir.
+Extracción y resolución de categoría/subcategoría del extracto; las categorías y subcategorías se leen como literales del statement y se resuelven mediante normalización, lookup y creación controlada antes de persistir.
 
 ---
 
 ## Requisitos
-
-### PCE-1: Extracción de literales sin listas cerradas
-
-| ID    | Requisito | Escenarios |
-|-------|-----------|------------|
-| PCE-1 | Para el path ING, `IngBankPdfParser` MUST extraer categoría y subcategoría directamente desde las zonas X del bloque (`IngRawColumnExtractor` + `IngColumnThresholds`) sin instanciar `IngControlledTaxonomy` ni usar ninguna lista cerrada. Cuando la geometría no produce señal fiable, MUST aplicar fallback conservador: `Category = null`, `SubCategory = null`, descripción literal conservada; la transacción NO debe descartarse. Para el path no-ING el comportamiento es inalterado. Solo whitespace trim en ambos paths. | PCE-1a, PCE-1b, PCE-1c, PCE-1d, PCE-1e, PCE-1f |
-
-(Previously: path ING usaba `IngControlledTaxonomy` L→R como fuente primaria; valores no reconocidos preservados como `RawOnly`.)
-
-#### PCE-1a: DAZN — categoría + subcategoría + descripción desde columnas
-
-- GIVEN fila ING con palabras en zona categoría `Compras`, zona subcategoría `Online`, zona descripción `DAZN`
-- WHEN `IngRawColumnExtractor` clasifica por zona X usando `IngColumnThresholds`
-- THEN `Category = "Compras"`, `SubCategory = "Online"`, `Description = "DAZN"`
-
-#### PCE-1b: Parking — literal multipalabra preservado en subcategoría
-
-- GIVEN fila ING con zona categoría `Vehículo y transporte` y zona subcategoría `Parking y garaje`
-- WHEN `IngRawColumnExtractor` clasifica palabras por zona X
-- THEN `Category = "Vehículo y transporte"`, `SubCategory = "Parking y garaje"`
-
-#### PCE-1c: Nómina — categoría sin subcategoría
-
-- GIVEN fila ING con zona categoría `Nominas` y zona subcategoría sin palabras
-- WHEN `IngRawColumnExtractor` procesa el bloque
-- THEN `Category = "Nominas"`, `SubCategory = null`
-
-#### PCE-1d: Traspaso entre cuentas propias
-
-- GIVEN fila ING con zona categoría `Mis cuentas y depósitos` y zona subcategoría `Traspasos propios`
-- WHEN `IngRawColumnExtractor` clasifica por zona X
-- THEN `Category = "Mis cuentas y depósitos"`, `SubCategory = "Traspasos propios"`
-
-#### PCE-1e: Fallback conservador — geometría insuficiente
-
-- GIVEN bloque ING donde `IngColumnThresholds` no derivan umbrales fiables para ese bloque
-- WHEN `IngRawColumnExtractor` no produce señal de columna
-- THEN `Category = null`, `SubCategory = null`; descripción literal conservada; transacción no descartada
-
-#### PCE-1f: Path no-ING sin lista cerrada
-
-- GIVEN PDF de otro banco procesado por parser genérico
-- WHEN el parser procesa la fila
-- THEN categoría y subcategoría se extraen como literales del PDF sin comparar contra ninguna lista
-
----
 
 ### PCE-2: Función de normalización para deduplicación
 
@@ -75,11 +29,11 @@ Extracción de categoría/subcategoría del PDF; path ING usa `IngControlledTaxo
 
 ---
 
-### PCE-3: Get-or-add de categoría para import PDF
+### PCE-3: Get-or-add de categoría para import de extracto
 
 | ID | Requisito | Escenarios |
 |----|-----------|------------|
-| PCE-3 | `IPdfCategoryResolverService.ResolveOrCreateAsync(userId, rawCategory, rawSubcategory)` MUST buscar categoría por clave normalizada para el usuario; si no existe, MUST crear una nueva (name = literal PDF, userId = usuario actual). MUST NOT coincidir ni crear categorías con `IsSystemDefault = true`. Si rawCategory es null/vacío, MUST retornar (null, null, RawOnly) sin crear nada. | PCE-3a (existente), PCE-3b (creación), PCE-3c (system default excluido), PCE-3d (rawCategory null), PCE-3e (concurrencia) |
+| PCE-3 | `IStatementCategoryResolverService.ResolveOrCreateAsync(userId, rawCategory, rawSubcategory)` MUST buscar categoría por clave normalizada para el usuario; si no existe, MUST crear una nueva (name = literal del extracto, userId = usuario actual). MUST NOT coincidir ni crear categorías con `IsSystemDefault = true`. Si rawCategory es null/vacío, MUST retornar (null, null, RawOnly) sin crear nada. | PCE-3a (existente), PCE-3b (creación), PCE-3c (system default excluido), PCE-3d (rawCategory null), PCE-3e (concurrencia) |
 
 #### PCE-3a: Categoría ya existe → reutiliza
 - GIVEN Category(name="Compras", userId) con clave normalizada "compras"
@@ -109,7 +63,7 @@ Extracción de categoría/subcategoría del PDF; path ING usa `IngControlledTaxo
 
 ---
 
-### PCE-4: Get-or-add de subcategoría para import PDF
+### PCE-4: Get-or-add de subcategoría para import de extracto
 
 | ID | Requisito | Escenarios |
 |----|-----------|------------|
@@ -141,14 +95,14 @@ Extracción de categoría/subcategoría del PDF; path ING usa `IngControlledTaxo
 
 | ID | Requisito | Escenarios |
 |----|-----------|------------|
-| PCE-5 | La transacción importada MUST persistir simultáneamente: (a) literales del PDF en BankCategory/BankSubcategory, (b) IDs resueltos en CategoryId/SubcategoryId. Import MUST NOT depender de categorías predefinidas ni system defaults. | PCE-5a (happy path), PCE-5b (sin subcategoría) |
+| PCE-5 | La transacción importada MUST persistir simultáneamente: (a) literales del extracto en BankCategory/BankSubcategory, (b) IDs resueltos en CategoryId/SubcategoryId. Import MUST NOT depender de categorías predefinidas ni system defaults. | PCE-5a (happy path), PCE-5b (sin subcategoría) |
 
 #### PCE-5a: Raw + IDs persistidos — happy path
-- GIVEN rawCategory="Compras", rawSubcategory="Ropa", IDs resueltos por PdfCategoryResolverService
+- GIVEN rawCategory="Compras", rawSubcategory="Ropa", IDs resueltos por StatementCategoryResolverService
 - WHEN handler persiste la transacción
 - THEN BankCategory="Compras", BankSubcategory="Ropa", CategoryId=resuelto, SubcategoryId=resuelto, source=AutoMatched
 
-#### PCE-5b: Sin subcategoría PDF
+#### PCE-5b: Sin subcategoría en extracto
 - GIVEN rawCategory="Compras", rawSubcategory=null
 - WHEN handler persiste la transacción
 - THEN BankCategory="Compras", BankSubcategory=null, SubcategoryId=null, CategoryId=resuelto, source=AutoMatched
