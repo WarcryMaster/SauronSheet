@@ -4,58 +4,29 @@ import { test, expect } from '@playwright/test';
  * E2E Tests for Excel Upload page — ESP-4
  * GREEN: Pass after Upload.cshtml is updated to accept=".xls,.xlsx" with format guide.
  *
- * Auth strategy (W-2 remediation attempt):
- *   Priority 1 — Self-registration: registers a unique test user via /auth/register,
- *                which auto-logs in on success (email confirmation must be OFF).
- *   Priority 2 — Env-var credentials: fallback to TEST_USER_EMAIL / TEST_USER_PASSWORD
- *                if self-registration is unavailable (e.g. email confirmation is ON).
+ * Auth strategy:
+ *   Priority 1 — Env-var credentials: TEST_USER_EMAIL / TEST_USER_PASSWORD (CI / custom override).
+ *   Priority 2 — Seeded test user: e2e@saurontest.local / ***REMOVED*** (pre-seeded in Supabase
+ *                with email_confirmed_at set directly in auth.users — no email confirmation needed).
  *
- *   If BOTH paths fail, tests skip with a clear diagnostic message rather than
- *   producing misleading failures.
+ *   If both paths fail, tests skip with a diagnostic message rather than misleading failures.
+ *
+ *   NOTE: Self-registration is NOT used because Supabase email confirmation is ON for this project.
+ *   The seeded user bypasses that requirement entirely.
  */
 
-/** Generate a unique e-mail address safe for re-use across runs. */
-function uniqueTestEmail(): string {
-    return `e2e.sauron.${Date.now()}@gmail.com`;
-}
+/** Default seeded test user — exists in Supabase with email_confirmed_at pre-set. */
+const SEEDED_EMAIL    = 'e2e@saurontest.local';
+const SEEDED_PASSWORD = '***REMOVED***';
 
 /**
- * Attempts to authenticate via self-registration (/auth/register).
- * Returns true if the browser reached /dashboard after registration.
- * Returns false if the page shows an error (email confirmation ON, rate limit, etc.).
+ * Attempts login with the given credentials.
+ * Returns true if the browser reached /dashboard, false otherwise.
  */
-async function tryRegisterAndLogin(page: any): Promise<boolean> {
-    const email = uniqueTestEmail();
-    const password = '***REMOVED***';
-
-    await page.goto('/auth/register');
-    await page.fill('#email', email);
-    await page.fill('#password', password);
-    await page.fill('#confirmPassword', password);
-    await page.click('button[type="submit"]');
-
-    try {
-        // If auto-login after registration is active, we land on /dashboard
-        await page.waitForURL(/dashboard/i, { timeout: 12000 });
-        return true;
-    } catch {
-        // Registration failed (error shown on page) or redirect never happened
-        return false;
-    }
-}
-
-/**
- * Attempts login with existing credentials from environment variables.
- * Returns true on success, false otherwise.
- */
-async function tryEnvLogin(page: any): Promise<boolean> {
-    const testEmail = process.env.TEST_USER_EMAIL;
-    const testPassword = process.env.TEST_USER_PASSWORD;
-    if (!testEmail || !testPassword) return false;
-
+async function loginWith(page: any, email: string, password: string): Promise<boolean> {
     await page.goto('/auth/login');
-    await page.fill('input[type="email"]', testEmail);
-    await page.fill('input[type="password"]', testPassword);
+    await page.fill('input[type="email"]', email);
+    await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
 
     try {
@@ -68,31 +39,28 @@ async function tryEnvLogin(page: any): Promise<boolean> {
 
 test.describe('Upload Excel Bank Statement — ESP-4', () => {
     test.beforeEach(async ({ page }) => {
-        // Auth path 1: self-register a fresh unique user (works when email confirmation is OFF)
-        const registeredOk = await tryRegisterAndLogin(page);
-        if (registeredOk) {
-            await page.goto('/transactions/upload');
-            return;
+        // Auth path 1: env-var credentials (CI or developer override)
+        const envEmail    = process.env.TEST_USER_EMAIL;
+        const envPassword = process.env.TEST_USER_PASSWORD;
+        if (envEmail && envPassword) {
+            const ok = await loginWith(page, envEmail, envPassword);
+            if (ok) { await page.goto('/transactions/upload'); return; }
         }
 
-        // Auth path 2: use pre-seeded env-var credentials
-        const loggedInOk = await tryEnvLogin(page);
-        if (loggedInOk) {
+        // Auth path 2: seeded test user (pre-confirmed, works without email confirmation toggle)
+        const seededOk = await loginWith(page, SEEDED_EMAIL, SEEDED_PASSWORD);
+        if (seededOk) {
             await page.goto('/transactions/upload');
             return;
         }
 
         // Both paths failed — skip with diagnostic message
-        const registerError = await page.locator('.alert-danger').textContent().catch(() => '(not found)');
         test.skip(
             true,
             `W-2 BLOCKED: both auth paths failed. ` +
-            `Self-register error on page: "${registerError}". ` +
-            `Env vars TEST_USER_EMAIL/TEST_USER_PASSWORD not set. ` +
-            `Root cause: Supabase email confirmation is ON — self-registration does not create a ` +
-            `session until the confirmation link is clicked. ` +
-            `Resolution: disable email confirmation in Supabase Auth settings, ` +
-            `or provide TEST_USER_EMAIL / TEST_USER_PASSWORD for a pre-verified account.`
+            `Seeded user ${SEEDED_EMAIL} did not authenticate — verify the user exists in Supabase ` +
+            `auth.users with email_confirmed_at set and confirmation_token = ''. ` +
+            `Env vars TEST_USER_EMAIL/TEST_USER_PASSWORD are not set.`
         );
     });
 
