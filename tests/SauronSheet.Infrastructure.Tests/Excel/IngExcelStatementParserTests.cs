@@ -359,29 +359,146 @@ public class IngExcelStatementParserTests
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // ESP-1a (real sample): parse a real ING .xls file without crashing
+    // Golden-fixture tests: real ING .xls file (movements-non-2501.xls)
+    //
+    // File: src/SauronSheet.Infrastructure/Excel/movements-non-2501.xls
+    // Copied to: TestFixtures/movements-non-2501.xls via .csproj CopyToOutputDirectory
+    //
+    // Ground-truth (produced by parser with CultureInfo.InvariantCulture):
+    //   21 valid rows, 0 row-errors, 0 in-file duplicates
+    //   Amounts use dot as decimal separator (parser's ReadCellAsString uses InvariantCulture)
+    //   COMENTARIO and SALDO always null per spec ESP-2b
+    //   Currency always "EUR" (hardcoded in parser)
     // ════════════════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Guard: confirms the CopyToOutputDirectory rule in the .csproj is working.
+    /// A failure here means the build target is broken, NOT the parser.
+    /// Replacing the old silent "return;" pattern — this test FAILS loudly if the fixture is absent.
+    /// </summary>
     [Fact]
-    public async Task ParseAsync_RealIngSample_ReturnsNonEmptyResultWithoutCrashing()
+    public void RealXlsGolden_FixtureExistsInTestOutputDirectory()
     {
-        // Arrange — use the real ING sample file (movements-non-2501.xls)
-        // The file is copied to the test output via CopyToOutputDirectory in the .csproj
         var samplePath = Path.Combine(AppContext.BaseDirectory, "TestFixtures", "movements-non-2501.xls");
-        if (!File.Exists(samplePath))
-        {
-            // Skip gracefully if fixture file is not available in this environment
-            return;
-        }
+
+        Assert.True(
+            File.Exists(samplePath),
+            $"XLS golden fixture is missing from test output. " +
+            $"Ensure the .csproj has a CopyToOutputDirectory rule for '*.xls'. " +
+            $"Expected path: {samplePath}");
+    }
+
+    /// <summary>
+    /// ESP-1a (golden): real .xls BIFF format parsed correctly — exactly 21 rows, no errors, no skips.
+    /// Verifies the .xls code path (Windows-1252 encoding, BIFF reader) end-to-end.
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_RealXlsGolden_ParsesExactly21ValidRowsWithNoErrorsOrSkips()
+    {
+        // Arrange
+        var samplePath = Path.Combine(AppContext.BaseDirectory, "TestFixtures", "movements-non-2501.xls");
+        Assert.True(File.Exists(samplePath), $"XLS fixture not found: {samplePath}");
 
         await using var stream = File.OpenRead(samplePath);
         var parser = new IngExcelStatementParser();
 
-        // Act — must not throw
+        // Act
         StatementParseResult result = await parser.ParseAsync(stream, "movements-non-2501.xls");
 
-        // Assert — real file: at least one row parsed; no catastrophic failures
-        Assert.True(result.Rows.Count > 0,
-            $"Expected at least one parsed row from real sample. Errors: {result.RowErrors.Count}, Skipped: {result.SkippedCount}");
+        // Assert — exact counts from the golden file
+        Assert.Equal(21, result.Rows.Count);
+        Assert.Empty(result.RowErrors);
+        Assert.Equal(0, result.SkippedCount);
     }
+
+    /// <summary>
+    /// ESP-2a + ESP-2b (golden, data-driven): every row in the real .xls file has the exact
+    /// expected Date, Category, SubCategory, Description, Amount, and the discarded
+    /// Comment/Balance are always null per spec ESP-2b.
+    /// RowNumber is also verified — data starts at Excel row 5 (1-based), so RowNumber = rowIndex + 5.
+    ///
+    /// Amounts are dot-separated (InvariantCulture) because ExcelDataReader returns doubles
+    /// for numeric cells and the parser calls d.ToString(CultureInfo.InvariantCulture).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ExpectedRealXlsRows))]
+    public async Task ParseAsync_RealXlsGolden_EachRow_MapsAllFieldsExhaustively(
+        int rowIndex,
+        int expectedRowNumber,
+        string expectedDate,
+        string expectedCategory,
+        string expectedSubCategory,
+        string expectedDescription,
+        string expectedAmount)
+    {
+        // Arrange
+        var samplePath = Path.Combine(AppContext.BaseDirectory, "TestFixtures", "movements-non-2501.xls");
+        Assert.True(File.Exists(samplePath), $"XLS fixture not found: {samplePath}");
+
+        await using var stream = File.OpenRead(samplePath);
+        var parser = new IngExcelStatementParser();
+
+        // Act
+        StatementParseResult result = await parser.ParseAsync(stream, "movements-non-2501.xls");
+
+        // Guard — ensure the row index is within the parsed result
+        Assert.True(
+            rowIndex < result.Rows.Count,
+            $"Row index {rowIndex} is out of range. Total parsed rows: {result.Rows.Count}");
+
+        RawTransactionRow row = result.Rows[rowIndex];
+
+        // Assert RowNumber (1-based Excel row number assigned by parser — data starts at row 5)
+        Assert.Equal(expectedRowNumber, row.RowNumber);
+
+        // Assert mapped fields (exhaustive per spec ESP-2a)
+        Assert.Equal(expectedDate, row.Date);
+        Assert.Equal(expectedCategory, row.Category);
+        Assert.Equal(expectedSubCategory, row.SubCategory);
+        Assert.Equal(expectedDescription, row.Description);
+        Assert.Equal(expectedAmount, row.Amount);
+
+        // Assert discarded fields (spec ESP-2b: COMENTARIO and SALDO always null)
+        Assert.Null(row.Comment);
+        Assert.Null(row.Balance);
+
+        // Assert hardcoded currency
+        Assert.Equal("EUR", row.Currency);
+    }
+
+    /// <summary>
+    /// Ground-truth data for the 21 rows in movements-non-2501.xls.
+    /// Columns: rowIndex, expectedRowNumber (Excel 1-based, data starts at row 5),
+    ///          expectedDate, expectedCategory, expectedSubCategory,
+    ///          expectedDescription, expectedAmount.
+    /// Amounts use dot separator (parser's InvariantCulture for double cells).
+    /// Integer amounts (e.g. "9", "-15", "-45") have no decimal part (ExcelDataReader
+    /// returns whole-number doubles whose InvariantCulture ToString omits the decimal).
+    /// </summary>
+    public static TheoryData<int, int, string, string, string, string, string> ExpectedRealXlsRows =>
+        new()
+        {
+            //  idx  rowNo   date             category                           subCategory                        description                                                                   amount
+            {  0,  5,  "31/01/2025", "Otros gastos",                    "Suscripciones",                   "Pago en PAYPAL *DAZN DE 35314369001 DE",                                    "-9.99"   },
+            {  1,  6,  "31/01/2025", "Vehículo y transporte",           "Parking y garaje",                "Pago en BSM AP COTXERES DE SARRIABARCELONA ES",                             "-5.65"   },
+            {  2,  7,  "31/01/2025", "Nómina y otras prestaciones",     "Nómina o Pensión",                "Nomina recibida MICROSOFT CORPORATION ASSOCIATIONS SAF",                    "3426.05" },
+            {  3,  8,  "28/01/2025", "Alimentación",                    "Supermercados y alimentación",    "Pago en MERCADONA FRANCESC MARIMOCOLONIA SEDO ES",                          "-24.38"  },
+            {  4,  9,  "26/01/2025", "Compras",                         "Compras (otros)",                 "Pago en AMZN Mktp ES*VU6NZ2T85 800 279 6620 LU",                           "-28.99"  },
+            {  5, 10,  "26/01/2025", "Compras",                         "Compras (otros)",                 "Pago en AMZN Mktp ES*L697F2DM5",                                            "-26.03"  },
+            {  6, 11,  "25/01/2025", "Otros gastos",                    "Gasto Bizum",                     "Bizum enviado a GERARD MARI PRIETO Comilona",                               "-84.1"   },
+            {  7, 12,  "25/01/2025", "Compras",                         "Compras (otros)",                 "Pago en Amazon.es*LZ9RA9NZ5 amazon.esay LU",                                "-20.4"   },
+            {  8, 13,  "21/01/2025", "Otros ingresos",                  "Ingresos de otras entidades",     "Transferencia recibida Vinted",                                             "9"       },
+            {  9, 14,  "16/01/2025", "Compras",                         "Compras (otros)",                 "Pago Bizum en TULOTERO",                                                    "-15"     },
+            { 10, 15,  "13/01/2025", "Compras",                         "Compras (otros)",                 "Pago en AMZN Mktp ES*016ND9IX5",                                            "-47.99"  },
+            { 11, 16,  "08/01/2025", "Otros gastos",                    "Gasto Bizum",                     "Bizum enviado a FCO JAVIER DIAZ GONZALEZ Gift",                             "-22.71"  },
+            { 12, 17,  "08/01/2025", "Otros ingresos",                  "Ingreso Bizum",                   "Bizum recibido de ALVARO RODRIGO CANTARERO GALVEZ Regalo",                  "13"      },
+            { 13, 18,  "07/01/2025", "Otros gastos",                    "Transferencias",                  "Transferencia internacional emitida Movimiento ING",                        "-1200"   },
+            { 14, 19,  "06/01/2025", "Ocio y viajes",                   "Cafeterías y restaurantes",       "Pago en MCDONALDS ZARAGOZA ES",                                             "-22.93"  },
+            { 15, 20,  "06/01/2025", "Vehículo y transporte",           "Gasolina y combustible",          "Pago en FAMILY ENERGY ZARAGOZA PLATAFORMA LOES",                            "-42.6"   },
+            { 16, 21,  "05/01/2025", "Compras",                         "Ropa y complementos",             "Pago en CC. PARQUE CORREDOR TORREJON DE AES",                               "-29.99"  },
+            { 17, 22,  "04/01/2025", "Educación y salud",               "Deporte y gimnasio",              "Pago en EASY.TRAININGYM.COM",                                               "-45"     },
+            { 18, 23,  "03/01/2025", "Otros ingresos",                  "Ingreso Bizum",                   "Bizum recibido de MARIA ESMERALDA NIETO GARCIA Comida",                     "25.4"    },
+            { 19, 24,  "01/01/2025", "Otros gastos",                    "Suscripciones",                   "Pago en PAYPAL *DAZN DE",                                                   "-9.99"   },
+            { 20, 25,  "01/01/2025", "Movimientos excluidos",           "Traspaso entre cuentas",          "Traspaso interno emitido periódico SPO To 1727987684",                      "-1000"   },
+        };
 }
