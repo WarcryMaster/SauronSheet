@@ -39,6 +39,7 @@ public class DashboardModel : PageModel
 
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }
+    public int AnalyticsYear { get; set; }
 
     public DashboardModel(IMediator mediator)
     {
@@ -52,10 +53,11 @@ public class DashboardModel : PageModel
             CalculateDateRange();
 
             Summary = await _mediator.Send(new GetTransactionSummaryQuery(FromDate, ToDate));
+            AnalyticsYear = await ResolveAnalyticsYearAsync(Summary);
             SpendingByCategory = await _mediator.Send(new GetSpendingByCategoryQuery(FromDate, ToDate));
-            MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(DateTime.UtcNow.Year));
-            YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(DateTime.UtcNow.Year - 1, DateTime.UtcNow.Year));
-            MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(DateTime.UtcNow.Year));
+            MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(AnalyticsYear));
+            YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(AnalyticsYear - 1, AnalyticsYear));
+            MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(AnalyticsYear));
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
 
             // Phase 5: Budget status widget
@@ -98,5 +100,19 @@ public class DashboardModel : PageModel
                 => (CustomFromDate.Value, CustomToDate.Value),
             _ => (now.AddMonths(-3).Date, now.Date) // last-3-months fallback
         };
+    }
+
+    private async Task<int> ResolveAnalyticsYearAsync(TransactionSummaryDto? summary)
+    {
+        var currentYear = DateTime.UtcNow.Year;
+        var shouldUseActualRange = DateFilter == "all" || summary?.TransactionCount == 0;
+
+        if (!shouldUseActualRange)
+        {
+            return currentYear;
+        }
+
+        var actualDateRange = await _mediator.Send(new GetTransactionDateRangeQuery());
+        return actualDateRange?.MaxDate.Year ?? currentYear;
     }
 }

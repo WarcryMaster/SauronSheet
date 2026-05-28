@@ -317,6 +317,35 @@ public class SupabaseTransactionRepository : ITransactionRepository
         return response.Models.Any(r => r.Date.Date == date.Date);
     }
 
+    public async Task<(DateTime MinDate, DateTime MaxDate)?> GetDateRangeAsync(UserId userId)
+    {
+        try
+        {
+            var response = await _client.From<TransactionRow>()
+                .Where(x => x.UserId == userId.Value)
+                .Order("date", Constants.Ordering.Ascending)
+                .Get();
+
+            if (response.Models.Count == 0)
+            {
+                return null;
+            }
+
+            var minDate = response.Models.First().Date;
+            var maxDate = response.Models.Last().Date;
+            return (minDate, maxDate);
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("repo", "SupabaseTransactionRepository.GetDateRangeAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
     public async Task<Dictionary<CategoryId, int>> GetCountsByCategoriesAsync(List<CategoryId> categoryIds)
     {
         if (categoryIds == null || categoryIds.Count == 0)

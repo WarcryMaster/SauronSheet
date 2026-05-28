@@ -23,6 +23,12 @@ public interface ITransactionRepository
     Task<bool> ExistsDuplicateAsync(UserId userId, DateTime date, decimal amount, string description);
 
     /// <summary>
+    /// Gets the transaction date range for a user.
+    /// Returns null when the user has no transactions.
+    /// </summary>
+    Task<(DateTime MinDate, DateTime MaxDate)?> GetDateRangeAsync(UserId userId);
+
+    /// <summary>
     /// Deletes multiple transactions atomically for a user.
     /// Feature 004: Bulk delete implementation.
     /// If any transaction fails to delete, all deletions are rolled back (atomic semantics).

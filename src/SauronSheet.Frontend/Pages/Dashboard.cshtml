@@ -192,6 +192,6 @@
 
         initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
         initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);
-        initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(DateTime.UtcNow.Year - 1)', '@DateTime.UtcNow.Year');
+        initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(Model.AnalyticsYear - 1)', '@Model.AnalyticsYear');
     });
 </script>
