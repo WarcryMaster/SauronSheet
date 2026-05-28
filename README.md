@@ -238,6 +238,47 @@ await _mediator.Send(new GetSpendingByCategoryQuery(userId, month));
 5. **Wire Frontend** — Create Razor page to trigger command/query.
 6. **Test End-to-End** — Verify complete flow.
 
+### Database Migrations
+
+SauronSheet uses Supabase CLI for database migrations. All migrations are stored in `supabase/migrations/` and follow the naming convention `YYYYMMDDHHMMSS_descriptive_name.sql`.
+
+#### Prerequisites
+
+- Install Supabase CLI: https://supabase.com/docs/guides/cli
+- Authenticate: `supabase login`
+
+#### Creating a New Migration
+
+```bash
+# Create a new migration file with timestamp
+supabase migration new descriptive_name
+
+# Edit the generated file in supabase/migrations/
+# Apply locally
+supabase migration up
+```
+
+#### Applying Migrations
+
+```bash
+# Apply all pending migrations to local database
+supabase migration up
+
+# Push migrations to remote (production) database
+supabase db push --linked
+```
+
+#### CI/CD Integration
+
+Migrations are automatically applied during deployment via GitHub Actions. The workflow:
+1. Installs Supabase CLI
+2. Links to the Supabase project
+3. Runs `supabase db push --linked` to apply pending migrations
+
+**Required GitHub Secrets:**
+- `SUPABASE_ACCESS_TOKEN` — Personal access token from Supabase dashboard
+- `SUPABASE_DB_PASSWORD` — Database password from Supabase project settings
+
 ### Build Commands
 
 ```bash
