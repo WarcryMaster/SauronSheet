@@ -5,6 +5,9 @@
 This file is the single source of truth for AI behavior in this repository.
 Read it before acting, and follow the linked instruction files for file-type-specific rules.
 
+## Language
+Always when user interact with the IA and sdd artifacts must be in neutral Spanish. Never with Argentinian Accent or Vose! Code and IA Code like this document Agent.md must be in english.
+
 ## Working Rules
 
 - Operate in agent mode: avoid asking for permission on routine read-only tasks.
