@@ -13,7 +13,7 @@ Reemplaza el parser PDF como único mecanismo de importación de movimientos.
 
 | ID    | Requisito | Escenarios |
 |-------|-----------|------------|
-| ESP-1 | El parser MUST detectar la hoja `Movimientos`. MUST validar que la fila 4 contenga exactamente las columnas `F. VALOR \| CATEGORÍA \| SUBCATEGORÍA \| DESCRIPCIÓN \| COMENTARIO \| IMPORTE \| SALDO` por posición. Si la hoja falta o la cabecera no coincide, MUST retornar `ParseError` antes de procesar ninguna fila de datos. | ESP-1a, ESP-1b, ESP-1c |
+| ESP-1 | El parser MUST detectar la hoja `Movimientos`. MUST validar que la fila 4 contenga exactamente las columnas `F. VALOR \| CATEGORÍA \| SUBCATEGORÍA \| DESCRIPCIÓN \| COMENTARIO \| IMPORTE (€) \| SALDO (€)` por posición. Si la hoja falta o la cabecera no coincide, MUST retornar `ParseError` antes de procesar ninguna fila de datos. | ESP-1a, ESP-1b, ESP-1c |
 
 #### ESP-1a: Hoja y cabecera válidas — parseo iniciado
 
@@ -39,17 +39,17 @@ Reemplaza el parser PDF como único mecanismo de importación de movimientos.
 
 | ID    | Requisito | Escenarios |
 |-------|-----------|------------|
-| ESP-2 | MUST mapear cada fila de datos (desde fila 5) a `RawTransactionRow`: `F. VALOR` → `ValueDate`, `DESCRIPCIÓN` → `Description`, `IMPORTE` → `Amount`, `CATEGORÍA` → `BankCategory`, `SUBCATEGORÍA` → `BankSubCategory`. `COMENTARIO` y `SALDO` MUST leerse y descartarse. `ImportedFrom` MUST contener el filename original del archivo subido. | ESP-2a, ESP-2b |
+| ESP-2 | MUST mapear cada fila de datos (desde fila 5) a `RawTransactionRow`: `F. VALOR` → `ValueDate`, `DESCRIPCIÓN` → `Description`, `IMPORTE (€)` → `Amount`, `CATEGORÍA` → `BankCategory`, `SUBCATEGORÍA` → `BankSubCategory`. `COMENTARIO` y `SALDO (€)` MUST leerse y descartarse. `ImportedFrom` MUST contener el filename original del archivo subido. | ESP-2a, ESP-2b |
 
 #### ESP-2a: Fila completa — mapeo correcto
 
-- GIVEN fila con `F. VALOR = 15/01/2025`, `DESCRIPCIÓN = "DAZN"`, `IMPORTE = -12,99`, `CATEGORÍA = "Compras"`, `SUBCATEGORÍA = "Online"`
+- GIVEN fila con `F. VALOR = 15/01/2025`, `DESCRIPCIÓN = "DAZN"`, `IMPORTE (€) = -12,99`, `CATEGORÍA = "Compras"`, `SUBCATEGORÍA = "Online"`
 - WHEN el parser procesa la fila
 - THEN `ValueDate = 2025-01-15`, `Amount = -12.99`, `Description = "DAZN"`, `BankCategory = "Compras"`, `BankSubCategory = "Online"`
 
-#### ESP-2b: COMENTARIO y SALDO descartados
+#### ESP-2b: COMENTARIO y SALDO (€) descartados
 
-- GIVEN fila con `COMENTARIO = "Recibo luz"` y `SALDO = 1234,56`
+- GIVEN fila con `COMENTARIO = "Recibo luz"` y `SALDO (€) = 1234,56`
 - WHEN el parser procesa la fila
 - THEN `RawTransactionRow.Comment = null`; `Balance` no se persiste
 
