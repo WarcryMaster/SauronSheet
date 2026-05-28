@@ -55,6 +55,19 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 - PageModel: extract userId from `User.FindFirst("sub")`.
 - Never trust client-side userId from form inputs.
 
+### Database Migrations (Supabase CLI)
+- All migrations live in `supabase/migrations/` — this is the single source of truth.
+- Naming convention: `YYYYMMDDHHMMSS_descriptive_name.sql` (sequential timestamps).
+- Never modify migration files after they have been applied to production.
+- To create a new migration: `supabase migration new <name>`, then write SQL in the generated file.
+- To apply migrations locally: `supabase migration up`.
+- To apply migrations to production: `supabase db push --linked` (automated in CI/CD).
+- To reset local database: `supabase db reset`.
+- CI/CD runs `supabase db push --linked` automatically on deploy (GitHub Actions).
+- Required GitHub Actions secrets: `SUPABASE_ACCESS_TOKEN`.
+- Never put migration files in `src/` — they belong in `supabase/migrations/`.
+- If you see `PGRST205` errors about missing tables, a migration was not applied. Check `supabase/migrations/` and apply it.
+
 ## Domain Patterns Quick Reference
 
 | Pattern         | Convention                                 | Example                       |
@@ -160,6 +173,10 @@ These files are referenced by the editor/IDE through `applyTo`-style scoping and
 - ❌ Never use `data-mdb-button-init` on `<button type="submit">` — breaks form submission in MDBootstrap v9+.
 
 ### Supabase/Postgrest C# Client
+
+#### 0. PGRST205: Table Not Found in Schema Cache
+If you see `PGRST205: Could not find the table 'public.XXX' in the schema cache`, the table does not exist or the migration was not applied.
+**Solución**: Check `supabase/migrations/` for the correct migration file. Apply it with `supabase db push --linked` (production) or `supabase migration up` (local). Do NOT create tables manually via SQL Editor — always use migrations.
 
 #### 1. OR Conditions NOT Supported
 El cliente Postgrest C# (supabase-csharp 0.16.2) no soporta OR dentro de `.Where()`. 
