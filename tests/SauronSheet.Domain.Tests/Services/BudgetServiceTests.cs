@@ -159,4 +159,27 @@ public class BudgetServiceTests
         var result = BudgetService.GetStatusLevel(1.25m);
         Assert.Equal(BudgetStatusLevel.Overage, result);
     }
+
+    // === GetStatusLevel Spec Boundary Tests ===
+    // Spec thresholds: Green < 75%, Yellow 75%–<100%, Red = 100% exactly, Overage > 100%.
+    // Boundary values: 0.74 (just below Green→Yellow), 0.75 (Green→Yellow threshold),
+    //                  0.99 (just below Yellow→Red), 1.00 (Yellow→Red threshold),
+    //                  1.01 (just above Red→Overage).
+
+    [Theory]
+    [Trait("Category", "Domain")]
+    [InlineData(0.74, BudgetStatusLevel.Green)]
+    [InlineData(0.75, BudgetStatusLevel.Yellow)]
+    [InlineData(0.99, BudgetStatusLevel.Yellow)]
+    [InlineData(1.00, BudgetStatusLevel.Red)]
+    [InlineData(1.01, BudgetStatusLevel.Overage)]
+    public void GetStatusLevel_SpecBoundaryValues_ReturnsCorrectStatus(
+        double percentageUsed, BudgetStatusLevel expected)
+    {
+        // Act
+        BudgetStatusLevel result = BudgetService.GetStatusLevel((decimal)percentageUsed);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
 }

@@ -35,16 +35,16 @@ public class BudgetService
 
     /// <summary>
     /// Calculate the budget status level based on percentage used.
-    /// Thresholds (exclusive >): Green ≤ 60%, Yellow 60–80%, Red 80–100%, Overage > 100%.
+    /// Thresholds: Green &lt; 75%, Yellow 75%–&lt;100%, Red = 100% exactly, Overage &gt; 100%.
     /// </summary>
     public static BudgetStatusLevel GetStatusLevel(decimal percentageUsed)
     {
         return percentageUsed switch
         {
-            > 1.0m => BudgetStatusLevel.Overage,
-            > 0.8m => BudgetStatusLevel.Red,
-            > 0.6m => BudgetStatusLevel.Yellow,
-            _ => BudgetStatusLevel.Green
+            > 1.0m   => BudgetStatusLevel.Overage,
+            1.0m     => BudgetStatusLevel.Red,
+            >= 0.75m => BudgetStatusLevel.Yellow,
+            _        => BudgetStatusLevel.Green
         };
     }
 }
