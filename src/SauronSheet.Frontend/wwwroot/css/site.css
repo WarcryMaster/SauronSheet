@@ -96,3 +96,39 @@
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.12) !important;
     transition: box-shadow 0.2s ease;
 }
+
+/* Transactions source filter — DESIGN.md aligned chips */
+.source-filter-panel {
+    background-color: var(--surface-card);
+}
+
+.source-picker {
+    border: 1px solid var(--hairline);
+    border-radius: var(--rounded-md);
+    background-color: var(--surface-card);
+    padding: 0.875rem;
+}
+
+.source-chip-selected {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.source-chip-remove {
+    border: 0;
+    background: transparent;
+    color: var(--brand);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
+
+.source-chip-remove:hover,
+.source-chip-remove:focus {
+    color: var(--brand-dark);
+    outline: none;
+}

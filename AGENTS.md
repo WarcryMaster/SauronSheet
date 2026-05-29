@@ -102,6 +102,8 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
   - `data-mdb-dismiss="modal"` (not `data-bs-dismiss`)
   - `data-mdb-auto-close="outside"` (not `data-bs-auto-close`)
   - `data-mdb-ripple-init` (not `data-bs-ripple`)
+- **DESIGN.md is the visual source of truth for all UI work.** Read `DESIGN.md` BEFORE changing any `.cshtml`, CSS, component layout, spacing, or interaction pattern.
+- When delegating frontend/UI work to any sub-agent, ALWAYS include `DESIGN.md` and the Frontend Rules section of this file in the prompt/context.
 - Keep JavaScript modern: `const` / `let`, event listeners, null checks, and server-side revalidation.
 - See `.github/instructions/razor-frontend.instructions.md` for full MDBootstrap API and PageModel patterns (auto-loaded for `.cshtml` files).
 - Utilizar la metodología https://github.com/voltagent/awesome-design-md para la generación de interfaces. Todas las interfaces frontend deben crearse siguiendo esta metodología.

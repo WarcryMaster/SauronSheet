@@ -15,50 +15,70 @@
     </div>
 
     <!-- Filters -->
-    <form method="get" class="card border-0 shadow-sm p-3">
-        <div class="d-flex flex-wrap align-items-end gap-3">
-            <div>
+    <form method="get" class="card border-0 shadow-sm p-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-3">
                 <label for="StartDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">From</label>
                 <input type="date" name="StartDate" id="StartDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")"
                        class="form-control form-control-sm" />
             </div>
-            <div>
+            <div class="col-12 col-md-3">
                 <label for="EndDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">To</label>
                 <input type="date" name="EndDate" id="EndDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")"
                        class="form-control form-control-sm" />
             </div>
-            <div>
-                <label class="form-label small fw-semibold text-muted text-uppercase mb-1">Source</label>
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start" type="button"
-                            id="sourceDropdown" data-mdb-toggle="dropdown" data-mdb-auto-close="outside"
-                            aria-expanded="false">
-                        @if (Model.SelectedSources.Any())
-                        {
-                            <span>@Model.SelectedSources.Count selected</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">All sources</span>
-                        }
-                    </button>
-                    <ul class="dropdown-menu w-100" aria-labelledby="sourceDropdown">
-                        @foreach (var source in Model.AvailableSources)
-                        {
-                            <li>
-                                <label class="dropdown-item d-flex align-items-center">
-                                    <input type="checkbox" class="form-check-input me-2 source-checkbox"
-                                           name="SelectedSources" value="@source"
-                                           @(Model.SelectedSources.Contains(source) ? "checked" : "") />
-                                    @source
-                                </label>
-                            </li>
-                        }
-                    </ul>
+            <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
+                <button type="submit" class="btn btn-brand btn-sm">Apply</button>
+                <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
+            </div>
+            <div class="col-12">
+                <div class="source-filter-panel">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+                        <div>
+                            <label class="form-label small fw-semibold text-muted text-uppercase mb-1 d-block">Source</label>
+                            <span id="selectedSourcesSummary"
+                                  class="@(Model.SelectedSources.Any() ? "badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2" : "small text-muted")"
+                                  data-empty-text="Search and add one or more sources. If none are selected, all sources are shown.">
+                                @(Model.SelectedSources.Any()
+                                    ? $"{Model.SelectedSources.Count} selected source(s)"
+                                    : "Search and add one or more sources. If none are selected, all sources are shown.")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="source-picker">
+                        <div id="selectedSourcesContainer" class="d-flex flex-wrap gap-2 mb-3">
+                            @foreach (string source in Model.SelectedSources)
+                            {
+                                <span class="badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2 source-chip-selected">
+                                    <span>@source</span>
+                                    <button type="button"
+                                            class="source-chip-remove"
+                                            data-source="@source"
+                                            aria-label="Remove source @source">
+                                        ×
+                                    </button>
+                                </span>
+                                <input type="hidden" name="SelectedSources" value="@source" data-selected-source="@source" />
+                            }
+                        </div>
+
+                        <div class="position-relative">
+                            <input type="text"
+                                   id="SourceAutocomplete"
+                                   list="availableSourcesList"
+                                   class="form-control form-control-sm"
+                                   placeholder="Search source and select it..."
+                                   autocomplete="off" />
+                            <datalist id="availableSourcesList">
+                                @foreach (string source in Model.AvailableSources)
+                                {
+                                    <option value="@source"></option>
+                                }
+                            </datalist>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <button type="submit" class="btn btn-brand btn-sm">Apply</button>
-            <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
         </div>
     </form>
 
@@ -192,4 +212,106 @@
 
 @section Scripts {
     <script src="~/js/bulk-delete.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sourceInput = document.getElementById('SourceAutocomplete');
+            const selectedContainer = document.getElementById('selectedSourcesContainer');
+            const summary = document.getElementById('selectedSourcesSummary');
+            const form = sourceInput?.closest('form');
+
+            if (!sourceInput || !selectedContainer || !form || !summary) {
+                return;
+            }
+
+            const availableSources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableSources));
+
+            function getSelectedSources() {
+                return Array.from(form.querySelectorAll('input[name="SelectedSources"]'))
+                    .map(input => input.value);
+            }
+
+            function updateSummary() {
+                const count = getSelectedSources().length;
+                if (count === 0) {
+                    summary.className = 'small text-muted';
+                    summary.textContent = summary.dataset.emptyText || 'All sources are shown.';
+                    return;
+                }
+
+                summary.className = 'badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2';
+                summary.textContent = `${count} selected source(s)`;
+            }
+
+            function addSource(source) {
+                const normalized = source?.trim();
+                if (!normalized) {
+                    return;
+                }
+
+                const existsInAvailable = availableSources.includes(normalized);
+                const alreadySelected = getSelectedSources().includes(normalized);
+
+                if (!existsInAvailable || alreadySelected) {
+                    sourceInput.value = '';
+                    return;
+                }
+
+                const chip = document.createElement('span');
+                chip.className = 'badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2 source-chip-selected';
+
+                const chipText = document.createElement('span');
+                chipText.textContent = normalized;
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'source-chip-remove';
+                removeButton.setAttribute('data-source', normalized);
+                removeButton.setAttribute('aria-label', `Remove source ${normalized}`);
+                removeButton.textContent = '×';
+
+                chip.appendChild(chipText);
+                chip.appendChild(removeButton);
+
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'SelectedSources';
+                hidden.value = normalized;
+                hidden.setAttribute('data-selected-source', normalized);
+
+                selectedContainer.appendChild(chip);
+                selectedContainer.appendChild(hidden);
+                sourceInput.value = '';
+                updateSummary();
+            }
+
+            sourceInput.addEventListener('change', function () {
+                addSource(sourceInput.value);
+            });
+
+            sourceInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addSource(sourceInput.value);
+                }
+            });
+
+            selectedContainer.addEventListener('click', function (event) {
+                const button = event.target.closest('.source-chip-remove');
+                if (!button) {
+                    return;
+                }
+
+                const source = button.getAttribute('data-source');
+                const hiddenInput = Array.from(form.querySelectorAll('input[name="SelectedSources"]'))
+                    .find(input => input.getAttribute('data-selected-source') === source);
+                const chip = button.closest('.source-chip-selected');
+
+                hiddenInput?.remove();
+                chip?.remove();
+                updateSummary();
+            });
+
+            updateSummary();
+        });
+    </script>
 }
