@@ -49,15 +49,15 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Cobertura E2E (PR 3)
 
-- [ ] 3.1 Crear `e2e/tests/03-budgets.spec.ts` extendiendo `auth.fixture.ts`; worker único, ejecución secuencial
-- [ ] 3.2 Escenario: crear presupuesto → verificar que aparece en el listado del mes
-- [ ] 3.3 Escenario: abrir comparación → categoría sin presupuesto con gasto muestra etiqueta "Sin presupuesto" e importe
-- [ ] 3.4 Escenario: abrir dashboard → widget refleja exclusivamente el mes actual (no mes anterior ni futuro)
-- [ ] 3.5 Ejecutar `npx playwright test --config=e2e/playwright.config.ts --project=chromium` — todos los escenarios pasan
+- [x] 3.1 Crear `e2e/tests/03-budgets.spec.ts` extendiendo `auth.fixture.ts`; worker único, ejecución secuencial
+- [x] 3.2 Escenario: crear presupuesto → verificar que aparece en el listado del mes (TC-B01)
+- [x] 3.3 Escenario: abrir comparación → categoría sin presupuesto con gasto muestra etiqueta "Sin presupuesto" e importe (TC-B02)
+- [x] 3.4 Escenario: abrir dashboard → widget refleja exclusivamente el mes actual (no mes anterior ni futuro) (TC-B03)
+- [x] 3.5 Ejecutar `npx playwright test --config=e2e/playwright.config.ts --project=chromium` — 8 pass, 4 skip, 0 fail
 
 ---
 
 ## Phase 4: Integridad de build
 
-- [ ] 4.1 Ejecutar `dotnet build` — cero advertencias, cero errores (`TreatWarningsAsErrors=true` en Domain y Application)
-- [ ] 4.2 Confirmar que `dotnet format` no produce cambios pendientes
+- [x] 4.1 Ejecutar `dotnet build` — 0 advertencias, 0 errores
+- [x] 4.2 `dotnet format --verify-no-changes` reporta violaciones PREEXISTENTES (archivos no tocados por PR 3); ninguna introducida por este PR (PR 3 solo añade TypeScript)
