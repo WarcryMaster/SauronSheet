@@ -1,16 +1,13 @@
-# Documentation & Architecture Decision Records (ADRs)
+# Documentation
 
-This directory contains **informal product context and architecture decisions** that inform
-development but are not formal speckit specifications.
+This directory contains **architecture decisions and informal product context** that inform
+development. For formal specifications and SDD artifacts, see the directories below.
 
 ## Directory Structure
 
 ```
 docs/
-├── adr/                           # Architecture Decision Records
-│   ├── 00001-description.md       # Format: [NNNN]-[short-title]
-│   └── ...
-├── PDF_PARSER_AMOUNT_NORMALIZATION.md   # Technical implementation notes
+├── adr/                           # Architecture Decision Records (format: [NNNN]-[short-title])
 └── README.md                      # This file
 ```
 
@@ -19,17 +16,17 @@ docs/
 ADRs capture **why** we made certain architectural choices, linking implementation details
 to business context. They are not specifications but reference material for future decisions.
 
-| ID | Title | Date |
-|----|----- |------|
-| [00001](adr/00001-pdf-parser-dual-format-normalization.md) | PDF Parser Amount Normalization — Dual-Format Support | 2026-03-13 |
+> No active ADRs. Previous ADRs (e.g., PDF parser dual-format normalization) were retired
+> when the PDF import module was replaced with Excel (see `openspec/` for the change archive).
 
-## Technical Notes
+## Related Documentation
 
-- **[PDF Parser Amount Normalization](PDF_PARSER_AMOUNT_NORMALIZATION.md)**: Implementation
-  details for dual-format number parsing in Infrastructure/PDF/Parsers
-
-## Reference
-
-- **Specifications**: See `specs/` for formal phase-based requirements and plans.
-- **Constitution**: See `.specify/memory/constitution.md` for governance and core principles.
-- **Code**: All source code must follow patterns in `.github/copilot-instructions.md`.
+| Directory | Purpose |
+|-----------|---------|
+| `openspec/` | SDD artifacts: specs, changes (archived), and roadmap |
+| `specs/` | Phase-based specifications (phase-0 through phase-6) and feature specs |
+| `sdd/` | Active SDD working files for current changes |
+| `DESIGN.md` | Visual design source of truth (colors, typography, spacing, components) |
+| `.specify/memory/constitution.md` | Governance and core principles |
+| `.github/copilot-instructions.md` | Code patterns and quality rules |
+| `AGENTS.md` | AI behavior rules and architecture constraints |
