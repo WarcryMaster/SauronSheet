@@ -8,6 +8,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  outputDir: '../test-results/playwright/artifacts',
   
   // Run tests in files in parallel
   fullyParallel: false,
@@ -23,9 +24,9 @@ export default defineConfig({
   
   // Reporter to use
   reporter: [
-    ['html', { outputFolder: './results/html' }],
+    ['html', { outputFolder: '../test-results/playwright/html' }],
     ['list'],
-    ['junit', { outputFile: './results/junit/results.xml' }]
+    ['junit', { outputFile: '../test-results/playwright/junit/results.xml' }]
   ],
   
   // Shared settings for all the projects below
