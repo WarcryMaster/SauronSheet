@@ -177,9 +177,17 @@ public class ImportTransactionsCommandHandler
                         continue;
                     }
 
-                    // Check cross-store duplicates.
+                    // Parse balance (nullable — not all statements provide it).
+                    decimal? balance = null;
+                    if (!string.IsNullOrWhiteSpace(row.Balance)
+                        && TryParseAmount(row.Balance, out var parsedBalance))
+                    {
+                        balance = parsedBalance;
+                    }
+
+                    // Check cross-store duplicates (date + amount + description + balance).
                     var isDuplicate = await _transactionRepo.ExistsDuplicateAsync(
-                        userId, date, amount, row.Description ?? string.Empty);
+                        userId, date, amount, row.Description ?? string.Empty, balance);
 
                     if (isDuplicate)
                     {
@@ -208,7 +216,8 @@ public class ImportTransactionsCommandHandler
                         bankCategory: row.Category?.Trim(),
                         bankSubcategory: row.SubCategory?.Trim(),
                         subcategoryId: resolution.SubcategoryId,
-                        categorySource: resolution.CategorySource);
+                        categorySource: resolution.CategorySource,
+                        balance: balance);
 
                     await _transactionRepo.AddAsync(transaction);
                     importedCount++;

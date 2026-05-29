@@ -228,10 +228,11 @@ public class IngExcelStatementParserTests
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
 
-        // Assert — ESP-2b: Comment and Balance are null in the returned row
+        // Assert — ESP-2b: Comment is null, Balance is now populated
         Assert.Single(result.Rows);
         Assert.Null(result.Rows[0].Comment);
-        Assert.Null(result.Rows[0].Balance);
+        Assert.NotNull(result.Rows[0].Balance);
+        Assert.Equal("500,00", result.Rows[0].Balance);
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -458,9 +459,9 @@ public class IngExcelStatementParserTests
         Assert.Equal(expectedDescription, row.Description);
         Assert.Equal(expectedAmount, row.Amount);
 
-        // Assert discarded fields (spec ESP-2b: COMENTARIO and SALDO always null)
+        // Assert discarded fields (spec ESP-2b: COMENTARIO always null, SALDO now populated)
         Assert.Null(row.Comment);
-        Assert.Null(row.Balance);
+        Assert.NotNull(row.Balance);
 
         // Assert hardcoded currency
         Assert.Equal("EUR", row.Currency);

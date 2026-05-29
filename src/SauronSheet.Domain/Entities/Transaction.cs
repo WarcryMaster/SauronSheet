@@ -29,10 +29,13 @@ public class Transaction : AggregateRoot<TransactionId>
     /// <summary>Source of the category assignment (Legacy, RawOnly, AutoMatched, UserOverride).</summary>
     public CategorySource CategorySource { get; private set; }
 
+    /// <summary>Account balance at time of transaction. Used for duplicate detection.</summary>
+    public decimal? Balance { get; private set; }
+
     /// <summary>
     /// Constructor for Transaction aggregate root.
     /// The first 6 params match the original signature for backward compatibility.
-    /// New params (bankCategory, bankSubcategory, subcategoryId, categorySource) default
+    /// New params (bankCategory, bankSubcategory, subcategoryId, categorySource, balance) default
     /// to null/Legacy so existing call sites continue to work without changes.
     /// </summary>
     public Transaction(
@@ -46,7 +49,8 @@ public class Transaction : AggregateRoot<TransactionId>
         string? bankCategory = null,
         string? bankSubcategory = null,
         SubcategoryId? subcategoryId = null,
-        CategorySource categorySource = CategorySource.Legacy)
+        CategorySource categorySource = CategorySource.Legacy,
+        decimal? balance = null)
         : base(id)
     {
         if (userId == null)
@@ -66,6 +70,7 @@ public class Transaction : AggregateRoot<TransactionId>
         BankSubcategory = bankSubcategory;
         SubcategoryId = subcategoryId;
         CategorySource = categorySource;
+        Balance = balance;
     }
 
     /// <summary>
