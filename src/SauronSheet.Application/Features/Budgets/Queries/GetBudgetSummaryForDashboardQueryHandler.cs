@@ -114,10 +114,13 @@ public class GetBudgetSummaryForDashboardQueryHandler
                 budget.Period.EndDate));
         }
 
+        // On-track = Green or Yellow only (spec: Red = 100% is NOT on-track)
+        var onTrackCount = budgetStatuses.Count(s => s.StatusLevel is "Green" or "Yellow");
+
         return new BudgetDashboardSummaryDto(
             budgetStatuses,
             periodBudgets.Count,
-            periodBudgets.Count - overBudgetCount,
+            onTrackCount,
             overBudgetCount);
     }
 }

@@ -166,6 +166,63 @@ public class GetBudgetSummaryForDashboardQueryHandlerTests
         Assert.Equal(0, result.OverBudgetCount);
     }
 
+    /// <summary>
+    /// Task 2.1 [RED → GREEN]: A budget with exactly 100% spend yields status Red.
+    /// Red is NOT on-track per spec (on-track = Green or Yellow only, i.e. spend &lt; 100%).
+    /// The current handler counts it as on-track because it only subtracts Overage (>100%).
+    /// This test proves the bug.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_RedBudget_IsNotOnTrack()
+    {
+        // Arrange — budget1: 375/500 = 75% → Yellow (on-track)
+        //           budget2: 300/300 = 100% → Red (NOT on-track)
+        SetupUser();
+        var userId = new UserId("user-1");
+        var cat1Id = new CategoryId(Guid.NewGuid());
+        var cat2Id = new CategoryId(Guid.NewGuid());
+
+        var budget1 = CreateBudget(userId, cat1Id, 500m);
+        var budget2 = CreateBudget(userId, cat2Id, 300m);
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId))
+            .ReturnsAsync(new List<Budget> { budget1, budget2 });
+
+        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "A");
+        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "B");
+        _categoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId))
+            .ReturnsAsync(new List<Category> { cat1, cat2 });
+
+        // tx1: 375 / 500 = 75% → Yellow
+        var tx1 = new Transaction(
+            new TransactionId(Guid.NewGuid()), userId,
+            new Money(-375, "EUR"), new DateTime(2026, 2, 5), "Exp1", cat1Id);
+        // tx2: 300 / 300 = 100% → Red (exact boundary)
+        var tx2 = new Transaction(
+            new TransactionId(Guid.NewGuid()), userId,
+            new Money(-300, "EUR"), new DateTime(2026, 2, 10), "Exp2", cat2Id);
+
+        _transactionRepoMock
+            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
+            .ReturnsAsync(new List<Transaction> { tx1, tx2 });
+
+        var handler = CreateHandler();
+
+        // Act
+        var result = await handler.Handle(
+            new GetBudgetSummaryForDashboardQuery(2026, 2), CancellationToken.None);
+
+        // Assert — only Yellow counts as on-track; Red is excluded
+        Assert.Equal(2, result.TotalBudgets);
+        Assert.Equal(1, result.OnTrackCount);       // Yellow only; Red must be excluded
+        Assert.Equal(0, result.OverBudgetCount);    // No Overage (> 100%) budgets present
+        var redBudget = result.Budgets.First(b => b.CategoryId == cat2Id.Value);
+        Assert.Equal("Red", redBudget.StatusLevel);
+    }
+
     [Fact]
     [Trait("Category", "Application")]
     public async Task Handle_TenantScoped_OnlyCurrentUserBudgets()
