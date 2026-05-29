@@ -37,6 +37,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? ImportedFrom { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public List<string> SelectedSources { get; set; } = new();
+
     public List<string> AvailableSources { get; set; } = new();
 
     public IndexModel(IMediator mediator)
@@ -48,8 +51,20 @@ public class IndexModel : PageModel
     {
         AvailableSources = await _mediator.Send(new GetDistinctImportedSourcesQuery());
 
+        // Build ImportedFrom from SelectedSources (comma-separated)
+        string? importedFrom = null;
+        if (SelectedSources.Any())
+        {
+            importedFrom = string.Join(",", SelectedSources);
+        }
+        else if (!string.IsNullOrEmpty(ImportedFrom))
+        {
+            // Backward compatibility: single source from query string
+            importedFrom = ImportedFrom;
+        }
+
         Transactions = await _mediator.Send(
-            new GetTransactionsQuery(PageNumber, PageSize, CategoryId, StartDate, EndDate, ImportedFrom));
+            new GetTransactionsQuery(PageNumber, PageSize, CategoryId, StartDate, EndDate, importedFrom));
     }
 
     public async Task<IActionResult> OnPostDeleteAsync(Guid id)

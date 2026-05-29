@@ -96,6 +96,12 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 
 - Razor Pages should use PageModel patterns and antiforgery protection.
 - Use MDBootstrap via CDN (mdb-ui-kit v9.2.0), not Bootstrap or local alternatives.
+- **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**
+  - `data-mdb-toggle="dropdown"` (not `data-bs-toggle`)
+  - `data-mdb-target="#modal"` (not `data-bs-target`)
+  - `data-mdb-dismiss="modal"` (not `data-bs-dismiss`)
+  - `data-mdb-auto-close="outside"` (not `data-bs-auto-close`)
+  - `data-mdb-ripple-init` (not `data-bs-ripple`)
 - Keep JavaScript modern: `const` / `let`, event listeners, null checks, and server-side revalidation.
 - See `.github/instructions/razor-frontend.instructions.md` for full MDBootstrap API and PageModel patterns (auto-loaded for `.cshtml` files).
 - Utilizar la metodología https://github.com/voltagent/awesome-design-md para la generación de interfaces. Todas las interfaces frontend deben crearse siguiendo esta metodología.

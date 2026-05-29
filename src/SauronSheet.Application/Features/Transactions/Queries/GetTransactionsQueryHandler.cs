@@ -65,8 +65,20 @@ public class GetTransactionsQueryHandler
 
         if (!string.IsNullOrEmpty(request.ImportedFrom))
         {
-            var sourceSpec = new TransactionByImportedFromSpecification(request.ImportedFrom);
-            spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, sourceSpec);
+            // Support comma-separated multiple sources
+            var sources = request.ImportedFrom
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (sources.Length == 1)
+            {
+                var sourceSpec = new TransactionByImportedFromSpecification(sources[0]);
+                spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, sourceSpec);
+            }
+            else if (sources.Length > 1)
+            {
+                var sourceSpec = new TransactionByMultipleImportedFromsSpecification(sources);
+                spec = CompositeSpecification<Domain.Entities.Transaction>.And(spec, sourceSpec);
+            }
         }
 
         var filtered = await _transactionRepo.FindBySpecificationAsync(spec);
