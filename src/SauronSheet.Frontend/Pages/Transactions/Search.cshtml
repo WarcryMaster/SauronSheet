@@ -84,20 +84,13 @@
                             @foreach (var tx in Model.Results.Items)
                             {
                                 <tr>
-                                    @{ TransactionCategoryDisplay display = TransactionCategoryDisplayHelper.Build(tx); }
                                     <td class="small text-muted">@tx.Date.ToString("dd/MM/yyyy")</td>
                                     <td class="small">@tx.Description</td>
                                     <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-brand" : "text-danger")">
                                         &euro;@tx.Amount.ToString("N2")
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-column gap-1 small">
-                                            <span class="text-muted">@display.PrimaryText</span>
-                                            @if (!string.IsNullOrEmpty(display.SecondaryText))
-                                            {
-                                                <span class="text-muted">@display.SecondaryText</span>
-                                            }
-                                        </div>
+                                        <partial name="Shared/_CategoryBadge" model="TransactionCategoryDisplayHelper.BuildBadge(tx)" />
                                     </td>
                                 </tr>
                             }

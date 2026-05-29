@@ -117,20 +117,13 @@
                             @foreach (var tx in Model.RecentTransactions)
                             {
                                 <tr>
-                                    @{ TransactionCategoryDisplay display = TransactionCategoryDisplayHelper.Build(tx); }
                                     <td class="text-muted small">@tx.Date.ToString("dd/MM/yyyy")</td>
                                     <td class="small">@tx.Description</td>
                                     <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-success" : "text-danger")">
                                         €@tx.Amount.ToString("N2")
                                     </td>
                                     <td>
-                                        <div class="d-flex flex-column gap-1 small">
-                                            <span class="text-muted">@display.PrimaryText</span>
-                                            @if (!string.IsNullOrEmpty(display.SecondaryText))
-                                            {
-                                                <span class="text-muted">@display.SecondaryText</span>
-                                            }
-                                        </div>
+                                        <partial name="Shared/_CategoryBadge" model="TransactionCategoryDisplayHelper.BuildBadge(tx)" />
                                     </td>
                                 </tr>
                             }
@@ -171,7 +164,9 @@
                 {
                     <div class="mb-3">
                         <div class="d-flex justify-content-between small mb-1">
-                            <a href="/budgets/detail/@budget.Id" class="text-decoration-none">@budget.CategoryName</a>
+                            <a href="/budgets/detail/@budget.Id" class="text-decoration-none d-inline-flex">
+                                <partial name="Shared/_CategoryBadge" model="new CategoryBadgeDisplay(budget.CategoryName, AccentColor: budget.CategoryColor)" />
+                            </a>
                             <span>€@budget.CurrentSpend.ToString("N2") / €@budget.LimitAmount.ToString("N2")</span>
                         </div>
                         <partial name="Shared/_BudgetProgressBar" model="budget" />
