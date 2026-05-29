@@ -27,19 +27,19 @@ Chain strategy: stacked-to-main
 
 ## Phase 1: Baseline Domain (PR 1 — RED)
 
-- [ ] 1.1 Run `dotnet test tests/SauronSheet.Domain.Tests --collect:"XPlat Code Coverage"` — confirm coverage is **below 80 %** (expected ~78.11 %, 432/553 lines).
-- [ ] 1.2 Inspect `tests/SauronSheet.Domain.Tests/Exceptions/EntityNotFoundExceptionTests.cs` and `Specifications/TransactionByImportedFromSpecificationTests.cs` — note naming/trait conventions to follow.
+- [x] 1.1 Run `dotnet test tests/SauronSheet.Domain.Tests --collect:"XPlat Code Coverage"` — confirm coverage is **below 80 %** (expected ~78.11 %, 432/553 lines).
+- [x] 1.2 Inspect `tests/SauronSheet.Domain.Tests/Exceptions/EntityNotFoundExceptionTests.cs` and `Specifications/TransactionByImportedFromSpecificationTests.cs` — note naming/trait conventions to follow.
 
 ## Phase 2: Domain Test Files (PR 1 — GREEN)
 
-- [ ] 2.1 Create `tests/SauronSheet.Domain.Tests/Exceptions/DuplicateEntityExceptionTests.cs` — cover 3 constructors (message, type+message, type+message+inner), message format assertion, and inner exception chaining. Use `[Trait("Category","Domain")]`.
-- [ ] 2.2 Create `tests/SauronSheet.Domain.Tests/Records/BankCategoryTranslationTests.cs` *(new folder)* — cover construction, value equality between two identical instances, and `with`-expression mutation.
-- [ ] 2.3 Create `tests/SauronSheet.Domain.Tests/Specifications/TransactionByMultipleImportedFromsSpecificationTests.cs` — cover multi-source match, case-insensitive filter, and null/empty input guard.
+- [x] 2.1 Create `tests/SauronSheet.Domain.Tests/Exceptions/DuplicateEntityExceptionTests.cs` — cover 3 constructors (message, type+message, type+message+inner), message format assertion, and inner exception chaining. Use `[Trait("Category","Domain")]`.
+- [x] 2.2 Create `tests/SauronSheet.Domain.Tests/Records/BankCategoryTranslationTests.cs` *(new folder)* — cover construction, value equality between two identical instances, and `with`-expression mutation.
+- [x] 2.3 Create `tests/SauronSheet.Domain.Tests/Specifications/TransactionByMultipleImportedFromsSpecificationTests.cs` — cover multi-source match, case-insensitive filter, and null/empty input guard.
 
 ## Phase 3: Coverage Gate (PR 1 — VERIFY)
 
-- [ ] 3.1 Run `dotnet test tests/SauronSheet.Domain.Tests --collect:"XPlat Code Coverage"` — assert **≥ 446/553 lines (> 80 %)**.  If short, add backup class (`TransactionByMultipleImportedFromsSpec`) tests or similar until threshold is confirmed.
-- [ ] 3.2 Run `dotnet build` — zero new warnings (TreatWarningsAsErrors in Domain project).
+- [x] 3.1 Run `dotnet test tests/SauronSheet.Domain.Tests --collect:"XPlat Code Coverage"` — assert **≥ 446/553 lines (> 80 %)**.  If short, add backup class (`TransactionByMultipleImportedFromsSpec`) tests or similar until threshold is confirmed.
+- [x] 3.2 Run `dotnet build` — zero new warnings (TreatWarningsAsErrors in Domain project).
 
 ---
 
