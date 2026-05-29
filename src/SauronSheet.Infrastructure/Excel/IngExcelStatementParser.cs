@@ -151,7 +151,7 @@ public sealed class IngExcelStatementParser : IStatementParser
         string? rawDescripcion = ReadCellAsString(reader, ColDescripcion);
         // ColComentario (4) — read and discard
         string? rawImporte = ReadCellAsString(reader, ColImporte);
-        // ColSaldo (6) — read and discard
+        string? rawSaldo = ReadCellAsString(reader, ColSaldo);
 
         // Silently skip completely empty rows (trailing blank rows in the sheet)
         if (string.IsNullOrWhiteSpace(rawDate)
@@ -197,7 +197,7 @@ public sealed class IngExcelStatementParser : IStatementParser
             Description: rawDescripcion,
             Comment: null,          // COMENTARIO read and discarded per spec ESP-2b
             Amount: rawImporte,
-            Balance: null,          // SALDO read and discarded per spec ESP-2b
+            Balance: rawSaldo,      // SALDO used for duplicate detection
             Currency: "EUR"));
     }
 

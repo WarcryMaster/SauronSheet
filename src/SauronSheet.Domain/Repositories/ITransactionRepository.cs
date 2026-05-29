@@ -23,6 +23,13 @@ public interface ITransactionRepository
     Task<bool> ExistsDuplicateAsync(UserId userId, DateTime date, decimal amount, string description);
 
     /// <summary>
+    /// Checks if a transaction with the same date, amount, description, AND balance exists.
+    /// Two transactions with same date/amount/description but different balances are NOT duplicates
+    /// (e.g., two gym receipts for two people on the same day).
+    /// </summary>
+    Task<bool> ExistsDuplicateAsync(UserId userId, DateTime date, decimal amount, string description, decimal? balance);
+
+    /// <summary>
     /// Gets the transaction date range for a user.
     /// Returns null when the user has no transactions.
     /// </summary>

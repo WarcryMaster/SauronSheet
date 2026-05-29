@@ -230,7 +230,7 @@ public class ImportTransactionsCommandHandlerTests
 
         _mockTransactionRepo
             .Setup(x => x.ExistsDuplicateAsync(
-                It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>()))
+                It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<decimal?>()))
             .ReturnsAsync(true); // cross-store duplicate
 
         var command = new ImportTransactionsCommand(new MemoryStream(), "statement.xlsx");

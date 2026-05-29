@@ -58,6 +58,10 @@ internal class TransactionRow : BaseModel
     [Column("category_source")]
     public string? CategorySourceColumn { get; set; }
 
+    [Column("balance")]
+    [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+    public decimal? Balance { get; set; }
+
     [Column("created_at")]
     [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
     public DateTime? CreatedAt { get; set; }
@@ -87,7 +91,8 @@ internal class TransactionRow : BaseModel
             BankCategory,
             BankSubcategory,
             subcategoryId,
-            categorySource);
+            categorySource,
+            Balance);
     }
 
     private static CategorySource ParseCategorySource(string? source)
@@ -130,6 +135,7 @@ internal class TransactionRow : BaseModel
             BankSubcategory = t.BankSubcategory,
             SubcategoryId = t.SubcategoryId?.Value.ToString(),
             CategorySourceColumn = SerializeCategorySource(t.CategorySource),
+            Balance = t.Balance,
             CreatedAt = t.CreatedAt,
             UpdatedAt = t.UpdatedAt
         };
@@ -156,6 +162,7 @@ internal class TransactionRow : BaseModel
             BankSubcategory = t.BankSubcategory,
             SubcategoryId = t.SubcategoryId?.Value.ToString(),
             CategorySourceColumn = SerializeCategorySource(t.CategorySource),
+            Balance = t.Balance,
             CreatedAt = DateTime.UtcNow
         };
         return row;
@@ -314,7 +321,29 @@ public class SupabaseTransactionRepository : ITransactionRepository
             .Get();
 
         // Filter by date in-memory (Postgrest date filtering can be tricky with timezone)
+        // NOTE: Balance is NOT included here — duplicate detection uses the overload with balance.
+        // This method is kept for backward compatibility.
         return response.Models.Any(r => r.Date.Date == date.Date);
+    }
+
+    /// <summary>
+    /// Checks if a transaction with the same date, amount, description, AND balance exists.
+    /// Two transactions with same date/amount/description but different balances are NOT duplicates
+    /// (e.g., two gym receipts for two people on the same day).
+    /// </summary>
+    public async Task<bool> ExistsDuplicateAsync(
+        UserId userId, DateTime date, decimal amount, string description, decimal? balance)
+    {
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.Amount == amount)
+            .Where(x => x.Description == description)
+            .Get();
+
+        // Filter by date and balance in-memory
+        return response.Models.Any(r =>
+            r.Date.Date == date.Date
+            && r.Balance == balance);
     }
 
     public async Task<(DateTime MinDate, DateTime MaxDate)?> GetDateRangeAsync(UserId userId)
