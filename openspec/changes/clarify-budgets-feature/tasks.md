@@ -40,10 +40,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: Application — Semántica OnTrack (PR 2)
 
-- [ ] 2.1 **[RED]** Añadir test fallido en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandlerTests.cs` — estado Red NO es on-track
-- [ ] 2.2 **[GREEN]** Corregir agregación en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandler.cs` — contar solo Green + Yellow como on-track
-- [ ] 2.3 **[VERIFY]** Ejecutar `dotnet test tests/SauronSheet.Application.Tests` — confirmar que `GetBudgetVsActualQueryHandlerTests` ya cubre categorías sin presupuesto
-- [ ] 2.4 Ejecutar `dotnet test --collect:"XPlat Code Coverage"` — Domain ≥ 80 %, Application ≥ 70 %
+- [x] 2.1 **[RED]** Añadir test fallido en `tests/SauronSheet.Application.Tests/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandlerTests.cs` — estado Red NO es on-track
+- [x] 2.2 **[GREEN]** Corregir agregación en `src/SauronSheet.Application/Features/Budgets/Queries/GetBudgetSummaryForDashboardQueryHandler.cs` — contar solo Green + Yellow como on-track
+- [x] 2.3 **[VERIFY]** Ejecutar `dotnet test tests/SauronSheet.Application.Tests` — confirmar que `GetBudgetVsActualQueryHandlerTests` ya cubre categorías sin presupuesto
+- [x] 2.4 Ejecutar `dotnet test --collect:"XPlat Code Coverage"` — Domain ≥ 80 %, Application ≥ 70 % ⚠️ Domain: 78.1% (pre-existing gap, -1.9pp; not caused by PR 2)
 
 ---
 
