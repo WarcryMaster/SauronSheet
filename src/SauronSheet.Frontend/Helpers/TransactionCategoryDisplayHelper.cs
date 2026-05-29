@@ -63,6 +63,16 @@ public static class TransactionCategoryDisplayHelper
         return new TransactionCategoryDisplay(primaryText, secondaryText, isUncategorized, usesRawCategoryFallback);
     }
 
+    public static CategoryBadgeDisplay BuildBadge(TransactionDto transaction)
+    {
+        TransactionCategoryDisplay display = Build(transaction);
+        return new CategoryBadgeDisplay(
+            display.PrimaryText,
+            display.SecondaryText,
+            display.IsUncategorized,
+            display.UsesRawCategoryFallback);
+    }
+
     private static string? NormalizeDisplayPart(string? value)
     {
         return string.IsNullOrWhiteSpace(value)

@@ -1,5 +1,6 @@
 ﻿@page "/budgets"
 @model SauronSheet.Frontend.Pages.Budgets.IndexModel
+@using SauronSheet.Frontend.Helpers
 @{
     ViewData["Title"] = "Budgets";
     var currentYear = Model.Year ?? DateTime.UtcNow.Year;
@@ -55,11 +56,7 @@
                             <tr>
                                 <td>
                                     <a href="/budgets/detail/@budget.Id" class="text-brand fw-medium text-decoration-none">
-                                        @if (!string.IsNullOrEmpty(budget.CategoryColor))
-                                        {
-                                            <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background-color:@budget.CategoryColor"></span>
-                                        }
-                                        @budget.CategoryName
+                                        <partial name="Shared/_CategoryBadge" model="new CategoryBadgeDisplay(budget.CategoryName, AccentColor: budget.CategoryColor)" />
                                     </a>
                                 </td>
                                 <td class="text-end small fw-medium">€@budget.LimitAmount.ToString("N2")</td>

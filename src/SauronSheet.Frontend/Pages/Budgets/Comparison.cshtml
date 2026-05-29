@@ -1,5 +1,6 @@
 ﻿@page "/budgets/comparison"
 @model SauronSheet.Frontend.Pages.Budgets.ComparisonModel
+@using SauronSheet.Frontend.Helpers
 @using System.Text.Json
 @{
     ViewData["Title"] = "Budget vs Actual";
@@ -73,11 +74,7 @@
                         {
                             <tr>
                                 <td class="small">
-                                    @if (!string.IsNullOrEmpty(item.CategoryColor))
-                                    {
-                                        <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background-color:@item.CategoryColor"></span>
-                                    }
-                                    @item.CategoryName
+                                    <partial name="Shared/_CategoryBadge" model="new CategoryBadgeDisplay(item.CategoryName, AccentColor: item.CategoryColor)" />
                                 </td>
                                 <td class="text-end small fw-medium">
                                     @if (item.BudgetLimit.HasValue)

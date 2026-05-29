@@ -1,0 +1,24 @@
+@model SauronSheet.Frontend.Helpers.CategoryBadgeDisplay
+
+@{
+    string primaryClass = Model.IsUncategorized
+        ? "category-badge category-badge-primary category-badge-uncategorized"
+        : Model.UsesWarningStyle
+            ? "category-badge category-badge-primary category-badge-warning"
+            : "category-badge category-badge-primary category-badge-brand";
+}
+
+<div class="category-badge-stack">
+    <span class="@primaryClass">
+        @if (!string.IsNullOrWhiteSpace(Model.AccentColor))
+        {
+            <span class="category-badge-dot" style="background-color:@Model.AccentColor"></span>
+        }
+        <span>@Model.PrimaryText</span>
+    </span>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SecondaryText))
+    {
+        <span class="category-badge category-badge-secondary">@Model.SecondaryText</span>
+    }
+</div>
