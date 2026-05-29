@@ -45,26 +45,26 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: E2E Baseline (PR 2 — RED)
 
-- [ ] 4.1 On the PR 2 branch (stacked on PR 1), run `npx playwright test --project=chromium e2e/tests/03-budgets.spec.ts` — confirm TC-B01/B02/B03 are skipped or fail without deterministic data provisioning.
+- [x] 4.1 On the PR 2 branch (stacked on PR 1), run `npx playwright test --project=chromium e2e/tests/03-budgets.spec.ts` — confirm TC-B01/B02/B03 are skipped or fail without deterministic data provisioning.
 
 ## Phase 5: Fixture (PR 2 — GREEN)
 
-- [ ] 5.1 Create `e2e/fixtures/budget-data.fixture.ts` using `test.extend<{ budgetReadyPage: Page }>` — follow `e2e/fixtures/auth.fixture.ts` pattern. Implement these idempotent steps in order:
+- [x] 5.1 Create `e2e/fixtures/budget-data.fixture.ts` using `test.extend<{ budgetReadyPage: Page }>` — follow `e2e/fixtures/auth.fixture.ts` pattern. Implement these idempotent steps in order:
   1. Login via existing auth dual-path
   2. Navigate `/categories` → create `"E2E-Budget-Cat-A"` via modal if missing (DOM check)
   3. Create `"E2E-Budget-Cat-B"` if missing
   4. Navigate `/transactions/add` → add expense `−25 €` on `"E2E-Budget-Cat-B"`, current-month date, if missing
   5. Yield `budgetReadyPage` to the suite
-- [ ] 5.2 Export `{ test, expect }` from the fixture so tests import from `../fixtures/budget-data.fixture` instead of `@playwright/test`.
+- [x] 5.2 Export `{ test, expect }` from the fixture so tests import from `../fixtures/budget-data.fixture` instead of `@playwright/test`.
 
 ## Phase 6: Wire Suite (PR 2 — GREEN)
 
-- [ ] 6.1 Modify `e2e/tests/03-budgets.spec.ts` — replace `@playwright/test` import with `../fixtures/budget-data.fixture`.
-- [ ] 6.2 Replace all conditional `test.skip` guards in TC-B01, TC-B02, TC-B03 — none should remain.
-- [ ] 6.3 Replace any dynamic category name references with `"E2E-Budget-Cat-B"` where the budget scenarios depend on it.
+- [x] 6.1 Modify `e2e/tests/03-budgets.spec.ts` — replace `@playwright/test` import with `../fixtures/budget-data.fixture`.
+- [x] 6.2 Replace all conditional `test.skip` guards in TC-B01, TC-B02, TC-B03 — none should remain.
+- [x] 6.3 Replace any dynamic category name references with `"E2E-Budget-Cat-B"` where the budget scenarios depend on it.
 
 ## Phase 7: E2E Verification (PR 2 — VERIFY / REFACTOR)
 
-- [ ] 7.1 Run `npx playwright test --project=chromium e2e/tests/03-budgets.spec.ts` — all tests green, **zero skipped**.
-- [ ] 7.2 Re-run the suite immediately (second consecutive run) — fixture must detect existing data and create no duplicates (idempotency check).
-- [ ] 7.3 Run `dotnet build` — confirm zero new warnings.
+- [x] 7.1 Run `npx playwright test --project=chromium e2e/tests/03-budgets.spec.ts` — all tests green, **zero skipped**.
+- [x] 7.2 Re-run the suite immediately (second consecutive run) — fixture must detect existing data and create no duplicates (idempotency check).
+- [x] 7.3 Run `dotnet build` — confirm zero new warnings.

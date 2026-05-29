@@ -85,6 +85,7 @@ jspm_packages/
 .vs/
 *.csproj.lscache
 *.lscache
+.playwright-mcp/
 
 # Test / CI outputs (artefactos temporales)
 test-results/
