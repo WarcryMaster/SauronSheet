@@ -150,10 +150,13 @@ public class SupabaseBudgetRepository : IBudgetRepository
     {
         try
         {
+            var categoryIdString = categoryId.Value.ToString();
+            var periodStart = period.StartDate;
+
             var response = await _client.From<BudgetRow>()
                 .Where(r => r.UserId == userId.Value)
-                .Where(r => r.CategoryId == categoryId.Value.ToString())
-                .Where(r => r.PeriodStart == period.StartDate)
+                .Where(r => r.CategoryId == categoryIdString)
+                .Where(r => r.PeriodStart == periodStart)
                 .Get();
             var row = response.Models.FirstOrDefault();
             return row?.ToDomain();
