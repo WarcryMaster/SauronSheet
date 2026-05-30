@@ -62,8 +62,9 @@ internal class BudgetRow : BaseModel
             Id = b.Id.Value.ToString(),
             UserId = b.UserId.Value,
             CategoryId = b.CategoryId.Value.ToString(),
-            PeriodStart = b.Period.StartDate,
-            PeriodEnd = b.Period.EndDate,
+            // Use .Date to strip any residual time component: period columns are DATE, not TIMESTAMPTZ.
+            PeriodStart = b.Period.StartDate.Date,
+            PeriodEnd = b.Period.EndDate.Date,
             LimitAmount = b.Limit.Amount,
             Currency = b.Limit.Currency,
             CreatedAt = b.CreatedAt,
@@ -82,8 +83,9 @@ internal class BudgetRow : BaseModel
             Id = b.Id.Value.ToString(),
             UserId = b.UserId.Value,
             CategoryId = b.CategoryId.Value.ToString(),
-            PeriodStart = b.Period.StartDate,
-            PeriodEnd = b.Period.EndDate,
+            // Use .Date to strip any residual time component: period columns are DATE, not TIMESTAMPTZ.
+            PeriodStart = b.Period.StartDate.Date,
+            PeriodEnd = b.Period.EndDate.Date,
             LimitAmount = b.Limit.Amount,
             Currency = b.Limit.Currency
             // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
@@ -151,12 +153,14 @@ public class SupabaseBudgetRepository : IBudgetRepository
         try
         {
             var categoryIdString = categoryId.Value.ToString();
-            var periodStart = period.StartDate;
+            // Use date-only comparison: period_start is a DATE column; stripping the
+            // time component avoids false mismatches from residual ticks.
+            var periodStartDate = period.StartDate.Date;
 
             var response = await _client.From<BudgetRow>()
                 .Where(r => r.UserId == userId.Value)
                 .Where(r => r.CategoryId == categoryIdString)
-                .Where(r => r.PeriodStart == periodStart)
+                .Where(r => r.PeriodStart == periodStartDate)
                 .Get();
             var row = response.Models.FirstOrDefault();
             return row?.ToDomain();

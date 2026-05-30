@@ -29,11 +29,15 @@ public class DetailModel : PageModel
         {
             Budget = await _mediator.Send(new GetBudgetByIdQuery(id));
 
-            // Load transactions for this category and period
+            // Load transactions for this category and period.
+            // Extend the end boundary to the last tick of the final day so that
+            // transactions with a time component on period_end are not excluded —
+            // consistent with GetBudgetByIdQueryHandler (EndDate.Date.AddDays(1).AddTicks(-1)).
+            var txEnd = Budget.PeriodEnd.Date.AddDays(1).AddTicks(-1);
             var searchResult = await _mediator.Send(new SearchTransactionsQuery(
                 Keyword: null,
                 FromDate: Budget.PeriodStart,
-                ToDate: Budget.PeriodEnd,
+                ToDate: txEnd,
                 CategoryId: Budget.CategoryId,
                 MinAmount: null,
                 MaxAmount: null,

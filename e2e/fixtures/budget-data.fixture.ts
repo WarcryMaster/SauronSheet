@@ -180,6 +180,99 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Cleanup helpers — call from test.afterAll to remove E2E artifacts
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Deletes all budgets whose category name matches the E2E pattern.
+ * Navigates to /budgets, collects IDs from the DOM, then POSTs delete for each.
+ * Tolerant: missing CSRF token or empty list → silent no-op.
+ */
+export async function cleanupE2EBudgets(page: Page): Promise<void> {
+    await page.goto('/budgets');
+    await page.waitForLoadState('domcontentloaded');
+
+    // Collect budget IDs where the category name contains "E2E-"
+    const e2eBudgetIds = await page.evaluate(() => {
+        const rows = document.querySelectorAll('table tbody tr');
+        const ids: string[] = [];
+        rows.forEach(row => {
+            const categoryCell = row.querySelector('td');
+            if (categoryCell?.textContent?.includes('E2E-')) {
+                const input = row.querySelector('input[name="budgetId"]') as HTMLInputElement | null;
+                if (input?.value) ids.push(input.value);
+            }
+        });
+        return ids;
+    });
+
+    if (e2eBudgetIds.length === 0) return;
+
+    // Delete each budget via the Razor Pages POST handler
+    for (const budgetId of e2eBudgetIds) {
+        await page.evaluate(async (id: string) => {
+            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
+            const token   = tokenEl?.value ?? '';
+
+            const fd = new FormData();
+            fd.append('budgetId', id);
+            fd.append('__RequestVerificationToken', token);
+
+            await fetch('/budgets?handler=Delete', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+            });
+        }, budgetId);
+    }
+}
+
+/**
+ * Deletes all categories whose name matches the E2E pattern.
+ * Navigates to /categories, collects IDs from the DOM, then POSTs delete for each.
+ * Tolerant: missing category or CSRF → silent no-op.
+ */
+export async function cleanupE2ECategories(page: Page): Promise<void> {
+    await page.goto('/categories');
+    await page.waitForLoadState('domcontentloaded');
+
+    // Collect category IDs where the name contains "E2E-"
+    const e2eCategoryIds = await page.evaluate(() => {
+        const items = document.querySelectorAll('.list-group-item');
+        const ids: string[] = [];
+        items.forEach(item => {
+            const nameEl = item.querySelector('.fw-bold');
+            if (nameEl?.textContent?.includes('E2E-')) {
+                // Category ID is in the delete form's hidden input or a data attribute
+                const deleteForm = item.querySelector('form[action*="Delete"]') as HTMLFormElement | null;
+                const input = deleteForm?.querySelector('input[name="categoryId"]') as HTMLInputElement | null;
+                if (input?.value) ids.push(input.value);
+            }
+        });
+        return ids;
+    });
+
+    if (e2eCategoryIds.length === 0) return;
+
+    for (const categoryId of e2eCategoryIds) {
+        await page.evaluate(async (id: string) => {
+            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
+            const token   = tokenEl?.value ?? '';
+
+            const fd = new FormData();
+            fd.append('categoryId', id);
+            fd.append('__RequestVerificationToken', token);
+
+            await fetch('/categories?handler=Delete', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+            });
+        }, categoryId);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Fixture export
 // ─────────────────────────────────────────────────────────────────────────────
 
