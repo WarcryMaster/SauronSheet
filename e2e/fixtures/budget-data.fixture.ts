@@ -1,4 +1,4 @@
-import { test as base, Page } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 
 /**
  * Budget data fixture for SauronSheet E2E tests.
@@ -43,6 +43,7 @@ interface BudgetFixtures {
 
 /**
  * Attempts login with the given credentials.
+ * MUST be called on a clean context (no prior session cookies).
  * Returns true if the browser reached /dashboard, false otherwise.
  */
 async function loginWith(page: Page, email: string, password: string): Promise<boolean> {
@@ -56,6 +57,27 @@ async function loginWith(page: Page, email: string, password: string): Promise<b
     } catch {
         return false;
     }
+}
+
+/**
+ * Resolves the test account credentials.
+ *
+ * Safety rule: env-var credentials are ONLY honoured when CI=true.
+ * Local runs MUST always use the seeded test user to prevent
+ * accidental pollution of real user accounts with test data.
+ */
+export function resolveTestAccount(): { email: string; password: string } {
+    const isCI = process.env.CI === 'true' || process.env.CI === '1';
+
+    if (isCI) {
+        const envEmail = process.env.TEST_USER_EMAIL;
+        const envPassword = process.env.TEST_USER_PASSWORD;
+        if (envEmail && envPassword) {
+            return { email: envEmail, password: envPassword };
+        }
+    }
+
+    return { email: SEEDED_EMAIL, password: SEEDED_PASSWORD };
 }
 
 /**
@@ -274,24 +296,18 @@ export async function cleanupE2ECategories(page: Page): Promise<void> {
 
 export const test = base.extend<BudgetFixtures>({
     budgetReadyPage: async ({ page }, use) => {
-        // ── Step 1: Authenticate via dual-path ────────────────────────────────
-        const envEmail    = process.env.TEST_USER_EMAIL;
-        const envPassword = process.env.TEST_USER_PASSWORD;
+        // ── Step 0: Clear any leftover cookies from previous sessions ─────────
+        const context = page.context();
+        await context.clearCookies();
 
-        let authenticated = false;
-        if (envEmail && envPassword) {
-            authenticated = await loginWith(page, envEmail, envPassword);
-        }
-        if (!authenticated) {
-            authenticated = await loginWith(page, SEEDED_EMAIL, SEEDED_PASSWORD);
-        }
+        // ── Step 1: Authenticate (seeded user always; env vars only in CI) ───
+        const account = resolveTestAccount();
+        const authenticated = await loginWith(page, account.email, account.password);
 
         if (!authenticated) {
             throw new Error(
-                'FIXTURE BLOCKED: both auth paths failed. ' +
-                `Seeded user ${SEEDED_EMAIL} did not authenticate — verify the user exists in ` +
-                `Supabase auth.users with email_confirmed_at set and confirmation_token = ''. ` +
-                `Env vars TEST_USER_EMAIL/TEST_USER_PASSWORD are not set or invalid.`,
+                `FIXTURE BLOCKED: login failed for ${account.email}. ` +
+                `Verify the user exists in Supabase auth.users with email_confirmed_at set.`,
             );
         }
 
