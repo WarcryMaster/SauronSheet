@@ -73,7 +73,7 @@ public class CreateModel : PageModel
                 periodEnd));
 
             TempData["SuccessMessage"] = "Budget created successfully.";
-            return RedirectToPage("/budgets");
+            return RedirectToPage("/Budgets/Index");
         }
         catch (DomainException ex)
         {

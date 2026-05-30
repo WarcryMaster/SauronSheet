@@ -91,6 +91,6 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        return RedirectToPage("/budgets", new { Year, Month });
+        return RedirectToPage("/Budgets/Index", new { Year, Month });
     }
 }
