@@ -120,6 +120,64 @@ public class IndexModelTests
 
     [Fact]
     [Trait("Category", "Frontend")]
+    public void CreateCategoryInputModel_WithNullType_FailsValidation()
+    {
+        // Regression: missing Type must NOT silently default to Expense.
+        // Type is now int? — null must be rejected by [Required].
+        var input = new CreateCategoryInputModel
+        {
+            Name = "Food",
+            Type = null, // missing
+            Color = "#E74C3C",
+            IconName = "utensils"
+        };
+
+        var results = ValidateModel(input);
+
+        Assert.NotEmpty(results);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateCategoryInputModel.Type)));
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public void CreateCategoryInputModel_WithInvalidTypeValue_FailsValidation()
+    {
+        // Regression: invalid Type (e.g. 99) must be rejected, not silently
+        // coerced to Expense.
+        var input = new CreateCategoryInputModel
+        {
+            Name = "Food",
+            Type = 99, // out of range
+            Color = "#E74C3C",
+            IconName = "utensils"
+        };
+
+        var results = ValidateModel(input);
+
+        Assert.NotEmpty(results);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CreateCategoryInputModel.Type)));
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public void CreateCategoryInputModel_WithTypeZero_PassesValidation()
+    {
+        // 0 (Income) is a valid Type value
+        var input = new CreateCategoryInputModel
+        {
+            Name = "Salary",
+            Type = 0,
+            Color = "#27AE60",
+            IconName = "wallet"
+        };
+
+        var results = ValidateModel(input);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
     public void CreateCategoryInputModel_WithEmptyName_FailsValidation()
     {
         var input = new CreateCategoryInputModel
@@ -215,6 +273,56 @@ public class IndexModelTests
 
     [Fact]
     [Trait("Category", "Frontend")]
+    public async Task OnPostUpdateAsync_WithEmptyCategoryId_ReturnsSuccessFalseWithoutDispatch()
+    {
+        // Regression: Guid.Empty must NOT be dispatched to MediatR.
+        var mockMediator = new Mock<IMediator>();
+
+        var formData = new Dictionary<string, StringValues>
+        {
+            { "EditForm.CategoryId", Guid.Empty.ToString() },
+            { "EditForm.Name", "Test" },
+        };
+        var model = CreateModelWithForm(mockMediator, formData);
+
+        // Act
+        var result = await model.OnPostUpdateAsync();
+
+        // Assert
+        var json = Assert.IsType<JsonResult>(result);
+        var payload = SerializeAnonymous(json.Value!);
+        Assert.Contains("\"success\":false", payload);
+
+        mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostUpdateAsync_WithNonParseableCategoryId_ReturnsSuccessFalseWithoutDispatch()
+    {
+        // Regression: a non-GUID string in the form field must not produce a valid ID.
+        var mockMediator = new Mock<IMediator>();
+
+        var formData = new Dictionary<string, StringValues>
+        {
+            { "EditForm.CategoryId", "not-a-guid" },
+            { "EditForm.Name", "Test" },
+        };
+        var model = CreateModelWithForm(mockMediator, formData);
+
+        // Act
+        var result = await model.OnPostUpdateAsync();
+
+        // Assert
+        var json = Assert.IsType<JsonResult>(result);
+        var payload = SerializeAnonymous(json.Value!);
+        Assert.Contains("\"success\":false", payload);
+
+        mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
     public async Task OnPostUpdateAsync_WithEmptyName_ReturnsSuccessFalse()
     {
         // Arrange — name is intentionally empty to trigger validation failure
@@ -289,6 +397,26 @@ public class IndexModelTests
         var json = Assert.IsType<JsonResult>(result);
         var payload = SerializeAnonymous(json.Value!);
         Assert.Contains("\"success\":true", payload);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostDeleteAsync_WithEmptyCategoryId_ReturnsSuccessFalseWithoutDispatch()
+    {
+        // Regression: Guid.Empty must NOT be dispatched to MediatR.
+        var mockMediator = new Mock<IMediator>();
+
+        var model = CreateModelWithForm(mockMediator, new Dictionary<string, StringValues>());
+
+        // Act
+        var result = await model.OnPostDeleteAsync(Guid.Empty);
+
+        // Assert
+        var json = Assert.IsType<JsonResult>(result);
+        var payload = SerializeAnonymous(json.Value!);
+        Assert.Contains("\"success\":false", payload);
+
+        mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

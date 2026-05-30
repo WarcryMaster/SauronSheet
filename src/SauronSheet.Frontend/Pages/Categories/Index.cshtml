@@ -443,6 +443,9 @@
             }
         })
         .then(r => {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
             if (!r.ok) {
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category create request failed with HTTP error', {
@@ -450,15 +453,21 @@
                         tags: { operation: 'category-create', http_status: String(r.status) }
                     });
                 }
+                // Do NOT call r.json() on non-OK non-JSON responses — it would
+                // throw a parsing error that triggers a second Sentry report.
+                return isJson ? r.json().then(body => ({ ok: false, body }))
+                              : Promise.resolve({ ok: false, body: null });
             }
-            return r.json();
+            return r.json().then(body => ({ ok: true, body }));
         })
-        .then(data => {
-            if (data.success) {
+        .then(payload => {
+            const data = payload.body;
+            if (data && data.success) {
                 mdb.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
                 location.reload();
             } else {
-                document.getElementById('createError').textContent = data.error || 'An error occurred';
+                document.getElementById('createError').textContent =
+                    (data && data.error) || 'An error occurred';
                 document.getElementById('createError').classList.remove('d-none');
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category create returned success:false', {
@@ -506,6 +515,9 @@
             }
         })
         .then(r => {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
             if (!r.ok) {
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category update request failed with HTTP error', {
@@ -513,15 +525,19 @@
                         tags: { operation: 'category-update', http_status: String(r.status) }
                     });
                 }
+                return isJson ? r.json().then(body => ({ ok: false, body }))
+                              : Promise.resolve({ ok: false, body: null });
             }
-            return r.json();
+            return r.json().then(body => ({ ok: true, body }));
         })
-        .then(data => {
-            if (data.success) {
+        .then(payload => {
+            const data = payload.body;
+            if (data && data.success) {
                 mdb.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
                 location.reload();
             } else {
-                document.getElementById('editError').textContent = data.error || 'An error occurred';
+                document.getElementById('editError').textContent =
+                    (data && data.error) || 'An error occurred';
                 document.getElementById('editError').classList.remove('d-none');
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category update returned success:false', {
@@ -571,6 +587,9 @@
             }
         })
         .then(r => {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
             if (!r.ok) {
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category delete request failed with HTTP error', {
@@ -578,15 +597,19 @@
                         tags: { operation: 'category-delete', http_status: String(r.status) }
                     });
                 }
+                return isJson ? r.json().then(body => ({ ok: false, body }))
+                              : Promise.resolve({ ok: false, body: null });
             }
-            return r.json();
+            return r.json().then(body => ({ ok: true, body }));
         })
-        .then(data => {
-            if (data.success) {
+        .then(payload => {
+            const data = payload.body;
+            if (data && data.success) {
                 mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
                 location.reload();
             } else {
-                document.getElementById('deleteError').textContent = data.error || 'An error occurred';
+                document.getElementById('deleteError').textContent =
+                    (data && data.error) || 'An error occurred';
                 document.getElementById('deleteError').classList.remove('d-none');
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category delete returned success:false', {
