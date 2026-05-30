@@ -9,6 +9,7 @@ using MediatR;
 using Sentry;
 using Sentry.Extensibility;
 using SauronSheet.Domain.Common;
+using SauronSheet.Domain.Exceptions;
 
 /// <summary>
 /// Pipeline behavior for MediatR that adds Sentry tracing (breadcrumbs and error capture) to all requests.
@@ -78,19 +79,30 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
                 scope.SetTag("requestType", requestTypeName);
             });
 
-            // Add error details as breadcrumb before capturing
             sw.Stop();
 
-            SentrySdk.Logger?.LogError("MediatR handler failed: {0} — {1}", requestTypeName, ex.GetType().Name);
+            // DomainException: business rule violations (e.g. duplicate budget, insufficient funds).
+            // UnauthorizedAccessException: expected auth failures (e.g. wrong password, locked account).
+            // Both are caught and surfaced by the calling Razor Page — they are NOT system errors.
+            var isExpectedBusinessException = ex is DomainException or UnauthorizedAccessException;
+
+            if (isExpectedBusinessException)
+            {
+                SentrySdk.Logger?.LogWarning("MediatR handler: expected business exception in {0} — {1}", requestTypeName, ex.GetType().Name);
+            }
+            else
+            {
+                SentrySdk.Logger?.LogError("MediatR handler failed: {0} — {1}", requestTypeName, ex.GetType().Name);
+            }
 
             SentrySdk.AddBreadcrumb(
                 $"Error in {requestTypeName}: {ex.Message}",
                 "error",
-                level: BreadcrumbLevel.Error,
+                level: isExpectedBusinessException ? BreadcrumbLevel.Warning : BreadcrumbLevel.Error,
                 data: breadcrumbData
             );
 
-            // Metrics: count handler failures
+            // Metrics: count handler failures (all exception types tracked for monitoring completeness)
             SentrySdk.Experimental.Metrics.EmitCounter("app.handler.error", 1.0,
                 new KeyValuePair<string, object>[]
                 {
@@ -98,10 +110,9 @@ public class SentryTracingBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
                     new("exception", ex.GetType().Name)
                 });
 
-            // UnauthorizedAccessException is an expected business flow (e.g., failed login),
-            // not a system error. Skip automatic capture here — let the calling handler
-            // capture it with proper context (email, stage, etc.) at Warning level.
-            if (ex is not UnauthorizedAccessException)
+            // Skip automatic Sentry capture for expected business flow exceptions.
+            // The calling handler is responsible for surfacing these to the user with proper context.
+            if (!isExpectedBusinessException)
             {
                 SentrySdk.CaptureException(ex);
             }
