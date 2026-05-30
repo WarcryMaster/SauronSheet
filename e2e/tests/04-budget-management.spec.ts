@@ -208,7 +208,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         }
 
         await expect(page.locator('table')).toBeVisible();
-        await expect(page.locator('table')).toContainText('300.00');
+        await expect(page.locator('table')).toContainText('300,00');
     });
 
     /**
@@ -360,12 +360,21 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await page.goto('/budgets');
         }
 
-        await expect(page.locator('table')).toBeVisible();
-        // The budget should NOT appear in the list anymore
-        const goneRow = page.locator('table tbody tr').filter({
-            has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
-        });
-        await expect(goneRow).toHaveCount(0);
+        await expect(page).toHaveURL(/\/budgets/i);
+
+        // After deletion the budget should not be in the list.
+        // If other budgets exist, the table is rendered without the deleted row.
+        // If this was the only budget, the empty state ("No budgets found") is shown instead.
+        const tableVisible = await page.locator('table').isVisible().catch(() => false);
+        if (tableVisible) {
+            const goneRow = page.locator('table tbody tr').filter({
+                has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
+            });
+            await expect(goneRow).toHaveCount(0);
+        } else {
+            // Empty state — no table at all
+            await expect(page.locator('text=No budgets found')).toBeVisible();
+        }
     });
 
     /**
