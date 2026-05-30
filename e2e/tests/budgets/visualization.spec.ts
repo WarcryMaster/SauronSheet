@@ -50,10 +50,11 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
         // Verify the page loaded (either metrics content or empty state)
         await expect(page.locator('main')).toBeVisible();
 
-        // ── Check for view tabs/buttons ─────────────────────────────────────
-        const monthTab = page.getByRole('button', { name: /Mes Actual|Current Month/i });
-        const periodTab = page.getByRole('button', { name: /Período Actual|Current Period/i });
-        const yearTab = page.getByRole('button', { name: /Año Actual|Current Year/i });
+        // ── Check for view tabs ──────────────────────────────────────────────
+        // Tabs are <a> links with btn classes, NOT <button> elements.
+        const monthTab  = page.getByRole('link', { name: /Mes Actual|Current Month/i });
+        const periodTab = page.getByRole('link', { name: /Período Actual|Current Period/i });
+        const yearTab   = page.getByRole('link', { name: /Año Actual|Current Year/i });
 
         // At least the month tab should be visible
         await expect(monthTab).toBeVisible();

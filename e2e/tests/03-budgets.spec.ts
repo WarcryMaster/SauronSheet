@@ -75,13 +75,14 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const catBValue = await catBOption.getAttribute('value');
         await categorySelect.selectOption(catBValue!);
 
-        // Current month as YYYY-MM (native format for input[type="month"]).
-        // A real user selects the month in the browser's native month picker,
-        // which sends "YYYY-MM" to the server.
+        // Fill effective from date (first day of current month) and granularity.
+        // The Create page uses input[type="date"]#EffectiveFrom + select#PeriodGranularity
+        // (there is no input[type="month"]#Month anymore).
         const now   = new Date();
         const year  = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        await page.fill('input#Month', `${year}-${month}`);
+        await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+        await page.selectOption('#PeriodGranularity', 'Monthly');
 
         // Set a spending limit of €100
         await page.fill('input#LimitAmount', '100.00');
@@ -255,12 +256,13 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             await page.goto('/budgets/create');
             const categorySelect = page.locator('select#CategoryId');
             const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
-            await catBOption.waitFor({ state: 'visible', timeout: 5000 });
+            await expect(catBOption).toHaveCount(1);
             const catBValue = await catBOption.getAttribute('value');
             await categorySelect.selectOption(catBValue!);
 
-            // Fill month using native input[type="month"] format
-            await page.fill('input#Month', `${year}-${month}`);
+            // Fill effective from date and granularity (no input[type="month"] in current form)
+            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '50.00');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 

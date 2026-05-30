@@ -148,12 +148,19 @@ test.describe('Categories — create and delete lifecycle', () => {
         const deleteBtn = catItem.locator('button', { hasText: /delete/i });
         await expect(deleteBtn).toBeVisible();
 
-        // Handle confirmation dialog
-        page.on('dialog', async dialog => {
-            await dialog.accept();
-        });
-
+        // The delete button opens an MDB modal (#deleteConfirmModal), NOT a native browser dialog.
+        // Click the delete button to open the modal, then click the confirm button inside it.
         await deleteBtn.click();
+
+        const deleteModal = page.locator('#deleteConfirmModal');
+        await expect(deleteModal).toBeVisible({ timeout: 5000 });
+
+        const confirmDeleteBtn = page.locator('#deleteConfirmBtn');
+        await expect(confirmDeleteBtn).toBeVisible();
+        await confirmDeleteBtn.click();
+
+        // Wait for modal to close and page to reload after deletion
+        await expect(deleteModal).toBeHidden({ timeout: 10000 });
         await page.waitForLoadState('domcontentloaded');
 
         // ── Verify category is gone ──────────────────────────────────────────
