@@ -22,8 +22,12 @@ public class CreateModel : PageModel
     [BindProperty]
     public decimal LimitAmount { get; set; }
 
+    /// <summary>
+    /// Month string in YYYY-MM format (as sent by input[type="month"]).
+    /// Converted to DateTime in OnPostAsync.
+    /// </summary>
     [BindProperty]
-    public DateTime Month { get; set; } = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+    public string? Month { get; set; } = $"{DateTime.UtcNow.Year:D4}-{DateTime.UtcNow.Month:D2}";
 
     public string? ErrorMessage { get; set; }
 
@@ -51,7 +55,15 @@ public class CreateModel : PageModel
         {
             Categories = await _mediator.Send(new GetCategoriesQuery());
 
-            var periodStart = new DateTime(Month.Year, Month.Month, 1);
+            // Parse YYYY-MM format from input[type="month"]
+            if (string.IsNullOrWhiteSpace(Month) || !DateTime.TryParse(Month + "-01", out var monthDate))
+            {
+                ErrorMessage = "Invalid month format. Please select a valid month.";
+                Categories = await _mediator.Send(new GetCategoriesQuery());
+                return Page();
+            }
+
+            var periodStart = new DateTime(monthDate.Year, monthDate.Month, 1);
             var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
             await _mediator.Send(new CreateBudgetCommand(

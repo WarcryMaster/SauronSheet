@@ -77,20 +77,13 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const catBValue = await catBOption.getAttribute('value');
         await categorySelect.selectOption(catBValue!);
 
-        // Current month as YYYY-MM-01.
-        // The [BindProperty] DateTime Month on CreateModel cannot parse the "YYYY-MM" format
-        // that input[type="month"] sends natively — DateTime.TryParse requires a full date.
-        // Playwright also rejects fill("YYYY-MM-DD") on type="month" as malformed.
-        // Workaround: switch the input to type="text" via evaluate() before setting the value.
-        // This sends "YYYY-MM-01" to the server, which ASP.NET Core DateTime binder accepts.
+        // Current month as YYYY-MM (native format for input[type="month"]).
+        // A real user selects the month in the browser's native month picker,
+        // which sends "YYYY-MM" to the server.
         const now   = new Date();
         const year  = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        await page.evaluate(() => {
-            const input = document.getElementById('Month') as HTMLInputElement;
-            input.type = 'text';
-        });
-        await page.fill('input#Month', `${year}-${month}-01`);
+        await page.fill('input#Month', `${year}-${month}`);
 
         // Set a spending limit of €100
         await page.fill('input#LimitAmount', '100.00');
@@ -240,12 +233,11 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
     /**
      * TC-B04: Delete a budget and verify it disappears from the list.
      *
-     * NOTE: There is a known server-side issue with the delete endpoint that causes
-     * "An unexpected error occurred" when deleting via the UI form submission.
-     * This test uses a direct fetch() call via page.evaluate() to verify the delete
-     * functionality works at the API level. The UI delete button should be fixed separately.
+     * Flow: Navigate to budgets list, find the E2E budget, click Delete button,
+     *       confirm the browser dialog, and verify the row is gone.
      *
-     * Flow: Creates a budget if needed, deletes it via fetch(), verifies it's gone.
+     * Idempotent: if no budget exists for E2E-Budget-Cat-B, creates one first.
+     * After deletion, the list must not contain "E2E-Budget-Cat-B" anymore.
      */
     test('TC-B04: delete budget removes it from the list', async ({ budgetReadyPage: page }) => {
         const now   = new Date();
@@ -261,7 +253,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         });
 
         if ((await existingRow.count()) === 0) {
-            // No budget yet — create one first
+            // No budget yet — create one first using real user interaction
             await page.goto('/budgets/create');
             const categorySelect = page.locator('select#CategoryId');
             const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
@@ -269,11 +261,8 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             const catBValue = await catBOption.getAttribute('value');
             await categorySelect.selectOption(catBValue!);
 
-            await page.evaluate(() => {
-                const input = document.getElementById('Month') as HTMLInputElement;
-                input.type = 'text';
-            });
-            await page.fill('input#Month', `${year}-${month}-01`);
+            // Fill month using native input[type="month"] format
+            await page.fill('input#Month', `${year}-${month}`);
             await page.fill('input#LimitAmount', '50.00');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
@@ -293,75 +282,35 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         await expect(table).toBeVisible();
         await expect(table).toContainText('E2E-Budget-Cat-B');
 
-        // ── Delete the budget via direct fetch() call ─────────────────────────
-        // This bypasses the UI form submission which has a known server-side issue.
-        // The fetch() call uses credentials: 'same-origin' to send the auth cookie.
-        const deleteResult = await page.evaluate(async () => {
-            // Find the first E2E budget form and extract its data
-            const forms = document.querySelectorAll('form[method="post"]');
-            for (const form of forms) {
-                const input = form.querySelector('input[name="budgetId"]') as HTMLInputElement | null;
-                if (input?.value) {
-                    const tokenEl = form.querySelector('input[name="__RequestVerificationToken"]') as HTMLInputElement | null;
-                    const token   = tokenEl?.value ?? '';
+        // ── Delete the budget via UI (real user interaction) ──────────────────
+        // Find the Delete button in the row for E2E-Budget-Cat-B and click it
+        const deleteButton = existingRow.locator('button', { hasText: 'Delete' });
+        await expect(deleteButton).toBeVisible();
 
-                    const fd = new FormData();
-                    fd.append('budgetId', input.value);
-                    fd.append('__RequestVerificationToken', token);
-
-                    try {
-                        const response = await fetch('/budgets?handler=Delete', {
-                            method: 'POST',
-                            body: fd,
-                            credentials: 'same-origin',
-                        });
-                        
-                        // Check if response contains error message
-                        const html = await response.text();
-                        return {
-                            status: response.status,
-                            ok: response.ok,
-                            hasError: html.includes('alert-danger') || html.includes('unexpected error'),
-                            hasSuccess: html.includes('alert-success') || html.includes('deleted successfully'),
-                        };
-                    } catch (e: any) {
-                        return { status: 0, ok: false, error: e.message };
-                    }
-                }
-            }
-            return { status: 0, ok: false, error: 'No budget form found' };
+        // Handle the confirmation dialog that appears when clicking Delete
+        page.on('dialog', async dialog => {
+            expect(dialog.message()).toContain('Delete this budget?');
+            await dialog.accept();
         });
 
-        // Wait for any page state changes
-        await page.waitForTimeout(1000);
-        await page.reload({ waitUntil: 'domcontentloaded' });
+        await deleteButton.click();
+
+        // Wait for the page to reload after form submission
+        await page.waitForLoadState('domcontentloaded');
 
         // ── Assert the budget is gone ─────────────────────────────────────────
-        // Due to the known server-side issue, the delete may fail.
-        // We check if the delete was successful OR if the budget is gone.
+        // After successful delete, either the table is gone (no budgets left)
+        // or the table exists but doesn't contain the deleted budget.
         const tableAfter = page.locator('table');
+        const tableExists = await tableAfter.count() > 0;
         
-        if (deleteResult.ok && !deleteResult.hasError) {
-            // Successful delete response — budget should be gone
+        if (tableExists) {
             await expect(tableAfter).not.toContainText('E2E-Budget-Cat-B');
-        } else if (deleteResult.hasError) {
-            // Server returned error — this is the known issue
-            // Skip the assertion but log the result for debugging
-            console.warn(`TC-B04: Delete failed with status ${deleteResult.status}. Known server-side issue.`);
-            // Pass the test anyway since this is a known issue
-            expect(true).toBe(true);
-        } else {
-            // Fallback: check if budget is gone (maybe cleanup ran)
-            const budgetStillThere = await tableAfter.textContent().then(t => t.includes('E2E-Budget-Cat-B')).catch(() => false);
-            if (!budgetStillThere) {
-                // Budget was deleted by cleanup or another process
-                expect(true).toBe(true);
-            } else {
-                // Budget still there and no clear error — this is unexpected
-                console.warn('TC-B04: Budget still present after delete attempt.');
-                expect(true).toBe(true); // Pass for now due to known issue
-            }
         }
+        // If table doesn't exist, that's also a success state (no budgets left)
+        
+        // Verify success message is shown
+        await expect(page.locator('.alert-success')).toContainText('Budget deleted successfully');
     });
 
 });
