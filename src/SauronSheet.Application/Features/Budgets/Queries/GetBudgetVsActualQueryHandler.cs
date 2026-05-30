@@ -46,7 +46,7 @@ public class GetBudgetVsActualQueryHandler : IRequestHandler<GetBudgetVsActualQu
 
         // Construct DateRange from year + month
         var periodStart = new DateTime(request.Year, request.Month, 1);
-        var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+        var periodEnd   = periodStart.AddMonths(1).AddDays(-1);
 
         // Load all user budgets for the period
         var allBudgets = await _budgetRepo.GetByUserIdAsync(userId);
@@ -55,9 +55,12 @@ public class GetBudgetVsActualQueryHandler : IRequestHandler<GetBudgetVsActualQu
                      && b.Period.StartDate.Month == request.Month)
             .ToList();
 
-        // Load all transactions for the period
+        // Load all transactions for the period.
+        // Extend the end boundary to the last tick of the final day so that
+        // transactions with a time component on the last day are not excluded.
+        var txPeriodEnd = periodEnd.Date.AddDays(1).AddTicks(-1);
         var userSpec = new TransactionByUserSpecification(userId);
-        var dateSpec = new TransactionByDateRangeSpecification(periodStart, periodEnd);
+        var dateSpec = new TransactionByDateRangeSpecification(periodStart, txPeriodEnd);
         var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec);
         var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
 

@@ -64,9 +64,13 @@ public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<Budg
         var results = new List<BudgetStatusDto>();
         foreach (var budget in budgets)
         {
-            // Calculate current spend from transactions in this category and period
+            // Calculate current spend from transactions in this category and period.
+            // Extend the end boundary to the last tick of the final day so that
+            // transactions with a time component on period_end are not excluded.
+            var txStart = budget.Period.StartDate.Date;
+            var txEnd   = budget.Period.EndDate.Date.AddDays(1).AddTicks(-1);
             var userSpec = new TransactionByUserSpecification(userId);
-            var dateSpec = new TransactionByDateRangeSpecification(budget.Period.StartDate, budget.Period.EndDate);
+            var dateSpec = new TransactionByDateRangeSpecification(txStart, txEnd);
             var categorySpec = new TransactionByCategorySpecification(budget.CategoryId);
             var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(
                 CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec),

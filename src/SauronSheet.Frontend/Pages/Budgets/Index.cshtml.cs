@@ -78,7 +78,12 @@ public class IndexModel : PageModel
             ErrorMessage = "An unexpected error occurred while deleting the budget. Please try again later.";
         }
 
-        Budgets = await _mediator.Send(new GetBudgetsQuery(Year, Month));
-        return Page();
+        if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            Budgets = await _mediator.Send(new GetBudgetsQuery(Year, Month));
+            return Page();
+        }
+
+        return RedirectToPage("/budgets", new { Year, Month });
     }
 }

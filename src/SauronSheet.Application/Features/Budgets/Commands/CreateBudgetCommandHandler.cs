@@ -45,8 +45,12 @@ public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, G
         if (category is null || !category.IsAccessibleToUser(userId))
             throw new EntityNotFoundException("Category", request.CategoryId);
 
-        // Build domain values
-        var period = new DateRange(request.PeriodStart, request.PeriodEnd);
+        // Build domain values — normalise the period to canonical month boundaries on the
+        // server so that timezone drift in the client-submitted dates cannot produce a
+        // budget that belongs to the wrong month.
+        var normalizedStart = new DateTime(request.PeriodStart.Year, request.PeriodStart.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var normalizedEnd   = normalizedStart.AddMonths(1).AddDays(-1);
+        var period = new DateRange(normalizedStart, normalizedEnd);
         var limit = new Money(request.LimitAmount);
 
         // Validate uniqueness via domain service
