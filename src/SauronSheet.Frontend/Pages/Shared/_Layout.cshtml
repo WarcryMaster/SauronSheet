@@ -1,5 +1,7 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration _config
 @{
     string fontAwesomeUrl = "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css";
+    string sentryDsn = _config["Sentry:Dsn"] ?? "";
 }
 
 <!DOCTYPE html>
@@ -12,6 +14,50 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="/img/sauron-sheet-logo-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/img/sauron-sheet-logo-16x16.png" />
+
+    <!-- Sentry JavaScript SDK — frontend error tracking & observability -->
+    <!-- Note: floating 8.x version intentionally avoids stale SRI pinning; pin to a specific
+         version with a verified integrity hash before going to high-traffic production. -->
+    <script src="https://browser.sentry-cdn.com/8.x/bundle.tracing.replay.min.js"
+            crossorigin="anonymous"></script>
+    <script>
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                dsn: "@sentryDsn",
+                integrations: [
+                    // Session replay: mask all inputs and text to prevent PII capture.
+                    Sentry.replayIntegration({
+                        maskAllText: true,
+                        blockAllMedia: false,
+                    }),
+                    Sentry.browserTracingIntegration(),
+                ],
+                tracesSampleRate: 0.2,
+                replaysSessionSampleRate: 0.05,
+                replaysOnErrorSampleRate: 1.0,
+                // Do not send browser extension errors or cross-origin scripts.
+                beforeSend(event) {
+                    const url = event.request && event.request.url;
+                    if (url && url.startsWith('chrome-extension://')) return null;
+                    return event;
+                },
+            });
+
+            // Capture unhandled JS errors globally
+            window.addEventListener('error', function(event) {
+                Sentry.captureException(event.error || new Error(event.message || 'Unknown JS error'), {
+                    tags: { source: 'window.onerror' }
+                });
+            });
+
+            // Capture unhandled Promise rejections globally
+            window.addEventListener('unhandledrejection', function(event) {
+                Sentry.captureException(event.reason || new Error('Unhandled promise rejection'), {
+                    tags: { source: 'unhandledrejection' }
+                });
+            });
+        }
+    </script>
 
     <!-- MDBootstrap CSS via CDN (Cloudflare - allowed by CSP) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css" />
