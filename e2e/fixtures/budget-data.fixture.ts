@@ -64,9 +64,7 @@ async function loginWith(page: Page, email: string, password: string): Promise<b
  * Idempotency: navigates to /categories and performs a DOM check. If the category is
  * already listed, returns immediately without creating it.
  *
- * Creation: calls /categories?handler=Create via page.evaluate() (shares the browser's
- * auth session and anti-forgery cookie). Includes required EditForm.* placeholder values
- * because the page has two [BindProperty] models and ModelState validates both.
+ * Creation: uses the UI modal form to create the category (real user interaction).
  */
 async function ensureCategoryExists(page: Page, name: string): Promise<void> {
     await page.goto('/categories');
@@ -81,51 +79,49 @@ async function ensureCategoryExists(page: Page, name: string): Promise<void> {
         return; // Already exists — nothing to do
     }
 
-    // Call the app's category create endpoint from within the browser context.
-    // The browser context shares the same auth cookies and anti-forgery state as the page.
-    // EditForm.* placeholder values are required because the page model validates both
-    // CreateForm and EditForm on every POST (see implementation note in file header).
-    const result = await page.evaluate(async (catName: string) => {
-        const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
-        const token   = tokenEl?.value ?? '';
+    // Create category via UI modal form (real user interaction)
+    // Click the "Add New Category" button to open the modal
+    await page.getByRole('button', { name: 'Add New Category' }).click();
+    
+    // Wait for the modal to be visible
+    const createModal = page.locator('#createCategoryModal');
+    await expect(createModal).toBeVisible();
 
-        const fd = new FormData();
-        fd.append('CreateForm.Name',    catName);
-        fd.append('CreateForm.Type',    '1');        // 1 = Expense
-        fd.append('CreateForm.Color',   '#3498DB');
-        fd.append('CreateForm.IconName', 'tag');
-        // Placeholder values for EditForm — required by ModelState due to [BindProperty]
-        fd.append('EditForm.Name',    '_');          // 1 char min per [StringLength(50, MinimumLength = 1)]
-        fd.append('EditForm.Color',   '#3498DB');
-        fd.append('EditForm.IconName', 'tag');
-        fd.append('__RequestVerificationToken', token);
+    // Fill the create form fields inside the modal
+    await page.fill('#createName', name);
+    
+    // Select Expense type
+    await page.selectOption('#createType', '1');
+    
+    // Select an icon (required field)
+    await page.selectOption('#createIcon', 'tag');
+    
+    // Color has a default value (#3498DB), but set it explicitly
+    await page.fill('#createColor', '#3498DB');
 
-        const resp = await fetch('/categories?handler=Create', {
-            method: 'POST',
-            body:   fd,
-        });
+    // Wait for the submit button to be enabled (validation requires all fields)
+    const submitBtn = page.locator('#createSubmitBtn');
+    await expect(submitBtn).toBeEnabled({ timeout: 5000 });
 
-        return resp.json() as Promise<{ success: boolean; error?: string; categoryId?: string }>;
-    }, name);
+    // Submit the form
+    await submitBtn.click();
 
-    if (!result.success) {
-        // Tolerate "already exists" domain errors (race condition between DOM check and creation)
-        const isAlreadyExists = result.error
-            ? /already|duplicate|exist/i.test(result.error)
-            : false;
-
-        if (!isAlreadyExists) {
-            throw new Error(`Category creation failed for "${name}": ${result.error}`);
-        }
-    }
-
-    // Reload to reflect the new or existing category in the DOM
-    await page.reload({ waitUntil: 'domcontentloaded' });
-
-    // Verify the category appears in the list after reload
+    // Wait for the modal to close and page to reload
+    await expect(createModal).toBeHidden({ timeout: 10000 });
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Verify the category appears in the list
     await page.locator('.list-group-item').filter({
         has: page.locator('.fw-bold', { hasText: new RegExp(`^${name}$`) }),
-    }).waitFor({ state: 'visible', timeout: 5000 });
+    }).waitFor({ state: 'visible', timeout: 5000 }).catch(async () => {
+        // If not visible, check for error message
+        const errorAlert = page.locator('#createError:not(.d-none)');
+        if (await errorAlert.isVisible()) {
+            const errorMsg = await errorAlert.textContent();
+            throw new Error(`Category creation failed: ${errorMsg}`);
+        }
+        throw new Error(`Category "${name}" did not appear after creation`);
+    });
 }
 
 /**
@@ -199,7 +195,7 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
         rows.forEach(row => {
             const categoryCell = row.querySelector('td');
             if (categoryCell?.textContent?.includes('E2E-')) {
-                const input = row.querySelector('input[name="budgetId"]') as HTMLInputElement | null;
+                const input = row.querySelector('input[name="BudgetId"]') as HTMLInputElement | null;
                 if (input?.value) ids.push(input.value);
             }
         });
@@ -215,7 +211,7 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
             const token   = tokenEl?.value ?? '';
 
             const fd = new FormData();
-            fd.append('budgetId', id);
+            fd.append('BudgetId', id);
             fd.append('__RequestVerificationToken', token);
 
             await fetch('/budgets?handler=Delete', {

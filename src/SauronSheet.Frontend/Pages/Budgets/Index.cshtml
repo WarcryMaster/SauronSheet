@@ -72,7 +72,7 @@
                                     <div class="d-flex justify-content-center gap-2">
                                         <a href="/budgets/edit/@budget.Id" class="small text-brand fw-medium text-decoration-none">Edit</a>
                                         <form method="post" asp-page-handler="Delete" class="d-inline">
-                                            <input type="hidden" name="budgetId" value="@budget.Id" />
+                                            <input type="hidden" name="BudgetId" value="@budget.Id" />
                                             <button type="submit" onclick="return confirm('Delete this budget?')"
                                                     class="btn btn-link btn-sm text-danger p-0 text-decoration-none">Delete</button>
                                         </form>

@@ -110,8 +110,9 @@ public class SupabaseBudgetRepository : IBudgetRepository
     {
         try
         {
+            var idString = id.Value.ToString();
             var response = await _client.From<BudgetRow>()
-                .Where(r => r.Id == id.Value.ToString())
+                .Where(r => r.Id == idString)
                 .Get();
             var row = response.Models.FirstOrDefault();
             return row?.ToDomain();
@@ -199,9 +200,10 @@ public class SupabaseBudgetRepository : IBudgetRepository
     {
         try
         {
+            var idString = budget.Id.Value.ToString();
             var row = BudgetRow.FromDomain(budget);
             await _client.From<BudgetRow>()
-                .Where(r => r.Id == budget.Id.Value.ToString())
+                .Where(r => r.Id == idString)
                 .Update(row);
         }
         catch (Exception ex)
@@ -219,8 +221,9 @@ public class SupabaseBudgetRepository : IBudgetRepository
     {
         try
         {
+            var idString = id.Value.ToString();
             await _client.From<BudgetRow>()
-                .Where(r => r.Id == id.Value.ToString())
+                .Where(r => r.Id == idString)
                 .Delete();
         }
         catch (Exception ex)

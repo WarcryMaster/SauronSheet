@@ -25,6 +25,12 @@ public class IndexModel : PageModel
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
 
+    /// <summary>
+    /// Budget ID to delete — bound from form POST.
+    /// </summary>
+    [BindProperty]
+    public Guid BudgetId { get; set; }
+
     public IndexModel(IMediator mediator)
     {
         _mediator = mediator;
@@ -43,12 +49,13 @@ public class IndexModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(Guid budgetId)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostDeleteAsync()
     {
         try
         {
-            await _mediator.Send(new DeleteBudgetCommand(budgetId));
-            SuccessMessage = "Budget deleted successfully.";
+            await _mediator.Send(new DeleteBudgetCommand(BudgetId));
+            TempData["SuccessMessage"] = "Budget deleted successfully.";
         }
         catch (DomainException ex)
         {
