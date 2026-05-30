@@ -68,8 +68,8 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
             // Verify key elements in metric cards
             const firstCard = page.locator('.metric-card').first();
             await expect(firstCard).toBeVisible();
-            // Card should contain a category name and values
-            await expect(firstCard.locator('text=€')).toBeVisible();
+            // Card should contain at least one € value — use first() to avoid strict mode violation
+            await expect(firstCard.locator('text=€').first()).toBeVisible();
         }
 
         // ── Switch to Current Period view ───────────────────────────────────

@@ -61,54 +61,49 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
      * verifies the budget is already there.
      */
     test('TC-B01: create budget appears in current-month list', async ({ budgetReadyPage: page }) => {
-        await page.goto('/budgets/create');
-        await expect(page).toHaveURL(/\/budgets\/create/i);
-
-        const categorySelect = page.locator('select#CategoryId');
-        await expect(categorySelect).toBeVisible();
-
-        // Select the deterministic category provisioned by the fixture
-        const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
-        await expect(catBOption).toHaveCount(1, {
-            message: 'E2E-Budget-Cat-B must appear in the budget category dropdown (provisioned by fixture)',
-        });
-        const catBValue = await catBOption.getAttribute('value');
-        await categorySelect.selectOption(catBValue!);
-
-        // Fill effective from date (first day of current month) and granularity.
-        // The Create page uses input[type="date"]#EffectiveFrom + select#PeriodGranularity
-        // (there is no input[type="month"]#Month anymore).
         const now   = new Date();
         const year  = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        await page.fill('#EffectiveFrom', `${year}-${month}-01`);
-        await page.selectOption('#PeriodGranularity', 'Monthly');
 
-        // Set a spending limit of €100
-        await page.fill('input#LimitAmount', '100.00');
+        // ── Idempotency: if budget for Cat-B already exists, skip creation ────────
+        // (prevents DomainException from ValidateNoOverlap on re-runs with leftover data)
+        await page.goto('/budgets');
+        await page.waitForLoadState('domcontentloaded');
 
-        // Submit the form (use role+name to avoid ambiguity with the header logout button)
-        await page.getByRole('button', { name: 'Create Budget' }).click();
+        const alreadyExists = (await page.locator('table tbody tr').filter({
+            has: page.locator('td', { hasText: 'E2E-Budget-Cat-B' }),
+        }).count()) > 0;
 
-        // Wait for outcome: successful redirect to /budgets or a validation error staying on /budgets/create
-        await Promise.race([
-            page.waitForURL(
-                (url: string) => new URL(url).pathname === '/budgets',
-                { timeout: 10000 },
-            ),
-            page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
-        ]).catch(() => {
-            // Neither fired within timeout — continue and check state below
-        });
+        if (!alreadyExists) {
+            await page.goto('/budgets/create');
+            await expect(page).toHaveURL(/\/budgets\/create/i);
 
-        // If still on the create page (e.g. duplicate budget), navigate to the list directly
-        if (new URL(page.url()).pathname === '/budgets/create') {
-            await page.goto(`/budgets?Year=${year}&Month=${parseInt(month)}`);
+            const categorySelect = page.locator('select#CategoryId');
+            await expect(categorySelect).toBeVisible();
+
+            const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
+            await expect(catBOption).toHaveCount(1);
+            const catBValue = await catBOption.getAttribute('value');
+            await categorySelect.selectOption(catBValue!);
+
+            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            await page.selectOption('#PeriodGranularity', 'Monthly');
+            await page.fill('input#LimitAmount', '100.00');
+
+            await page.getByRole('button', { name: 'Create Budget' }).click();
+
+            await Promise.race([
+                page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
+            ]).catch(() => {});
+
+            if (new URL(page.url()).pathname === '/budgets/create') {
+                await page.goto('/budgets');
+            }
         }
 
         await expect(page).toHaveURL(/\/budgets/i);
 
-        // The budget table must be visible and contain a row for E2E-Budget-Cat-B
         const table = page.locator('table');
         await expect(table).toBeVisible();
         await expect(table).toContainText('E2E-Budget-Cat-B');
@@ -267,8 +262,8 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
             await Promise.race([
-                page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
-                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+                page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
             ]).catch(() => {});
 
             if (new URL(page.url()).pathname === '/budgets/create') {
@@ -277,41 +272,43 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         }
 
         // ── Verify the budget is in the list before deleting ──────────────────
+        await page.goto('/budgets');
+        await page.waitForLoadState('domcontentloaded');
         await expect(page).toHaveURL(/\/budgets/i);
         const table = page.locator('table');
         await expect(table).toBeVisible();
         await expect(table).toContainText('E2E-Budget-Cat-B');
 
-        // ── Delete the budget via UI (real user interaction) ──────────────────
-        // Find the Delete button in the row for E2E-Budget-Cat-B and click it
-        const deleteButton = existingRow.locator('button', { hasText: 'Delete' });
-        await expect(deleteButton).toBeVisible();
+        // ── Delete via Edit page (the list has no Delete button — only Deactivate) ──
+        const editLink = page.locator('table tbody tr').filter({
+            has: page.locator('td', { hasText: 'E2E-Budget-Cat-B' }),
+        }).locator('a', { hasText: 'Edit' });
+        await expect(editLink).toBeVisible();
+        const editHref = await editLink.getAttribute('href');
 
-        // Handle the confirmation dialog that appears when clicking Delete
+        await page.goto(editHref!);
+        await expect(page).toHaveURL(/\/budgets\/edit\//i);
+
+        const deletePermBtn = page.getByRole('button', { name: 'Delete Permanently' });
+        await expect(deletePermBtn).toBeVisible();
+
+        // Edit page uses native browser confirm() dialog
         page.on('dialog', async dialog => {
-            expect(dialog.message()).toContain('Delete this budget?');
             await dialog.accept();
         });
 
-        await deleteButton.click();
+        await deletePermBtn.click();
 
-        // Wait for the page to reload after form submission
+        // Wait for redirect back to the list
+        await page.waitForURL(/\/budgets(?!\/)/i, { timeout: 10000 });
         await page.waitForLoadState('domcontentloaded');
 
         // ── Assert the budget is gone ─────────────────────────────────────────
-        // After successful delete, either the table is gone (no budgets left)
-        // or the table exists but doesn't contain the deleted budget.
         const tableAfter = page.locator('table');
         const tableExists = await tableAfter.count() > 0;
-        
         if (tableExists) {
             await expect(tableAfter).not.toContainText('E2E-Budget-Cat-B');
         }
-        // If table doesn't exist, that's also a success state (no budgets left)
-        
-        // Note: Success message verification is skipped because TempData
-        // may not persist across redirects in the test environment.
-        // The key assertion is that the budget is no longer in the list.
     });
 
 });

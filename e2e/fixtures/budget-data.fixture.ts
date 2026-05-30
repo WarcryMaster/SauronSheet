@@ -205,7 +205,7 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
             fd.append('BudgetId', id);
             fd.append('__RequestVerificationToken', token);
 
-            await fetch('/budgets?handler=Delete', {
+            await fetch(`/budgets/edit/${id}?handler=Delete`, {
                 method: 'POST',
                 body: fd,
                 credentials: 'same-origin',

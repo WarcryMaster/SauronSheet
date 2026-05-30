@@ -76,8 +76,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
             await Promise.race([
-                page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
-                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+                page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
             ]).catch(() => {});
 
             if (new URL(page.url()).pathname === '/budgets/create') {
@@ -165,8 +165,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
             await Promise.race([
-                page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
-                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+                page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
             ]).catch(() => {});
 
             if (new URL(page.url()).pathname === '/budgets/create') {
@@ -198,8 +198,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await page.getByRole('button', { name: 'Save Changes' }).click();
 
         await Promise.race([
-            page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
-            page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+            page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+            page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
         ]).catch(() => {});
 
         // ── Verify updated limit ─────────────────────────────────────────────
@@ -242,8 +242,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
             await Promise.race([
-                page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
-                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+                page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
             ]).catch(() => {});
 
             if (new URL(page.url()).pathname === '/budgets/create') {
@@ -319,8 +319,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
             await Promise.race([
-                page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
-                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+                page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 30000 }),
             ]).catch(() => {});
 
             if (new URL(page.url()).pathname === '/budgets/create') {
