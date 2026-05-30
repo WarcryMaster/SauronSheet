@@ -86,6 +86,7 @@ jspm_packages/
 *.csproj.lscache
 *.lscache
 .playwright-mcp/
+.antigravitycli/
 
 # Test / CI outputs (artefactos temporales)
 test-results/
