@@ -3,6 +3,7 @@ namespace SauronSheet.Application.Features.Categories.Commands;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using SauronSheet.Application.Services;
 using SauronSheet.Domain.Common;
 using Domain.Repositories;
 using Domain.Services;
@@ -52,7 +53,11 @@ public class RenameCategoryCommandHandler
             category.Color,
             category.IconName);
 
-        await _categoryRepo.UpdateAsync(category);
+        // Compute normalized name for the updated name (DB column is NOT NULL)
+        var normalizedName = CategoryNormalizer.Normalize(request.NewName)
+            ?? throw new DomainException("Category name cannot be empty.");
+
+        await _categoryRepo.UpdateAsync(category, normalizedName);
         return Unit.Value;
     }
 }
