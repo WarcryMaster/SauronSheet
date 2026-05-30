@@ -149,6 +149,28 @@ dotnet test
 npx playwright test --config=e2e/playwright.config.ts --project=chromium
 ```
 
+### E2E Testing Policy: Real User Interaction Required
+
+**Fundamental rule:** E2E interface tests **MUST** act as a real user navigating and interacting with the web. If they don't simulate real interaction, **they are worthless**.
+
+**DO:**
+- Use `page.click()`, `page.fill()`, `page.selectOption()` to interact with elements.
+- Wait for elements to be visible before interacting (`waitFor`, `toBeVisible`).
+- Handle native browser dialogs (`page.on('dialog')`).
+- Navigate the app as a real user would (clicks on buttons, links, forms).
+- Verify observable results in the UI (visible text, redirects, success/error messages).
+
+**DO NOT:**
+- ❌ Use `page.evaluate()` to execute direct JavaScript in the DOM.
+- ❌ Use `fetch()` inside `page.evaluate()` to call APIs directly.
+- ❌ Manipulate the DOM directly (`document.querySelector`, `input.type = 'text'`).
+- ❌ Skip UI flows (modals, confirmations, form validations).
+- ❌ Verify database state directly instead of the UI.
+
+**Exception:** Post-execution cleanup helpers (`test.afterAll`) **MAY** use `fetch()` directly, as they are maintenance operations, not tests themselves.
+
+**Reason:** An E2E test that doesn't simulate real interaction doesn't test real use cases. It only verifies the API works, which integration tests already cover. E2E tests must validate that **the user can complete their task** through the interface.
+
 ## Documentation and Review Rules
 
 - Design docs should lead with the decision, then the details.
