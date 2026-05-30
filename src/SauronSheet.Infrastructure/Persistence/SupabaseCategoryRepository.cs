@@ -88,6 +88,26 @@ internal class CategoryRow : BaseModel
     /// <summary>
     /// Feature 3: Updated to handle nullable UserId.
     /// </summary>
+    /// <summary>
+    /// Converts category to update-safe DTO with normalized name.
+    /// normalizedName is pre-computed by the caller (CategoryNormalizer.Normalize).
+    /// </summary>
+    public static CategoryRow FromDomainForUpdate(Category c, string normalizedName)
+    {
+        return new CategoryRow
+        {
+            Id = c.Id.Value.ToString(),
+            UserId = c.UserId?.Value,
+            Name = c.Name.Value,
+            NormalizedName = normalizedName,
+            Type = c.Type.ToString(),
+            Color = c.Color.Value,
+            IconName = c.IconName,
+            IsSystemDefault = c.IsSystemDefault,
+            UpdatedAt = c.UpdatedAt
+        };
+    }
+
     public static CategoryRow FromDomain(Category c)
     {
         return new CategoryRow
@@ -308,12 +328,12 @@ public class SupabaseCategoryRepository : ICategoryRepository
         }
     }
 
-    public async Task UpdateAsync(Category category)
+    public async Task UpdateAsync(Category category, string normalizedName)
     {
         var idString = category.Id.Value.ToString();
         await _client.From<CategoryRow>()
             .Where(x => x.Id == idString)
-            .Update(CategoryRow.FromDomain(category));
+            .Update(CategoryRow.FromDomainForUpdate(category, normalizedName));
     }
 
     public async Task DeleteAsync(CategoryId id)

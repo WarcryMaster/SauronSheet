@@ -32,7 +32,12 @@ public interface ICategoryRepository
     /// </summary>
     Task AddAsync(Category category, string normalizedName);
 
-    Task UpdateAsync(Category category);
+    /// <summary>
+    /// Update an existing category with its pre-computed normalized name.
+    /// normalizedName is mandatory — the DB column is NOT NULL after migration 011.
+    /// Caller must use CategoryNormalizer.Normalize(category.Name.Value).
+    /// </summary>
+    Task UpdateAsync(Category category, string normalizedName);
     Task DeleteAsync(CategoryId id);
     Task<bool> HasTransactionsAsync(CategoryId categoryId);
 }
