@@ -29,6 +29,10 @@
     {
         <div class="alert alert-success" role="alert">@Model.SuccessMessage</div>
     }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success" role="alert">@TempData["SuccessMessage"]</div>
+    }
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
