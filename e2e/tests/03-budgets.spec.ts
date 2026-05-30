@@ -24,7 +24,7 @@
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 test.describe('Budgets — monthly budget management (clarify-budgets-feature)', () => {
 
@@ -34,15 +34,13 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const context = await browser.newContext();
         const page    = await context.newPage();
 
-        // Re-authenticate as the test user for cleanup
-        const envEmail    = process.env.TEST_USER_EMAIL;
-        const envPassword = process.env.TEST_USER_PASSWORD;
-        const email    = envEmail    || 'e2e@saurontest.local';
-        const password = envPassword || '***REMOVED***';
+        // Clear any leftover cookies, then authenticate as the test user
+        await context.clearCookies();
+        const account = resolveTestAccount();
 
         await page.goto('/auth/login');
-        await page.fill('input[type="email"]', email);
-        await page.fill('input[type="password"]', password);
+        await page.fill('input[type="email"]', account.email);
+        await page.fill('input[type="password"]', account.password);
         await page.click('button[type="submit"]');
         await page.waitForURL(/dashboard/i, { timeout: 15000 });
 
