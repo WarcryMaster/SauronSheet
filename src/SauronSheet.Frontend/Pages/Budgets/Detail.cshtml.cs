@@ -50,7 +50,7 @@ public class DetailModel : PageModel
         }
         catch (EntityNotFoundException)
         {
-            return RedirectToPage("/budgets/index");
+            return RedirectToPage("/Budgets/Index");
         }
         catch (UnauthorizedAccessException)
         {

@@ -40,7 +40,7 @@ public class EditModel : PageModel
         }
         catch (EntityNotFoundException)
         {
-            return RedirectToPage("/budgets/index");
+            return RedirectToPage("/Budgets/Index");
         }
         catch (UnauthorizedAccessException)
         {
@@ -54,7 +54,7 @@ public class EditModel : PageModel
         {
             await _mediator.Send(new UpdateBudgetCommand(BudgetId, NewLimitAmount));
             TempData["SuccessMessage"] = "Budget updated successfully.";
-            return RedirectToPage("/budgets/index");
+            return RedirectToPage("/Budgets/Index");
         }
         catch (DomainException ex)
         {
