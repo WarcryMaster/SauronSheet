@@ -203,7 +203,7 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
 
 /**
  * Deletes all budgets whose category name matches the E2E pattern.
- * Navigates to /budgets, collects IDs from the DOM, then POSTs delete for each.
+ * Navigates to /budgets, collects IDs from the DOM, then POSTs deactivate for each.
  * Tolerant: missing CSRF token or empty list → silent no-op.
  */
 export async function cleanupE2EBudgets(page: Page): Promise<void> {
@@ -226,7 +226,7 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
 
     if (e2eBudgetIds.length === 0) return;
 
-    // Delete each budget via the Razor Pages POST handler
+    // Deactivate each budget via the Razor Pages POST handler
     for (const budgetId of e2eBudgetIds) {
         await page.evaluate(async (id: string) => {
             const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
@@ -236,7 +236,79 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
             fd.append('BudgetId', id);
             fd.append('__RequestVerificationToken', token);
 
-            await fetch('/budgets?handler=Delete', {
+            await fetch('/budgets?handler=Deactivate', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+            });
+        }, budgetId);
+    }
+}
+        });
+        return ids;
+    });
+
+    if (e2eBudgetIds.length === 0) return;
+
+    // Deactivate each budget via the Razor Pages POST handler
+    for (const budgetId of e2eBudgetIds) {
+        await page.evaluate(async (id: string) => {
+            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
+            const token   = tokenEl?.value ?? '';
+
+            const fd = new FormData();
+            fd.append('BudgetId', id);
+            fd.append('__RequestVerificationToken', token);
+
+            await fetch('/budgets?handler=Deactivate', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+            });
+        }, budgetId);
+    }
+}
+        });
+        return ids;
+    });
+
+    if (e2eBudgetIds.length === 0) return;
+
+    // Deactivate each budget via the Razor Pages POST handler
+    for (const budgetId of e2eBudgetIds) {
+        await page.evaluate(async (id: string) => {
+            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
+            const token   = tokenEl?.value ?? '';
+
+            const fd = new FormData();
+            fd.append('BudgetId', id);
+            fd.append('__RequestVerificationToken', token);
+
+            await fetch('/budgets?handler=Deactivate', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+            });
+        }, budgetId);
+    }
+}
+        });
+        return ids;
+    });
+
+    if (e2eBudgetIds.length === 0) return;
+
+    // Deactivate each budget via the Razor Pages POST handler
+    for (const budgetId of e2eBudgetIds) {
+        await page.evaluate(async (id: string) => {
+            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
+            const token   = tokenEl?.value ?? '';
+
+            const fd = new FormData();
+            fd.append('BudgetId', id);
+            fd.append('__RequestVerificationToken', token);
+
+            await fetch('/budgets?handler=Deactivate', {
                 method: 'POST',
                 body: fd,
                 credentials: 'same-origin',
