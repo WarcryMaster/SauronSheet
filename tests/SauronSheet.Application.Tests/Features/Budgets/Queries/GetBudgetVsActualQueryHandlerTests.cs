@@ -1,14 +1,14 @@
-using SauronSheet.Domain.Common;
-using Xunit;
 using Moq;
+using Xunit;
 
-using SauronSheet.Application.Features.Budgets.Queries;
 using SauronSheet.Application.Features.Budgets.DTOs;
+using SauronSheet.Application.Features.Budgets.Queries;
+using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
+using SauronSheet.Domain.Services;
 using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
-using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 
@@ -18,6 +18,7 @@ public class GetBudgetVsActualQueryHandlerTests
     private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly Mock<ICategoryRepository> _categoryRepoMock = new();
     private readonly Mock<IUserContext> _userContextMock = new();
+    private readonly BudgetCalculationService _calcService = new();
 
     private GetBudgetVsActualQueryHandler CreateHandler()
     {
@@ -25,6 +26,7 @@ public class GetBudgetVsActualQueryHandlerTests
             _budgetRepoMock.Object,
             _transactionRepoMock.Object,
             _categoryRepoMock.Object,
+            _calcService,
             _userContextMock.Object);
     }
 
@@ -33,226 +35,193 @@ public class GetBudgetVsActualQueryHandlerTests
         _userContextMock.Setup(u => u.UserId).Returns(userId);
     }
 
-    private Budget CreateBudget(UserId userId, CategoryId catId, decimal limit = 500m)
+    private static Budget CreateBudget(
+        Guid id,
+        string userId = "user-1",
+        Guid? categoryId = null,
+        DateOnly? effectiveFrom = null,
+        DateOnly? effectiveUntil = null,
+        BudgetPeriod period = BudgetPeriod.Monthly,
+        decimal limit = 500m)
     {
         return new Budget(
-            new BudgetId(Guid.NewGuid()), userId, catId,
-            new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28)),
+            new BudgetId(id),
+            new UserId(userId),
+            new CategoryId(categoryId ?? Guid.NewGuid()),
+            effectiveFrom ?? new DateOnly(2026, 1, 1),
+            effectiveUntil,
+            period,
             new Money(limit, "EUR"));
     }
 
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task Handle_BudgetsAndTransactions_ReturnsComparison()
+    private static Category CreateCategory(Guid id, string name, string userId = "user-1")
     {
-        // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var cat1Id = new CategoryId(Guid.NewGuid());
-        var cat2Id = new CategoryId(Guid.NewGuid());
-
-        var budget1 = CreateBudget(userId, cat1Id, 500m);
-        var budget2 = CreateBudget(userId, cat2Id, 300m);
-
-        _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Budget> { budget1, budget2 });
-
-        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "Groceries");
-        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "Entertainment");
-        _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat1, cat2 });
-
-        var tx1 = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-200, "EUR"), new DateTime(2026, 2, 10), "Shopping", cat1Id);
-        var tx2 = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-150, "EUR"), new DateTime(2026, 2, 15), "Cinema", cat2Id);
-
-        _transactionRepoMock
-            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction> { tx1, tx2 });
-
-        var handler = CreateHandler();
-
-        // Act
-        var result = await handler.Handle(new GetBudgetVsActualQuery(2026, 2), CancellationToken.None);
-
-        // Assert
-        Assert.Equal(2, result.Count);
-        Assert.All(result, dto => Assert.NotNull(dto.BudgetLimit));
+        return new Category(
+            new CategoryId(id),
+            new UserId(userId),
+            new CategoryName(name),
+            CategoryType.Expense,
+            new ColorHex("#000000"),
+            "default");
     }
 
+    private static Transaction CreateTransaction(
+        Guid categoryId, decimal amount, DateTime date,
+        string userId = "user-1")
+    {
+        return new Transaction(
+            new TransactionId(Guid.NewGuid()),
+            new UserId(userId),
+            new Money(amount, "EUR"),
+            date, "Test transaction",
+            new CategoryId(categoryId));
+    }
+
+    // ── RED: Returns comparison for category with budget ───────
+
     [Fact]
     [Trait("Category", "Application")]
-    public async Task Handle_CategoryWithSpendButNoBudget_ShowsNoBudget()
+    public async Task Handle_WithBudget_UsesCalculationService()
     {
         // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var budgetedCatId = new CategoryId(Guid.NewGuid());
-        var unbudgetedCatId = new CategoryId(Guid.NewGuid());
-
-        var budget = CreateBudget(userId, budgetedCatId, 500m);
+        SetupUser("user-1");
+        var catId = Guid.NewGuid();
+        var budgetId = Guid.NewGuid();
+        var budget = CreateBudget(budgetId,
+            categoryId: catId,
+            limit: 300m,
+            period: BudgetPeriod.Monthly,
+            effectiveFrom: new DateOnly(2026, 1, 1));
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
             .ReturnsAsync(new List<Budget> { budget });
 
-        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: budgetedCatId, userId: userId, name: "Groceries");
-        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: unbudgetedCatId, userId: userId, name: "Transport");
         _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat1, cat2 });
-
-        var tx1 = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-200, "EUR"), new DateTime(2026, 2, 10), "Shopping", budgetedCatId);
-        var tx2 = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-50, "EUR"), new DateTime(2026, 2, 12), "Bus", unbudgetedCatId);
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Category>
+            {
+                CreateCategory(catId, "Groceries")
+            });
 
         _transactionRepoMock
             .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction> { tx1, tx2 });
+            .ReturnsAsync(new List<Transaction>
+            {
+                CreateTransaction(catId, 150m, new DateTime(2026, 1, 15))
+            });
 
+        var query = new GetBudgetVsActualQuery(
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 1, 31));
         var handler = CreateHandler();
 
         // Act
-        var result = await handler.Handle(new GetBudgetVsActualQuery(2026, 2), CancellationToken.None);
+        List<BudgetVsActualDto> result = await handler.Handle(query, CancellationToken.None);
 
-        // Assert
-        Assert.Equal(2, result.Count);
-        var unbudgeted = result.First(r => r.CategoryName == "Transport");
-        Assert.Null(unbudgeted.BudgetLimit);
-        Assert.Equal(50m, unbudgeted.ActualSpend);
+        // Assert — Monthly: 1 period × 300 = 300 budget limit, spent 150
+        Assert.Single(result);
+        Assert.Equal("Groceries", result[0].CategoryName);
+        Assert.Equal(300m, result[0].BudgetLimit);
+        Assert.Equal(150m, result[0].ActualSpend);
+        Assert.Equal(150m, result[0].Difference);
+        Assert.Equal(50m, result[0].PercentageUsed);
     }
+
+    // ── RED: Category without budget shows "Sin presupuesto" ────
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task Handle_BudgetWithNoSpend_ShowsZeroActual()
+    public async Task Handle_NoBudget_ShowsSinPresupuesto()
     {
         // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var catId = new CategoryId(Guid.NewGuid());
-        var budget = CreateBudget(userId, catId, 500m);
+        SetupUser("user-1");
+        var catId = Guid.NewGuid();
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Budget>());
+
+        _categoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Category>
+            {
+                CreateCategory(catId, "Entertainment")
+            });
+
+        _transactionRepoMock
+            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
+            .ReturnsAsync(new List<Transaction>
+            {
+                CreateTransaction(catId, 50m, new DateTime(2026, 1, 15))
+            });
+
+        var query = new GetBudgetVsActualQuery(
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 1, 31));
+        var handler = CreateHandler();
+
+        // Act
+        List<BudgetVsActualDto> result = await handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Entertainment", result[0].CategoryName);
+        Assert.Null(result[0].BudgetLimit);
+        Assert.Equal(50m, result[0].ActualSpend);
+        Assert.Equal("Sin presupuesto", result[0].StatusLevel);
+    }
+
+    // ── RED: Multiple categories, mixed with and without budget ──
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_Mixed_ReturnsAllCategories()
+    {
+        // Arrange
+        SetupUser("user-1");
+        var catId1 = Guid.NewGuid();
+        var catId2 = Guid.NewGuid();
+        var budgetId = Guid.NewGuid();
+        var budget = CreateBudget(budgetId,
+            categoryId: catId1, limit: 200m,
+            period: BudgetPeriod.Monthly);
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
             .ReturnsAsync(new List<Budget> { budget });
 
-        var cat = TestCategoryFactory.CreateUserCategory(categoryId: catId, userId: userId, name: "Groceries");
         _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat });
-
-        // No transactions
-        _transactionRepoMock
-            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction>());
-
-        var handler = CreateHandler();
-
-        // Act
-        var result = await handler.Handle(new GetBudgetVsActualQuery(2026, 2), CancellationToken.None);
-
-        // Assert
-        var dto = Assert.Single(result);
-        Assert.Equal(0m, dto.ActualSpend);
-        Assert.Equal(500m, dto.BudgetLimit);
-    }
-
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task Handle_SummaryRow_TotalsCorrectly()
-    {
-        // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var cat1Id = new CategoryId(Guid.NewGuid());
-        var cat2Id = new CategoryId(Guid.NewGuid());
-
-        var budget1 = CreateBudget(userId, cat1Id, 500m);
-        var budget2 = CreateBudget(userId, cat2Id, 300m);
-
-        _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Budget> { budget1, budget2 });
-
-        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: cat1Id, userId: userId, name: "A");
-        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: cat2Id, userId: userId, name: "B");
-        _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat1, cat2 });
-
-        var tx1 = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-200, "EUR"), new DateTime(2026, 2, 10), "Exp1", cat1Id);
-        var tx2 = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-150, "EUR"), new DateTime(2026, 2, 15), "Exp2", cat2Id);
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Category>
+            {
+                CreateCategory(catId1, "Groceries"),
+                CreateCategory(catId2, "Transport")
+            });
 
         _transactionRepoMock
             .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction> { tx1, tx2 });
+            .ReturnsAsync(new List<Transaction>
+            {
+                CreateTransaction(catId1, 100m, new DateTime(2026, 1, 15)),
+                CreateTransaction(catId2, 80m, new DateTime(2026, 1, 20))
+            });
 
+        var query = new GetBudgetVsActualQuery(
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 1, 31));
         var handler = CreateHandler();
 
         // Act
-        var result = await handler.Handle(new GetBudgetVsActualQuery(2026, 2), CancellationToken.None);
+        List<BudgetVsActualDto> result = await handler.Handle(query, CancellationToken.None);
 
-        // Assert — verify individual budget items and their sums
-        var totalBudgeted = result.Where(r => r.BudgetLimit.HasValue).Sum(r => r.BudgetLimit!.Value);
-        var totalActual = result.Sum(r => r.ActualSpend);
-
-        Assert.Equal(800m, totalBudgeted); // 500 + 300
-        Assert.Equal(350m, totalActual);   // 200 + 150
-    }
-
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task Handle_SortOrder_OverBudgetFirst()
-    {
-        // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var underCatId = new CategoryId(Guid.NewGuid());
-        var overCatId = new CategoryId(Guid.NewGuid());
-
-        var underBudget = CreateBudget(userId, underCatId, 500m); // will be under
-        var overBudget = CreateBudget(userId, overCatId, 100m);   // will be over
-
-        _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Budget> { underBudget, overBudget });
-
-        var cat1 = TestCategoryFactory.CreateUserCategory(categoryId: underCatId, userId: userId, name: "Under");
-        var cat2 = TestCategoryFactory.CreateUserCategory(categoryId: overCatId, userId: userId, name: "Over");
-        _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat1, cat2 });
-
-        var txUnder = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-100, "EUR"), new DateTime(2026, 2, 10), "Exp1", underCatId);
-        var txOver = new Transaction(
-            new TransactionId(Guid.NewGuid()), userId,
-            new Money(-200, "EUR"), new DateTime(2026, 2, 15), "Exp2", overCatId);
-
-        _transactionRepoMock
-            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction> { txUnder, txOver });
-
-        var handler = CreateHandler();
-
-        // Act
-        var result = await handler.Handle(new GetBudgetVsActualQuery(2026, 2), CancellationToken.None);
-
-        // Assert — over-budget should be first
-        Assert.Equal("Over", result[0].CategoryName);
-        Assert.True(result[0].PercentageUsed > 1.0m);
+        // Assert — 2 categories, one with budget, one without
+        Assert.Equal(2, result.Count);
+        BudgetVsActualDto withBudget = result.First(r => r.BudgetLimit != null);
+        Assert.NotNull(withBudget.BudgetLimit);
+        BudgetVsActualDto withoutBudget = result.First(r => r.BudgetLimit == null);
+        Assert.Null(withoutBudget.BudgetLimit);
+        Assert.Equal(80m, withoutBudget.ActualSpend);
+        Assert.Equal("Sin presupuesto", withoutBudget.StatusLevel);
     }
 }

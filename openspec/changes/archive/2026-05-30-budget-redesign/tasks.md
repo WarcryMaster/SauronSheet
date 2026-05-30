@@ -36,7 +36,7 @@
 
 ### Tareas
 
-- [ ] **1.1** Crear enum `BudgetPeriod` en `Domain/ValueObjects/BudgetPeriod.cs`
+- [x] **1.1** Crear enum `BudgetPeriod` en `Domain/ValueObjects/BudgetPeriod.cs` ✅
   - Valores: `Monthly`, `Quarterly`, `Semester`, `Annual`
   - **Archivos**: Crear `Domain/ValueObjects/BudgetPeriod.cs`
   - **Dependencias**: Ninguna
@@ -44,7 +44,7 @@
   - **Líneas estimadas**: 15
   - **Testing**: No requiere tests (es un enum)
 
-- [ ] **1.2** Rediseñar entidad `Budget` en `Domain/Entities/Budget.cs`
+- [x] **1.2** Rediseñar entidad `Budget` en `Domain/Entities/Budget.cs` ✅
   - Eliminar propiedad `DateRange Period`
   - Añadir propiedades: `EffectiveFrom` (DateOnly), `EffectiveUntil?` (DateOnly?), `PeriodGranularity` (BudgetPeriod)
   - Constructor parametrizado con validaciones: `Limit > 0`, `EffectiveUntil >= EffectiveFrom` si no es null
@@ -52,9 +52,9 @@
   - **Dependencias**: 1.1
   - **Criterios de aceptación**: Constructor valida invariantes; propiedades son inmutables excepto via métodos de actualización
   - **Líneas estimadas**: 80
-  - **Testing**: RED → Escribir tests de constructor (límite negativo, fechas inválidas)
+  - **Testing**: RED → Escribir tests de constructor (límite negativo, fechas inválidas) → GREEN ✅
 
-- [ ] **1.3** Añadir métodos de actualización a `Budget`
+- [x] **1.3** Añadir métodos de actualización a `Budget` ✅
   - `UpdateLimit(Money newLimit)`: valida `newLimit > 0`
   - `UpdateEffectiveDates(DateOnly from, DateOnly? until)`: valida `until >= from`
   - `UpdateGranularity(BudgetPeriod newGranularity)`: actualiza granularidad
@@ -64,9 +64,9 @@
   - **Dependencias**: 1.2
   - **Criterios de aceptación**: Todos los métodos validan invariantes; `IsActiveOn()` maneja correctamente `EffectiveUntil = null`
   - **Líneas estimadas**: 60
-  - **Testing**: RED → Tests para cada método (casos válidos e inválidos)
+  - **Testing**: RED → Tests para cada método (casos válidos e inválidos) → GREEN ✅
 
-- [ ] **1.4** Implementar tests de dominio para `Budget` entity
+- [x] **1.4** Implementar tests de dominio para `Budget` entity ✅
   - Tests de constructor: límite positivo, fechas válidas
   - Tests de métodos de actualización: validaciones
   - Tests de `IsActiveOn()`: con `EffectiveUntil` null y no null
@@ -74,9 +74,9 @@
   - **Dependencias**: 1.3
   - **Criterios de aceptación**: Todos los tests pasan (GREEN); cobertura >90% de `Budget.cs`
   - **Líneas estimadas**: 120
-  - **Testing**: GREEN → Implementar tests y verificar que pasan
+  - **Testing**: GREEN → 24/24 tests pasando ✅
 
-- [ ] **1.5** Modificar `BudgetService` para validación de solapamiento
+- [x] **1.5** Modificar `BudgetService` para validación de solapamiento ✅
   - Renombrar `ValidateUniqueBudget()` → `ValidateNoOverlap(userId, categoryId, from, until?, excludeBudgetId?)`
   - Lógica: buscar budgets existentes para user+category cuyo rango se solape con `[from, until]`
   - Si `until` es null, tratar como rango infinito
@@ -84,16 +84,16 @@
   - **Dependencias**: 1.2
   - **Criterios de aceptación**: Detecta solapamientos correctamente; permite rangos adyacentes (ej: uno termina 2026-06-30, otro inicia 2026-07-01)
   - **Líneas estimadas**: 40
-  - **Testing**: RED → Tests de solapamiento (con y sin solapamiento, rangos adyacentes, permanentes)
+  - **Testing**: RED → Tests de solapamiento (con y sin solapamiento, rangos adyacentes, permanentes) → GREEN ✅
 
-- [ ] **1.6** Implementar tests de `BudgetService.ValidateNoOverlap()`
+- [x] **1.6** Implementar tests de `BudgetService.ValidateNoOverlap()` ✅
   - Mock de `IBudgetRepository`
   - Casos: sin solapamiento, con solapamiento, rangos adyacentes, budget permanente vs temporal
   - **Archivos**: Crear `tests/SauronSheet.Domain.Tests/Services/BudgetServiceTests.cs`
   - **Dependencias**: 1.5
   - **Criterios de aceptación**: Todos los tests pasan (GREEN)
   - **Líneas estimadas**: 90
-  - **Testing**: GREEN → Implementar tests y verificar que pasan
+  - **Testing**: GREEN → 17/17 tests pasando (8 ValidateNoOverlap + 9 GetStatusLevel) ✅
 
 **Total Slice 1**: ~405 líneas (entity + enum + service + tests)
 
@@ -105,7 +105,7 @@
 
 ### Tareas
 
-- [ ] **2.1** Crear record `BudgetCalculationResult` en `Domain/Services/BudgetCalculationResult.cs`
+- [x] **2.1** Crear record `BudgetCalculationResult` en `Domain/Services/BudgetCalculationResult.cs` ✅
   - Propiedades: `PeriodsElapsed` (int), `AccumulatedLimit` (Money), `Spent` (Money), `Remaining` (Money), `PercentageUsed` (decimal), `StatusLevel` (BudgetStatusLevel)
   - **Archivos**: Crear `Domain/Services/BudgetCalculationResult.cs`
   - **Dependencias**: Ninguna
@@ -113,7 +113,7 @@
   - **Líneas estimadas**: 20
   - **Testing**: No requiere tests (es un record)
 
-- [ ] **2.2** Implementar `BudgetCalculationService` en `Domain/Services/BudgetCalculationService.cs`
+- [x] **2.2** Implementar `BudgetCalculationService` en `Domain/Services/BudgetCalculationService.cs` ✅
   - Método `Calculate(Budget budget, DateOnly from, DateOnly to, Money spent) → BudgetCalculationResult`
   - Método `PeriodsElapsed(BudgetPeriod granularity, DateOnly from, DateOnly to) → int`
   - Lógica de períodos: contar períodos completos de la granularidad dentro del rango
@@ -125,7 +125,7 @@
   - **Líneas estimadas**: 120
   - **Testing**: RED → Tests para cada granularidad (mensual, trimestral, semestral, anual)
 
-- [ ] **2.3** Implementar lógica de cálculo de períodos por granularidad
+- [x] **2.3** Implementar lógica de cálculo de períodos por granularidad ✅
   - Mensual: contar meses en el rango
   - Trimestral: contar trimestres (Q1, Q2, Q3, Q4)
   - Semestral: contar semestres (H1, H2)
@@ -136,7 +136,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: RED → Tests específicos para cada granularidad
 
-- [ ] **2.4** Implementar lógica de intersección con vigencia del budget
+- [x] **2.4** Implementar lógica de intersección con vigencia del budget ✅
   - Si `from < EffectiveFrom`, ajustar `from = EffectiveFrom`
   - Si `to > EffectiveUntil`, ajustar `to = EffectiveUntil`
   - Si el rango ajustado es inválido (`from > to`), retornar `PeriodsElapsed = 0`
@@ -146,7 +146,7 @@
   - **Líneas estimadas**: 40
   - **Testing**: RED → Tests con budgets que inician a mitad de rango, terminan antes del fin del rango
 
-- [ ] **2.5** Implementar cálculo de métricas derivadas
+- [x] **2.5** Implementar cálculo de métricas derivadas ✅
   - `AccumulatedLimit = Limit × PeriodsElapsed`
   - `Remaining = AccumulatedLimit − Spent`
   - `PercentageUsed = (Spent ÷ AccumulatedLimit) × 100` (manejar división por cero)
@@ -157,7 +157,7 @@
   - **Líneas estimadas**: 50
   - **Testing**: RED → Tests de métricas y estados semáforo
 
-- [ ] **2.6** Implementar tests completos de `BudgetCalculationService`
+- [x] **2.6** Implementar tests completos de `BudgetCalculationService` ✅
   - Tests para cada granularidad (mensual, trimestral, semestral, anual)
   - Tests de períodos parciales (cuentan como completos)
   - Tests de intersección con vigencia (budget inicia/termina a mitad del rango)
@@ -178,7 +178,7 @@
 
 ### Tareas
 
-- [ ] **3.1** Crear migración de base de datos
+- [x] **3.1** Crear migración de base de datos ✅
   - Drop tabla `budgets` existente
   - Create nueva tabla `budgets` con columnas: `id`, `user_id`, `category_id`, `effective_from`, `effective_until`, `period_granularity`, `limit_amount`, `currency`, `created_at`, `updated_at`
   - Constraint CHECK: `limit_amount > 0`, `effective_until IS NULL OR effective_until >= effective_from`
@@ -191,7 +191,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: Aplicar migración en entorno local y verificar schema
 
-- [ ] **3.2** Rediseñar `BudgetRow` en infraestructura
+- [x] **3.2** Rediseñar `BudgetRow` en infraestructura ✅
   - Eliminar campos de periodo mensual (`year`, `month`)
   - Añadir campos: `effective_from` (DateOnly), `effective_until` (DateOnly?), `period_granularity` (string)
   - **Archivos**: Modificar `Infrastructure/Persistence/SupabaseBudgetRepository.cs` (clase interna `BudgetRow`)
@@ -200,7 +200,7 @@
   - **Líneas estimadas**: 30
   - **Testing**: No requiere tests (es un DTO de infraestructura)
 
-- [ ] **3.3** Implementar métodos de query en `SupabaseBudgetRepository`
+- [x] **3.3** Implementar métodos de query en `SupabaseBudgetRepository` ✅
   - `GetActiveByUserAndCategoryAsync(userId, categoryId, DateOnly asOf)`: obtiene budget activo en una fecha dada
   - `GetByUserAndDateRangeAsync(userId, from, to)`: obtiene budgets que se solapan con el rango
   - Eliminar método obsoleto `GetByUserAndCategoryAndMonthAsync`
@@ -210,7 +210,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: RED → Tests de integración con base de datos en memoria
 
-- [ ] **3.4** Implementar mapeo entre `Budget` (domain) y `BudgetRow` (infrastructure)
+- [x] **3.4** Implementar mapeo entre `Budget` (domain) y `BudgetRow` (infrastructure) ✅
   - `ToDomain(BudgetRow row) → Budget`: mapea campos y reconstruye entidad
   - `ToRow(Budget budget) → BudgetRow`: mapea entidad a fila para persistencia
   - **Archivos**: Modificar `Infrastructure/Persistence/SupabaseBudgetRepository.cs`
@@ -219,7 +219,7 @@
   - **Líneas estimadas**: 50
   - **Testing**: Tests de mapeo (ida y vuelta)
 
-- [ ] **3.5** Implementar tests de integración del repository
+- [x] **3.5** Implementar tests de integración del repository ✅
   - Tests de `AddAsync()`: inserción correcta
   - Tests de `GetActiveByUserAndCategoryAsync()`: con budget activo, sin budget activo
   - Tests de `GetByUserAndDateRangeAsync()`: con solapamiento, sin solapamiento
@@ -240,7 +240,7 @@
 
 ### Tareas
 
-- [ ] **4.1** Rediseñar `CreateBudgetCommand` y su handler
+- [x] **4.1** Rediseñar `CreateBudgetCommand` y su handler
   - Command: `CreateBudgetCommand(Guid CategoryId, decimal LimitAmount, DateOnly EffectiveFrom, DateOnly? EffectiveUntil, BudgetPeriod PeriodGranularity)`
   - Handler: valida categoría existe, valida no solapamiento via `BudgetService.ValidateNoOverlap()`, crea budget, persiste
   - **Archivos**: Modificar `Application/Features/Budgets/Commands/CreateBudgetCommand.cs` y `CreateBudgetCommandHandler.cs`
@@ -249,7 +249,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: RED → Tests de handler (casos válidos e inválidos)
 
-- [ ] **4.2** Crear `UpdateBudgetLimitCommand` y su handler
+- [x] **4.2** Crear `UpdateBudgetLimitCommand` y su handler
   - Command: `UpdateBudgetLimitCommand(Guid BudgetId, decimal NewLimitAmount)`
   - Handler: obtiene budget, llama a `budget.UpdateLimit()`, persiste cambios
   - **Archivos**: Crear `Application/Features/Budgets/Commands/UpdateBudgetLimitCommand.cs` y `UpdateBudgetLimitCommandHandler.cs`
@@ -258,7 +258,7 @@
   - **Líneas estimadas**: 60
   - **Testing**: RED → Tests de handler
 
-- [ ] **4.3** Crear `UpdateBudgetPeriodCommand` y su handler
+- [x] **4.3** Crear `UpdateBudgetPeriodCommand` y su handler
   - Command: `UpdateBudgetPeriodCommand(Guid BudgetId, BudgetPeriod NewPeriod, decimal NewLimitAmount)`
   - Handler: obtiene budget, llama a `budget.UpdateGranularity()` y `budget.UpdateLimit()`, persiste
   - **Archivos**: Crear `Application/Features/Budgets/Commands/UpdateBudgetPeriodCommand.cs` y `UpdateBudgetPeriodCommandHandler.cs`
@@ -267,7 +267,7 @@
   - **Líneas estimadas**: 65
   - **Testing**: RED → Tests de handler
 
-- [ ] **4.4** Crear `DeactivateBudgetCommand` y su handler
+- [x] **4.4** Crear `DeactivateBudgetCommand` y su handler
   - Command: `DeactivateBudgetCommand(Guid BudgetId, DateOnly AsOf)`
   - Handler: obtiene budget, llama a `budget.Deactivate(asOf)`, persiste cambios
   - **Archivos**: Crear `Application/Features/Budgets/Commands/DeactivateBudgetCommand.cs` y `DeactivateBudgetCommandHandler.cs`
@@ -276,7 +276,7 @@
   - **Líneas estimadas**: 55
   - **Testing**: RED → Tests de handler
 
-- [ ] **4.5** Implementar tests de todos los command handlers
+- [x] **4.5** Implementar tests de todos los command handlers
   - Tests de `CreateBudgetCommandHandler`: categoría válida, solapamiento, límite inválido
   - Tests de `UpdateBudgetLimitCommandHandler`: límite válido, límite inválido
   - Tests de `UpdateBudgetPeriodCommandHandler`: granularidad válida
@@ -298,7 +298,7 @@
 
 ### Tareas
 
-- [ ] **5.1** Rediseñar `GetBudgetsQuery` y su handler
+- [x] **5.1** Rediseñar `GetBudgetsQuery` y su handler
   - Query: `GetBudgetsQuery(DateOnly? AsOf = null)` — si `AsOf` es null, retorna todos los budgets del usuario
   - Handler: obtiene budgets via repository, mapea a `BudgetDto`
   - **Archivos**: Modificar `Application/Features/Budgets/Queries/GetBudgetsQuery.cs` y `GetBudgetsQueryHandler.cs`
@@ -307,7 +307,7 @@
   - **Líneas estimadas**: 70
   - **Testing**: RED → Tests de handler
 
-- [ ] **5.2** Crear `GetBudgetMetricsQuery` y su handler
+- [x] **5.2** Crear `GetBudgetMetricsQuery` y su handler
   - Query: `GetBudgetMetricsQuery(DateOnly From, DateOnly To)`
   - Handler: obtiene budgets activos en el rango, obtiene transacciones de categorías con budgets, llama a `BudgetCalculationService.Calculate()` para cada budget, retorna `List<BudgetMetricsDto>`
   - Incluir categorías sin budget con etiqueta "Sin presupuesto"
@@ -317,7 +317,7 @@
   - **Líneas estimadas**: 120
   - **Testing**: RED → Tests de handler con múltiples budgets y categorías
 
-- [ ] **5.3** Crear `GetBudgetHistoryQuery` y su handler
+- [x] **5.3** Crear `GetBudgetHistoryQuery` y su handler
   - Query: `GetBudgetHistoryQuery(int Year)`
   - Handler: obtiene budgets activos en el año dado, calcula métricas para el rango del año, retorna `List<BudgetPeriodSummaryDto>`
   - **Archivos**: Crear `Application/Features/Budgets/Queries/GetBudgetHistoryQuery.cs` y `GetBudgetHistoryQueryHandler.cs`
@@ -326,7 +326,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: RED → Tests de handler
 
-- [ ] **5.4** Adaptar `GetBudgetVsActualQuery` al nuevo modelo
+- [x] **5.4** Adaptar `GetBudgetVsActualQuery` al nuevo modelo
   - Modificar handler para usar `BudgetCalculationService` en lugar de lógica hardcoded
   - Aceptar rango de fechas como parámetro
   - **Archivos**: Modificar `Application/Features/Budgets/Queries/GetBudgetVsActualQuery.cs` y `GetBudgetVsActualQueryHandler.cs`
@@ -335,7 +335,7 @@
   - **Líneas estimadas**: 60
   - **Testing**: RED → Tests de handler
 
-- [ ] **5.5** Crear DTOs para queries
+- [x] **5.5** Crear DTOs para queries
   - `BudgetDto`: id, categoryId, categoryName, effectiveFrom, effectiveUntil, periodGranularity, limit
   - `BudgetMetricsDto`: budgetId, categoryId, categoryName, periodsElapsed, accumulatedLimit, spent, remaining, percentageUsed, statusLevel
   - `BudgetPeriodSummaryDto`: month/period, accumulatedLimit, spent, remaining, statusLevel
@@ -345,7 +345,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: No requiere tests (son DTOs)
 
-- [ ] **5.6** Implementar tests de todos los query handlers
+- [x] **5.6** Implementar tests de todos los query handlers
   - Tests de `GetBudgetsQueryHandler`: con y sin filtro de fecha
   - Tests de `GetBudgetMetricsQueryHandler`: múltiples budgets, categorías sin budget, métricas correctas
   - Tests de `GetBudgetHistoryQueryHandler`: resumen histórico
@@ -367,7 +367,7 @@
 
 ### Tareas
 
-- [ ] **6.1** Rediseñar página de creación de budget
+- [x] **6.1** Rediseñar página de creación de budget
   - Formulario con campos: categoría (dropdown), límite, fecha inicio, fecha fin (opcional), granularidad (dropdown)
   - Validación client-side y server-side
   - **Archivos**: Modificar `Frontend/Pages/Budgets/Create.cshtml` y `Create.cshtml.cs`
@@ -376,7 +376,7 @@
   - **Líneas estimadas**: 120
   - **Testing**: E2E test de creación de budget
 
-- [ ] **6.2** Rediseñar página de edición de budget
+- [x] **6.2** Rediseñar página de edición de budget
   - Formulario para editar límite, granularidad, fechas
   - Botón para desactivar budget
   - **Archivos**: Modificar `Frontend/Pages/Budgets/Edit.cshtml` y `Edit.cshtml.cs`
@@ -385,7 +385,7 @@
   - **Líneas estimadas**: 130
   - **Testing**: E2E test de edición y desactivación
 
-- [ ] **6.3** Rediseñar página de lista de budgets
+- [x] **6.3** Rediseñar página de lista de budgets
   - Tabla con columnas: categoría, granularidad, límite, vigencia (desde-hasta), estado (activo/inactivo)
   - Filtros: mostrar solo activos, por categoría
   - **Archivos**: Modificar `Frontend/Pages/Budgets/Index.cshtml` y `Index.cshtml.cs`
@@ -394,7 +394,7 @@
   - **Líneas estimadas**: 100
   - **Testing**: E2E test de navegación y filtros
 
-- [ ] **6.4** Implementar tests E2E de gestión de budgets
+- [x] **6.4** Implementar tests E2E de gestión de budgets
   - Test de creación de budget válido
   - Test de creación con validación (límite negativo)
   - Test de edición de límite
@@ -416,7 +416,7 @@
 
 ### Tareas
 
-- [ ] **7.1** Crear página de métricas de budget
+- [x] **7.1** Crear página de métricas de budget
   - Vista de mes actual: métricas del mes calendario actual
   - Vista de período actual: métricas del período de granularidad actual
   - Vista de año actual: métricas acumuladas del año en curso
@@ -427,7 +427,7 @@
   - **Líneas estimadas**: 140
   - **Testing**: E2E test de visualización de métricas
 
-- [ ] **7.2** Crear página de histórico de budget
+- [x] **7.2** Crear página de histórico de budget
   - Selector de año
   - Tabla/gráfico con resumen mensual del año seleccionado
   - **Archivos**: Crear `Frontend/Pages/Budgets/History.cshtml` y `History.cshtml.cs`
@@ -436,7 +436,7 @@
   - **Líneas estimadas**: 110
   - **Testing**: E2E test de navegación y selector de año
 
-- [ ] **7.3** Actualizar página de comparación budget vs actual
+- [x] **7.3** Actualizar página de comparación budget vs actual
   - Adaptar a nuevo modelo con rango de fechas
   - Mostrar categorías sin budget con etiqueta "Sin presupuesto"
   - **Archivos**: Modificar `Frontend/Pages/Budgets/Comparison.cshtml` y `Comparison.cshtml.cs`
@@ -445,7 +445,7 @@
   - **Líneas estimadas**: 80
   - **Testing**: E2E test de comparación
 
-- [ ] **7.4** Actualizar widget de budgets en dashboard
+- [x] **7.4** Actualizar widget de budgets en dashboard
   - Consumir vista de mes actual de `GetBudgetMetricsQuery`
   - Mostrar porcentaje total consumido y recuento por estado
   - **Archivos**: Modificar `Frontend/Pages/Dashboard/Index.cshtml` y `Index.cshtml.cs` (sección de budgets)
@@ -454,7 +454,7 @@
   - **Líneas estimadas**: 60
   - **Testing**: E2E test de widget en dashboard
 
-- [ ] **7.5** Implementar tests E2E de visualización
+- [x] **7.5** Implementar tests E2E de visualización
   - Test de página de métricas (tres vistas)
   - Test de página de histórico (selector de año)
   - Test de página de comparación
@@ -475,7 +475,7 @@
 
 ### Tareas
 
-- [ ] **8.1** Eliminar código de monthly budgets obsoleto
+- [x] **8.1** Eliminar código de monthly budgets obsoleto
   - Eliminar comandos/queries/handlers de monthly budgets que ya no se usan
   - Eliminar DTOs obsoletos
   - **Archivos**: Modificar `Application/Features/Budgets/` (eliminar archivos obsoletos)
@@ -484,7 +484,7 @@
   - **Líneas estimadas**: -80 (eliminación)
   - **Testing**: Verificar que compilación pasa
 
-- [ ] **8.2** Actualizar documentación inline
+- [x] **8.2** Actualizar documentación inline
   - Comentarios en código sobre el nuevo modelo
   - XML docs en métodos públicos de domain services
   - **Archivos**: Modificar varios archivos de Domain y Application
@@ -493,7 +493,7 @@
   - **Líneas estimadas**: 40
   - **Testing**: No requiere tests
 
-- [ ] **8.3** Ejecutar suite completa de tests
+- [x] **8.3** Ejecutar suite completa de tests
   - Tests unitarios de dominio
   - Tests de integración de aplicación
   - Tests E2E de frontend
@@ -503,7 +503,7 @@
   - **Líneas estimadas**: 0
   - **Testing**: Ejecutar `dotnet test` y `npx playwright test`
 
-- [ ] **8.4** Verificar migración en entorno de staging
+- [x] **8.4** Verificar migración en entorno de staging
   - Aplicar migración en base de datos de staging
   - Verificar que constraints funcionan
   - Verificar que RLS policies funcionan
@@ -511,7 +511,7 @@
   - **Dependencias**: 3.1
   - **Criterios de aceptación**: Migración aplica sin errores; constraints y RLS funcionan
   - **Líneas estimadas**: 0
-  - **Testing**: Verificación manual en staging
+  - **Testing**: Verificación manual en staging (documentada abajo)
 
 **Total Slice 8**: ~-40 líneas (neto, por eliminaciones)
 

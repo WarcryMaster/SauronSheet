@@ -26,7 +26,17 @@ public class DashboardModel : PageModel
     public List<YearlyComparisonDto> YearlyComparison { get; set; } = new();
     public List<MonthlyCategorySpendingDto> MonthlySpendingByCategory { get; set; } = new();
     public List<TransactionDto> RecentTransactions { get; set; } = new();
-    public BudgetDashboardSummaryDto? BudgetSummary { get; set; }
+    /// <summary>Budget metrics for the current month (widget data source).</summary>
+    public List<BudgetMetricsDto> BudgetMetrics { get; set; } = new();
+
+    /// <summary>Total percentage consumed across all budgets in current month.</summary>
+    public decimal BudgetTotalPercentageUsed { get; set; }
+
+    /// <summary>Count of budgets by status level for the widget summary.</summary>
+    public int BudgetGreenCount { get; set; }
+    public int BudgetYellowCount { get; set; }
+    public int BudgetRedCount { get; set; }
+    public int BudgetOverageCount { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public string DateFilter { get; set; } = "all";
@@ -60,10 +70,31 @@ public class DashboardModel : PageModel
             MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(AnalyticsYear));
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
 
-            // Phase 5: Budget status widget
-            // Budget widget always shows current month status regardless of date filter
-            var now = DateTime.UtcNow;
-            BudgetSummary = await _mediator.Send(new GetBudgetSummaryForDashboardQuery(now.Year, now.Month));
+            // Budget status widget — use GetBudgetMetricsQuery for current month
+            var nowDate = DateOnly.FromDateTime(DateTime.UtcNow);
+            var monthFrom = new DateOnly(nowDate.Year, nowDate.Month, 1);
+            var monthTo = monthFrom.AddMonths(1).AddDays(-1);
+
+            var allMetrics = await _mediator.Send(new GetBudgetMetricsQuery(monthFrom, monthTo));
+
+            // Filter out "Sin presupuesto" entries — dashboard widget only shows actual budgets.
+            // Categories with spending but no budget are noise for the widget empty-state logic.
+            BudgetMetrics = allMetrics
+                .Where(m => m.BudgetId != Guid.Empty)
+                .ToList();
+
+            // Compute widget summary counts
+            BudgetGreenCount = BudgetMetrics.Count(m => m.StatusLevel == "Green");
+            BudgetYellowCount = BudgetMetrics.Count(m => m.StatusLevel == "Yellow");
+            BudgetRedCount = BudgetMetrics.Count(m => m.StatusLevel == "Red");
+            BudgetOverageCount = BudgetMetrics.Count(m => m.StatusLevel == "Overage");
+
+            // Compute overall percentage consumed (weighted average)
+            var totalLimit = BudgetMetrics.Sum(m => m.AccumulatedLimit);
+            var totalSpent = BudgetMetrics.Sum(m => m.Spent);
+            BudgetTotalPercentageUsed = totalLimit > 0
+                ? Math.Round(totalSpent / totalLimit * 100, 1)
+                : 0;
 
             return Page();
         }

@@ -143,7 +143,7 @@
                 <h3 class="h6 fw-semibold mb-0">Budget Status</h3>
                 <a href="/budgets" class="small text-brand">Manage &rarr;</a>
             </div>
-            @if (Model.BudgetSummary == null || Model.BudgetSummary.TotalBudgets == 0)
+            @if (!Model.BudgetMetrics.Any())
             {
                 <p class="text-muted small">No budgets set.
                    <a href="/budgets/create" class="text-brand fw-semibold">Create budgets to track spending.</a>
@@ -151,25 +151,65 @@
             }
             else
             {
+                <!-- Overall summary line -->
                 <p class="small text-muted mb-3">
-                    @Model.BudgetSummary.OnTrackCount of @Model.BudgetSummary.TotalBudgets budgets on track
-                    @if (Model.BudgetSummary.OverBudgetCount > 0)
-                    {
-                        <span class="text-danger fw-semibold">
-                            — @Model.BudgetSummary.OverBudgetCount over limit
-                        </span>
-                    }
+                    @Model.BudgetMetrics.Count budget(s) this month
+                    —
+                    <span class="fw-semibold @(Model.BudgetTotalPercentageUsed > 100 ? "text-danger" : Model.BudgetTotalPercentageUsed >= 75 ? "text-warning" : "text-success")">
+                        @Model.BudgetTotalPercentageUsed.ToString("N1")% consumed
+                    </span>
                 </p>
-                @foreach (var budget in Model.BudgetSummary.Budgets)
+
+                <!-- Status count chips -->
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @if (Model.BudgetGreenCount > 0)
+                    {
+                        <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount On Track</span>
+                    }
+                    @if (Model.BudgetYellowCount > 0)
+                    {
+                        <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount Warning</span>
+                    }
+                    @if (Model.BudgetRedCount > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount Near Limit</span>
+                    }
+                    @if (Model.BudgetOverageCount > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount Over</span>
+                    }
+                </div>
+
+                <!-- Per-budget progress bars -->
+                @foreach (var metric in Model.BudgetMetrics)
                 {
+                    var pct = Math.Min(metric.PercentageUsed, 100);
+                    var barColor = metric.StatusLevel switch
+                    {
+                        "Green" => "bg-success",
+                        "Yellow" => "bg-warning",
+                        "Red" => "bg-danger",
+                        "Overage" => "bg-danger",
+                        _ => "bg-secondary"
+                    };
+
                     <div class="mb-3">
                         <div class="d-flex justify-content-between small mb-1">
-                            <a href="/budgets/detail/@budget.Id" class="text-decoration-none d-inline-flex">
-                                <partial name="Shared/_CategoryBadge" model="new CategoryBadgeDisplay(budget.CategoryName, AccentColor: budget.CategoryColor)" />
+                            <a href="/budgets/metrics" class="text-decoration-none">
+                                <span class="fw-medium">@metric.CategoryName</span>
                             </a>
-                            <span>€@budget.CurrentSpend.ToString("N2") / €@budget.LimitAmount.ToString("N2")</span>
+                            <span>&euro;@metric.Spent.ToString("N0") / &euro;@metric.AccumulatedLimit.ToString("N0")</span>
                         </div>
-                        <partial name="Shared/_BudgetProgressBar" model="budget" />
+                        <div class="progress rounded-pill" style="height:12px" role="progressbar"
+                             aria-valuenow="@((int)pct)" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar @barColor transition" style="width:@(pct)%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-1">
+                            <span>                            @Math.Round(metric.PercentageUsed, 1)% used</span>
+                            <span class="@(metric.Remaining >= 0 ? "text-success" : "text-danger")">
+                                &euro;@metric.Remaining.ToString("N0") left
+                            </span>
+                        </div>
                     </div>
                 }
             }

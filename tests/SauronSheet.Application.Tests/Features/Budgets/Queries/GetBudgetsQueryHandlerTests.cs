@@ -1,21 +1,18 @@
-using SauronSheet.Domain.Common;
-using Xunit;
 using Moq;
+using Xunit;
 
-using SauronSheet.Application.Features.Budgets.Queries;
 using SauronSheet.Application.Features.Budgets.DTOs;
+using SauronSheet.Application.Features.Budgets.Queries;
+using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
-using SauronSheet.Domain.Specifications;
 using SauronSheet.Domain.ValueObjects;
-using SauronSheet.Application.Tests.Common;
 
 namespace SauronSheet.Application.Tests.Features.Budgets.Queries;
 
 public class GetBudgetsQueryHandlerTests
 {
     private readonly Mock<IBudgetRepository> _budgetRepoMock = new();
-    private readonly Mock<ITransactionRepository> _transactionRepoMock = new();
     private readonly Mock<ICategoryRepository> _categoryRepoMock = new();
     private readonly Mock<IUserContext> _userContextMock = new();
 
@@ -23,7 +20,6 @@ public class GetBudgetsQueryHandlerTests
     {
         return new GetBudgetsQueryHandler(
             _budgetRepoMock.Object,
-            _transactionRepoMock.Object,
             _categoryRepoMock.Object,
             _userContextMock.Object);
     }
@@ -33,178 +29,209 @@ public class GetBudgetsQueryHandlerTests
         _userContextMock.Setup(u => u.UserId).Returns(userId);
     }
 
-    private Budget CreateBudget(UserId userId, CategoryId catId, decimal limit = 500m, int month = 2)
+    private static Budget CreateBudget(
+        string userId = "user-1",
+        Guid? categoryId = null,
+        DateOnly? effectiveFrom = null,
+        DateOnly? effectiveUntil = null,
+        BudgetPeriod period = BudgetPeriod.Monthly,
+        decimal limit = 500m)
     {
         return new Budget(
             new BudgetId(Guid.NewGuid()),
-            userId,
-            catId,
-            new DateRange(new DateTime(2026, month, 1), new DateTime(2026, month, DateTime.DaysInMonth(2026, month))),
+            new UserId(userId),
+            new CategoryId(categoryId ?? Guid.NewGuid()),
+            effectiveFrom ?? new DateOnly(2026, 1, 1),
+            effectiveUntil,
+            period,
             new Money(limit, "EUR"));
     }
 
-    private Category CreateCategory(CategoryId id, UserId userId, string name, string? color = null)
+    private static Category CreateCategory(Guid id, string name)
     {
-        return TestCategoryFactory.CreateUserCategory(categoryId: id, userId: userId, name: name, color: color);
+        return new Category(
+            new CategoryId(id),
+            new UserId("user-1"),
+            new CategoryName(name),
+            CategoryType.Expense,
+            new ColorHex("#000000"),
+            "default");
     }
 
-    private Transaction CreateExpense(UserId userId, CategoryId catId, decimal amount, DateTime date)
-    {
-        return new Transaction(
-            new TransactionId(Guid.NewGuid()),
-            userId,
-            new Money(-Math.Abs(amount), "EUR"),
-            date,
-            "Expense",
-            catId);
-    }
+    // ── Happy path: returns all budgets when AsOf is null ──────
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task Handle_BudgetsExist_ReturnsBudgetStatusDtoList()
+    public async Task Handle_AsOfNull_ReturnsAllUserBudgets()
     {
         // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var cat1Id = new CategoryId(Guid.NewGuid());
-        var cat2Id = new CategoryId(Guid.NewGuid());
-
-        var budget1 = CreateBudget(userId, cat1Id, 500m);
-        var budget2 = CreateBudget(userId, cat2Id, 300m);
+        SetupUser("user-1");
+        var catId1 = Guid.NewGuid();
+        var catId2 = Guid.NewGuid();
+        var budget1 = CreateBudget(categoryId: catId1, limit: 500m);
+        var budget2 = CreateBudget(categoryId: catId2, limit: 300m);
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
             .ReturnsAsync(new List<Budget> { budget1, budget2 });
 
-        var cat1 = CreateCategory(cat1Id, userId, "Groceries", "#00FF00");
-        var cat2 = CreateCategory(cat2Id, userId, "Entertainment", "#FF0000");
-
         _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat1, cat2 });
-
-        // Transactions: cat1 has 200 spend, cat2 has 100 spend
-        var txs1 = new List<Transaction>
-        {
-            CreateExpense(userId, cat1Id, 200m, new DateTime(2026, 2, 10))
-        };
-        var txs2 = new List<Transaction>
-        {
-            CreateExpense(userId, cat2Id, 100m, new DateTime(2026, 2, 15))
-        };
-
-        _transactionRepoMock
-            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync((ISpecification<Transaction> spec) =>
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Category>
             {
-                // Return different transactions based on the spec — simplified: return all and let handler filter
-                return txs1.Concat(txs2).ToList();
+                CreateCategory(catId1, "Groceries"),
+                CreateCategory(catId2, "Transport")
             });
 
+        var query = new GetBudgetsQuery();
         var handler = CreateHandler();
 
         // Act
-        var result = await handler.Handle(new GetBudgetsQuery(2026, 2), CancellationToken.None);
+        List<BudgetDto> result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, result.Count);
-        // Sorted alphabetically: Entertainment before Groceries
-        Assert.Equal("Entertainment", result[0].CategoryName);
-        Assert.Equal("Groceries", result[1].CategoryName);
+        Assert.Equal(budget1.Id.Value, result[0].Id);
+        Assert.Equal(catId1, result[0].CategoryId);
+        Assert.Equal("Groceries", result[0].CategoryName);
+        Assert.Equal(500m, result[0].Limit);
+        Assert.Equal(budget2.Id.Value, result[1].Id);
+        Assert.Equal("Transport", result[1].CategoryName);
+        Assert.Equal(300m, result[1].Limit);
     }
+
+    // ── Filters by AsOf date ───────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_AsOfSpecified_FiltersActiveOnDate()
+    {
+        // Arrange
+        SetupUser("user-1");
+        var catId = Guid.NewGuid();
+        var activeBudget = CreateBudget(
+            categoryId: catId,
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: new DateOnly(2026, 6, 30));
+        var inactiveBudget = CreateBudget(
+            effectiveFrom: new DateOnly(2026, 7, 1));
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Budget> { activeBudget, inactiveBudget });
+
+        _categoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Category>
+            {
+                CreateCategory(catId, "Groceries"),
+                CreateCategory(inactiveBudget.CategoryId.Value, "Future")
+            });
+
+        var query = new GetBudgetsQuery(AsOf: new DateOnly(2026, 3, 15));
+        var handler = CreateHandler();
+
+        // Act
+        List<BudgetDto> result = await handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(activeBudget.Id.Value, result[0].Id);
+    }
+
+    // ── Permanent budget (EffectiveUntil = null) is always active
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_AsOfSpecified_PermanentBudgetAlwaysActive()
+    {
+        // Arrange
+        SetupUser("user-1");
+        var catId = Guid.NewGuid();
+        var permanent = CreateBudget(
+            categoryId: catId,
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: null); // permanent
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Budget> { permanent });
+
+        _categoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
+            .ReturnsAsync(new List<Category>
+            {
+                CreateCategory(catId, "Groceries")
+            });
+
+        var query = new GetBudgetsQuery(AsOf: new DateOnly(2030, 6, 1));
+        var handler = CreateHandler();
+
+        // Act
+        List<BudgetDto> result = await handler.Handle(query, CancellationToken.None);
+
+        // Assert — permanent budget is active on any future date
+        Assert.Single(result);
+        Assert.Equal(permanent.Id.Value, result[0].Id);
+    }
+
+    // ── Empty list when no budgets ─────────────────────────────
 
     [Fact]
     [Trait("Category", "Application")]
     public async Task Handle_NoBudgets_ReturnsEmptyList()
     {
         // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
+        SetupUser("user-1");
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
             .ReturnsAsync(new List<Budget>());
 
         _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-1")))
             .ReturnsAsync(new List<Category>());
 
+        var query = new GetBudgetsQuery();
         var handler = CreateHandler();
 
         // Act
-        var result = await handler.Handle(new GetBudgetsQuery(2026, 2), CancellationToken.None);
+        List<BudgetDto> result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Empty(result);
     }
 
-    [Fact]
-    [Trait("Category", "Application")]
-    public async Task Handle_WithYearMonthFilter_FiltersCorrectly()
-    {
-        // Arrange
-        SetupUser();
-        var userId = new UserId("user-1");
-        var catId = new CategoryId(Guid.NewGuid());
-
-        var febBudget = CreateBudget(userId, catId, 500m, 2);
-        var marBudget = CreateBudget(userId, catId, 600m, 3);
-
-        _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Budget> { febBudget, marBudget });
-
-        var cat = CreateCategory(catId, userId, "Groceries");
-        _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Category> { cat });
-
-        _transactionRepoMock
-            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction>());
-
-        var handler = CreateHandler();
-
-        // Act — filter to Feb only
-        var result = await handler.Handle(new GetBudgetsQuery(2026, 2), CancellationToken.None);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal(new DateTime(2026, 2, 1), result[0].PeriodStart);
-    }
+    // ── Tenant scoping ─────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task Handle_TenantScoped_ReturnsOnlyOwnBudgets()
+    public async Task Handle_TenantScoped_UsesCurrentUserContext()
     {
         // Arrange
         SetupUser("user-A");
-        var userA = new UserId("user-A");
-        var catId = new CategoryId(Guid.NewGuid());
+        var catId = Guid.NewGuid();
+        var budget = CreateBudget(userId: "user-A", categoryId: catId, limit: 500m);
 
-        var budget = CreateBudget(userA, catId, 500m);
-
-        // Repository returns only user-A budgets (tenant scoping via repo)
         _budgetRepoMock
-            .Setup(r => r.GetByUserIdAsync(userA))
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-A")))
             .ReturnsAsync(new List<Budget> { budget });
 
-        var cat = CreateCategory(catId, userA, "Food");
         _categoryRepoMock
-            .Setup(r => r.GetByUserIdAsync(userA))
-            .ReturnsAsync(new List<Category> { cat });
+            .Setup(r => r.GetByUserIdAsync(new UserId("user-A")))
+            .ReturnsAsync(new List<Category>
+            {
+                CreateCategory(catId, "Groceries")
+            });
 
-        _transactionRepoMock
-            .Setup(r => r.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
-            .ReturnsAsync(new List<Transaction>());
-
+        var query = new GetBudgetsQuery();
         var handler = CreateHandler();
 
         // Act
-        var result = await handler.Handle(new GetBudgetsQuery(2026, 2), CancellationToken.None);
+        List<BudgetDto> result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         Assert.Single(result);
-        _budgetRepoMock.Verify(r => r.GetByUserIdAsync(userA), Times.Once);
+        _budgetRepoMock.Verify(r => r.GetByUserIdAsync(new UserId("user-A")), Times.Once);
     }
 }

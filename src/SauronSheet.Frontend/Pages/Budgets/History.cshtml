@@ -1,0 +1,125 @@
+@page "/budgets/history"
+@model SauronSheet.Frontend.Pages.Budgets.HistoryModel
+@{
+    ViewData["Title"] = "Budget History";
+    var currentYear = DateTime.UtcNow.Year;
+    var years = Enumerable.Range(currentYear - 3, 7).Reverse().ToList();
+}
+
+<div class="d-flex flex-column gap-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="h3 fw-bold mb-0">Budget History</h2>
+        <a href="/budgets" class="small text-brand text-decoration-none">&larr; Back to Budgets</a>
+    </div>
+
+    <!-- Year Selector -->
+    <form method="get" action="/budgets/history" class="card border-0 shadow-sm p-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <label for="Year" class="small fw-semibold text-muted text-uppercase mb-0">Year:</label>
+            <select id="Year" name="Year" class="form-select form-select-sm" style="width:auto">
+                @foreach (var y in years)
+                {
+                    bool selected = y == Model.Year;
+                    <option value="@y" selected="@selected">@y</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-brand btn-sm">View</button>
+        </div>
+    </form>
+
+    @if (Model.History.Any())
+    {
+        <!-- Year Summary Cards -->
+        <div class="row row-cols-1 row-cols-sm-3 g-3">
+            <div class="col">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Total Limit</p>
+                    <p class="h5 fw-bold text-brand mb-0">&euro;@Model.TotalAccumulatedLimit.ToString("N2")</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Total Spent</p>
+                    <p class="h5 fw-bold mb-0">&euro;@Model.TotalSpent.ToString("N2")</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Remaining</p>
+                    <p class="h5 fw-bold mb-0 @(Model.TotalRemaining >= 0 ? "text-success" : "text-danger")">
+                        &euro;@Model.TotalRemaining.ToString("N2")
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly History Table -->
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" aria-label="Budget history for @Model.Year">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-uppercase small fw-semibold text-muted">Period</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">Accumulated Limit</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">Spent</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">Remaining</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.History)
+                        {
+                            var statusLabel = item.StatusLevel switch
+                            {
+                                "Green" => "On Track",
+                                "Yellow" => "Warning",
+                                "Red" => "Near Limit",
+                                "Overage" => "Over Budget",
+                                _ => "Unknown"
+                            };
+
+                            var rowClass = item.StatusLevel switch
+                            {
+                                "Overage" => "table-danger",
+                                "Red" => "table-danger",
+                                "Yellow" => "table-warning",
+                                _ => ""
+                            };
+
+                            <tr class="@rowClass">
+                                <td class="small fw-medium">@item.Period</td>
+                                <td class="text-end small fw-medium">&euro;@item.AccumulatedLimit.ToString("N2")</td>
+                                <td class="text-end small fw-medium">&euro;@item.Spent.ToString("N2")</td>
+                                <td class="text-end small @(item.Remaining >= 0 ? "text-success" : "text-danger") fw-medium">
+                                    &euro;@item.Remaining.ToString("N2")
+                                </td>
+                                <td class="text-center">
+                                    <partial name="Shared/_BudgetStatusBadge" model="item.StatusLevel" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td class="small">Total @Model.Year</td>
+                            <td class="text-end small">&euro;@Model.TotalAccumulatedLimit.ToString("N2")</td>
+                            <td class="text-end small">&euro;@Model.TotalSpent.ToString("N2")</td>
+                            <td class="text-end small @(Model.TotalRemaining >= 0 ? "text-success" : "text-danger")">
+                                &euro;@Model.TotalRemaining.ToString("N2")
+                            </td>
+                            <td class="text-center small">&mdash;</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
+            <p class="h5 text-muted mb-3">No budget data for @Model.Year.</p>
+            <p class="text-muted mb-4">Select a different year or create budgets to start tracking.</p>
+            <div><a href="/budgets/create" class="btn btn-brand">+ Create Budget</a></div>
+        </div>
+    }
+</div>

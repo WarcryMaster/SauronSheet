@@ -7,7 +7,9 @@ namespace SauronSheet.Domain.Tests.Entities;
 
 public class BudgetTests
 {
-    // === Construction Tests ===
+    // ─────────────────────────────────────────────
+    // Construction (Task 1.2)
+    // ─────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Domain")]
@@ -17,17 +19,20 @@ public class BudgetTests
         var budgetId = new BudgetId(Guid.NewGuid());
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
+        var effectiveFrom = new DateOnly(2026, 1, 1);
         var limit = new Money(500m, "EUR");
 
         // Act
-        var budget = new Budget(budgetId, userId, categoryId, period, limit);
+        var budget = new Budget(budgetId, userId, categoryId,
+            effectiveFrom, effectiveUntil: null, BudgetPeriod.Monthly, limit);
 
         // Assert
         Assert.Equal(budgetId, budget.Id);
         Assert.Equal(userId, budget.UserId);
         Assert.Equal(categoryId, budget.CategoryId);
-        Assert.Equal(period, budget.Period);
+        Assert.Equal(effectiveFrom, budget.EffectiveFrom);
+        Assert.Null(budget.EffectiveUntil);
+        Assert.Equal(BudgetPeriod.Monthly, budget.PeriodGranularity);
         Assert.Equal(limit, budget.Limit);
         Assert.True(budget.CreatedAt <= DateTime.UtcNow);
         Assert.Null(budget.UpdatedAt);
@@ -35,62 +40,36 @@ public class BudgetTests
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void Budget_NullUserId_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var budgetId = new BudgetId(Guid.NewGuid());
-        var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
-        var limit = new Money(500m, "EUR");
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new Budget(budgetId, null!, categoryId, period, limit));
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void Budget_NullCategoryId_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var budgetId = new BudgetId(Guid.NewGuid());
-        var userId = new UserId("user-1");
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
-        var limit = new Money(500m, "EUR");
-
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new Budget(budgetId, userId, null!, period, limit));
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void Budget_NullPeriod_ThrowsArgumentNullException()
+    public void Budget_WithEffectiveUntil_SetsBothDates()
     {
         // Arrange
         var budgetId = new BudgetId(Guid.NewGuid());
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
+        var effectiveFrom = new DateOnly(2026, 1, 1);
+        var effectiveUntil = new DateOnly(2026, 12, 31);
         var limit = new Money(500m, "EUR");
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new Budget(budgetId, userId, categoryId, null!, limit));
+        // Act
+        var budget = new Budget(budgetId, userId, categoryId,
+            effectiveFrom, effectiveUntil, BudgetPeriod.Monthly, limit);
+
+        // Assert
+        Assert.Equal(effectiveFrom, budget.EffectiveFrom);
+        Assert.Equal(effectiveUntil, budget.EffectiveUntil);
     }
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void Budget_NullLimit_ThrowsArgumentNullException()
+    public void Budget_QuarterlyGranularity_SetsCorrectly()
     {
-        // Arrange
-        var budgetId = new BudgetId(Guid.NewGuid());
-        var userId = new UserId("user-1");
-        var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
+        // Arrange & Act
+        var budget = CreateValidBudget(
+            granularity: BudgetPeriod.Quarterly,
+            effectiveFrom: new DateOnly(2026, 1, 1));
 
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
-            new Budget(budgetId, userId, categoryId, period, null!));
+        // Assert
+        Assert.Equal(BudgetPeriod.Quarterly, budget.PeriodGranularity);
     }
 
     [Fact]
@@ -101,13 +80,14 @@ public class BudgetTests
         var budgetId = new BudgetId(Guid.NewGuid());
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
+        var effectiveFrom = new DateOnly(2026, 1, 1);
         var limit = new Money(0m, "EUR");
 
         // Act & Assert
         var ex = Assert.Throws<DomainException>(() =>
-            new Budget(budgetId, userId, categoryId, period, limit));
-        Assert.Contains("Budget limit must be positive", ex.Message);
+            new Budget(budgetId, userId, categoryId,
+                effectiveFrom, effectiveUntil: null, BudgetPeriod.Monthly, limit));
+        Assert.Contains("positive", ex.Message);
     }
 
     [Fact]
@@ -118,157 +98,71 @@ public class BudgetTests
         var budgetId = new BudgetId(Guid.NewGuid());
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
+        var effectiveFrom = new DateOnly(2026, 1, 1);
         var limit = new Money(-100m, "EUR");
 
         // Act & Assert
         var ex = Assert.Throws<DomainException>(() =>
-            new Budget(budgetId, userId, categoryId, period, limit));
-        Assert.Contains("Budget limit must be positive", ex.Message);
-    }
-
-    // === IsOverBudget Tests ===
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void IsOverBudget_SpendExceedsLimit_ReturnsTrue()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(600m, "EUR");
-
-        // Act
-        var result = budget.IsOverBudget(currentSpend);
-
-        // Assert
-        Assert.True(result);
+            new Budget(budgetId, userId, categoryId,
+                effectiveFrom, effectiveUntil: null, BudgetPeriod.Monthly, limit));
+        Assert.Contains("positive", ex.Message);
     }
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void IsOverBudget_SpendBelowLimit_ReturnsFalse()
+    public void Budget_EffectiveUntil_Before_EffectiveFrom_ThrowsDomainException()
     {
         // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(300m, "EUR");
+        var budgetId = new BudgetId(Guid.NewGuid());
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
+        var effectiveFrom = new DateOnly(2026, 6, 1);
+        var effectiveUntil = new DateOnly(2026, 1, 1); // before EffectiveFrom
+        var limit = new Money(500m, "EUR");
 
-        // Act
-        var result = budget.IsOverBudget(currentSpend);
-
-        // Assert
-        Assert.False(result);
+        // Act & Assert
+        var ex = Assert.Throws<DomainException>(() =>
+            new Budget(budgetId, userId, categoryId,
+                effectiveFrom, effectiveUntil, BudgetPeriod.Monthly, limit));
+        Assert.Contains("EffectiveUntil", ex.Message);
     }
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void IsOverBudget_SpendEqualsLimit_ReturnsFalse()
+    public void Budget_EffectiveUntil_Equals_EffectiveFrom_Valid()
     {
         // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(500m, "EUR");
+        var budgetId = new BudgetId(Guid.NewGuid());
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
+        var sameDate = new DateOnly(2026, 1, 1);
+        var limit = new Money(500m, "EUR");
 
-        // Act
-        var result = budget.IsOverBudget(currentSpend);
+        // Act — should not throw
+        var budget = new Budget(budgetId, userId, categoryId,
+            sameDate, sameDate, BudgetPeriod.Monthly, limit);
 
         // Assert
-        Assert.False(result);
+        Assert.Equal(sameDate, budget.EffectiveFrom);
+        Assert.Equal(sameDate, budget.EffectiveUntil);
     }
 
-    // === PercentageUsed Tests ===
+    // ─────────────────────────────────────────────
+    // UpdateLimit (Task 1.3)
+    // ─────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void PercentageUsed_ZeroSpend_ReturnsZero()
+    public void UpdateLimit_ValidPositiveAmount_UpdatesLimitAndTimestamp()
     {
         // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(0m, "EUR");
+        var budget = CreateValidBudget(limitAmount: 500m);
 
         // Act
-        var result = budget.PercentageUsed(currentSpend);
+        budget.UpdateLimit(new Money(750m, "EUR"));
 
         // Assert
-        Assert.Equal(0.0m, result);
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void PercentageUsed_HalfSpend_ReturnsFiftyPercent()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(250m, "EUR");
-
-        // Act
-        var result = budget.PercentageUsed(currentSpend);
-
-        // Assert
-        Assert.Equal(0.50m, result);
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void PercentageUsed_OverSpend_ReturnsGreaterThanOne()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(625m, "EUR");
-
-        // Act
-        var result = budget.PercentageUsed(currentSpend);
-
-        // Assert
-        Assert.Equal(1.25m, result);
-    }
-
-    // === RemainingAmount Tests ===
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void RemainingAmount_UnderBudget_ReturnsPositive()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(300m, "EUR");
-
-        // Act
-        var result = budget.RemainingAmount(currentSpend);
-
-        // Assert
-        Assert.Equal(200m, result.Amount);
-        Assert.Equal("EUR", result.Currency);
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void RemainingAmount_OverBudget_ReturnsNegative()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(700m, "EUR");
-
-        // Act
-        var result = budget.RemainingAmount(currentSpend);
-
-        // Assert
-        Assert.Equal(-200m, result.Amount);
-        Assert.Equal("EUR", result.Currency);
-    }
-
-    // === UpdateLimit Tests ===
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void UpdateLimit_ValidPositiveLimit_UpdatesLimitAndTimestamp()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-
-        // Act
-        budget.UpdateLimit(new Money(600m, "EUR"));
-
-        // Assert
-        Assert.Equal(600m, budget.Limit.Amount);
+        Assert.Equal(750m, budget.Limit.Amount);
         Assert.NotNull(budget.UpdatedAt);
     }
 
@@ -277,51 +171,291 @@ public class BudgetTests
     public void UpdateLimit_ZeroLimit_ThrowsDomainException()
     {
         // Arrange
-        var budget = CreateValidBudget(500m);
+        var budget = CreateValidBudget(limitAmount: 500m);
 
         // Act & Assert
         var ex = Assert.Throws<DomainException>(() =>
             budget.UpdateLimit(new Money(0m, "EUR")));
-        Assert.Contains("Budget limit must be positive", ex.Message);
-    }
-
-    // === Currency Validation Tests ===
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void IsOverBudget_CurrencyMismatch_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(300m, "USD");
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            budget.IsOverBudget(currentSpend));
+        Assert.Contains("positive", ex.Message);
     }
 
     [Fact]
     [Trait("Category", "Domain")]
-    public void PercentageUsed_CurrencyMismatch_ThrowsInvalidOperationException()
+    public void UpdateLimit_NegativeLimit_ThrowsDomainException()
     {
         // Arrange
-        var budget = CreateValidBudget(500m);
-        var currentSpend = new Money(250m, "USD");
+        var budget = CreateValidBudget(limitAmount: 500m);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            budget.PercentageUsed(currentSpend));
+        var ex = Assert.Throws<DomainException>(() =>
+            budget.UpdateLimit(new Money(-50m, "EUR")));
+        Assert.Contains("positive", ex.Message);
     }
 
-    // === Helpers ===
+    // ─────────────────────────────────────────────
+    // UpdateEffectiveDates (Task 1.3)
+    // ─────────────────────────────────────────────
 
-    private static Budget CreateValidBudget(decimal limitAmount)
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void UpdateEffectiveDates_ValidDates_UpdatesBothDates()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: null);
+
+        // Act
+        budget.UpdateEffectiveDates(
+            new DateOnly(2026, 6, 1),
+            new DateOnly(2026, 12, 31));
+
+        // Assert
+        Assert.Equal(new DateOnly(2026, 6, 1), budget.EffectiveFrom);
+        Assert.Equal(new DateOnly(2026, 12, 31), budget.EffectiveUntil);
+        Assert.NotNull(budget.UpdatedAt);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void UpdateEffectiveDates_UntilBeforeFrom_ThrowsDomainException()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: null);
+
+        // Act & Assert
+        var ex = Assert.Throws<DomainException>(() =>
+            budget.UpdateEffectiveDates(
+                new DateOnly(2026, 12, 1),
+                new DateOnly(2026, 1, 1)));
+        Assert.Contains("EffectiveUntil", ex.Message);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void UpdateEffectiveDates_ClearUntil_MakesPermanent()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: new DateOnly(2026, 12, 31));
+
+        // Act
+        budget.UpdateEffectiveDates(
+            new DateOnly(2026, 1, 1),
+            until: null);
+
+        // Assert
+        Assert.Null(budget.EffectiveUntil);
+    }
+
+    // ─────────────────────────────────────────────
+    // UpdateGranularity (Task 1.3)
+    // ─────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void UpdateGranularity_ChangesPeriodGranularity()
+    {
+        // Arrange
+        var budget = CreateValidBudget(granularity: BudgetPeriod.Monthly);
+
+        // Act
+        budget.UpdateGranularity(BudgetPeriod.Annual);
+
+        // Assert
+        Assert.Equal(BudgetPeriod.Annual, budget.PeriodGranularity);
+        Assert.NotNull(budget.UpdatedAt);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void UpdateGranularity_QuarterlyToSemester_ChangesCorrectly()
+    {
+        // Arrange
+        var budget = CreateValidBudget(granularity: BudgetPeriod.Quarterly);
+
+        // Act
+        budget.UpdateGranularity(BudgetPeriod.Semester);
+
+        // Assert
+        Assert.Equal(BudgetPeriod.Semester, budget.PeriodGranularity);
+    }
+
+    // ─────────────────────────────────────────────
+    // Deactivate (Task 1.3)
+    // ─────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void Deactivate_SetsEffectiveUntilToGivenDate()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: null);
+        var deactivationDate = new DateOnly(2026, 5, 30);
+
+        // Act
+        budget.Deactivate(deactivationDate);
+
+        // Assert
+        Assert.Equal(deactivationDate, budget.EffectiveUntil);
+        Assert.NotNull(budget.UpdatedAt);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void Deactivate_AlreadyActiveWithEndDate_OverwritesEffectiveUntil()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: new DateOnly(2026, 12, 31));
+        var earlierDate = new DateOnly(2026, 6, 30);
+
+        // Act
+        budget.Deactivate(earlierDate);
+
+        // Assert
+        Assert.Equal(earlierDate, budget.EffectiveUntil);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void Deactivate_BeforeEffectiveFrom_ThrowsDomainException()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 6, 1),
+            effectiveUntil: null);
+        var tooEarly = new DateOnly(2026, 1, 1);
+
+        // Act & Assert
+        var ex = Assert.Throws<DomainException>(() =>
+            budget.Deactivate(tooEarly));
+        Assert.Contains("EffectiveFrom", ex.Message);
+    }
+
+    // ─────────────────────────────────────────────
+    // IsActiveOn (Task 1.3)
+    // ─────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsActiveOn_DateWithinRange_ReturnsTrue()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: new DateOnly(2026, 12, 31));
+
+        // Act
+        var result = budget.IsActiveOn(new DateOnly(2026, 6, 15));
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsActiveOn_DateBeforeEffectiveFrom_ReturnsFalse()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 6, 1),
+            effectiveUntil: null);
+
+        // Act
+        var result = budget.IsActiveOn(new DateOnly(2026, 1, 1));
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsActiveOn_DateAfterEffectiveUntil_ReturnsFalse()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: new DateOnly(2026, 6, 30));
+
+        // Act
+        var result = budget.IsActiveOn(new DateOnly(2026, 7, 1));
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsActiveOn_DateEqualsEffectiveFrom_ReturnsTrue()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: null);
+
+        // Act
+        var result = budget.IsActiveOn(new DateOnly(2026, 1, 1));
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsActiveOn_DateEqualsEffectiveUntil_ReturnsTrue()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: new DateOnly(2026, 6, 30));
+
+        // Act
+        var result = budget.IsActiveOn(new DateOnly(2026, 6, 30));
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void IsActiveOn_PermanentBudget_AlwaysActiveAfterEffectiveFrom()
+    {
+        // Arrange
+        var budget = CreateValidBudget(
+            effectiveFrom: new DateOnly(2026, 1, 1),
+            effectiveUntil: null);
+
+        // Act
+        var result = budget.IsActiveOn(new DateOnly(2099, 12, 31));
+
+        // Assert
+        Assert.True(result);
+    }
+
+    // ─────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────
+
+    private static Budget CreateValidBudget(
+        decimal limitAmount = 500m,
+        BudgetPeriod granularity = BudgetPeriod.Monthly,
+        DateOnly? effectiveFrom = null,
+        DateOnly? effectiveUntil = null)
     {
         return new Budget(
             new BudgetId(Guid.NewGuid()),
             new UserId("user-1"),
             new CategoryId(Guid.NewGuid()),
-            new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28)),
+            effectiveFrom ?? new DateOnly(2026, 1, 1),
+            effectiveUntil,
+            granularity,
             new Money(limitAmount, "EUR"));
     }
 }

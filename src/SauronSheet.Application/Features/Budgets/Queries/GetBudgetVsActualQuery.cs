@@ -4,7 +4,9 @@ using DTOs;
 using MediatR;
 
 /// <summary>
-/// Query to get budget vs. actual spending comparison for a given month.
-/// Phase 5 (Scenario 5.6).
+/// Query to compare budget vs actual spending for a date range.
+/// Returns a comparison for all categories with spending activity,
+/// including categories without defined budgets.
+/// Slice 5 — Budget redesign.
 /// </summary>
-public record GetBudgetVsActualQuery(int Year, int Month) : IRequest<List<BudgetVsActualDto>>;
+public record GetBudgetVsActualQuery(DateOnly From, DateOnly To) : IRequest<List<BudgetVsActualDto>>;

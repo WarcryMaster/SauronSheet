@@ -1,13 +1,17 @@
 namespace SauronSheet.Application.Features.Budgets.Commands;
 
 using MediatR;
+using SauronSheet.Domain.ValueObjects;
 
 /// <summary>
-/// Command to create a new monthly budget for a category.
-/// Phase 5 (Scenario 5.1).
+/// Command to create a new budget policy with configurable granularity.
+/// A budget defines a spending limit per period (Monthly, Quarterly, Semester, Annual)
+/// that applies from EffectiveFrom until deactivated or modified.
+/// Slice 4 — Budget redesign: Application Commands.
 /// </summary>
 public record CreateBudgetCommand(
     Guid CategoryId,
     decimal LimitAmount,
-    DateTime PeriodStart,
-    DateTime PeriodEnd) : IRequest<Guid>;
+    DateOnly EffectiveFrom,
+    DateOnly? EffectiveUntil,
+    BudgetPeriod PeriodGranularity) : IRequest<Guid>;

@@ -4,7 +4,7 @@
     ViewData["Title"] = "Create Budget";
 }
 
-<div class="mx-auto d-flex flex-column gap-4" style="max-width:520px">
+<div class="mx-auto d-flex flex-column gap-4" style="max-width:560px">
     <div class="d-flex align-items-center gap-3">
         <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
         <h2 class="h4 fw-bold mb-0">Create Budget</h2>
@@ -16,35 +16,98 @@
     }
 
     <form method="post" class="card border-0 shadow-sm p-4 d-flex flex-column gap-4">
+        @* Category dropdown *@
         <div>
-            <label class="form-label small fw-semibold text-muted text-uppercase">Category</label>
-            <select asp-for="CategoryId" class="form-select form-select-sm">
+            <label asp-for="CategoryId" class="form-label small fw-semibold text-muted text-uppercase">Category</label>
+            <select asp-for="CategoryId" class="form-select form-select-sm" required>
                 <option value="">-- Select Category --</option>
                 @foreach (var cat in Model.Categories)
                 {
                     <option value="@cat.Id">@cat.Name</option>
                 }
             </select>
+            <span asp-validation-for="CategoryId" class="text-danger small"></span>
         </div>
 
+        @* Spending limit *@
         <div>
-            <label class="form-label small fw-semibold text-muted text-uppercase">Month</label>
-            <input type="month" asp-for="Month" class="form-control form-control-sm" />
-        </div>
-
-        <div>
-            <label class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
+            <label asp-for="LimitAmount" class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
             <div class="input-group input-group-sm">
                 <span class="input-group-text">&euro;</span>
                 <input type="number" asp-for="LimitAmount" step="0.01" min="0.01"
-                       class="form-control" placeholder="500.00" />
+                       class="form-control" placeholder="500.00" required />
                 <span class="input-group-text">EUR</span>
             </div>
+            <span asp-validation-for="LimitAmount" class="text-danger small"></span>
         </div>
 
+        @* Effective from date *@
+        <div>
+            <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase">Effective From</label>
+            <input type="date" asp-for="EffectiveFrom"
+                   class="form-control form-control-sm" required />
+            <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
+        </div>
+
+        @* Effective until date (optional) *@
+        <div>
+            <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase">Effective Until (optional)</label>
+            <input type="date" asp-for="EffectiveUntil"
+                   class="form-control form-control-sm" />
+            <span asp-validation-for="EffectiveUntil" class="text-danger small"></span>
+            <small class="text-muted">Leave empty for a permanent budget.</small>
+        </div>
+
+        @* Period granularity dropdown *@
+        <div>
+            <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase">Period Granularity</label>
+            <select asp-for="PeriodGranularity" class="form-select form-select-sm" required>
+                <option value="">-- Select Granularity --</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Quarterly">Quarterly</option>
+                <option value="Semester">Semester</option>
+                <option value="Annual">Annual</option>
+            </select>
+            <span asp-validation-for="PeriodGranularity" class="text-danger small"></span>
+        </div>
+
+        @* Buttons *@
         <div class="d-flex justify-content-end gap-3">
             <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
-            <button type="submit" class="btn btn-brand btn-sm">Create Budget</button>
+            <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm">Create Budget</button>
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        const form = document.querySelector('form');
+        form?.addEventListener('submit', function(e) {
+            const limitInput = document.getElementById('LimitAmount');
+            const limit = parseFloat(limitInput?.value ?? '');
+            if (isNaN(limit) || limit <= 0) {
+                e.preventDefault();
+                const errorSpan = limitInput?.closest('div')?.querySelector('.text-danger');
+                if (errorSpan) {
+                    errorSpan.textContent = 'Limit must be a positive number.';
+                }
+                return false;
+            }
+
+            const fromInput = document.getElementById('EffectiveFrom');
+            const untilInput = document.getElementById('EffectiveUntil');
+            if (fromInput?.value && untilInput?.value) {
+                const fromDate = new Date(fromInput.value);
+                const untilDate = new Date(untilInput.value);
+                if (untilDate < fromDate) {
+                    e.preventDefault();
+                    const errorSpan = untilInput?.closest('div')?.querySelector('.text-danger');
+                    if (errorSpan) {
+                        errorSpan.textContent = 'Effective Until must be on or after Effective From.';
+                    }
+                    return false;
+                }
+            }
+        });
+    </script>
+}

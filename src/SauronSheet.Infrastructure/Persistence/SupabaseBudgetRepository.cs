@@ -12,7 +12,9 @@ using Domain.Repositories;
 using Domain.ValueObjects;
 
 /// <summary>
-/// Postgrest DTO for the budgets table.
+/// Postgrest DTO for the redesigned budgets table (permanent policy model).
+/// Columns: effective_from (DATE), effective_until (DATE?),
+/// period_granularity (VARCHAR).
 /// </summary>
 [Table("budgets")]
 internal class BudgetRow : BaseModel
@@ -27,11 +29,14 @@ internal class BudgetRow : BaseModel
     [Column("category_id")]
     public string CategoryId { get; set; } = "";
 
-    [Column("period_start")]
-    public DateTime PeriodStart { get; set; }
+    [Column("effective_from")]
+    public DateTime EffectiveFrom { get; set; }
 
-    [Column("period_end")]
-    public DateTime PeriodEnd { get; set; }
+    [Column("effective_until")]
+    public DateTime? EffectiveUntil { get; set; }
+
+    [Column("period_granularity")]
+    public string PeriodGranularity { get; set; } = "Monthly";
 
     [Column("limit_amount")]
     public decimal LimitAmount { get; set; }
@@ -45,16 +50,55 @@ internal class BudgetRow : BaseModel
     [Column("updated_at")]
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>
+    /// Maps this infrastructure row to a domain Budget entity.
+    /// Uses DateOnly.FromDateTime to strip time components from DATE columns.
+    /// </summary>
     public Budget ToDomain()
     {
-        return new Budget(
+        var effectiveFrom = DateOnly.FromDateTime(EffectiveFrom);
+        DateOnly? effectiveUntil = EffectiveUntil.HasValue
+            ? DateOnly.FromDateTime(EffectiveUntil.Value)
+            : null;
+
+        var budgetPeriod = PeriodGranularity switch
+        {
+            "Monthly" => BudgetPeriod.Monthly,
+            "Quarterly" => BudgetPeriod.Quarterly,
+            "Semester" => BudgetPeriod.Semester,
+            "Annual" => BudgetPeriod.Annual,
+            _ => BudgetPeriod.Monthly // fallback for unknown values
+        };
+
+        // Use reflection to set CreatedAt/UpdatedAt on the entity
+        // (Budget constructor doesn't accept timestamps; they come from the base Entity)
+        var budget = new Budget(
             new BudgetId(Guid.Parse(Id)),
             new UserId(UserId),
             new CategoryId(Guid.Parse(CategoryId)),
-            new DateRange(PeriodStart, PeriodEnd),
+            effectiveFrom,
+            effectiveUntil,
+            budgetPeriod,
             new Money(LimitAmount, Currency));
+
+        // Set base entity timestamps via reflection
+        // (CreatedAt/UpdatedAt are protected setters on Entity<TId>)
+        var entityType = typeof(Domain.Common.Entity<BudgetId>);
+        var createdAtProp = entityType.GetProperty("CreatedAt");
+        var updatedAtProp = entityType.GetProperty("UpdatedAt");
+
+        if (createdAtProp != null)
+            createdAtProp.SetValue(budget, CreatedAt);
+        if (updatedAtProp != null)
+            updatedAtProp.SetValue(budget, UpdatedAt);
+
+        return budget;
     }
 
+    /// <summary>
+    /// Maps a domain Budget entity to this infrastructure row.
+    /// EffectiveFrom/EffectiveUntil are stored as DATE — use .Date to strip time.
+    /// </summary>
     public static BudgetRow FromDomain(Budget b)
     {
         return new BudgetRow
@@ -62,9 +106,11 @@ internal class BudgetRow : BaseModel
             Id = b.Id.Value.ToString(),
             UserId = b.UserId.Value,
             CategoryId = b.CategoryId.Value.ToString(),
-            // Use .Date to strip any residual time component: period columns are DATE, not TIMESTAMPTZ.
-            PeriodStart = b.Period.StartDate.Date,
-            PeriodEnd = b.Period.EndDate.Date,
+            EffectiveFrom = b.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
+            EffectiveUntil = b.EffectiveUntil.HasValue
+                ? b.EffectiveUntil.Value.ToDateTime(TimeOnly.MinValue)
+                : null,
+            PeriodGranularity = b.PeriodGranularity.ToString(),
             LimitAmount = b.Limit.Amount,
             Currency = b.Limit.Currency,
             CreatedAt = b.CreatedAt,
@@ -83,9 +129,11 @@ internal class BudgetRow : BaseModel
             Id = b.Id.Value.ToString(),
             UserId = b.UserId.Value,
             CategoryId = b.CategoryId.Value.ToString(),
-            // Use .Date to strip any residual time component: period columns are DATE, not TIMESTAMPTZ.
-            PeriodStart = b.Period.StartDate.Date,
-            PeriodEnd = b.Period.EndDate.Date,
+            EffectiveFrom = b.EffectiveFrom.ToDateTime(TimeOnly.MinValue),
+            EffectiveUntil = b.EffectiveUntil.HasValue
+                ? b.EffectiveUntil.Value.ToDateTime(TimeOnly.MinValue)
+                : null,
+            PeriodGranularity = b.PeriodGranularity.ToString(),
             LimitAmount = b.Limit.Amount,
             Currency = b.Limit.Currency
             // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
@@ -95,7 +143,7 @@ internal class BudgetRow : BaseModel
 
 /// <summary>
 /// Supabase implementation of IBudgetRepository.
-/// Phase 5: Budget Management.
+/// Redesigned for permanent policy budgets with configurable period granularity.
 /// </summary>
 public class SupabaseBudgetRepository : IBudgetRepository
 {
@@ -119,7 +167,8 @@ public class SupabaseBudgetRepository : IBudgetRepository
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("repo", "SupabaseBudgetRepository.GetByIdAsync");
                 scope.SetTag("budgetId", id.Value.ToString());
                 scope.Level = Sentry.SentryLevel.Error;
@@ -139,7 +188,8 @@ public class SupabaseBudgetRepository : IBudgetRepository
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserIdAsync");
                 scope.SetTag("userId", userId.Value);
                 scope.Level = Sentry.SentryLevel.Error;
@@ -148,30 +198,131 @@ public class SupabaseBudgetRepository : IBudgetRepository
         }
     }
 
-    public async Task<Budget?> GetByUserAndCategoryAndMonthAsync(
-        UserId userId, CategoryId categoryId, DateRange period)
+    public async Task<IReadOnlyList<Budget>> GetByUserAndCategoryAsync(
+        UserId userId, CategoryId categoryId)
     {
         try
         {
             var categoryIdString = categoryId.Value.ToString();
-            // Use date-only comparison: period_start is a DATE column; stripping the
-            // time component avoids false mismatches from residual ticks.
-            var periodStartDate = period.StartDate.Date;
-
             var response = await _client.From<BudgetRow>()
                 .Where(r => r.UserId == userId.Value)
                 .Where(r => r.CategoryId == categoryIdString)
-                .Where(r => r.PeriodStart == periodStartDate)
                 .Get();
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
+            return response.Models.Select(r => r.ToDomain()).ToList();
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserAndCategoryAndMonthAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserAndCategoryAsync");
                 scope.SetTag("userId", userId.Value);
                 scope.SetTag("categoryId", categoryId.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns the budget active for a given user, category, and date.
+    /// A budget is active when asOf falls within [effective_from, effective_until]
+    /// (or effective_from onward when effective_until is null).
+    ///
+    /// Query strategy: filter by user_id + category_id, then filter in memory
+    /// for the date range because Postgrest C# client does not support OR conditions
+    /// in .Where() lambdas, making a single-query range filter impractical.
+    /// The Domain exclusion constraint ensures at most one row matches.
+    /// </summary>
+    public async Task<Budget?> GetActiveByUserAndCategoryAsync(
+        UserId userId, CategoryId categoryId, DateOnly asOf)
+    {
+        try
+        {
+            var categoryIdString = categoryId.Value.ToString();
+
+            // Fetch all budgets for this user+category (exclusion constraint
+            // guarantees at most ~1 active at any point; typically just a handful
+            // of historical rows).
+            var response = await _client.From<BudgetRow>()
+                .Where(r => r.UserId == userId.Value)
+                .Where(r => r.CategoryId == categoryIdString)
+                .Get();
+
+            var matchingRow = response.Models.FirstOrDefault(row =>
+            {
+                var effectiveFrom = DateOnly.FromDateTime(row.EffectiveFrom);
+                if (asOf < effectiveFrom)
+                    return false;
+
+                if (row.EffectiveUntil.HasValue)
+                {
+                    var effectiveUntil = DateOnly.FromDateTime(row.EffectiveUntil.Value);
+                    return asOf <= effectiveUntil;
+                }
+
+                return true; // permanent budget (effective_until IS NULL)
+            });
+
+            return matchingRow?.ToDomain();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseBudgetRepository.GetActiveByUserAndCategoryAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.SetTag("categoryId", categoryId.Value.ToString());
+                scope.SetTag("asOf", asOf.ToString("yyyy-MM-dd"));
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Returns all budgets for a user whose effective date range overlaps
+    /// with the query range [from, to]. If 'to' is null, treats the query
+    /// range as open-ended (from onward).
+    ///
+    /// Filtering is performed in memory after fetching user budgets because
+    /// the Postgrest C# client does not support OR conditions or method calls
+    /// inside .Where() lambdas.
+    /// </summary>
+    public async Task<IReadOnlyList<Budget>> GetByUserAndDateRangeAsync(
+        UserId userId, DateOnly from, DateOnly? to)
+    {
+        try
+        {
+            // Fetch all budgets for this user — budgets are per-user and typically
+            // few in number (dozens, not thousands). Filter overlap in memory.
+            var response = await _client.From<BudgetRow>()
+                .Where(r => r.UserId == userId.Value)
+                .Get();
+
+            var queryEnd = to ?? DateOnly.MaxValue;
+
+            var matchingRows = response.Models.Where(row =>
+            {
+                var rowStart = DateOnly.FromDateTime(row.EffectiveFrom);
+                var rowEnd = row.EffectiveUntil.HasValue
+                    ? DateOnly.FromDateTime(row.EffectiveUntil.Value)
+                    : DateOnly.MaxValue;
+
+                // Two ranges [rowStart, rowEnd] and [from, queryEnd] overlap
+                // when rowStart <= queryEnd AND rowEnd >= from
+                return rowStart <= queryEnd && rowEnd >= from;
+            });
+
+            return matchingRows.Select(r => r.ToDomain()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserAndDateRangeAsync");
+                scope.SetTag("userId", userId.Value);
+                scope.SetTag("from", from.ToString("yyyy-MM-dd"));
+                scope.SetTag("to", to?.ToString("yyyy-MM-dd") ?? "null");
                 scope.Level = Sentry.SentryLevel.Error;
             });
             throw;
@@ -187,7 +338,8 @@ public class SupabaseBudgetRepository : IBudgetRepository
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("repo", "SupabaseBudgetRepository.AddAsync");
                 scope.SetTag("userId", budget.UserId.Value);
                 scope.Level = Sentry.SentryLevel.Error;
@@ -208,7 +360,8 @@ public class SupabaseBudgetRepository : IBudgetRepository
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("repo", "SupabaseBudgetRepository.UpdateAsync");
                 scope.SetTag("budgetId", budget.Id.Value.ToString());
                 scope.Level = Sentry.SentryLevel.Error;
@@ -228,7 +381,8 @@ public class SupabaseBudgetRepository : IBudgetRepository
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("repo", "SupabaseBudgetRepository.DeleteAsync");
                 scope.SetTag("budgetId", id.Value.ToString());
                 scope.Level = Sentry.SentryLevel.Error;

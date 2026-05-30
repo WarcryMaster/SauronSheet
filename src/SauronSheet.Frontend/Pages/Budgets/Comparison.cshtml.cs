@@ -35,7 +35,10 @@ public class ComparisonModel : PageModel
             var year = Year ?? DateTime.UtcNow.Year;
             var month = Month ?? DateTime.UtcNow.Month;
 
-            Comparison = await _mediator.Send(new GetBudgetVsActualQuery(year, month));
+            var from = new DateOnly(year, month, 1);
+            var to = from.AddMonths(1).AddDays(-1);
+
+            Comparison = await _mediator.Send(new GetBudgetVsActualQuery(from, to));
 
             TotalBudgeted = Comparison.Where(c => c.BudgetLimit.HasValue).Sum(c => c.BudgetLimit!.Value);
             TotalActual = Comparison.Sum(c => c.ActualSpend);

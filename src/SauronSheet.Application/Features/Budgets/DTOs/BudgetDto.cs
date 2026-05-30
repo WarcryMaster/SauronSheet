@@ -1,16 +1,15 @@
 namespace SauronSheet.Application.Features.Budgets.DTOs;
 
 /// <summary>
-/// Basic budget representation for list views.
+/// Redesigned budget representation for list views.
+/// Reflects the new Budget entity: policy-based with configurable period granularity.
+/// Slice 5 — Budget redesign.
 /// </summary>
 public record BudgetDto(
     Guid Id,
     Guid CategoryId,
     string CategoryName,
-    string? CategoryColor,
-    decimal LimitAmount,
-    string Currency,
-    DateTime PeriodStart,
-    DateTime PeriodEnd,
-    DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateOnly EffectiveFrom,
+    DateOnly? EffectiveUntil,
+    string PeriodGranularity,
+    decimal Limit);

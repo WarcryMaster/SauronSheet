@@ -12,118 +12,270 @@ public class BudgetServiceTests
 {
     private readonly Mock<IBudgetRepository> _budgetRepoMock = new();
 
-    // === ValidateUniqueBudget Tests ===
+    // ─────────────────────────────────────────────
+    // ValidateNoOverlap (Task 1.5)
+    // ─────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Domain")]
-    public async Task ValidateUniqueBudget_NoDuplicate_Succeeds()
+    public async Task ValidateNoOverlap_NoExistingBudgets_Succeeds()
     {
         // Arrange
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserAndCategoryAndMonthAsync(userId, categoryId, period))
-            .ReturnsAsync((Budget?)null);
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget>());
 
         var service = new BudgetService(_budgetRepoMock.Object);
 
         // Act & Assert — no exception thrown
-        await service.ValidateUniqueBudget(userId, categoryId, period);
-
-        _budgetRepoMock.Verify(
-            r => r.GetByUserAndCategoryAndMonthAsync(userId, categoryId, period),
-            Times.Once);
+        await service.ValidateNoOverlap(
+            userId, categoryId,
+            from: new DateOnly(2026, 1, 1),
+            until: null);
     }
 
     [Fact]
     [Trait("Category", "Domain")]
-    public async Task ValidateUniqueBudget_DuplicateExists_ThrowsDomainException()
+    public async Task ValidateNoOverlap_ExistingPermanentBudget_NewOverlaps_Throws()
     {
         // Arrange
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
+
+        var permanentBudget = new Budget(
+            new BudgetId(Guid.NewGuid()),
+            userId,
+            categoryId,
+            new DateOnly(2026, 1, 1),
+            effectiveUntil: null,
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { permanentBudget });
+
+        var service = new BudgetService(_budgetRepoMock.Object);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
+            service.ValidateNoOverlap(
+                userId, categoryId,
+                from: new DateOnly(2026, 6, 1),
+                until: null));
+
+        Assert.Contains("overlap", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public async Task ValidateNoOverlap_AdjacentRanges_NoOverlap_Succeeds()
+    {
+        // Arrange
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
 
         var existingBudget = new Budget(
             new BudgetId(Guid.NewGuid()),
             userId,
             categoryId,
-            period,
-            new Money(500, "EUR"));
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 6, 30),
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserAndCategoryAndMonthAsync(userId, categoryId, period))
-            .ReturnsAsync(existingBudget);
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { existingBudget });
 
         var service = new BudgetService(_budgetRepoMock.Object);
 
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<DomainException>(
-            () => service.ValidateUniqueBudget(userId, categoryId, period));
-
-        Assert.Contains("already exists", ex.Message);
+        // Act & Assert — no exception: existing ends 2026-06-30, new starts 2026-07-01
+        await service.ValidateNoOverlap(
+            userId, categoryId,
+            from: new DateOnly(2026, 7, 1),
+            until: null);
     }
 
     [Fact]
     [Trait("Category", "Domain")]
-    public async Task ValidateUniqueBudget_SameUserDifferentCategory_Succeeds()
-    {
-        // Arrange
-        var userId = new UserId("user-1");
-        var categoryA = new CategoryId(Guid.NewGuid());
-        var categoryB = new CategoryId(Guid.NewGuid());
-        var period = new DateRange(new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
-
-        _budgetRepoMock
-            .Setup(r => r.GetByUserAndCategoryAndMonthAsync(userId, categoryB, period))
-            .ReturnsAsync((Budget?)null);
-
-        var service = new BudgetService(_budgetRepoMock.Object);
-
-        // Act & Assert — no exception
-        await service.ValidateUniqueBudget(userId, categoryB, period);
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public async Task ValidateUniqueBudget_SameUserSameCategoryDifferentMonth_Succeeds()
+    public async Task ValidateNoOverlap_ExistingEndsOnSameDay_NewStartsNextDay_Succeeds()
     {
         // Arrange
         var userId = new UserId("user-1");
         var categoryId = new CategoryId(Guid.NewGuid());
-        var marchPeriod = new DateRange(new DateTime(2026, 3, 1), new DateTime(2026, 3, 31));
+
+        var existingBudget = new Budget(
+            new BudgetId(Guid.NewGuid()),
+            userId,
+            categoryId,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 6, 30),
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
 
         _budgetRepoMock
-            .Setup(r => r.GetByUserAndCategoryAndMonthAsync(userId, categoryId, marchPeriod))
-            .ReturnsAsync((Budget?)null);
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { existingBudget });
 
         var service = new BudgetService(_budgetRepoMock.Object);
 
-        // Act & Assert — no exception
-        await service.ValidateUniqueBudget(userId, categoryId, marchPeriod);
+        // Act & Assert — adjacent: starts at existing end + 1 day
+        await service.ValidateNoOverlap(
+            userId, categoryId,
+            from: new DateOnly(2026, 7, 1),
+            until: new DateOnly(2026, 12, 31));
     }
 
-    // === GetStatusLevel Tests ===
+    [Fact]
+    [Trait("Category", "Domain")]
+    public async Task ValidateNoOverlap_OverlappingRanges_Throws()
+    {
+        // Arrange
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
+
+        var existingBudget = new Budget(
+            new BudgetId(Guid.NewGuid()),
+            userId,
+            categoryId,
+            new DateOnly(2026, 3, 1),
+            new DateOnly(2026, 9, 30),
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { existingBudget });
+
+        var service = new BudgetService(_budgetRepoMock.Object);
+
+        // Act & Assert — new budget [2026-06-01, 2026-12-31] overlaps with [2026-03-01, 2026-09-30]
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
+            service.ValidateNoOverlap(
+                userId, categoryId,
+                from: new DateOnly(2026, 6, 1),
+                until: new DateOnly(2026, 12, 31)));
+
+        Assert.Contains("overlap", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public async Task ValidateNoOverlap_NewIsPermanent_ExistingHasEnd_NoOverlap_Succeeds()
+    {
+        // Arrange
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
+
+        var existingBudget = new Budget(
+            new BudgetId(Guid.NewGuid()),
+            userId,
+            categoryId,
+            new DateOnly(2025, 1, 1),
+            new DateOnly(2025, 12, 31),
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { existingBudget });
+
+        var service = new BudgetService(_budgetRepoMock.Object);
+
+        // Act & Assert — existing ended in 2025, new starts 2026
+        await service.ValidateNoOverlap(
+            userId, categoryId,
+            from: new DateOnly(2026, 1, 1),
+            until: null);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public async Task ValidateNoOverlap_ExcludeBudgetId_IgnoresExcluded()
+    {
+        // Arrange
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
+        var budgetToExclude = new BudgetId(Guid.NewGuid());
+
+        var existingBudget = new Budget(
+            budgetToExclude,
+            userId,
+            categoryId,
+            new DateOnly(2026, 1, 1),
+            effectiveUntil: null,
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { existingBudget });
+
+        var service = new BudgetService(_budgetRepoMock.Object);
+
+        // Act & Assert — the only existing budget is excluded; no overlap
+        await service.ValidateNoOverlap(
+            userId, categoryId,
+            from: new DateOnly(2026, 1, 1),
+            until: null,
+            excludeBudgetId: budgetToExclude);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public async Task ValidateNoOverlap_TwoExisting_RangeOverlapsSecond_FindsOverlap()
+    {
+        // Arrange
+        var userId = new UserId("user-1");
+        var categoryId = new CategoryId(Guid.NewGuid());
+
+        var oldBudget = new Budget(
+            new BudgetId(Guid.NewGuid()),
+            userId,
+            categoryId,
+            new DateOnly(2025, 1, 1),
+            new DateOnly(2025, 12, 31),
+            BudgetPeriod.Monthly,
+            new Money(300m, "EUR"));
+
+        var activeBudget = new Budget(
+            new BudgetId(Guid.NewGuid()),
+            userId,
+            categoryId,
+            new DateOnly(2026, 1, 1),
+            effectiveUntil: null,
+            BudgetPeriod.Monthly,
+            new Money(500m, "EUR"));
+
+        _budgetRepoMock
+            .Setup(r => r.GetByUserAndCategoryAsync(userId, categoryId))
+            .ReturnsAsync(new List<Budget> { oldBudget, activeBudget });
+
+        var service = new BudgetService(_budgetRepoMock.Object);
+
+        // Act & Assert — overlaps with activeBudget (permanent from 2026-01-01)
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
+            service.ValidateNoOverlap(
+                userId, categoryId,
+                from: new DateOnly(2026, 6, 1),
+                until: new DateOnly(2026, 12, 31)));
+
+        Assert.Contains("overlap", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ─────────────────────────────────────────────
+    // GetStatusLevel (preserved from old tests)
+    // ─────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Domain")]
     public void GetStatusLevel_Under60Percent_ReturnsGreen()
     {
-        // Arrange & Act
         var result = BudgetService.GetStatusLevel(0.50m);
-
-        // Assert
-        Assert.Equal(BudgetStatusLevel.Green, result);
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void GetStatusLevel_At60Percent_ReturnsGreen()
-    {
-        // 0.60 is NOT > 0.6, so it stays Green
-        var result = BudgetService.GetStatusLevel(0.60m);
         Assert.Equal(BudgetStatusLevel.Green, result);
     }
 
@@ -132,15 +284,6 @@ public class BudgetServiceTests
     public void GetStatusLevel_At75Percent_ReturnsYellow()
     {
         var result = BudgetService.GetStatusLevel(0.75m);
-        Assert.Equal(BudgetStatusLevel.Yellow, result);
-    }
-
-    [Fact]
-    [Trait("Category", "Domain")]
-    public void GetStatusLevel_At80Percent_ReturnsYellow()
-    {
-        // 0.80 is NOT > 0.8, so it stays Yellow
-        var result = BudgetService.GetStatusLevel(0.80m);
         Assert.Equal(BudgetStatusLevel.Yellow, result);
     }
 
@@ -160,12 +303,6 @@ public class BudgetServiceTests
         Assert.Equal(BudgetStatusLevel.Overage, result);
     }
 
-    // === GetStatusLevel Spec Boundary Tests ===
-    // Spec thresholds: Green < 75%, Yellow 75%–<100%, Red = 100% exactly, Overage > 100%.
-    // Boundary values: 0.74 (just below Green→Yellow), 0.75 (Green→Yellow threshold),
-    //                  0.99 (just below Yellow→Red), 1.00 (Yellow→Red threshold),
-    //                  1.01 (just above Red→Overage).
-
     [Theory]
     [Trait("Category", "Domain")]
     [InlineData(0.74, BudgetStatusLevel.Green)]
@@ -176,10 +313,7 @@ public class BudgetServiceTests
     public void GetStatusLevel_SpecBoundaryValues_ReturnsCorrectStatus(
         double percentageUsed, BudgetStatusLevel expected)
     {
-        // Act
         BudgetStatusLevel result = BudgetService.GetStatusLevel((decimal)percentageUsed);
-
-        // Assert
         Assert.Equal(expected, result);
     }
 }

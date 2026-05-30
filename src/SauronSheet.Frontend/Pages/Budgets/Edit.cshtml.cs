@@ -6,21 +6,32 @@ using SauronSheet.Application.Features.Budgets.DTOs;
 using SauronSheet.Application.Features.Budgets.Queries;
 using SauronSheet.Application.Features.Budgets.Commands;
 using SauronSheet.Domain.Exceptions;
+using SauronSheet.Domain.ValueObjects;
 
 namespace SauronSheet.Frontend.Pages.Budgets;
 
 [Authorize]
+[ValidateAntiForgeryToken]
 public class EditModel : PageModel
 {
     private readonly IMediator _mediator;
 
-    public BudgetStatusDto? Budget { get; set; }
+    public BudgetDto? Budget { get; set; }
 
     [BindProperty]
     public Guid BudgetId { get; set; }
 
     [BindProperty]
     public decimal NewLimitAmount { get; set; }
+
+    [BindProperty]
+    public string PeriodGranularity { get; set; } = nameof(BudgetPeriod.Monthly);
+
+    [BindProperty]
+    public DateOnly EffectiveFrom { get; set; }
+
+    [BindProperty]
+    public DateOnly? EffectiveUntil { get; set; }
 
     public string? ErrorMessage { get; set; }
 
@@ -33,14 +44,21 @@ public class EditModel : PageModel
     {
         try
         {
-            Budget = await _mediator.Send(new GetBudgetByIdQuery(id));
-            BudgetId = id;
-            NewLimitAmount = Budget.LimitAmount;
+            IReadOnlyList<BudgetDto> budgets = await _mediator.Send(new GetBudgetsQuery());
+            Budget = budgets.FirstOrDefault(b => b.Id == id);
+
+            if (Budget == null)
+            {
+                return RedirectToPage("/Budgets/Index");
+            }
+
+            BudgetId = Budget.Id;
+            NewLimitAmount = Budget.Limit;
+            PeriodGranularity = Budget.PeriodGranularity;
+            EffectiveFrom = Budget.EffectiveFrom;
+            EffectiveUntil = Budget.EffectiveUntil;
+
             return Page();
-        }
-        catch (EntityNotFoundException)
-        {
-            return RedirectToPage("/Budgets/Index");
         }
         catch (UnauthorizedAccessException)
         {
@@ -48,23 +66,61 @@ public class EditModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostUpdateAsync()
     {
         try
         {
-            await _mediator.Send(new UpdateBudgetCommand(BudgetId, NewLimitAmount));
+            // Validate limit
+            if (NewLimitAmount <= 0)
+            {
+                ErrorMessage = "Spending limit must be greater than zero.";
+                await ReloadBudgetAsync();
+                return Page();
+            }
+
+            if (!Enum.TryParse<BudgetPeriod>(PeriodGranularity, ignoreCase: true, out BudgetPeriod granularity))
+            {
+                ErrorMessage = "Invalid period granularity.";
+                await ReloadBudgetAsync();
+                return Page();
+            }
+
+            bool limitChanged = NewLimitAmount != Budget?.Limit;
+            bool periodChanged = PeriodGranularity != Budget?.PeriodGranularity;
+            bool effectiveFromChanged = EffectiveFrom != Budget?.EffectiveFrom;
+            bool effectiveUntilChanged = EffectiveUntil != Budget?.EffectiveUntil;
+
+            // Apply date changes first (if any)
+            if (effectiveFromChanged || effectiveUntilChanged)
+            {
+                await _mediator.Send(new UpdateBudgetEffectiveDatesCommand(
+                    BudgetId, EffectiveFrom, EffectiveUntil));
+            }
+
+            if (periodChanged)
+            {
+                await _mediator.Send(new UpdateBudgetPeriodCommand(
+                    BudgetId, granularity, NewLimitAmount));
+            }
+            else if (limitChanged)
+            {
+                await _mediator.Send(new UpdateBudgetLimitCommand(
+                    BudgetId, NewLimitAmount));
+            }
+
             TempData["SuccessMessage"] = "Budget updated successfully.";
             return RedirectToPage("/Budgets/Index");
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Budgets/Edit.OnPostAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostUpdateAsync");
                 scope.SetTag("exception_type", "DomainException");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
             ErrorMessage = ex.Message;
-            Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId));
+            await ReloadBudgetAsync();
             return Page();
         }
         catch (UnauthorizedAccessException)
@@ -73,25 +129,148 @@ public class EditModel : PageModel
         }
         catch (HttpRequestException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Budgets/Edit.OnPostAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostUpdateAsync");
                 scope.SetTag("exception_type", "HttpRequestException");
                 scope.Level = Sentry.SentryLevel.Error;
             });
             ErrorMessage = "A network error occurred. Please check your connection and try again.";
-            try { Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId)); } catch { }
+            await ReloadBudgetAsync();
             return Page();
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Budgets/Edit.OnPostAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostUpdateAsync");
                 scope.SetTag("exception_type", ex.GetType().Name);
                 scope.Level = Sentry.SentryLevel.Error;
             });
             ErrorMessage = "An unexpected error occurred while updating the budget. Please try again later.";
-            try { Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId)); } catch { }
+            await ReloadBudgetAsync();
             return Page();
+        }
+    }
+
+    public async Task<IActionResult> OnPostDeactivateAsync()
+    {
+        try
+        {
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+            await _mediator.Send(new DeactivateBudgetCommand(BudgetId, today));
+            TempData["SuccessMessage"] = "Budget deactivated successfully.";
+            return RedirectToPage("/Budgets/Index");
+        }
+        catch (DomainException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostDeactivateAsync");
+                scope.SetTag("exception_type", "DomainException");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
+            ErrorMessage = ex.Message;
+            await ReloadBudgetAsync();
+            return Page();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToPage("/auth/login");
+        }
+        catch (HttpRequestException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostDeactivateAsync");
+                scope.SetTag("exception_type", "HttpRequestException");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            await ReloadBudgetAsync();
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostDeactivateAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An unexpected error occurred while deactivating the budget. Please try again later.";
+            await ReloadBudgetAsync();
+            return Page();
+        }
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync()
+    {
+        try
+        {
+            await _mediator.Send(new DeleteBudgetCommand(BudgetId));
+            TempData["SuccessMessage"] = "Budget deleted permanently.";
+            return RedirectToPage("/Budgets/Index");
+        }
+        catch (DomainException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostDeleteAsync");
+                scope.SetTag("exception_type", "DomainException");
+                scope.Level = Sentry.SentryLevel.Warning;
+            });
+            ErrorMessage = ex.Message;
+            await ReloadBudgetAsync();
+            return Page();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToPage("/auth/login");
+        }
+        catch (HttpRequestException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostDeleteAsync");
+                scope.SetTag("exception_type", "HttpRequestException");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred. Please check your connection and try again.";
+            await ReloadBudgetAsync();
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Edit.OnPostDeleteAsync");
+                scope.SetTag("exception_type", ex.GetType().Name);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An unexpected error occurred while deleting the budget. Please try again later.";
+            await ReloadBudgetAsync();
+            return Page();
+        }
+    }
+
+    private async Task ReloadBudgetAsync()
+    {
+        try
+        {
+            IReadOnlyList<BudgetDto> budgets = await _mediator.Send(new GetBudgetsQuery());
+            Budget = budgets.FirstOrDefault(b => b.Id == BudgetId);
+            if (Budget != null)
+            {
+                NewLimitAmount = Budget.Limit;
+                PeriodGranularity = Budget.PeriodGranularity;
+                EffectiveFrom = Budget.EffectiveFrom;
+                EffectiveUntil = Budget.EffectiveUntil;
+            }
+        }
+        catch
+        {
+            Budget = null;
         }
     }
 }

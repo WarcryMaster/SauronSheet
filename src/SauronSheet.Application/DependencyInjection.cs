@@ -5,6 +5,7 @@ using SauronSheet.Application.Common;
 using SauronSheet.Application.Common.Behaviors;
 using SauronSheet.Application.Services;
 using SauronSheet.Domain.Common;
+using SauronSheet.Domain.Services;
 
 namespace SauronSheet.Application;
 
@@ -32,6 +33,9 @@ public static class DependencyInjection
 
         // Bank category resolution service (Phase 2)
         services.AddScoped<IBankCategoryResolutionService, BankCategoryResolutionService>();
+
+        // Domain services — stateless, registered as singleton
+        services.AddSingleton<BudgetCalculationService>();
 
         return services;
     }

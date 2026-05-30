@@ -1,11 +1,10 @@
 ﻿@page "/budgets/edit/{id:guid}"
 @model SauronSheet.Frontend.Pages.Budgets.EditModel
-@using SauronSheet.Frontend.Helpers
 @{
     ViewData["Title"] = "Edit Budget";
 }
 
-<div class="mx-auto d-flex flex-column gap-4" style="max-width:520px">
+<div class="mx-auto d-flex flex-column gap-4" style="max-width:560px">
     <div class="d-flex align-items-center gap-3">
         <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
         <h2 class="h4 fw-bold mb-0">Edit Budget</h2>
@@ -19,54 +18,83 @@
     @if (Model.Budget != null)
     {
         <div class="card border-0 shadow-sm p-4 d-flex flex-column gap-4">
-            <!-- Read-only info -->
+            @* Read-only info *@
             <div class="row g-3 pb-3 border-bottom">
                 <div class="col-6">
                     <p class="small fw-semibold text-muted text-uppercase mb-1">Category</p>
-                    <div class="fw-medium mb-0 d-inline-flex">
-                        <partial name="Shared/_CategoryBadge" model="new CategoryBadgeDisplay(Model.Budget.CategoryName, AccentColor: Model.Budget.CategoryColor)" />
-                    </div>
+                    <p class="fw-medium mb-0">@Model.Budget.CategoryName</p>
                 </div>
                 <div class="col-6">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Period</p>
-                    <p class="fw-medium mb-0">@Model.Budget.PeriodStart.ToString("MMMM yyyy")</p>
-                </div>
-            </div>
-
-            <!-- Current status display -->
-            <div class="row g-3 pb-3">
-                <div class="col-4">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Current Spend</p>
-                    <p class="h5 fw-semibold mb-0 @(Model.Budget.CurrentSpend > Model.Budget.LimitAmount ? "text-danger" : "")">
-                        &euro;@Model.Budget.CurrentSpend.ToString("N2")
-                    </p>
-                </div>
-                <div class="col-4">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Remaining</p>
-                    <p class="h5 fw-semibold mb-0 @(Model.Budget.RemainingAmount >= 0 ? "text-brand" : "text-danger")">
-                        &euro;@Model.Budget.RemainingAmount.ToString("N2")
-                    </p>
-                </div>
-                <div class="col-4">
                     <p class="small fw-semibold text-muted text-uppercase mb-1">Status</p>
-                    <partial name="Shared/_BudgetStatusBadge" model="Model.Budget.StatusLevel" />
+                    <p class="fw-medium mb-0">
+                        @{
+                            bool isActive = Model.Budget.EffectiveUntil == null
+                                || Model.Budget.EffectiveUntil.Value >= DateOnly.FromDateTime(DateTime.UtcNow);
+                        }
+                        <span class="badge @(isActive ? "bg-success" : "bg-secondary")">@(isActive ? "Active" : "Inactive")</span>
+                    </p>
+                </div>
+                <div class="col-6">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Effective From</p>
+                    <p class="fw-medium mb-0">@Model.Budget.EffectiveFrom.ToString("yyyy-MM-dd")</p>
+                </div>
+                <div class="col-6">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">Effective Until</p>
+                    <p class="fw-medium mb-0">@(Model.Budget.EffectiveUntil?.ToString("yyyy-MM-dd") ?? "Permanent")</p>
                 </div>
             </div>
 
-            <!-- Edit form -->
-            <form method="post">
+            @* Edit form *@
+            <form method="post" asp-page-handler="Update" class="d-flex flex-column gap-4">
                 <input type="hidden" asp-for="BudgetId" />
-                <div class="mb-4">
-                    <label class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
+
+                @* Spending limit *@
+                <div>
+                    <label asp-for="NewLimitAmount" class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text">&euro;</span>
-                        <input type="number" asp-for="NewLimitAmount" step="0.01" min="0.01" class="form-control" />
+                        <input type="number" asp-for="NewLimitAmount" step="0.01" min="0.01"
+                               class="form-control" required />
                         <span class="input-group-text">EUR</span>
                     </div>
                 </div>
-                <div class="d-flex justify-content-end gap-3">
-                    <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
-                    <button type="submit" class="btn btn-brand btn-sm">Save Changes</button>
+
+                @* Period granularity *@
+                <div>
+                    <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase">Period Granularity</label>
+                    <select asp-for="PeriodGranularity" class="form-select form-select-sm" required>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Semester">Semester</option>
+                        <option value="Annual">Annual</option>
+                    </select>
+                </div>
+
+                @* Effective dates *@
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase">Effective From</label>
+                        <input type="date" asp-for="EffectiveFrom" class="form-control form-control-sm" required />
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase">Effective Until</label>
+                        <input type="date" asp-for="EffectiveUntil" class="form-control form-control-sm" />
+                        <small class="text-muted">Leave empty for permanent budget.</small>
+                    </div>
+                </div>
+
+                @* Buttons *@
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex gap-2">
+                        <button type="submit" formmethod="post" asp-page-handler="Deactivate"
+                                class="btn btn-outline-danger btn-sm">Deactivate Budget</button>
+                        <button type="submit" formmethod="post" asp-page-handler="Delete"
+                                class="btn btn-outline-danger btn-sm">Delete Permanently</button>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                        <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm">Save Changes</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -79,3 +107,21 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        const deactivateBtn = document.querySelector('button[formmethod="post"][asp-page-handler="Deactivate"]');
+        deactivateBtn?.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to deactivate this budget? It will stop applying to future periods.')) {
+                e.preventDefault();
+            }
+        });
+
+        const deleteBtn = document.querySelector('button[formmethod="post"][asp-page-handler="Delete"]');
+        deleteBtn?.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to permanently delete this budget? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+}

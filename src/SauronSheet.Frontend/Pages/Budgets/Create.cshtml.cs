@@ -6,10 +6,12 @@ using SauronSheet.Application.Features.Budgets.Commands;
 using SauronSheet.Application.Features.Categories.DTOs;
 using SauronSheet.Application.Features.Categories.Queries;
 using SauronSheet.Domain.Exceptions;
+using SauronSheet.Domain.ValueObjects;
 
 namespace SauronSheet.Frontend.Pages.Budgets;
 
 [Authorize]
+[ValidateAntiForgeryToken]
 public class CreateModel : PageModel
 {
     private readonly IMediator _mediator;
@@ -22,12 +24,14 @@ public class CreateModel : PageModel
     [BindProperty]
     public decimal LimitAmount { get; set; }
 
-    /// <summary>
-    /// Month string in YYYY-MM format (as sent by input[type="month"]).
-    /// Converted to DateTime in OnPostAsync.
-    /// </summary>
     [BindProperty]
-    public string? Month { get; set; } = $"{DateTime.UtcNow.Year:D4}-{DateTime.UtcNow.Month:D2}";
+    public DateOnly EffectiveFrom { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    [BindProperty]
+    public DateOnly? EffectiveUntil { get; set; }
+
+    [BindProperty]
+    public string PeriodGranularity { get; set; } = nameof(BudgetPeriod.Monthly);
 
     public string? ErrorMessage { get; set; }
 
@@ -55,29 +59,41 @@ public class CreateModel : PageModel
         {
             Categories = await _mediator.Send(new GetCategoriesQuery());
 
-            // Parse YYYY-MM format from input[type="month"]
-            if (string.IsNullOrWhiteSpace(Month) || !DateTime.TryParse(Month + "-01", out var monthDate))
+            // Validate Granularity
+            if (!Enum.TryParse<BudgetPeriod>(PeriodGranularity, ignoreCase: true, out BudgetPeriod granularity))
             {
-                ErrorMessage = "Invalid month format. Please select a valid month.";
-                Categories = await _mediator.Send(new GetCategoriesQuery());
+                ErrorMessage = "Invalid period granularity. Please select a valid option.";
                 return Page();
             }
 
-            var periodStart = new DateTime(monthDate.Year, monthDate.Month, 1);
-            var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+            // Validate limit is positive
+            if (LimitAmount <= 0)
+            {
+                ErrorMessage = "Spending limit must be greater than zero.";
+                return Page();
+            }
+
+            // Validate effective dates
+            if (EffectiveUntil.HasValue && EffectiveUntil.Value < EffectiveFrom)
+            {
+                ErrorMessage = "Effective Until must be on or after Effective From.";
+                return Page();
+            }
 
             await _mediator.Send(new CreateBudgetCommand(
                 CategoryId,
                 LimitAmount,
-                periodStart,
-                periodEnd));
+                EffectiveFrom,
+                EffectiveUntil,
+                granularity));
 
             TempData["SuccessMessage"] = "Budget created successfully.";
             return RedirectToPage("/Budgets/Index");
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("page", "Budgets/Create.OnPostAsync");
                 scope.SetTag("exception_type", "DomainException");
                 scope.Level = Sentry.SentryLevel.Warning;
@@ -92,7 +108,8 @@ public class CreateModel : PageModel
         }
         catch (HttpRequestException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("page", "Budgets/Create.OnPostAsync");
                 scope.SetTag("exception_type", "HttpRequestException");
                 scope.Level = Sentry.SentryLevel.Error;
@@ -103,7 +120,8 @@ public class CreateModel : PageModel
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
                 scope.SetTag("page", "Budgets/Create.OnPostAsync");
                 scope.SetTag("exception_type", ex.GetType().Name);
                 scope.Level = Sentry.SentryLevel.Error;

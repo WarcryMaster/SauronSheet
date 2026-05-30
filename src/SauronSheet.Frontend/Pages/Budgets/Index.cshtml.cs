@@ -5,6 +5,8 @@ using MediatR;
 using SauronSheet.Application.Features.Budgets.DTOs;
 using SauronSheet.Application.Features.Budgets.Queries;
 using SauronSheet.Application.Features.Budgets.Commands;
+using SauronSheet.Application.Features.Categories.DTOs;
+using SauronSheet.Application.Features.Categories.Queries;
 using SauronSheet.Domain.Exceptions;
 
 namespace SauronSheet.Frontend.Pages.Budgets;
@@ -14,22 +16,20 @@ public class IndexModel : PageModel
 {
     private readonly IMediator _mediator;
 
-    public List<BudgetStatusDto> Budgets { get; set; } = new();
+    public IReadOnlyList<BudgetDto> Budgets { get; set; } = Array.Empty<BudgetDto>();
+    public List<CategoryDto> Categories { get; set; } = new();
 
     [BindProperty(SupportsGet = true)]
-    public int? Year { get; set; }
+    public bool ShowActiveOnly { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public int? Month { get; set; }
+    public Guid? CategoryFilter { get; set; }
+
+    [BindProperty]
+    public Guid BudgetId { get; set; }
 
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
-
-    /// <summary>
-    /// Budget ID to delete — bound from form POST.
-    /// </summary>
-    [BindProperty]
-    public Guid BudgetId { get; set; }
 
     public IndexModel(IMediator mediator)
     {
@@ -40,7 +40,25 @@ public class IndexModel : PageModel
     {
         try
         {
-            Budgets = await _mediator.Send(new GetBudgetsQuery(Year, Month));
+            IReadOnlyList<BudgetDto> allBudgets = await _mediator.Send(new GetBudgetsQuery());
+            Categories = await _mediator.Send(new GetCategoriesQuery());
+
+            // Apply filters
+            IEnumerable<BudgetDto> filtered = allBudgets;
+
+            if (ShowActiveOnly)
+            {
+                DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+                filtered = filtered.Where(b =>
+                    b.EffectiveUntil == null || b.EffectiveUntil.Value >= today);
+            }
+
+            if (CategoryFilter.HasValue)
+            {
+                filtered = filtered.Where(b => b.CategoryId == CategoryFilter.Value);
+            }
+
+            Budgets = filtered.ToList();
             return Page();
         }
         catch (UnauthorizedAccessException)
@@ -49,18 +67,19 @@ public class IndexModel : PageModel
         }
     }
 
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> OnPostDeleteAsync()
+    public async Task<IActionResult> OnPostDeactivateAsync()
     {
         try
         {
-            await _mediator.Send(new DeleteBudgetCommand(BudgetId));
-            TempData["SuccessMessage"] = "Budget deleted successfully.";
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            await _mediator.Send(new DeactivateBudgetCommand(BudgetId, today));
+            TempData["SuccessMessage"] = "Budget deactivated successfully.";
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Budgets/Index.OnPostDeleteAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Index.OnPostDeactivateAsync");
                 scope.SetTag("exception_type", "DomainException");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
@@ -68,8 +87,9 @@ public class IndexModel : PageModel
         }
         catch (HttpRequestException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Budgets/Index.OnPostDeleteAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Index.OnPostDeactivateAsync");
                 scope.SetTag("exception_type", "HttpRequestException");
                 scope.Level = Sentry.SentryLevel.Error;
             });
@@ -77,20 +97,15 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Budgets/Index.OnPostDeleteAsync");
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("page", "Budgets/Index.OnPostDeactivateAsync");
                 scope.SetTag("exception_type", ex.GetType().Name);
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            ErrorMessage = "An unexpected error occurred while deleting the budget. Please try again later.";
+            ErrorMessage = "An unexpected error occurred while deactivating the budget. Please try again later.";
         }
 
-        if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            Budgets = await _mediator.Send(new GetBudgetsQuery(Year, Month));
-            return Page();
-        }
-
-        return RedirectToPage("/Budgets/Index", new { Year, Month });
+        return RedirectToPage("/Budgets/Index", new { ShowActiveOnly, CategoryFilter });
     }
 }

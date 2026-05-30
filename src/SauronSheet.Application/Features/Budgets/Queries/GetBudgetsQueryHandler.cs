@@ -3,114 +3,100 @@ namespace SauronSheet.Application.Features.Budgets.Queries;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using SauronSheet.Domain.Common;
-using Domain.Repositories;
-using Domain.Services;
-using Domain.Specifications;
-using Domain.ValueObjects;
 using DTOs;
 using MediatR;
+using Sentry;
+using SauronSheet.Domain.Common;
+using SauronSheet.Domain.Exceptions;
+using SauronSheet.Domain.Repositories;
+using SauronSheet.Domain.ValueObjects;
 
 /// <summary>
-/// Handler for GetBudgetsQuery.
-/// Returns budget list with status (CurrentSpend, Remaining, PercentageUsed, StatusLevel).
-/// Optional year/month filtering, sorted alphabetically by category name.
+/// Redesigned handler for GetBudgetsQuery.
+/// Gets budgets for the current user, optionally filtering by AsOf date.
+/// Resolves category names via ICategoryRepository.
+/// Slice 5 — Budget redesign.
 /// </summary>
-public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<BudgetStatusDto>>
+public class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, List<BudgetDto>>
 {
     private readonly IBudgetRepository _budgetRepo;
-    private readonly ITransactionRepository _transactionRepo;
     private readonly ICategoryRepository _categoryRepo;
     private readonly IUserContext _userContext;
 
     public GetBudgetsQueryHandler(
         IBudgetRepository budgetRepo,
-        ITransactionRepository transactionRepo,
         ICategoryRepository categoryRepo,
         IUserContext userContext)
     {
-        _budgetRepo = budgetRepo;
-        _transactionRepo = transactionRepo;
-        _categoryRepo = categoryRepo;
-        _userContext = userContext;
+        _budgetRepo = budgetRepo ?? throw new ArgumentNullException(nameof(budgetRepo));
+        _categoryRepo = categoryRepo ?? throw new ArgumentNullException(nameof(categoryRepo));
+        _userContext = userContext ?? throw new ArgumentNullException(nameof(userContext));
     }
 
-    public async Task<List<BudgetStatusDto>> Handle(GetBudgetsQuery request, CancellationToken cancellationToken)
+    public async Task<List<BudgetDto>> Handle(
+        GetBudgetsQuery request, CancellationToken cancellationToken)
     {
-        var userId = new UserId(_userContext.UserId);
-        var budgets = await _budgetRepo.GetByUserIdAsync(userId);
-
-        // Optional year/month filter
-        if (request.Year.HasValue && request.Month.HasValue)
+        try
         {
-            budgets = budgets
-                .Where(b => b.Period.StartDate.Year == request.Year.Value
-                         && b.Period.StartDate.Month == request.Month.Value)
-                .ToList();
-        }
-        else if (request.Year.HasValue)
-        {
-            budgets = budgets
-                .Where(b => b.Period.StartDate.Year == request.Year.Value)
-                .ToList();
-        }
+            var userId = new UserId(_userContext.UserId);
 
-        // Load categories for name/color lookup
-        var categories = await _categoryRepo.GetByUserIdAsync(userId);
-        var categoryLookup = categories.ToDictionary(c => c.Id, c => c);
+            IReadOnlyList<Domain.Entities.Budget> budgets =
+                await _budgetRepo.GetByUserIdAsync(userId);
 
-        var results = new List<BudgetStatusDto>();
-        foreach (var budget in budgets)
-        {
-            // Calculate current spend from transactions in this category and period.
-            // Extend the end boundary to the last tick of the final day so that
-            // transactions with a time component on period_end are not excluded.
-            var txStart = budget.Period.StartDate.Date;
-            var txEnd   = budget.Period.EndDate.Date.AddDays(1).AddTicks(-1);
-            var userSpec = new TransactionByUserSpecification(userId);
-            var dateSpec = new TransactionByDateRangeSpecification(txStart, txEnd);
-            var categorySpec = new TransactionByCategorySpecification(budget.CategoryId);
-            var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(
-                CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec),
-                categorySpec);
-
-            var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
-            var currentSpendAmount = transactions
-                .Where(t => t.Amount.IsNegative)
-                .Sum(t => Math.Abs(t.Amount.Amount));
-
-            var currentSpend = new Money(currentSpendAmount);
-            var percentageUsed = budget.PercentageUsed(currentSpend);
-            var remaining = budget.RemainingAmount(currentSpend);
-            var statusLevel = BudgetService.GetStatusLevel(percentageUsed);
-
-            var catName = "Unknown";
-            string? catColor = null;
-            if (categoryLookup.TryGetValue(budget.CategoryId, out var cat))
+            if (request.AsOf.HasValue)
             {
-                catName = cat.Name.Value;
-                catColor = cat.Color.Value;
+                budgets = budgets
+                    .Where(b => b.IsActiveOn(request.AsOf.Value))
+                    .ToList();
             }
 
-            results.Add(new BudgetStatusDto(
-                budget.Id.Value,
-                budget.CategoryId.Value,
-                catName,
-                catColor,
-                budget.Limit.Amount,
-                currentSpendAmount,
-                remaining.Amount,
-                percentageUsed,
-                statusLevel.ToString(),
-                budget.Limit.Currency,
-                budget.Period.StartDate,
-                budget.Period.EndDate));
-        }
+            // Resolve category names
+            IReadOnlyList<Domain.Entities.Category> categories =
+                await _categoryRepo.GetByUserIdAsync(userId);
 
-        return results
-            .OrderBy(b => b.CategoryName)
-            .ToList();
+            var categoryNameLookup = categories.ToDictionary(
+                c => c.Id,
+                c => c.Name.Value);
+
+            return budgets
+                .Select(b => new BudgetDto(
+                    Id: b.Id.Value,
+                    CategoryId: b.CategoryId.Value,
+                    CategoryName: categoryNameLookup.TryGetValue(b.CategoryId, out string? name)
+                        ? name
+                        : b.CategoryId.Value.ToString(),
+                    EffectiveFrom: b.EffectiveFrom,
+                    EffectiveUntil: b.EffectiveUntil,
+                    PeriodGranularity: b.PeriodGranularity.ToString(),
+                    Limit: b.Limit.Amount))
+                .ToList();
+        }
+        catch (DomainException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("handler", "GetBudgetsQueryHandler");
+                scope.Level = SentryLevel.Error;
+            });
+            throw new DomainException(
+                "A network error occurred. Please check your connection and try again.");
+        }
+        catch (Exception ex)
+        {
+            SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("handler", "GetBudgetsQueryHandler");
+                scope.Level = SentryLevel.Error;
+            });
+            throw new DomainException(
+                "An unexpected error occurred while retrieving budgets. Please try again.");
+        }
     }
 }

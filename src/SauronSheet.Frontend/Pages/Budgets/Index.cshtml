@@ -1,29 +1,14 @@
 ﻿@page "/budgets"
 @model SauronSheet.Frontend.Pages.Budgets.IndexModel
-@using SauronSheet.Frontend.Helpers
 @{
     ViewData["Title"] = "Budgets";
-    var currentYear = Model.Year ?? DateTime.UtcNow.Year;
-    var currentMonth = Model.Month ?? DateTime.UtcNow.Month;
-    var monthName = new DateTime(currentYear, currentMonth, 1).ToString("MMMM yyyy");
 }
 
 <div class="d-flex flex-column gap-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h2 class="h3 fw-bold mb-0">💰 Budgets</h2>
+        <h2 class="h3 fw-bold mb-0">Budgets</h2>
         <a href="/budgets/create" class="btn btn-brand btn-sm">+ Create Budget</a>
     </div>
-
-    <!-- Month Filter -->
-    <form method="get" action="/budgets" class="card border-0 shadow-sm p-3">
-        <div class="d-flex flex-wrap align-items-center gap-3">
-            <label class="small fw-semibold text-muted text-uppercase mb-0">Month:</label>
-            <input type="month" name="month" id="monthPicker"
-                   value="@($"{currentYear:D4}-{currentMonth:D2}")"
-                   class="form-control form-control-sm" style="width:auto" />
-            <button type="submit" class="btn btn-brand btn-sm">Filter</button>
-        </div>
-    </form>
 
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
     {
@@ -38,18 +23,43 @@
         <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
     }
 
+    @* Filters *@
+    <form method="get" action="/budgets" class="card border-0 shadow-sm p-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            @* Active only toggle *@
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="ShowActiveOnly"
+                       name="ShowActiveOnly" value="true" @(Model.ShowActiveOnly ? "checked" : "") />
+                <label class="form-check-label small fw-semibold text-muted text-uppercase" for="ShowActiveOnly">Active Only</label>
+            </div>
+
+            @* Category filter *@
+            <div>
+                <select id="CategoryFilter" name="CategoryFilter" class="form-select form-select-sm" style="width:auto">
+                    <option value="">All Categories</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        bool selected = Model.CategoryFilter.HasValue && Model.CategoryFilter.Value == cat.Id;
+                        <option value="@cat.Id" selected="@selected">@cat.Name</option>
+                    }
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-brand btn-sm">Filter</button>
+        </div>
+    </form>
+
     @if (Model.Budgets.Any())
     {
         <div class="card border-0 shadow-sm">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" aria-label="Budgets list">
                     <thead class="table-light">
                         <tr>
                             <th class="text-uppercase small fw-semibold text-muted">Category</th>
+                            <th class="text-uppercase small fw-semibold text-muted">Granularity</th>
                             <th class="text-uppercase small fw-semibold text-muted text-end">Limit</th>
-                            <th class="text-uppercase small fw-semibold text-muted text-end">Spent</th>
-                            <th class="text-uppercase small fw-semibold text-muted text-end">Remaining</th>
-                            <th class="text-uppercase small fw-semibold text-muted text-center" style="min-width:150px">Progress</th>
+                            <th class="text-uppercase small fw-semibold text-muted">Validity</th>
                             <th class="text-uppercase small fw-semibold text-muted text-center">Status</th>
                             <th class="text-uppercase small fw-semibold text-muted text-center">Actions</th>
                         </tr>
@@ -57,28 +67,36 @@
                     <tbody>
                         @foreach (var budget in Model.Budgets)
                         {
+                            bool isActive = budget.EffectiveUntil == null
+                                || budget.EffectiveUntil.Value >= DateOnly.FromDateTime(DateTime.UtcNow);
+
                             <tr>
                                 <td>
-                                    <a href="/budgets/detail/@budget.Id" class="text-brand fw-medium text-decoration-none">
-                                        <partial name="Shared/_CategoryBadge" model="new CategoryBadgeDisplay(budget.CategoryName, AccentColor: budget.CategoryColor)" />
-                                    </a>
+                                    <span class="fw-medium">@budget.CategoryName</span>
                                 </td>
-                                <td class="text-end small fw-medium">€@budget.LimitAmount.ToString("N2")</td>
-                                <td class="text-end small @(budget.CurrentSpend > budget.LimitAmount ? "text-danger fw-bold" : "")">€@budget.CurrentSpend.ToString("N2")</td>
-                                <td class="text-end small @(budget.RemainingAmount >= 0 ? "text-brand" : "text-danger")">€@budget.RemainingAmount.ToString("N2")</td>
                                 <td>
-                                    <partial name="Shared/_BudgetProgressBar" model="budget" />
+                                    <span class="small">@budget.PeriodGranularity</span>
+                                </td>
+                                <td class="text-end small fw-medium">&euro;@budget.Limit.ToString("N2")</td>
+                                <td>
+                                    <span class="small text-muted">
+                                        @budget.EffectiveFrom.ToString("yyyy-MM-dd")
+                                        &mdash;
+                                        @(budget.EffectiveUntil?.ToString("yyyy-MM-dd") ?? "Permanent")
+                                    </span>
                                 </td>
                                 <td class="text-center">
-                                    <partial name="Shared/_BudgetStatusBadge" model="budget.StatusLevel" />
+                                    <span class="badge @(isActive ? "bg-success" : "bg-secondary")" role="status">
+                                        @(isActive ? "Active" : "Inactive")
+                                    </span>
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center gap-2">
                                         <a href="/budgets/edit/@budget.Id" class="small text-brand fw-medium text-decoration-none">Edit</a>
-                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                        <form method="post" asp-page-handler="Deactivate" class="d-inline">
                                             <input type="hidden" name="BudgetId" value="@budget.Id" />
-                                            <button type="submit" onclick="return confirm('Delete this budget?')"
-                                                    class="btn btn-link btn-sm text-danger p-0 text-decoration-none">Delete</button>
+                                            <button type="submit" onclick="return confirm('Deactivate this budget?')"
+                                                    class="btn btn-link btn-sm text-warning p-0 text-decoration-none">Deactivate</button>
                                         </form>
                                     </div>
                                 </td>
@@ -92,22 +110,9 @@
     else
     {
         <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
-            <p class="h5 text-muted mb-3">No budgets set for @monthName.</p>
+            <p class="h5 text-muted mb-3">No budgets found.</p>
             <p class="text-muted mb-4">Create one to start tracking your spending.</p>
             <div><a href="/budgets/create" class="btn btn-brand">+ Create Budget</a></div>
         </div>
     }
 </div>
-
-<script>
-    document.getElementById('monthPicker')?.closest('form')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var val = document.getElementById('monthPicker').value;
-        if (val) {
-            var parts = val.split('-');
-            window.location.href = '/budgets?Year=' + parts[0] + '&Month=' + parseInt(parts[1]);
-        } else {
-            window.location.href = '/budgets';
-        }
-    });
-</script>
