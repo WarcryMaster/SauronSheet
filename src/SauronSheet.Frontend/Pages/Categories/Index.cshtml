@@ -469,7 +469,9 @@
                 document.getElementById('createError').textContent =
                     (data && data.error) || 'An error occurred';
                 document.getElementById('createError').classList.remove('d-none');
-                if (typeof Sentry !== 'undefined') {
+                // Only capture when the HTTP request itself succeeded (payload.ok is true).
+                // When !r.ok we already captured at the !r.ok branch above.
+                if (payload.ok && typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category create returned success:false', {
                         level: 'warning',
                         tags: { operation: 'category-create' }
@@ -539,7 +541,9 @@
                 document.getElementById('editError').textContent =
                     (data && data.error) || 'An error occurred';
                 document.getElementById('editError').classList.remove('d-none');
-                if (typeof Sentry !== 'undefined') {
+                // Only capture when the HTTP request itself succeeded (payload.ok is true).
+                // When !r.ok we already captured at the !r.ok branch above.
+                if (payload.ok && typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category update returned success:false', {
                         level: 'warning',
                         tags: { operation: 'category-update' }
@@ -611,7 +615,9 @@
                 document.getElementById('deleteError').textContent =
                     (data && data.error) || 'An error occurred';
                 document.getElementById('deleteError').classList.remove('d-none');
-                if (typeof Sentry !== 'undefined') {
+                // Only capture when the HTTP request itself succeeded (payload.ok is true).
+                // When !r.ok we already captured at the !r.ok branch above.
+                if (payload.ok && typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category delete returned success:false', {
                         level: 'warning',
                         tags: { operation: 'category-delete' }
