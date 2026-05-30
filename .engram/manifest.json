@@ -40,6 +40,14 @@
       "sessions": 11,
       "memories": 99,
       "prompts": 44
+    },
+    {
+      "id": "a664c742",
+      "created_by": "Gonzalo",
+      "created_at": "2026-05-30T23:08:48Z",
+      "sessions": 21,
+      "memories": 122,
+      "prompts": 85
     }
   ]
 }
