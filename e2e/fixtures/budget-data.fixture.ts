@@ -102,41 +102,27 @@ async function ensureCategoryExists(page: Page, name: string): Promise<void> {
     }
 
     // Create category via UI modal form (real user interaction)
-    // Click the "Add New Category" button to open the modal
     await page.getByRole('button', { name: 'Add New Category' }).click();
     
-    // Wait for the modal to be visible
     const createModal = page.locator('#createCategoryModal');
     await expect(createModal).toBeVisible();
 
-    // Fill the create form fields inside the modal
     await page.fill('#createName', name);
-    
-    // Select Expense type
     await page.selectOption('#createType', '1');
-    
-    // Select an icon (required field)
     await page.selectOption('#createIcon', 'tag');
-    
-    // Color has a default value (#3498DB), but set it explicitly
     await page.fill('#createColor', '#3498DB');
 
-    // Wait for the submit button to be enabled (validation requires all fields)
     const submitBtn = page.locator('#createSubmitBtn');
     await expect(submitBtn).toBeEnabled({ timeout: 5000 });
 
-    // Submit the form
     await submitBtn.click();
 
-    // Wait for the modal to close and page to reload
     await expect(createModal).toBeHidden({ timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
     
-    // Verify the category appears in the list
     await page.locator('.list-group-item').filter({
         has: page.locator('.fw-bold', { hasText: new RegExp(`^${name}$`) }),
     }).waitFor({ state: 'visible', timeout: 5000 }).catch(async () => {
-        // If not visible, check for error message
         const errorAlert = page.locator('#createError:not(.d-none)');
         if (await errorAlert.isVisible()) {
             const errorMsg = await errorAlert.textContent();
@@ -148,18 +134,6 @@ async function ensureCategoryExists(page: Page, name: string): Promise<void> {
 
 /**
  * Ensures the deterministic fixture transaction exists for E2E-Budget-Cat-B.
- *
- * Transaction properties:
- *   - Amount      : -25 EUR (expense)
- *   - Date        : first day of the current calendar month
- *   - Category    : E2E-Budget-Cat-B
- *   - Description : "E2E-Budget-Cat-B fixture" (idempotency key)
- *
- * Idempotency: navigates to /transactions filtered to the current month and checks
- * the transactions table for a row with the fixture description.
- *
- * Creation: standard Razor Pages form POST (single [BindProperty] Input model — no
- * cross-form ModelState issue). Redirects to /transactions on success.
  */
 async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     const now        = new Date();
@@ -169,8 +143,6 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
     const lastDay    = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
 
-    // DOM idempotency check: look for the fixture row in the current-month transaction list.
-    // If the table is absent (no transactions yet) count() returns 0 — proceed to creation.
     await page.goto(`/transactions?StartDate=${firstDay}&EndDate=${lastDay}`);
     await page.waitForLoadState('domcontentloaded');
 
@@ -179,10 +151,9 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     });
 
     if ((await fixtureRow.count()) > 0) {
-        return; // Already exists — nothing to do
+        return;
     }
 
-    // Navigate to the Add Transaction form and fill all fields deterministically
     await page.goto('/transactions/add');
     await page.waitForLoadState('domcontentloaded');
 
@@ -190,9 +161,8 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     await page.fill('#Description',  FIXTURE_TX_DESCRIPTION);
     await page.fill('#Amount',       '-25');
     await page.selectOption('#Currency', 'EUR');
-    await page.fill('#CategoryName', E2E_CAT_B);   // datalist: server resolves by name
+    await page.fill('#CategoryName', E2E_CAT_B);
 
-    // Submit via the form's own button (not the logout button in the header which is also type=submit)
     await page.getByRole('button', { name: 'Add Transaction' }).click();
     await page.waitForURL(/\/transactions/i, { timeout: 10000 });
 }
@@ -203,14 +173,13 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
 
 /**
  * Deletes all budgets whose category name matches the E2E pattern.
- * Navigates to /budgets, collects IDs from the DOM, then POSTs deactivate for each.
+ * Navigates to /budgets, collects IDs from the DOM, then POSTs delete for each.
  * Tolerant: missing CSRF token or empty list → silent no-op.
  */
 export async function cleanupE2EBudgets(page: Page): Promise<void> {
     await page.goto('/budgets');
     await page.waitForLoadState('domcontentloaded');
 
-    // Collect budget IDs where the category name contains "E2E-"
     const e2eBudgetIds = await page.evaluate(() => {
         const rows = document.querySelectorAll('table tbody tr');
         const ids: string[] = [];
@@ -226,7 +195,7 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
 
     if (e2eBudgetIds.length === 0) return;
 
-    // Deactivate each budget via the Razor Pages POST handler
+    // Delete each budget permanently via the Razor Pages POST handler
     for (const budgetId of e2eBudgetIds) {
         await page.evaluate(async (id: string) => {
             const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
@@ -236,79 +205,7 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
             fd.append('BudgetId', id);
             fd.append('__RequestVerificationToken', token);
 
-            await fetch('/budgets?handler=Deactivate', {
-                method: 'POST',
-                body: fd,
-                credentials: 'same-origin',
-            });
-        }, budgetId);
-    }
-}
-        });
-        return ids;
-    });
-
-    if (e2eBudgetIds.length === 0) return;
-
-    // Deactivate each budget via the Razor Pages POST handler
-    for (const budgetId of e2eBudgetIds) {
-        await page.evaluate(async (id: string) => {
-            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
-            const token   = tokenEl?.value ?? '';
-
-            const fd = new FormData();
-            fd.append('BudgetId', id);
-            fd.append('__RequestVerificationToken', token);
-
-            await fetch('/budgets?handler=Deactivate', {
-                method: 'POST',
-                body: fd,
-                credentials: 'same-origin',
-            });
-        }, budgetId);
-    }
-}
-        });
-        return ids;
-    });
-
-    if (e2eBudgetIds.length === 0) return;
-
-    // Deactivate each budget via the Razor Pages POST handler
-    for (const budgetId of e2eBudgetIds) {
-        await page.evaluate(async (id: string) => {
-            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
-            const token   = tokenEl?.value ?? '';
-
-            const fd = new FormData();
-            fd.append('BudgetId', id);
-            fd.append('__RequestVerificationToken', token);
-
-            await fetch('/budgets?handler=Deactivate', {
-                method: 'POST',
-                body: fd,
-                credentials: 'same-origin',
-            });
-        }, budgetId);
-    }
-}
-        });
-        return ids;
-    });
-
-    if (e2eBudgetIds.length === 0) return;
-
-    // Deactivate each budget via the Razor Pages POST handler
-    for (const budgetId of e2eBudgetIds) {
-        await page.evaluate(async (id: string) => {
-            const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
-            const token   = tokenEl?.value ?? '';
-
-            const fd = new FormData();
-            fd.append('BudgetId', id);
-            fd.append('__RequestVerificationToken', token);
-
-            await fetch('/budgets?handler=Deactivate', {
+            await fetch('/budgets?handler=Delete', {
                 method: 'POST',
                 body: fd,
                 credentials: 'same-origin',
@@ -326,14 +223,12 @@ export async function cleanupE2ECategories(page: Page): Promise<void> {
     await page.goto('/categories');
     await page.waitForLoadState('domcontentloaded');
 
-    // Collect category IDs where the name contains "E2E-"
     const e2eCategoryIds = await page.evaluate(() => {
         const items = document.querySelectorAll('.list-group-item');
         const ids: string[] = [];
         items.forEach(item => {
             const nameEl = item.querySelector('.fw-bold');
             if (nameEl?.textContent?.includes('E2E-')) {
-                // Category ID is in the delete form's hidden input or a data attribute
                 const deleteForm = item.querySelector('form[action*="Delete"]') as HTMLFormElement | null;
                 const input = deleteForm?.querySelector('input[name="categoryId"]') as HTMLInputElement | null;
                 if (input?.value) ids.push(input.value);
@@ -368,11 +263,9 @@ export async function cleanupE2ECategories(page: Page): Promise<void> {
 
 export const test = base.extend<BudgetFixtures>({
     budgetReadyPage: async ({ page }, use) => {
-        // ── Step 0: Clear any leftover cookies from previous sessions ─────────
         const context = page.context();
         await context.clearCookies();
 
-        // ── Step 1: Authenticate (seeded user always; env vars only in CI) ───
         const account = resolveTestAccount();
         const authenticated = await loginWith(page, account.email, account.password);
 
@@ -383,16 +276,10 @@ export const test = base.extend<BudgetFixtures>({
             );
         }
 
-        // ── Step 2: Ensure E2E-Budget-Cat-A exists ────────────────────────────
         await ensureCategoryExists(page, E2E_CAT_A);
-
-        // ── Step 3: Ensure E2E-Budget-Cat-B exists ────────────────────────────
         await ensureCategoryExists(page, E2E_CAT_B);
-
-        // ── Step 4: Ensure fixture transaction exists ─────────────────────────
         await ensureFixtureTransactionExists(page);
 
-        // ── Step 5: Yield the provisioned page to the test ───────────────────
         await use(page);
     },
 });

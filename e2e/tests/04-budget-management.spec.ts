@@ -288,6 +288,87 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
     });
 
     /**
+     * TC-M06: Delete a budget permanently via the edit page.
+     *
+     * Flow: /budgets → find E2E-Budget-Cat-A → click Edit → click Delete Permanently → confirm → budget disappears from list.
+     */
+    test('TC-M06: delete budget permanently removes it from list', async ({ budgetReadyPage: page }) => {
+        // ── Ensure a budget exists for E2E-Budget-Cat-A ──────────────────────
+        await page.goto('/budgets');
+        await page.waitForLoadState('domcontentloaded');
+
+        let existingRow = page.locator('table tbody tr').filter({
+            has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
+        });
+
+        if ((await existingRow.count()) === 0) {
+            // Create one first
+            await page.goto('/budgets/create');
+            const categorySelect = page.locator('#CategoryId');
+            const catAOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-A$/ });
+            await catAOption.waitFor({ state: 'visible', timeout: 5000 });
+            const catAValue = await catAOption.getAttribute('value');
+            await categorySelect.selectOption(catAValue!);
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            await page.fill('#LimitAmount', '100.00');
+            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            await page.selectOption('#PeriodGranularity', 'Monthly');
+            await page.getByRole('button', { name: 'Create Budget' }).click();
+
+            await Promise.race([
+                page.waitForURL((url: string) => new URL(url).pathname === '/budgets', { timeout: 10000 }),
+                page.locator('.alert-danger').waitFor({ state: 'visible', timeout: 10000 }),
+            ]).catch(() => {});
+
+            if (new URL(page.url()).pathname === '/budgets/create') {
+                await page.goto('/budgets');
+            }
+            await page.waitForLoadState('domcontentloaded');
+        }
+
+        // ── Navigate to edit page ─────────────────────────────────────────────
+        await page.goto('/budgets');
+        await page.waitForLoadState('domcontentloaded');
+
+        const editLink = page.locator('table tbody tr').filter({
+            has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
+        }).locator('a', { hasText: 'Edit' });
+
+        await expect(editLink).toBeVisible();
+        const editHref = await editLink.getAttribute('href');
+        await page.goto(editHref!);
+        await expect(page).toHaveURL(/\/budgets\/edit\//i);
+
+        // ── Click Delete Permanently ──────────────────────────────────────────
+        const deleteBtn = page.getByRole('button', { name: 'Delete Permanently' });
+        await expect(deleteBtn).toBeVisible();
+
+        // Handle confirmation dialog
+        page.on('dialog', async dialog => {
+            expect(dialog.message()).toContain('delete');
+            await dialog.accept();
+        });
+
+        await deleteBtn.click();
+        await page.waitForLoadState('domcontentloaded');
+
+        // ── Verify budget is gone from list ───────────────────────────────────
+        if (new URL(page.url()).pathname !== '/budgets') {
+            await page.goto('/budgets');
+        }
+
+        await expect(page.locator('table')).toBeVisible();
+        // The budget should NOT appear in the list anymore
+        const goneRow = page.locator('table tbody tr').filter({
+            has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
+        });
+        await expect(goneRow).toHaveCount(0);
+    });
+
+    /**
      * TC-M05: Navigate budget list with filters (show active only, by category).
      *
      * Flow: /budgets → verify table renders → toggle active filter → verify filtering.
