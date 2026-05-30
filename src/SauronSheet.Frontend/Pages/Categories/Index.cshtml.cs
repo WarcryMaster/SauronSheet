@@ -23,8 +23,9 @@ public class IndexModel : PageModel
     public List<CategoryDto> Categories { get; set; } = new();
     public IReadOnlyList<string> AvailableIcons => AllowedBootstrapIcons.GetAllIconsForDropdown();
 
-    // Not [BindProperty]: each handler binds its own input model via TryUpdateModelAsync
-    // to avoid cross-form ModelState pollution between the two forms on this page.
+    // Not [BindProperty]: each handler reads its own scoped form fields directly from
+    // Request.Form via BindXxxFormFromRequest() helpers, avoiding cross-form ModelState
+    // pollution between the two forms on this page.
     public CreateCategoryInputModel CreateForm { get; set; } = new();
     public EditCategoryInputModel EditForm { get; set; } = new();
 
@@ -83,7 +84,7 @@ public class IndexModel : PageModel
             if (!AllowedBootstrapIcons.IsValid(input.IconName))
                 return BadRequest(new { error = "Invalid icon selection" });
 
-            var categoryType = input.Type == 0 ? CategoryType.Income : CategoryType.Expense;
+            var categoryType = input.Type!.Value == 0 ? CategoryType.Income : CategoryType.Expense;
 
             var command = new CreateCategoryCommand(
                 input.Name,
@@ -148,6 +149,12 @@ public class IndexModel : PageModel
                     new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             }
 
+            if (input.CategoryId == Guid.Empty)
+            {
+                return new JsonResult(new { success = false, error = "Invalid category ID" },
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            }
+
             var command = new RenameCategoryCommand(
                 input.CategoryId,
                 input.Name);
@@ -188,6 +195,12 @@ public class IndexModel : PageModel
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
+            if (categoryId == Guid.Empty)
+            {
+                return new JsonResult(new { success = false, error = "Invalid category ID" },
+                    new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            }
+
             var command = new DeleteCategoryCommand(categoryId);
             await _mediator.Send(command);
 
@@ -224,7 +237,7 @@ public class IndexModel : PageModel
         new CreateCategoryInputModel
         {
             Name = Request.Form["CreateForm.Name"].FirstOrDefault()?.Trim() ?? string.Empty,
-            Type = int.TryParse(Request.Form["CreateForm.Type"].FirstOrDefault(), out int t) ? t : 1,
+            Type = int.TryParse(Request.Form["CreateForm.Type"].FirstOrDefault(), out int t) ? t : null,
             Color = Request.Form["CreateForm.Color"].FirstOrDefault() ?? "#3498DB",
             IconName = Request.Form["CreateForm.IconName"].FirstOrDefault() ?? "tag"
         };
@@ -245,6 +258,8 @@ public class IndexModel : PageModel
 /// Input model for the create-category form.
 /// Intentionally separate from <see cref="EditCategoryInputModel"/> so that the two forms
 /// on the same Razor Page do not share a validated type and cause cross-form ModelState pollution.
+/// Type is nullable so that [Required] triggers when the field is missing,
+/// and [Range(0, 1)] ensures the value is a valid <see cref="CategoryType"/>.
 /// </summary>
 public class CreateCategoryInputModel
 {
@@ -253,7 +268,8 @@ public class CreateCategoryInputModel
     public string Name { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Type is required")]
-    public int Type { get; set; } = 1; // Default to Expense
+    [Range(0, 1, ErrorMessage = "Type must be 0 (Income) or 1 (Expense)")]
+    public int? Type { get; set; }
 
     [Required]
     public string Color { get; set; } = "#3498DB";
