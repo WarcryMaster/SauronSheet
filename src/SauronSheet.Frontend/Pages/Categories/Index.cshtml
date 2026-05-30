@@ -442,7 +442,17 @@
                 'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
             }
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category create request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'category-create', http_status: String(r.status) }
+                    });
+                }
+            }
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
                 mdb.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
@@ -450,11 +460,23 @@
             } else {
                 document.getElementById('createError').textContent = data.error || 'An error occurred';
                 document.getElementById('createError').classList.remove('d-none');
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category create returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'category-create' }
+                    });
+                }
             }
         })
         .catch(err => {
             document.getElementById('createError').textContent = 'Request failed';
             document.getElementById('createError').classList.remove('d-none');
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Category create fetch failed'),
+                    { tags: { operation: 'category-create', source: 'fetch-catch' } }
+                );
+            }
         });
     }
 
@@ -483,7 +505,17 @@
                 'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
             }
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category update request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'category-update', http_status: String(r.status) }
+                    });
+                }
+            }
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
                 mdb.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
@@ -491,11 +523,23 @@
             } else {
                 document.getElementById('editError').textContent = data.error || 'An error occurred';
                 document.getElementById('editError').classList.remove('d-none');
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category update returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'category-update' }
+                    });
+                }
             }
         })
         .catch(err => {
             document.getElementById('editError').textContent = 'Request failed';
             document.getElementById('editError').classList.remove('d-none');
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Category update fetch failed'),
+                    { tags: { operation: 'category-update', source: 'fetch-catch' } }
+                );
+            }
         });
     }
 
@@ -526,7 +570,17 @@
                 'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
             }
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category delete request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'category-delete', http_status: String(r.status) }
+                    });
+                }
+            }
+            return r.json();
+        })
         .then(data => {
             if (data.success) {
                 mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
@@ -534,11 +588,23 @@
             } else {
                 document.getElementById('deleteError').textContent = data.error || 'An error occurred';
                 document.getElementById('deleteError').classList.remove('d-none');
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category delete returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'category-delete' }
+                    });
+                }
             }
         })
         .catch(err => {
             document.getElementById('deleteError').textContent = 'Request failed';
             document.getElementById('deleteError').classList.remove('d-none');
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Category delete fetch failed'),
+                    { tags: { operation: 'category-delete', source: 'fetch-catch' } }
+                );
+            }
         });
     }
 </script>
