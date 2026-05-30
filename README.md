@@ -297,6 +297,9 @@ dotnet test --filter "Category=Domain"
 # Run application tests only
 dotnet test --filter "Category=Application"
 
+# Run E2E tests (Playwright, auto-starts app)
+npx playwright test --config=e2e/playwright.config.ts --project=chromium
+
 # Build for production
 dotnet publish -c Release
 ```
@@ -393,7 +396,7 @@ Environment-specific settings:
 |--------------------|---------------------------------------|----------------------|
 | Unit Tests         | Domain entities, value objects, domain services | xUnit + Moq         |
 | Integration Tests  | Application handlers with mocked repositories | xUnit + Moq + in-memory doubles |
-| End-to-End Tests   | API → Database round-trip             | xUnit + test Supabase instance   |
+| End-to-End Tests   | Full browser flows (Razor Pages UI)  | Playwright + Edge/Chromium        |
 
 ### Coverage Requirements
 
@@ -414,6 +417,34 @@ dotnet test --filter "Category=Domain"
 
 # Run application tests only
 dotnet test --filter "Category=Application"
+```
+
+### End-to-End Tests (Playwright)
+
+Browser-based E2E tests using Playwright. The config auto-starts the .NET app on `localhost:54100` before running.
+
+```bash
+# Install browsers (first time only)
+npx playwright install chromium
+
+# Run all E2E tests (auto-starts the app)
+npx playwright test --config=e2e/playwright.config.ts --project=chromium
+
+# Run a specific test file
+npx playwright test --config=e2e/playwright.config.ts e2e/tests/03-budgets.spec.ts
+
+# Run with visible browser (for debugging)
+npx playwright test --config=e2e/playwright.config.ts --headed
+
+# Debug mode (step-by-step inspector)
+npx playwright test --config=e2e/playwright.config.ts --debug
+```
+
+**Auth**: Tests use a seeded Supabase user (`e2e@saurontest.local`). Override with env vars:
+
+```bash
+$env:TEST_USER_EMAIL = "your@email.com"
+$env:TEST_USER_PASSWORD = "your-password"
 ```
 
 ## Deployment to Vercel
