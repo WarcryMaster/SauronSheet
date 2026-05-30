@@ -45,13 +45,33 @@
                 // other sources that are not actionable for this application.
                 // Sentry SDK v8 already captures unhandled JS errors and Promise
                 // rejections automatically — no manual window listeners needed.
-                beforeSend(event) {
+                beforeSend(event, hint) {
+                    // Inspect request URL (network events, fetch errors)
                     const url = event.request && event.request.url;
-                    if (!url) return event;
-                    if (url.startsWith('chrome-extension://') ||
-                        url.startsWith('moz-extension://') ||
-                        url.startsWith('safari-web-extension://') ||
-                        url.startsWith('ms-browser-extension://')) return null;
+                    if (url) {
+                        if (url.startsWith('chrome-extension://') ||
+                            url.startsWith('moz-extension://') ||
+                            url.startsWith('safari-web-extension://') ||
+                            url.startsWith('ms-browser-extension://')) return null;
+                    }
+                    // Inspect exception stack frame filenames (JS errors injected by extensions)
+                    const exceptions = event.exception && event.exception.values;
+                    if (exceptions) {
+                        for (const ex of exceptions) {
+                            const frames = ex.stacktrace && ex.stacktrace.frames;
+                            if (!frames) continue;
+                            for (const frame of frames) {
+                                const filename = (frame.filename || '').toLowerCase();
+                                if (filename.startsWith('chrome-extension://') ||
+                                    filename.startsWith('moz-extension://') ||
+                                    filename.startsWith('safari-web-extension://') ||
+                                    filename.startsWith('ms-browser-extension://') ||
+                                    filename.indexOf('extension://') !== -1) {
+                                    return null;
+                                }
+                            }
+                        }
+                    }
                     return event;
                 },
             });

@@ -293,7 +293,7 @@ public class IndexModelTests
         var payload = SerializeAnonymous(json.Value!);
         Assert.Contains("\"success\":false", payload);
 
-        mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockMediator.Verify(m => m.Send(It.IsAny<IRequest<Unit>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public class IndexModelTests
         var payload = SerializeAnonymous(json.Value!);
         Assert.Contains("\"success\":false", payload);
 
-        mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockMediator.Verify(m => m.Send(It.IsAny<IRequest<Unit>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -416,7 +416,7 @@ public class IndexModelTests
         var payload = SerializeAnonymous(json.Value!);
         Assert.Contains("\"success\":false", payload);
 
-        mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockMediator.Verify(m => m.Send(It.IsAny<IRequest<Unit>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
