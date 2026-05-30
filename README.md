@@ -447,6 +447,28 @@ $env:TEST_USER_EMAIL = "your@email.com"
 $env:TEST_USER_PASSWORD = "your-password"
 ```
 
+#### Política de Tests E2E: Interacción Real de Usuario
+
+**Regla fundamental:** Los tests E2E de interfaz **DEBEN** actuar como un usuario real navegando e interactuando con la web. Si no simulan interacción real, **no valen para nada**.
+
+**Qué SÍ hacer:**
+- Usar `page.click()`, `page.fill()`, `page.selectOption()` para interactuar con elementos.
+- Esperar a que los elementos estén visibles antes de interactuar (`waitFor`, `toBeVisible`).
+- Manejar diálogos nativos del navegador (`page.on('dialog')`).
+- Navegar por la aplicación como lo haría un usuario real (clics en botones, links, formularios).
+- Verificar resultados observables en la UI (textos visibles, redirecciones, mensajes de éxito/error).
+
+**Qué NO hacer:**
+- ❌ Usar `page.evaluate()` para ejecutar JavaScript directo en el DOM.
+- ❌ Usar `fetch()` dentro de `page.evaluate()` para llamar a APIs directamente.
+- ❌ Manipular el DOM directamente (`document.querySelector`, `input.type = 'text'`).
+- ❌ Saltarse flujos de UI (modales, confirmaciones, validaciones de formulario).
+- ❌ Verificar estado de la base de datos directamente en lugar de la UI.
+
+**Excepción:** Los helpers de limpieza post-ejecución (`test.afterAll`) **SÍ** pueden usar `fetch()` directo, ya que son operaciones de mantenimiento y no tests en sí mismos.
+
+**Razón:** Un test E2E que no simula interacción real no prueba casos de uso reales. Solo verifica que la API funciona, lo cual ya cubren los tests de integración. Los tests E2E deben validar que **el usuario puede completar su tarea** a través de la interfaz.
+
 ## Deployment to Vercel
 
 SauronSheet is deployed to Vercel (free tier) for scalable, serverless hosting.
