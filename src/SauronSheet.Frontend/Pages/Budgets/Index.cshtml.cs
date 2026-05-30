@@ -67,12 +67,14 @@ public class IndexModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnPostDeactivateAsync()
-    {
-        try
+        public async Task<IActionResult> OnPostDeactivateAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            await _mediator.Send(new DeactivateBudgetCommand(BudgetId, today));
+            try
+            {
+                // Set EffectiveUntil to yesterday so the budget is immediately inactive today.
+                // isActive check uses ">= today", so "yesterday" evaluates to inactive.
+                var yesterday = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+                await _mediator.Send(new DeactivateBudgetCommand(BudgetId, yesterday));
             TempData["SuccessMessage"] = "Budget deactivated successfully.";
         }
         catch (DomainException ex)

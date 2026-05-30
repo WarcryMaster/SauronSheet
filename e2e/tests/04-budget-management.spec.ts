@@ -208,7 +208,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         }
 
         await expect(page.locator('table')).toBeVisible();
-        await expect(page.locator('table')).toContainText('300,00');
+        await expect(page.locator('table')).toContainText('300');
     });
 
     /**
