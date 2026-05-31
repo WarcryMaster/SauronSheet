@@ -186,8 +186,12 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
         rows.forEach(row => {
             const categoryCell = row.querySelector('td');
             if (categoryCell?.textContent?.includes('E2E-')) {
-                const input = row.querySelector('input[name="BudgetId"]') as HTMLInputElement | null;
-                if (input?.value) ids.push(input.value);
+                const editLink = row.querySelector('a[href^="/budgets/edit/"]') as HTMLAnchorElement | null;
+                const href = editLink?.getAttribute('href') ?? '';
+                const match = href.match(/\/budgets\/edit\/([0-9a-fA-F-]{36})$/);
+                if (match?.[1]) {
+                    ids.push(match[1]);
+                }
             }
         });
         return ids;

@@ -265,17 +265,17 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await page.goto(editHref!);
         await expect(page).toHaveURL(/\/budgets\/edit\//i);
 
-        // ── Click Deactivate ──────────────────────────────────────────────────
+        // ── Click Deactivate and confirm via MDB modal ───────────────────────
         const deactivateBtn = page.getByRole('button', { name: 'Deactivate Budget' });
         await expect(deactivateBtn).toBeVisible();
-
-        // Handle confirmation dialog
-        page.on('dialog', async dialog => {
-            expect(dialog.message()).toContain('deactivate');
-            await dialog.accept();
-        });
-
         await deactivateBtn.click();
+
+        const statusModal = page.locator('#budgetStatusModal');
+        await expect(statusModal).toBeVisible();
+        await expect(statusModal).toContainText('Deactivate budget');
+
+        await statusModal.getByRole('button', { name: 'Deactivate' }).click();
+        await page.waitForURL(/\/budgets(?!\/edit\/)/i, { timeout: 10000 });
         await page.waitForLoadState('domcontentloaded');
 
         // ── Verify budget appears as inactive in list ────────────────────────
