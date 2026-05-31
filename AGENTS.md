@@ -96,6 +96,7 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 
 - Razor Pages should use PageModel patterns and antiforgery protection.
 - Use MDBootstrap via CDN (mdb-ui-kit v9.2.0), not Bootstrap or local alternatives.
+- All local static assets referenced from Razor (`wwwroot/css`, `wwwroot/js`, `wwwroot/img`) MUST use `~/...` paths plus `asp-append-version="true"`. Never hardcode `/css/...`, `/js/...`, or `/img/...` for local assets.
 - **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**
   - `data-mdb-toggle="dropdown"` (not `data-bs-toggle`)
   - `data-mdb-target="#modal"` (not `data-bs-target`)
@@ -201,6 +202,7 @@ These files are referenced by the editor/IDE through `applyTo`-style scoping and
 - ❌ Public setters on domain entities (use parameterized constructors).
 - ❌ Never put `_ViewImports.cshtml` in `Shared/` — only in `Pages/` (breaks Tag Helpers).
 - ❌ Never use `data-mdb-button-init` on `<button type="submit">` — breaks form submission in MDBootstrap v9+.
+- ❌ Never reference local CSS, JS, or image assets with hardcoded `/css/...`, `/js/...`, or `/img/...` paths in Razor. Use `~/...` + `asp-append-version="true"` to prevent stale-cache drift between local and production.
 
 ### Supabase/Postgrest C# Client
 
