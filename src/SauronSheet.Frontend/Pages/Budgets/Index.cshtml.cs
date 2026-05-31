@@ -99,12 +99,6 @@ public class IndexModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Budgets/Index.OnPostStatusAsync");
-                scope.SetTag("exception_type", "DomainException");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
         }
         catch (HttpRequestException ex)

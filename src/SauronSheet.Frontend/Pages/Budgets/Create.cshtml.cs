@@ -92,12 +92,6 @@ public class CreateModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Budgets/Create.OnPostAsync");
-                scope.SetTag("exception_type", "DomainException");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
             Categories = await _mediator.Send(new GetCategoriesQuery());
             return Page();

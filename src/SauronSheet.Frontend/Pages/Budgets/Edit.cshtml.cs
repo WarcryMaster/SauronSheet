@@ -113,12 +113,6 @@ public class EditModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Budgets/Edit.OnPostUpdateAsync");
-                scope.SetTag("exception_type", "DomainException");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
             await ReloadBudgetAsync();
             return Page();
@@ -187,12 +181,6 @@ public class EditModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Budgets/Edit.OnPostStatusAsync");
-                scope.SetTag("exception_type", "DomainException");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
             await ReloadBudgetAsync();
             return Page();
@@ -237,12 +225,6 @@ public class EditModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Budgets/Edit.OnPostDeleteAsync");
-                scope.SetTag("exception_type", "DomainException");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
             await ReloadBudgetAsync();
             return Page();

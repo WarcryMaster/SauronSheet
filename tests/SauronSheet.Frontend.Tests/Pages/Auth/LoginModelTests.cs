@@ -79,6 +79,54 @@ public class LoginModelTests
         VerifyLog(loggerMock, LogLevel.Information, "Login failed for email");
     }
 
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostAsync_CuandoFaltaEmailOPassword_DevuelveLaPaginaYRegistraInformacion()
+    {
+        Mock<IMediator> mediatorMock = new Mock<IMediator>();
+        Mock<ILogger<LoginModel>> loggerMock = new Mock<ILogger<LoginModel>>();
+        Mock<IWebHostEnvironment> environmentMock = new Mock<IWebHostEnvironment>();
+        environmentMock.SetupGet(environment => environment.EnvironmentName).Returns(Environments.Development);
+
+        LoginModel model = CreateModel(mediatorMock, loggerMock, environmentMock);
+        model.Input = new LoginInputModel
+        {
+            Email = string.Empty,
+            Password = string.Empty
+        };
+
+        IActionResult result = await model.OnPostAsync();
+
+        PageResult page = Assert.IsType<PageResult>(result);
+        Assert.NotNull(page);
+        Assert.False(model.ModelState.IsValid);
+        VerifyLog(loggerMock, LogLevel.Information, "Login: Missing email or password");
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostAsync_CuandoModelStateEsInvalido_DevuelveLaPaginaYRegistraInformacion()
+    {
+        Mock<IMediator> mediatorMock = new Mock<IMediator>();
+        Mock<ILogger<LoginModel>> loggerMock = new Mock<ILogger<LoginModel>>();
+        Mock<IWebHostEnvironment> environmentMock = new Mock<IWebHostEnvironment>();
+        environmentMock.SetupGet(environment => environment.EnvironmentName).Returns(Environments.Development);
+
+        LoginModel model = CreateModel(mediatorMock, loggerMock, environmentMock);
+        model.Input = new LoginInputModel
+        {
+            Email = "user@example.com",
+            Password = "password"
+        };
+        model.ModelState.AddModelError("Input.Email", "Invalid email format.");
+
+        IActionResult result = await model.OnPostAsync();
+
+        PageResult page = Assert.IsType<PageResult>(result);
+        Assert.NotNull(page);
+        VerifyLog(loggerMock, LogLevel.Information, "Login: ModelState is invalid");
+    }
+
     private static LoginModel CreateModel(
         Mock<IMediator> mediatorMock,
         Mock<ILogger<LoginModel>> loggerMock,

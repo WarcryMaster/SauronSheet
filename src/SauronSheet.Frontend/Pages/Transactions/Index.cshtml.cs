@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using MediatR;
 using System.Text.Json;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Transactions.Queries;
 using SauronSheet.Application.Features.Transactions.DTOs;
+using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.ValueObjects;
 using SauronSheet.Frontend.Helpers;
 
@@ -15,6 +17,7 @@ namespace SauronSheet.Frontend.Pages.Transactions;
 public class IndexModel : PageModel
 {
     private readonly IMediator _mediator;
+    private readonly ILogger<IndexModel> _logger;
 
     public PaginatedResultDto<TransactionDto> Transactions { get; set; } = 
         new PaginatedResultDto<TransactionDto>(new List<TransactionDto>(), 0, 1, 50, 0);
@@ -42,9 +45,10 @@ public class IndexModel : PageModel
 
     public List<string> AvailableSources { get; set; } = new();
 
-    public IndexModel(IMediator mediator)
+    public IndexModel(IMediator mediator, ILogger<IndexModel> logger)
     {
         _mediator = mediator;
+        _logger = logger;
     }
 
     public async Task OnGetAsync()
@@ -73,6 +77,15 @@ public class IndexModel : PageModel
         {
             await _mediator.Send(new DeleteTransactionCommand(id));
             TempData["SuccessMessage"] = "Transaction deleted successfully.";
+        }
+        catch (DomainException ex)
+        {
+            _logger.LogInformation("Transaction deletion failed for transaction {TransactionId}: {Message}", id, ex.Message);
+            TempData["ErrorMessage"] = ex.Message;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToPage("/auth/login");
         }
         catch (Exception ex)
         {
@@ -120,7 +133,7 @@ public class IndexModel : PageModel
             var userId = User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userId))
             {
-                Sentry.SentrySdk.Logger?.LogError("OnPostBulkDeleteAsync: No user ID found in claims");
+                _logger.LogInformation("Bulk delete skipped because the user claim was missing");
                 TempData["ErrorMessage"] = "Authentication error. Please log in again.";
                 return RedirectToPage();
             }
@@ -148,6 +161,12 @@ public class IndexModel : PageModel
                     TempData["ErrorMessage"] = $"Deletion error: {result.ErrorMessage}";
                 }
             }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _logger.LogInformation("Bulk delete failed because authentication expired");
+            TempData["ErrorMessage"] = "Authentication error. Please log in again.";
+            return RedirectToPage();
         }
         catch (Exception ex)
         {

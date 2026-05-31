@@ -54,6 +54,10 @@ public class UploadModel : PageModel
             ImportResult = await _mediator.Send(
                 new ImportTransactionsCommand(stream, filename));
         }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToPage("/auth/login");
+        }
         catch (HttpRequestException ex)
         {
             Sentry.SentrySdk.CaptureException(ex, scope =>
@@ -66,12 +70,6 @@ public class UploadModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Transactions/Upload.OnPostAsync");
-                scope.SetTag("exception_type", "DomainException");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
         }
         catch (Exception ex)

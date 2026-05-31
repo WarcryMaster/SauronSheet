@@ -48,14 +48,14 @@ public class LoginModel : PageModel
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            _logger.LogWarning("Login: Missing email or password");
+            _logger.LogInformation("Login: Missing email or password");
             ModelState.AddModelError(string.Empty, "Email and password are required.");
             return Page();
         }
 
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("Login: ModelState is invalid");
+            _logger.LogInformation("Login: ModelState is invalid");
             return Page();
         }
 

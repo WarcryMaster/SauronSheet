@@ -43,9 +43,17 @@ public class AddModel : PageModel
         return await _mediator.Send(new CreateCategoryCommand(categoryName, type));
     }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
-        Categories = await _mediator.Send(new GetCategoriesQuery());
+        try
+        {
+            Categories = await _mediator.Send(new GetCategoriesQuery());
+            return Page();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToPage("/auth/login");
+        }
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -68,12 +76,12 @@ public class AddModel : PageModel
             TempData["SuccessMessage"] = "Transaction added successfully.";
             return RedirectToPage("/Transactions/Index");
         }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToPage("/auth/login");
+        }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Transactions/Add.OnPostAsync");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             ErrorMessage = ex.Message;
             return Page();
         }

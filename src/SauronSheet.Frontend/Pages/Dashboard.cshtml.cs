@@ -98,12 +98,8 @@ public class DashboardModel : PageModel
 
             return Page();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("dashboard", "OnGetAsync");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             return RedirectToPage("/auth/login");
         }
         catch (Exception ex)

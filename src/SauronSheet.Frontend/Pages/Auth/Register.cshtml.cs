@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using MediatR;
 using SauronSheet.Application.Features.Auth.Commands;
 using SauronSheet.Domain.Exceptions;
@@ -16,15 +17,17 @@ namespace SauronSheet.Frontend.Pages.Auth;
 public class RegisterModel : PageModel
 {
     private readonly IMediator _mediator;
+    private readonly ILogger<RegisterModel> _logger;
 
     [BindProperty]
     public RegisterInputModel Input { get; set; } = new();
 
     public string? ErrorMessage { get; set; }
 
-    public RegisterModel(IMediator mediator)
+    public RegisterModel(IMediator mediator, ILogger<RegisterModel> logger)
     {
         _mediator = mediator;
+        _logger = logger;
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -77,11 +80,7 @@ public class RegisterModel : PageModel
         }
         catch (DomainException ex)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Auth/Register.OnPostAsync");
-                scope.SetTag("register.email", Input.Email);
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
+            _logger.LogInformation("Registration failed for email {Email}: {Message}", Input.Email, ex.Message);
             ErrorMessage = ex.Message;
             return Page();
         }

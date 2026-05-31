@@ -65,12 +65,8 @@ public class SearchModel : PageModel
 
             return Page();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("page", "Transactions/Search.OnGetAsync");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
             return RedirectToPage("/auth/login");
         }
         catch (Exception ex)
