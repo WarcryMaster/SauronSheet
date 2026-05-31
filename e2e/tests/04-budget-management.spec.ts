@@ -99,6 +99,10 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
     test('TC-M02: create budget with negative limit shows validation error', async ({ budgetReadyPage: page }) => {
         await ensureBudgetDeleted(page, E2E_CAT_B);
 
+        await page.goto('/budgets');
+        await expect(page).toHaveURL(/\/budgets/i);
+        const rowsBefore = await page.locator('table[aria-label="Budgets list"] tbody tr').count();
+
         await page.goto('/budgets/create');
         await expect(page).toHaveURL(/\/budgets\/create/i);
 
@@ -124,9 +128,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await expect(page.getByRole('heading', { name: 'Create Budget' })).toBeVisible();
 
         await page.goto('/budgets');
-        await expect(page.locator('table[aria-label="Budgets list"]')).toHaveCount(0);
-        await expect(page.getByText('No budgets found.')).toBeVisible();
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(0);
+        await expect(page.locator('table[aria-label="Budgets list"] tbody tr')).toHaveCount(rowsBefore);
     });
 
     /**
