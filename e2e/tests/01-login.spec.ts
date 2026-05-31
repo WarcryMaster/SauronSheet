@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
  * E2E Tests for Login/Authentication Flow
@@ -31,12 +32,10 @@ test.describe('Login Flow', () => {
   });
 
   test('TC-002: Login with valid credentials redirects to Dashboard', async ({ page }) => {
-    const testEmail = process.env.TEST_USER_EMAIL;
-    const testPassword = process.env.TEST_USER_PASSWORD;
-    test.skip(!testEmail || !testPassword, 'TEST_USER_EMAIL and TEST_USER_PASSWORD must be set');
+    const account = resolveTestAccount();
 
-    await page.fill('input[type="email"]', testEmail!);
-    await page.fill('input[type="password"]', testPassword!);
+    await page.fill('input[type="email"]', account.email);
+    await page.fill('input[type="password"]', account.password);
     await page.click('button[type="submit"]');
     
     // Wait for navigation to dashboard

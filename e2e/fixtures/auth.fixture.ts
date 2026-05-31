@@ -1,4 +1,5 @@
 import { test as base } from '@playwright/test';
+import { loginAsTestAccount } from './budget-data.fixture';
 
 /**
  * Auth fixture for SauronSheet E2E tests
@@ -12,21 +13,7 @@ interface TestFixtures {
 export const test = base.extend<TestFixtures>({
   authenticatedPage: async ({ page }, use) => {
     // Setup: Login before each test
-    await page.goto('/Auth/Login');
-    
-    // Use test credentials from environment variables
-    const testEmail = process.env.TEST_USER_EMAIL || 'test@example.com';
-    const testPassword = process.env.TEST_USER_PASSWORD || 'TestPassword123!';
-    
-    // Fill login form
-    await page.fill('input[name="email"]', testEmail);
-    await page.fill('input[name="password"]', testPassword);
-    
-    // Submit login
-    await page.click('button[type="submit"]');
-    
-    // Wait for navigation to dashboard (successful login)
-    await page.waitForURL(/\/Dashboard/, { timeout: 10000 });
+    await loginAsTestAccount(page);
     
     // Provide the authenticated page to the test
     await use(page);

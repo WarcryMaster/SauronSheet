@@ -81,6 +81,21 @@ export function resolveTestAccount(): { email: string; password: string } {
 }
 
 /**
+ * Logs in using the resolved test account for the current environment.
+ */
+export async function loginAsTestAccount(page: Page): Promise<void> {
+    const account = resolveTestAccount();
+    const authenticated = await loginWith(page, account.email, account.password);
+
+    if (!authenticated) {
+        throw new Error(
+            `FIXTURE BLOCKED: login failed for ${account.email}. ` +
+            `Verify the user exists in Supabase auth.users with email_confirmed_at set.`,
+        );
+    }
+}
+
+/**
  * Ensures an Expense category with the given name exists for the authenticated user.
  *
  * Idempotency: navigates to /categories and performs a DOM check. If the category is
@@ -219,6 +234,63 @@ export async function cleanupE2EBudgets(page: Page): Promise<void> {
 }
 
 /**
+ * Deletes all deterministic E2E fixture transactions for the current month.
+ * Repeats until the first page no longer contains matches so paginated residue
+ * from previous runs is also removed.
+ */
+export async function cleanupE2ETransactions(page: Page): Promise<void> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const firstDay = `${year}-${month}-01`;
+    const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
+    const lastDay = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
+
+    for (let attempt = 0; attempt < 20; attempt++) {
+        await page.goto(`/transactions?StartDate=${firstDay}&EndDate=${lastDay}`);
+        await page.waitForLoadState('domcontentloaded');
+
+        const matchingTransactionIds = await page.evaluate((fixtureDescription: string) => {
+            const rows = document.querySelectorAll('#transactionsTable tbody tr');
+            const ids: string[] = [];
+
+            rows.forEach(row => {
+                const descriptionCell = row.querySelector('td:nth-child(3)');
+                const checkbox = row.querySelector('input.transaction-checkbox') as HTMLInputElement | null;
+                const description = descriptionCell?.textContent?.trim() ?? '';
+
+                if (description === fixtureDescription && checkbox?.value) {
+                    ids.push(checkbox.value);
+                }
+            });
+
+            return ids;
+        }, FIXTURE_TX_DESCRIPTION);
+
+        if (matchingTransactionIds.length === 0) {
+            return;
+        }
+
+        for (const transactionId of matchingTransactionIds) {
+            await page.evaluate(async (id: string) => {
+                const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
+                const token = tokenEl?.value ?? '';
+
+                await fetch(`/transactions?handler=Delete&id=${encodeURIComponent(id)}`, {
+                    method: 'POST',
+                    headers: {
+                        RequestVerificationToken: token,
+                    },
+                    credentials: 'same-origin',
+                });
+            }, transactionId);
+        }
+    }
+
+    throw new Error('E2E cleanup failed: fixture transactions still remained after repeated delete attempts.');
+}
+
+/**
  * Deletes all categories whose name matches the E2E pattern.
  * Navigates to /categories, collects IDs from the DOM, then POSTs delete for each.
  * Tolerant: missing category or CSRF → silent no-op.
@@ -233,9 +305,10 @@ export async function cleanupE2ECategories(page: Page): Promise<void> {
         items.forEach(item => {
             const nameEl = item.querySelector('.fw-bold');
             if (nameEl?.textContent?.includes('E2E-')) {
-                const deleteForm = item.querySelector('form[action*="Delete"]') as HTMLFormElement | null;
-                const input = deleteForm?.querySelector('input[name="categoryId"]') as HTMLInputElement | null;
-                if (input?.value) ids.push(input.value);
+                const deleteButton = item.querySelector('button[onclick*="showDeleteConfirm("]') as HTMLButtonElement | null;
+                const onclickValue = deleteButton?.getAttribute('onclick') ?? '';
+                const match = onclickValue.match(/showDeleteConfirm\('([0-9a-fA-F-]{36})',/);
+                if (match?.[1]) ids.push(match[1]);
             }
         });
         return ids;
@@ -248,13 +321,11 @@ export async function cleanupE2ECategories(page: Page): Promise<void> {
             const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
             const token   = tokenEl?.value ?? '';
 
-            const fd = new FormData();
-            fd.append('categoryId', id);
-            fd.append('__RequestVerificationToken', token);
-
-            await fetch('/categories?handler=Delete', {
+            await fetch(`/categories?handler=Delete&categoryId=${encodeURIComponent(id)}`, {
                 method: 'POST',
-                body: fd,
+                headers: {
+                    RequestVerificationToken: token,
+                },
                 credentials: 'same-origin',
             });
         }, categoryId);
@@ -270,15 +341,7 @@ export const test = base.extend<BudgetFixtures>({
         const context = page.context();
         await context.clearCookies();
 
-        const account = resolveTestAccount();
-        const authenticated = await loginWith(page, account.email, account.password);
-
-        if (!authenticated) {
-            throw new Error(
-                `FIXTURE BLOCKED: login failed for ${account.email}. ` +
-                `Verify the user exists in Supabase auth.users with email_confirmed_at set.`,
-            );
-        }
+        await loginAsTestAccount(page);
 
         await ensureCategoryExists(page, E2E_CAT_A);
         await ensureCategoryExists(page, E2E_CAT_B);

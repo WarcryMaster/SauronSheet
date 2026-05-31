@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
  * E2E Tests for Excel Upload page — ESP-4
@@ -39,28 +40,17 @@ async function loginWith(page: any, email: string, password: string): Promise<bo
 
 test.describe('Upload Excel Bank Statement — ESP-4', () => {
     test.beforeEach(async ({ page }) => {
-        // Auth path 1: env-var credentials (CI or developer override)
-        const envEmail    = process.env.TEST_USER_EMAIL;
-        const envPassword = process.env.TEST_USER_PASSWORD;
-        if (envEmail && envPassword) {
-            const ok = await loginWith(page, envEmail, envPassword);
-            if (ok) { await page.goto('/transactions/upload'); return; }
-        }
-
-        // Auth path 2: seeded test user (pre-confirmed, works without email confirmation toggle)
-        const seededOk = await loginWith(page, SEEDED_EMAIL, SEEDED_PASSWORD);
-        if (seededOk) {
+        const account = resolveTestAccount();
+        const authenticated = await loginWith(page, account.email, account.password);
+        if (authenticated) {
             await page.goto('/transactions/upload');
             return;
         }
 
-        // Both paths failed — skip with diagnostic message
         test.skip(
             true,
-            `W-2 BLOCKED: both auth paths failed. ` +
-            `Seeded user ${SEEDED_EMAIL} did not authenticate — verify the user exists in Supabase ` +
-            `auth.users with email_confirmed_at set and confirmation_token = ''. ` +
-            `Env vars TEST_USER_EMAIL/TEST_USER_PASSWORD are not set.`
+            `W-2 BLOCKED: login failed for ${account.email}. ` +
+            `Verify the user exists in Supabase auth.users with email_confirmed_at set.`
         );
     });
 

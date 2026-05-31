@@ -440,7 +440,7 @@ npx playwright test --config=e2e/playwright.config.ts --headed
 npx playwright test --config=e2e/playwright.config.ts --debug
 ```
 
-**Auth**: Tests use a seeded Supabase user (`e2e@saurontest.local`). Override with env vars:
+**Auth**: Local E2E runs use the seeded Supabase user (`e2e@saurontest.local`) to avoid polluting real accounts. CI consumes `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` when they are provided.
 
 ```bash
 $env:TEST_USER_EMAIL = "your@email.com"

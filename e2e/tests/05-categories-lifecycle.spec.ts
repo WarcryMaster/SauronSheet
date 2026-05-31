@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { loginAsTestAccount } from '../fixtures/budget-data.fixture';
 
 const E2E_CAT_DELETE = 'E2E-Delete-Cat';
 
@@ -24,11 +25,7 @@ test.describe('Categories — create and delete lifecycle', () => {
         const page = await context.newPage();
 
         await context.clearCookies();
-        await page.goto('/auth/login');
-        await page.fill('input[type="email"]', 'e2e@saurontest.local');
-        await page.fill('input[type="password"]', '***REMOVED***');
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
+        await loginAsTestAccount(page);
 
         await page.goto('/categories');
         await page.waitForLoadState('domcontentloaded');
@@ -57,11 +54,7 @@ test.describe('Categories — create and delete lifecycle', () => {
      */
     test('TC-C01: create category via modal form', async ({ page }) => {
         // ── Authenticate ─────────────────────────────────────────────────────
-        await page.goto('/auth/login');
-        await page.fill('input[type="email"]', 'e2e@saurontest.local');
-        await page.fill('input[type="password"]', '***REMOVED***');
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
+        await loginAsTestAccount(page);
 
         // ── Navigate to categories ───────────────────────────────────────────
         await page.goto('/categories');
@@ -111,11 +104,7 @@ test.describe('Categories — create and delete lifecycle', () => {
      */
     test('TC-C02: delete category removes it from list', async ({ page }) => {
         // ── Authenticate ─────────────────────────────────────────────────────
-        await page.goto('/auth/login');
-        await page.fill('input[type="email"]', 'e2e@saurontest.local');
-        await page.fill('input[type="password"]', '***REMOVED***');
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
+        await loginAsTestAccount(page);
 
         // ── Ensure category exists (reuse TC-C01 logic) ──────────────────────
         await page.goto('/categories');

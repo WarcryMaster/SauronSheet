@@ -17,7 +17,7 @@
  * Data provisioning: uses budget-data.fixture.ts for auth + test categories.
  */
 
-import { test, expect, cleanupE2EBudgets, E2E_CAT_A, E2E_CAT_B } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_A, E2E_CAT_B } from '../fixtures/budget-data.fixture';
 
 test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
@@ -26,14 +26,11 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         const page    = await context.newPage();
 
         await context.clearCookies();
-        // Re-auth as test user for cleanup
-        await page.goto('/auth/login');
-        await page.fill('input[type="email"]', 'e2e@saurontest.local');
-        await page.fill('input[type="password"]', '***REMOVED***');
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
+        await loginAsTestAccount(page);
 
         await cleanupE2EBudgets(page);
+        await cleanupE2ETransactions(page);
+        await cleanupE2ECategories(page);
         await context.close();
     });
 

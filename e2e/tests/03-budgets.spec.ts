@@ -24,7 +24,7 @@
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, resolveTestAccount } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount } from '../fixtures/budget-data.fixture';
 
 test.describe('Budgets — monthly budget management (clarify-budgets-feature)', () => {
 
@@ -34,17 +34,11 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const context = await browser.newContext();
         const page    = await context.newPage();
 
-        // Clear any leftover cookies, then authenticate as the test user
         await context.clearCookies();
-        const account = resolveTestAccount();
-
-        await page.goto('/auth/login');
-        await page.fill('input[type="email"]', account.email);
-        await page.fill('input[type="password"]', account.password);
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
+        await loginAsTestAccount(page);
 
         await cleanupE2EBudgets(page);
+        await cleanupE2ETransactions(page);
         await cleanupE2ECategories(page);
 
         await context.close();
