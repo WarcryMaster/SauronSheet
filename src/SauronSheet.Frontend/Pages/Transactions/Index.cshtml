@@ -197,7 +197,7 @@
 @await Html.PartialAsync("~/Shared/Modals/_ConfirmDeleteModal.cshtml")
 
 @section Scripts {
-    <script src="~/js/bulk-delete.js"></script>
+    <script src="~/js/bulk-delete.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const sourceInput = document.getElementById('SourceAutocomplete');

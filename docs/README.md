@@ -16,8 +16,15 @@ docs/
 ADRs capture **why** we made certain architectural choices, linking implementation details
 to business context. They are not specifications but reference material for future decisions.
 
-> No active ADRs. Previous ADRs (e.g., PDF parser dual-format normalization) were retired
-> when the PDF import module was replaced with Excel (see `openspec/` for the change archive).
+| ADR | Decision | Status |
+|---|---|---|
+| [0001-version-local-static-assets](adr/0001-version-local-static-assets.md) | Version local CSS, JS, and image assets with `asp-append-version` to avoid production/local drift caused by stale caches. | Active |
+
+## Current Context Notes
+
+- Production and local visual drift in the header/navbar can come from **stale local static assets** even when the Razor markup is identical.
+- In this repository, **all local CSS, JS, and image assets referenced from Razor must use `~/...` plus `asp-append-version="true"`**.
+- CDN assets (MDBootstrap, Font Awesome, Chart.js, Sentry) are external resources and are **not** covered by ASP.NET Core asset versioning.
 
 ## Related Documentation
 
