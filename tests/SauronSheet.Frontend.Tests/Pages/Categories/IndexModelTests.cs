@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using SauronSheet.Application.Features.Categories.Commands;
@@ -349,30 +350,64 @@ public class IndexModelTests
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPostUpdateAsync_WhenDomainExceptionThrown_ReturnsSuccessFalseWithMessage()
+    public async Task OnPostUpdateAsync_CuandoHayDomainException_DevuelveErrorYRegistraInformacion()
     {
         // Arrange
-        var categoryId = Guid.NewGuid();
-        var mockMediator = new Mock<IMediator>();
+        Guid categoryId = Guid.NewGuid();
+        Mock<IMediator> mockMediator = new Mock<IMediator>();
+        Mock<ILogger<IndexModel>> loggerMock = new Mock<ILogger<IndexModel>>();
         mockMediator
             .Setup(m => m.Send(It.IsAny<RenameCategoryCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DomainException("Category name already in use"));
 
-        var formData = new Dictionary<string, StringValues>
+        Dictionary<string, StringValues> formData = new Dictionary<string, StringValues>
         {
             { "EditForm.CategoryId", categoryId.ToString() },
             { "EditForm.Name", "Duplicate Name" },
         };
-        var model = CreateModelWithForm(mockMediator, formData);
+        IndexModel model = CreateModelWithForm(mockMediator, formData, loggerMock);
 
         // Act
-        var result = await model.OnPostUpdateAsync();
+        IActionResult result = await model.OnPostUpdateAsync();
 
         // Assert
-        var json = Assert.IsType<JsonResult>(result);
-        var payload = SerializeAnonymous(json.Value!);
+        JsonResult json = Assert.IsType<JsonResult>(result);
+        string payload = SerializeAnonymous(json.Value!);
         Assert.Contains("\"success\":false", payload);
         Assert.Contains("Category name already in use", payload);
+        VerifyLog(loggerMock, LogLevel.Information, "Category update failed");
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostCreateAsync_CuandoHayDomainException_DevuelveErrorYRegistraInformacion()
+    {
+        // Arrange
+        Mock<IMediator> mockMediator = new Mock<IMediator>();
+        Mock<ILogger<IndexModel>> loggerMock = new Mock<ILogger<IndexModel>>();
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateCategoryCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DomainException("Category name already in use"));
+
+        Dictionary<string, StringValues> formData = new Dictionary<string, StringValues>
+        {
+            { "CreateForm.Name", "Duplicate Name" },
+            { "CreateForm.Type", "1" },
+            { "CreateForm.Color", "#3498DB" },
+            { "CreateForm.IconName", "tag" }
+        };
+
+        IndexModel model = CreateModelWithForm(mockMediator, formData, loggerMock);
+
+        // Act
+        IActionResult result = await model.OnPostCreateAsync();
+
+        // Assert
+        JsonResult json = Assert.IsType<JsonResult>(result);
+        string payload = SerializeAnonymous(json.Value!);
+        Assert.Contains("\"success\":false", payload);
+        Assert.Contains("Category name already in use", payload);
+        VerifyLog(loggerMock, LogLevel.Information, "Category creation failed");
     }
 
     [Fact]
@@ -421,25 +456,27 @@ public class IndexModelTests
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPostDeleteAsync_WhenDomainExceptionThrown_ReturnsSuccessFalse()
+    public async Task OnPostDeleteAsync_CuandoHayDomainException_DevuelveErrorYRegistraInformacion()
     {
         // Arrange
-        var categoryId = Guid.NewGuid();
-        var mockMediator = new Mock<IMediator>();
+        Guid categoryId = Guid.NewGuid();
+        Mock<IMediator> mockMediator = new Mock<IMediator>();
+        Mock<ILogger<IndexModel>> loggerMock = new Mock<ILogger<IndexModel>>();
         mockMediator
             .Setup(m => m.Send(It.IsAny<DeleteCategoryCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DomainException("Cannot delete system default category"));
 
-        var model = CreateModelWithForm(mockMediator, new Dictionary<string, StringValues>());
+        IndexModel model = CreateModelWithForm(mockMediator, new Dictionary<string, StringValues>(), loggerMock);
 
         // Act
-        var result = await model.OnPostDeleteAsync(categoryId);
+        IActionResult result = await model.OnPostDeleteAsync(categoryId);
 
         // Assert
-        var json = Assert.IsType<JsonResult>(result);
-        var payload = SerializeAnonymous(json.Value!);
+        JsonResult json = Assert.IsType<JsonResult>(result);
+        string payload = SerializeAnonymous(json.Value!);
         Assert.Contains("\"success\":false", payload);
         Assert.Contains("Cannot delete system default category", payload);
+        VerifyLog(loggerMock, LogLevel.Information, "Category deletion failed");
     }
 
     // ---------------------------------------------------------------------------
@@ -455,9 +492,10 @@ public class IndexModelTests
 
     private static IndexModel CreateModelWithForm(
         Mock<IMediator> mediator,
-        Dictionary<string, StringValues> formValues)
+        Dictionary<string, StringValues> formValues,
+        Mock<ILogger<IndexModel>>? loggerMock = null)
     {
-        var httpContext = new DefaultHttpContext();
+        DefaultHttpContext httpContext = new DefaultHttpContext();
 
         // Set up a logged-in user
         httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -468,18 +506,32 @@ public class IndexModelTests
         httpContext.Request.ContentType = "application/x-www-form-urlencoded";
         httpContext.Request.Form = new FormCollection(formValues);
 
-        var pageContext = new PageContext(new ActionContext(
+        PageContext pageContext = new PageContext(new ActionContext(
             httpContext,
             new RouteData(),
             new PageActionDescriptor(),
             new ModelStateDictionary()));
 
+        ILogger<IndexModel> logger = loggerMock?.Object ?? NullLogger<IndexModel>.Instance;
+
         return new IndexModel(
             mediator.Object,
-            Mock.Of<ILogger<IndexModel>>())
+            logger)
         {
             PageContext = pageContext
         };
+    }
+
+    private static void VerifyLog(Mock<ILogger<IndexModel>> loggerMock, LogLevel expectedLevel, string expectedMessage)
+    {
+        loggerMock.Verify(
+            logger => logger.Log(
+                It.Is<LogLevel>(level => level == expectedLevel),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((value, _) => value.ToString()!.Contains(expectedMessage, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     private static string SerializeAnonymous(object value) =>

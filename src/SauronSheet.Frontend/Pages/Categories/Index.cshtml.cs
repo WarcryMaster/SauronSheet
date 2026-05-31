@@ -98,12 +98,7 @@ public class IndexModel : PageModel
         }
         catch (DomainException ex)
         {
-            _logger.LogWarning("Category creation failed: {Message}", ex.Message);
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Categories/Index.OnPostCreateAsync");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
+            _logger.LogInformation("Category creation failed: {Message}", ex.Message);
             return new JsonResult(new { success = false, error = ex.Message },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
@@ -165,12 +160,7 @@ public class IndexModel : PageModel
         }
         catch (DomainException ex)
         {
-            _logger.LogWarning("Category update failed: {Message}", ex.Message);
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Categories/Index.OnPostUpdateAsync");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
+            _logger.LogInformation("Category update failed: {Message}", ex.Message);
             return new JsonResult(new { success = false, error = ex.Message },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
@@ -208,12 +198,7 @@ public class IndexModel : PageModel
         }
         catch (DomainException ex)
         {
-            _logger.LogWarning("Category deletion failed: {Message}", ex.Message);
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("page", "Categories/Index.OnPostDeleteAsync");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
+            _logger.LogInformation("Category deletion failed: {Message}", ex.Message);
             return new JsonResult(new { success = false, error = ex.Message },
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }

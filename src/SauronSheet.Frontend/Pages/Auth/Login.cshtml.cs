@@ -99,23 +99,13 @@ public class LoginModel : PageModel
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning("Login failed for email {Email}: Unauthorized - {Message}", email, ex.Message);
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("auth.email", email ?? "");
-                scope.SetTag("auth.stage", "login");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
+            _logger.LogInformation("Login failed for email {Email}: Unauthorized - {Message}", email, ex.Message);
             ErrorMessage = "Invalid email or password.";
             return Page();
         }
         catch (DomainException ex)
         {
-            _logger.LogWarning("Login failed for email {Email}: Domain error - {Message}", email, ex.Message);
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("auth.email", email ?? "");
-                scope.SetTag("auth.stage", "login");
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
+            _logger.LogInformation("Login failed for email {Email}: Domain error - {Message}", email, ex.Message);
             ErrorMessage = ex.Message;
             return Page();
         }
