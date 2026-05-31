@@ -1,0 +1,100 @@
+<div class="modal fade" id="budgetStatusModal" tabindex="-1" aria-labelledby="budgetStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" asp-page-handler="Status">
+                @Html.AntiForgeryToken()
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <p class="text-uppercase small fw-semibold mb-1" id="budgetStatusModalEyebrow">Budget action</p>
+                        <h5 class="modal-title" id="budgetStatusModalLabel">Update budget status</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <input type="hidden" name="BudgetId" id="budgetStatusBudgetId" />
+
+                    <p class="mb-2">
+                        Are you sure you want to <span id="budgetStatusActionText">update</span>
+                        <strong id="budgetStatusBudgetName">this budget</strong>?
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Granularity: <span id="budgetStatusBudgetPeriod">-</span>.
+                        <span id="budgetStatusModalDescription">This budget will stop applying to future periods.</span>
+                    </p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-mdb-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" id="budgetStatusSubmitButton" data-mdb-ripple-init>Deactivate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const budgetStatusModalElement = document.getElementById('budgetStatusModal');
+        const budgetStatusBudgetIdInput = document.getElementById('budgetStatusBudgetId');
+        const budgetStatusBudgetName = document.getElementById('budgetStatusBudgetName');
+        const budgetStatusBudgetPeriod = document.getElementById('budgetStatusBudgetPeriod');
+        const budgetStatusActionText = document.getElementById('budgetStatusActionText');
+        const budgetStatusDescription = document.getElementById('budgetStatusModalDescription');
+        const budgetStatusTitle = document.getElementById('budgetStatusModalLabel');
+        const budgetStatusEyebrow = document.getElementById('budgetStatusModalEyebrow');
+        const budgetStatusSubmitButton = document.getElementById('budgetStatusSubmitButton');
+        const statusTriggers = document.querySelectorAll('[data-budget-status-trigger="true"]');
+        const budgetStatusModal = budgetStatusModalElement !== null && typeof mdb !== 'undefined'
+            ? new mdb.Modal(budgetStatusModalElement)
+            : null;
+
+        statusTriggers.forEach((trigger) => {
+            trigger.addEventListener('click', function () {
+                const budgetId = trigger.getAttribute('data-budget-id');
+                const budgetName = trigger.getAttribute('data-budget-name');
+                const budgetPeriod = trigger.getAttribute('data-budget-period');
+                const budgetAction = trigger.getAttribute('data-budget-action') ?? 'Deactivate';
+                const isActivation = budgetAction === 'Activate';
+
+                if (budgetStatusBudgetIdInput !== null) {
+                    budgetStatusBudgetIdInput.value = budgetId ?? '';
+                }
+
+                if (budgetStatusBudgetName !== null) {
+                    budgetStatusBudgetName.textContent = budgetName ?? 'this budget';
+                }
+
+                if (budgetStatusBudgetPeriod !== null) {
+                    budgetStatusBudgetPeriod.textContent = budgetPeriod ?? '-';
+                }
+
+                if (budgetStatusActionText !== null) {
+                    budgetStatusActionText.textContent = budgetAction.toLowerCase();
+                }
+
+                if (budgetStatusTitle !== null) {
+                    budgetStatusTitle.textContent = `${budgetAction} budget`;
+                }
+
+                if (budgetStatusEyebrow !== null) {
+                    budgetStatusEyebrow.textContent = isActivation ? 'Budget activation' : 'Budget deactivation';
+                    budgetStatusEyebrow.classList.toggle('text-success', isActivation);
+                    budgetStatusEyebrow.classList.toggle('text-danger', !isActivation);
+                }
+
+                if (budgetStatusDescription !== null) {
+                    budgetStatusDescription.textContent = isActivation
+                        ? 'This budget will apply again to current and future periods.'
+                        : 'This budget will stop applying to future periods.';
+                }
+
+                if (budgetStatusSubmitButton !== null) {
+                    budgetStatusSubmitButton.textContent = budgetAction;
+                    budgetStatusSubmitButton.classList.toggle('btn-success', isActivation);
+                    budgetStatusSubmitButton.classList.toggle('btn-danger', !isActivation);
+                }
+
+                budgetStatusModal?.show();
+            });
+        });
+    });
+</script>

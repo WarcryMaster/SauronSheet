@@ -153,22 +153,43 @@ public class EditModel : PageModel
         }
     }
 
-        public async Task<IActionResult> OnPostDeactivateAsync()
+    public async Task<IActionResult> OnPostStatusAsync()
+    {
+        try
         {
-            try
+            IReadOnlyList<BudgetDto> budgets = await _mediator.Send(new GetBudgetsQuery());
+            BudgetDto? budget = budgets.FirstOrDefault(b => b.Id == BudgetId);
+
+            if (budget is null)
             {
-                // Set EffectiveUntil to yesterday so the budget is immediately inactive today.
-                // isActive check uses ">= today", so "yesterday" evaluates to inactive.
+                throw new DomainException("Budget not found.");
+            }
+
+            DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+            bool isActive = budget.EffectiveUntil == null || budget.EffectiveUntil.Value >= today;
+
+            if (isActive)
+            {
                 DateOnly yesterday = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
                 await _mediator.Send(new DeactivateBudgetCommand(BudgetId, yesterday));
-            TempData["SuccessMessage"] = "Budget deactivated successfully.";
+                TempData["SuccessMessage"] = "Budget deactivated successfully.";
+            }
+            else
+            {
+                await _mediator.Send(new UpdateBudgetEffectiveDatesCommand(
+                    BudgetId,
+                    budget.EffectiveFrom,
+                    null));
+                TempData["SuccessMessage"] = "Budget activated successfully.";
+            }
+
             return RedirectToPage("/Budgets/Index");
         }
         catch (DomainException ex)
         {
             Sentry.SentrySdk.CaptureException(ex, scope =>
             {
-                scope.SetTag("page", "Budgets/Edit.OnPostDeactivateAsync");
+                scope.SetTag("page", "Budgets/Edit.OnPostStatusAsync");
                 scope.SetTag("exception_type", "DomainException");
                 scope.Level = Sentry.SentryLevel.Warning;
             });
@@ -184,7 +205,7 @@ public class EditModel : PageModel
         {
             Sentry.SentrySdk.CaptureException(ex, scope =>
             {
-                scope.SetTag("page", "Budgets/Edit.OnPostDeactivateAsync");
+                scope.SetTag("page", "Budgets/Edit.OnPostStatusAsync");
                 scope.SetTag("exception_type", "HttpRequestException");
                 scope.Level = Sentry.SentryLevel.Error;
             });
@@ -196,11 +217,11 @@ public class EditModel : PageModel
         {
             Sentry.SentrySdk.CaptureException(ex, scope =>
             {
-                scope.SetTag("page", "Budgets/Edit.OnPostDeactivateAsync");
+                scope.SetTag("page", "Budgets/Edit.OnPostStatusAsync");
                 scope.SetTag("exception_type", ex.GetType().Name);
                 scope.Level = Sentry.SentryLevel.Error;
             });
-            ErrorMessage = "An unexpected error occurred while deactivating the budget. Please try again later.";
+            ErrorMessage = "An unexpected error occurred while updating the budget status. Please try again later.";
             await ReloadBudgetAsync();
             return Page();
         }

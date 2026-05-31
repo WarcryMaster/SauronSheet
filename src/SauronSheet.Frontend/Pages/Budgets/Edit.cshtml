@@ -86,9 +86,16 @@
                 @* Buttons *@
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="submit" formmethod="post" asp-page-handler="Deactivate"
-                                class="btn btn-outline-danger btn-sm">Deactivate Budget</button>
+                        <button type="button"
+                                id="budgetStatusActionButton"
+                                data-budget-status-trigger="true"
+                                data-budget-id="@Model.Budget.Id"
+                                data-budget-action="@(isActive ? "Deactivate" : "Activate")"
+                                data-budget-name="@Model.Budget.CategoryName"
+                                data-budget-period="@Model.Budget.PeriodGranularity"
+                                class="btn btn-sm @(isActive ? "btn-outline-danger" : "btn-outline-success")">@(isActive ? "Deactivate Budget" : "Activate Budget")</button>
                         <button type="submit" formmethod="post" asp-page-handler="Delete"
+                                id="deleteBudgetButton"
                                 class="btn btn-outline-danger btn-sm">Delete Permanently</button>
                     </div>
                     <div class="d-flex flex-wrap gap-3">
@@ -108,17 +115,15 @@
     }
 </div>
 
+@if (Model.Budget != null)
+{
+    <partial name="Shared/Components/_BudgetStatusModal" />
+}
+
 @section Scripts {
     <script>
-        const deactivateBtn = document.querySelector('button[formmethod="post"][asp-page-handler="Deactivate"]');
-        deactivateBtn?.addEventListener('click', function(e) {
-            if (!confirm('Are you sure you want to deactivate this budget? It will stop applying to future periods.')) {
-                e.preventDefault();
-            }
-        });
-
-        const deleteBtn = document.querySelector('button[formmethod="post"][asp-page-handler="Delete"]');
-        deleteBtn?.addEventListener('click', function(e) {
+        const deleteBtn = document.getElementById('deleteBudgetButton');
+        deleteBtn?.addEventListener('click', function (e) {
             if (!confirm('Are you sure you want to permanently delete this budget? This action cannot be undone.')) {
                 e.preventDefault();
             }
