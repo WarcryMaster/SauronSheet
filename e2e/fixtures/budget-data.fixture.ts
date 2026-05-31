@@ -245,46 +245,33 @@ export async function cleanupE2ETransactions(page: Page): Promise<void> {
     const firstDay = `${year}-${month}-01`;
     const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
     const lastDay = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
+    const filteredTransactionsUrl = `/transactions?StartDate=${firstDay}&EndDate=${lastDay}`;
 
     for (let attempt = 0; attempt < 20; attempt++) {
-        await page.goto(`/transactions?StartDate=${firstDay}&EndDate=${lastDay}`);
+        await page.goto(filteredTransactionsUrl);
         await page.waitForLoadState('domcontentloaded');
 
-        const matchingTransactionIds = await page.evaluate((fixtureDescription: string) => {
-            const rows = document.querySelectorAll('#transactionsTable tbody tr');
-            const ids: string[] = [];
+        const matchingRows = page.locator('#transactionsTable tbody tr').filter({
+            has: page.locator('td', { hasText: new RegExp(`^${FIXTURE_TX_DESCRIPTION}$`) }),
+        });
 
-            rows.forEach(row => {
-                const descriptionCell = row.querySelector('td:nth-child(3)');
-                const checkbox = row.querySelector('input.transaction-checkbox') as HTMLInputElement | null;
-                const description = descriptionCell?.textContent?.trim() ?? '';
-
-                if (description === fixtureDescription && checkbox?.value) {
-                    ids.push(checkbox.value);
-                }
-            });
-
-            return ids;
-        }, FIXTURE_TX_DESCRIPTION);
-
-        if (matchingTransactionIds.length === 0) {
+        if ((await matchingRows.count()) === 0) {
             return;
         }
 
-        for (const transactionId of matchingTransactionIds) {
-            await page.evaluate(async (id: string) => {
-                const tokenEl = document.querySelector('[name="__RequestVerificationToken"]') as HTMLInputElement | null;
-                const token = tokenEl?.value ?? '';
+        const deleteButton = matchingRows.first().getByRole('button', { name: 'Delete' });
+        await expect(deleteButton).toBeVisible();
 
-                await fetch(`/transactions?handler=Delete&id=${encodeURIComponent(id)}`, {
-                    method: 'POST',
-                    headers: {
-                        RequestVerificationToken: token,
-                    },
-                    credentials: 'same-origin',
-                });
-            }, transactionId);
-        }
+        page.once('dialog', async dialog => {
+            await dialog.accept();
+        });
+
+        await Promise.all([
+            page.waitForURL(/\/transactions(?:\?|$)/i, { timeout: 10000 }),
+            deleteButton.click(),
+        ]);
+
+        await page.waitForLoadState('domcontentloaded');
     }
 
     throw new Error('E2E cleanup failed: fixture transactions still remained after repeated delete attempts.');

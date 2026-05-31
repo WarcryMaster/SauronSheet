@@ -24,7 +24,8 @@
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_B } from '../fixtures/budget-data.fixture';
+import { ensureBudgetDeleted, ensureBudgetExists, getCurrentBudgetMonth } from './budgets/helpers';
 
 test.describe('Budgets — monthly budget management (clarify-budgets-feature)', () => {
 
@@ -121,38 +122,24 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
      * the server-side rendering path.
      */
     test('TC-B02: comparison shows "No budget" label for unbudgeted categories with spend', async ({ budgetReadyPage: page }) => {
-        const now   = new Date();
-        const year  = now.getFullYear();
-        const month = now.getMonth() + 1;
+        const currentMonth = getCurrentBudgetMonth();
 
-        await page.goto(`/budgets/comparison?Year=${year}&Month=${month}`);
+        await ensureBudgetDeleted(page, E2E_CAT_B);
+
+        await page.goto(`/budgets/comparison?Year=${currentMonth.year}&Month=${currentMonth.monthNumber}`);
         await expect(page).toHaveURL(/\/budgets\/comparison/i);
         await expect(page).toHaveTitle(/Budget vs Actual/i);
 
-        // The fixture guarantees E2E-Budget-Cat-B has -25€ spend this month,
-        // so the comparison table must be visible.
         const table = page.locator('table');
         await expect(table).toBeVisible();
 
-        // Look for the "No budget" label in the Budget column.
-        const noBudgetLabel = page.locator('td span.text-muted', { hasText: 'No budget' });
-        const labelCount = await noBudgetLabel.count();
+        const catBRow = table.locator('tbody tr').filter({
+            has: page.locator('td', { hasText: E2E_CAT_B }),
+        });
 
-        if (labelCount > 0) {
-            // At least one unbudgeted category with spend exists — verify the label is rendered
-            await expect(noBudgetLabel.first()).toBeVisible();
-            await expect(noBudgetLabel.first()).toContainText('No budget');
-
-            // The Actual column of the same row must show a € amount
-            // DOM path: span (noBudgetLabel) → td (Budget column) → tr → td[3] (Actual column, 1-indexed)
-            const budgetTd   = noBudgetLabel.first().locator('xpath=..');
-            const row        = budgetTd.locator('xpath=..');
-            const actualCell = row.locator('td').nth(2); // 0=Category, 1=Budget, 2=Actual
-            await expect(actualCell).toContainText('€');
-        }
-        // If labelCount === 0: all visible categories already have budgets (e.g. TC-B01 ran first) — valid state.
-        // The "No budget" rendering path is covered at unit level; structural page correctness
-        // (table present, headers visible) is sufficient evidence at E2E level.
+        await expect(catBRow).toHaveCount(1);
+        await expect(catBRow).toContainText('Sin presupuesto');
+        await expect(catBRow.locator('td').nth(2)).toContainText('€');
     });
 
     /**
@@ -174,48 +161,44 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
      *      (proves the widget is not filtered by date range)
      */
     test('TC-B03: dashboard budget widget reflects current month, no period selector', async ({ budgetReadyPage: page }) => {
-        // Use the all-time filter — widest range, highest probability of surfacing transactions
+        await ensureBudgetExists(page, E2E_CAT_B, '100.00');
+
         await page.goto('/dashboard');
         await expect(page).toHaveURL(/\/dashboard/i);
         await expect(page).toHaveTitle(/Dashboard/i);
 
-        // The fixture guarantees at least one transaction exists, so the dashboard must
-        // render the "active" state and show the Budget Status widget.
         const budgetWidget = page.locator('.card', { hasText: 'Budget Status' });
         await expect(budgetWidget).toBeVisible();
 
-        // Spec: no period selector inside the widget
+        await expect(budgetWidget).toContainText('this month');
+        await expect(budgetWidget).toContainText(E2E_CAT_B);
         await expect(budgetWidget.locator('input[type="month"]')).toHaveCount(0);
         await expect(
             budgetWidget.locator('button', { hasText: /prev|next|anterior|siguiente/i }),
         ).toHaveCount(0);
+        await expect(budgetWidget.locator('#DateFilter, #CustomFromDate, #CustomToDate')).toHaveCount(0);
 
-        // Widget must render one of the two valid states (empty CTA or active budget rows)
-        const nobudgetCta = budgetWidget.locator('a[href="/budgets/create"]');
-        const budgetRows  = budgetWidget.locator('.mb-3');
+        const dashboardDateFilter = page.locator('#DateFilter');
+        await expect(dashboardDateFilter).toBeVisible();
 
-        const ctaVisible  = await nobudgetCta.isVisible().catch(() => false);
-        const rowsVisible = (await budgetRows.count()) > 0 &&
-                            await budgetRows.first().isVisible().catch(() => false);
+        const catBProgressBefore = budgetWidget.locator('.mb-3').filter({
+            has: page.locator('span', { hasText: E2E_CAT_B }),
+        }).first();
+        await expect(catBProgressBefore).toBeVisible();
+        const catBProgressText = (await catBProgressBefore.textContent())?.replace(/\s+/g, ' ').trim() ?? '';
 
-        expect(
-            ctaVisible || rowsVisible,
-            'Budget Status widget must render either the empty-state CTA or active budget rows',
-        ).toBeTruthy();
+        await dashboardDateFilter.selectOption('this-year');
+        await page.getByRole('button', { name: 'Apply' }).click();
 
-        // Verify widget remains present when date filter is changed to last-month
-        // (proves the widget is decoupled from the dashboard date filter)
-        await page.goto('/dashboard?DateFilter=last-month');
-        await expect(page).toHaveURL(/\/dashboard/i);
-        const widgetAfterFilter = page.locator('.card', { hasText: 'Budget Status' });
-        const stillPresent = await widgetAfterFilter.isVisible().catch(() => false);
-        if (stillPresent) {
-            // Widget visible with last-month filter: confirm no period selector still holds
-            await expect(widgetAfterFilter.locator('input[type="month"]')).toHaveCount(0);
-        }
-        // If not visible with last-month (no last-month transactions → empty state), that is
-        // an infrastructure gap, not a widget period-selector bug. The primary assertion above
-        // already passed with the all-time filter.
+        await expect(page).toHaveURL(/DateFilter=this-year/i);
+        await expect(budgetWidget).toContainText('this month');
+        await expect(budgetWidget).toContainText(E2E_CAT_B);
+
+        const catBProgressAfter = budgetWidget.locator('.mb-3').filter({
+            has: page.locator('span', { hasText: E2E_CAT_B }),
+        }).first();
+        await expect(catBProgressAfter).toBeVisible();
+        await expect(catBProgressAfter).toContainText(catBProgressText);
     });
 
     /**

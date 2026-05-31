@@ -18,6 +18,7 @@
  */
 
 import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_A, E2E_CAT_B } from '../fixtures/budget-data.fixture';
+import { budgetRow, ensureBudgetDeleted, ensureBudgetExists, ensureBudgetStatus, getCurrentBudgetMonth } from './budgets/helpers';
 
 test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
@@ -96,6 +97,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
      * Flow: /budgets/create → fill form with negative limit → submit → stay on page with error.
      */
     test('TC-M02: create budget with negative limit shows validation error', async ({ budgetReadyPage: page }) => {
+        await ensureBudgetDeleted(page, E2E_CAT_B);
+
         await page.goto('/budgets/create');
         await expect(page).toHaveURL(/\/budgets\/create/i);
 
@@ -110,24 +113,20 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         // Fill negative limit (INVALID)
         await page.fill('#LimitAmount', '-50.00');
 
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+        const currentMonth = getCurrentBudgetMonth();
+        await page.fill('#EffectiveFrom', currentMonth.firstDay);
         await page.selectOption('#PeriodGranularity', 'Monthly');
 
-        // ── Submit ────────────────────────────────────────────────────────────
         await page.getByRole('button', { name: 'Create Budget' }).click();
 
-        // ── Must stay on the create page with error ──────────────────────────
-        // Wait for either staying on create or redirecting
-        await page.waitForTimeout(2000);
+        await expect(page).toHaveURL(/\/budgets\/create/i);
+        await expect(page.locator('#LimitAmount')).toHaveValue(/-50(?:\.00)?/);
+        await expect(page.getByRole('heading', { name: 'Create Budget' })).toBeVisible();
 
-        // Should either see an alert-danger OR the page URL is still /budgets/create
-        const urlStillCreate = new URL(page.url()).pathname === '/budgets/create';
-        const errorVisible = await page.locator('.alert-danger').isVisible().catch(() => false);
-
-        expect(urlStillCreate || errorVisible, 'Must stay on create page or show validation error').toBeTruthy();
+        await page.goto('/budgets');
+        await expect(page.locator('table[aria-label="Budgets list"]')).toHaveCount(0);
+        await expect(page.getByText('No budgets found.')).toBeVisible();
+        await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(0);
     });
 
     /**
@@ -380,42 +379,34 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
      * Flow: /budgets → verify table renders → toggle active filter → verify filtering.
      */
     test('TC-M05: budget list renders with filter controls', async ({ budgetReadyPage: page }) => {
+        await ensureBudgetExists(page, E2E_CAT_A, '200.00');
+        await ensureBudgetExists(page, E2E_CAT_B, '120.00');
+        await ensureBudgetStatus(page, E2E_CAT_A, 'Active');
+        await ensureBudgetStatus(page, E2E_CAT_B, 'Inactive');
+
         await page.goto('/budgets');
         await expect(page).toHaveURL(/\/budgets/i);
 
-        // ── Verify the budget list table renders ─────────────────────────────
-        // The table should be present (even if empty)
-        const pageContent = page.locator('main');
-        await expect(pageContent).toBeVisible();
+        const table = page.locator('table[aria-label="Budgets list"]');
+        await expect(table).toBeVisible();
+        await expect(budgetRow(page, E2E_CAT_A)).toContainText('Active');
+        await expect(budgetRow(page, E2E_CAT_B)).toContainText('Inactive');
 
-        // Check for filter controls
-        const showActiveCheckbox = page.locator('#ShowActiveOnly');
-        const showActiveExists = await showActiveCheckbox.isVisible().catch(() => false);
+        await page.getByLabel('Active Only').check();
+        await page.getByRole('button', { name: 'Filter' }).click();
 
-        // If the filter checkbox exists, toggle it
-        if (showActiveExists) {
-            await showActiveCheckbox.click();
-            await page.waitForLoadState('domcontentloaded');
-        }
+        await expect(page).toHaveURL(/ShowActiveOnly=true/i);
+        await expect(budgetRow(page, E2E_CAT_A)).toHaveCount(1);
+        await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(0);
 
-        // Verify the page still shows a valid state (table or empty state)
-        await expect(pageContent).toBeVisible();
+        await page.getByLabel('Active Only').uncheck();
+        await page.selectOption('#CategoryFilter', { label: E2E_CAT_B });
+        await page.getByRole('button', { name: 'Filter' }).click();
 
-        // Check for category filter if present
-        const categoryFilter = page.locator('#CategoryFilter');
-        const categoryFilterExists = await categoryFilter.isVisible().catch(() => false);
-
-        if (categoryFilterExists) {
-            // Select E2E-Budget-Cat-A if it exists in the filter
-            const filterOption = categoryFilter.locator('option', { hasText: 'E2E-Budget-Cat-A' });
-            if ((await filterOption.count()) > 0) {
-                const filterValue = await filterOption.getAttribute('value');
-                await categoryFilter.selectOption(filterValue!);
-                await page.waitForLoadState('domcontentloaded');
-            }
-        }
-
-        // Page must still be functional
-        await expect(page).toHaveURL(/\/budgets/i);
+        await expect(page).toHaveURL(/CategoryFilter=/i);
+        await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(1);
+        await expect(budgetRow(page, E2E_CAT_B)).toContainText('Inactive');
+        await expect(budgetRow(page, E2E_CAT_A)).toHaveCount(0);
+        await expect(page.locator('table[aria-label="Budgets list"] tbody tr')).toHaveCount(1);
     });
 });

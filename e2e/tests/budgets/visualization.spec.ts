@@ -16,7 +16,8 @@
  * Data provisioning: uses budget-data.fixture.ts for auth + test categories.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount } from '../../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_B } from '../../fixtures/budget-data.fixture';
+import { ensureBudgetExists, getCurrentBudgetMonth } from './helpers';
 
 test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
 
@@ -41,47 +42,33 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
      *       → switch to current year view → verify accumulated data
      */
     test('TC-V01: metrics page shows three views (month, period, year)', async ({ budgetReadyPage: page }) => {
-        // Navigate to the metrics page
-        await page.goto('/budgets/metrics');
-        await page.waitForLoadState('domcontentloaded');
+        await ensureBudgetExists(page, E2E_CAT_B, '100.00');
 
-        // Verify the page loaded (either metrics content or empty state)
-        await expect(page.locator('main')).toBeVisible();
+        const views = [
+            { label: 'Current Month', query: 'Month' },
+            { label: 'Current Period', query: 'Period' },
+            { label: 'Current Year', query: 'Year' },
+        ];
 
-        // ── Check for view tabs ──────────────────────────────────────────────
-        // Tabs are <a> links with btn classes, NOT <button> elements.
-        const monthTab  = page.getByRole('link', { name: /Mes Actual|Current Month/i });
-        const periodTab = page.getByRole('link', { name: /Período Actual|Current Period/i });
-        const yearTab   = page.getByRole('link', { name: /Año Actual|Current Year/i });
+        await page.goto('/budgets/metrics?View=Month');
+        await expect(page.getByRole('heading', { name: 'Budget Metrics' })).toBeVisible();
 
-        // At least the month tab should be visible
-        await expect(monthTab).toBeVisible();
+        for (const view of views) {
+            const tab = page.getByRole('link', { name: view.label });
+            await expect(tab).toBeVisible();
+            await tab.click();
 
-        // ── Current Month view (default) ────────────────────────────────────
-        // Should show metric cards or empty state
-        const pageContent = page.locator('main');
-        const hasMetricCards = await page.locator('.metric-card').count();
+            await expect(page).toHaveURL(new RegExp(`View=${view.query}`, 'i'));
+            await expect(tab).toHaveClass(/btn-brand/);
+            await expect(page.getByText('Accumulated Limit')).toBeVisible();
 
-        if (hasMetricCards > 0) {
-            // Verify key elements in metric cards
-            const firstCard = page.locator('.metric-card').first();
-            await expect(firstCard).toBeVisible();
-            // Card should contain at least one € value — use first() to avoid strict mode violation
-            await expect(firstCard.locator('text=€').first()).toBeVisible();
-        }
+            const catBCard = page.locator('.metric-card').filter({
+                has: page.getByRole('heading', { name: E2E_CAT_B }),
+            });
 
-        // ── Switch to Current Period view ───────────────────────────────────
-        if (await periodTab.isVisible()) {
-            await periodTab.click();
-            await page.waitForLoadState('domcontentloaded');
-            await expect(pageContent).toBeVisible();
-        }
-
-        // ── Switch to Current Year view ─────────────────────────────────────
-        if (await yearTab.isVisible()) {
-            await yearTab.click();
-            await page.waitForLoadState('domcontentloaded');
-            await expect(pageContent).toBeVisible();
+            await expect(catBCard).toHaveCount(1);
+            await expect(catBCard).toContainText('% consumed');
+            await expect(catBCard).toContainText('€');
         }
     });
 
@@ -91,51 +78,33 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
      * Flow: /budgets/history → verify year selector → change year → verify table updates
      */
     test('TC-V02: history page with year selector shows monthly data', async ({ budgetReadyPage: page }) => {
-        // Navigate to the history page
-        await page.goto('/budgets/history');
-        await page.waitForLoadState('domcontentloaded');
+        await ensureBudgetExists(page, E2E_CAT_B, '100.00');
 
-        // Verify the page loaded
-        await expect(page.locator('main')).toBeVisible();
+        const currentYear = new Date().getFullYear().toString();
+        const previousYear = (new Date().getFullYear() - 1).toString();
 
-        // ── Year selector should be present ─────────────────────────────────
+        await page.goto(`/budgets/history?Year=${currentYear}`);
+        await expect(page.getByRole('heading', { name: 'Budget History' })).toBeVisible();
+
         const yearSelector = page.locator('#Year');
         await expect(yearSelector).toBeVisible();
+        await expect(yearSelector).toHaveValue(currentYear);
 
-        // ── Select the current year ─────────────────────────────────────────
-        const currentYear = new Date().getFullYear().toString();
-        await yearSelector.selectOption(currentYear);
+        const currentYearTable = page.locator(`table[aria-label="Budget history for ${currentYear}"]`);
+        await expect(currentYearTable).toBeVisible();
+        await expect(currentYearTable.locator('th', { hasText: 'Period' })).toBeVisible();
+        await expect(currentYearTable).toContainText(`Total ${currentYear}`);
 
-        // Submit the form to load data for the selected year
-        const filterBtn = page.getByRole('button', { name: /Filtrar|Filter|Ver|View/i });
-        if (await filterBtn.isVisible()) {
-            await filterBtn.click();
-            await page.waitForLoadState('domcontentloaded');
-        }
+        await yearSelector.selectOption(previousYear);
+        await page.getByRole('button', { name: 'View' }).click();
 
-        // ── Verify monthly data renders ─────────────────────────────────────
-        const table = page.locator('table');
-        const hasTable = await table.isVisible().catch(() => false);
+        await expect(page).toHaveURL(new RegExp(`Year=${previousYear}`, 'i'));
 
-        if (hasTable) {
-            // Table should have period labels
-            await expect(table).toBeVisible();
-            // Expect at least some month labels (even if no data has rows)
-            const pageContent = page.locator('main');
-            await expect(pageContent).toBeVisible();
-        }
-
-        // ── Try selecting a different year ──────────────────────────────────
-        const previousYear = (new Date().getFullYear() - 1).toString();
-        // Check if the option exists before selecting
-        const prevYearOption = yearSelector.locator(`option[value="${previousYear}"]`);
-        if ((await prevYearOption.count()) > 0) {
-            await yearSelector.selectOption(previousYear);
-            if (await filterBtn.isVisible()) {
-                await filterBtn.click();
-                await page.waitForLoadState('domcontentloaded');
-            }
-            await expect(page.locator('main')).toBeVisible();
+        const previousYearTable = page.locator(`table[aria-label="Budget history for ${previousYear}"]`);
+        if (await previousYearTable.isVisible().catch(() => false)) {
+            await expect(previousYearTable).toContainText(`Total ${previousYear}`);
+        } else {
+            await expect(page.getByText(`No budget data for ${previousYear}.`)).toBeVisible();
         }
     });
 
@@ -145,46 +114,37 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
      * Flow: /budgets/comparison → verify table with categories → check "Sin presupuesto" label
      */
     test('TC-V03: comparison page shows categories with budget status', async ({ budgetReadyPage: page }) => {
-        // Navigate to comparison page
+        await ensureBudgetExists(page, E2E_CAT_B, '100.00');
+
+        const currentMonth = getCurrentBudgetMonth();
+
         await page.goto('/budgets/comparison');
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.locator('main')).toBeVisible();
+        await expect(page.locator('h2', { hasText: 'Budget vs Actual' })).toBeVisible();
 
-        // ── Month picker should be present ──────────────────────────────────
         const monthPicker = page.locator('#monthPicker');
         await expect(monthPicker).toBeVisible();
 
-        // ── Submit the form to load data ────────────────────────────────────
-        const filterBtn = page.getByRole('button', { name: /Filter|Filtrar/i });
-        if (await filterBtn.isVisible()) {
-            await filterBtn.click();
-            await page.waitForLoadState('domcontentloaded');
-        }
+        await monthPicker.fill(`${currentMonth.year}-${currentMonth.month}`);
+        await page.getByRole('button', { name: 'Filter' }).click();
 
-        // ── Check for comparison table ──────────────────────────────────────
+        await expect(page).toHaveURL(new RegExp(`Year=${currentMonth.year}.*Month=${currentMonth.monthNumber}`, 'i'));
+
         const table = page.locator('table');
-        const hasTable = await table.isVisible().catch(() => false);
+        await expect(table).toBeVisible();
+        await expect(page.getByText('Total Budgeted').first()).toBeVisible();
+        await expect(page.getByText('Total Actual').first()).toBeVisible();
+        await expect(table.getByRole('columnheader', { name: 'Difference' })).toBeVisible();
 
-        if (hasTable) {
-            await expect(table).toBeVisible();
+        const catBRow = table.locator('tbody tr').filter({
+            has: page.locator('td', { hasText: E2E_CAT_B }),
+        });
 
-            // At least one row should have a category name
-            const tbody = table.locator('tbody');
-            const rowCount = await tbody.locator('tr').count();
-
-            if (rowCount > 0) {
-                // Verify table headers exist
-                await expect(table.locator('th', { hasText: /Category|Categoría/i })).toBeVisible();
-                await expect(table.locator('th', { hasText: /Budget|Presupuesto/i })).toBeVisible();
-                await expect(table.locator('th', { hasText: /Actual/i })).toBeVisible();
-            }
-        }
-
-        // Verify summary cards are present (Total Budgeted, Total Actual, Difference)
-        const summaryCards = page.locator('.card .text-uppercase');
-        const cardCount = await summaryCards.count();
-        expect(cardCount).toBeGreaterThan(0);
+        await expect(catBRow).toHaveCount(1);
+        await expect(catBRow.locator('td').nth(1)).toContainText('€');
+        await expect(catBRow.locator('td').nth(1)).not.toContainText('Sin presupuesto');
+        await expect(catBRow.locator('td').nth(2)).toContainText('€');
     });
 
     /**
