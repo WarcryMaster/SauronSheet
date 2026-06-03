@@ -81,17 +81,18 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
 
     /// <inheritdoc />
     public async Task<ResolutionResult> ResolveOrCreateAsync(
-        UserId userId, string? rawCategory, string? rawSubcategory, CancellationToken ct)
+        UserId userId, string? rawCategory, string? rawSubcategory, decimal amount, CancellationToken ct)
     {
         // PCE-3d: null / whitespace rawCategory → RawOnly, nothing created
         if (string.IsNullOrWhiteSpace(rawCategory))
             return new ResolutionResult(null, null, CategorySource.RawOnly);
 
-        var rawCat       = rawCategory.Trim();
+        var rawCat        = rawCategory.Trim();
         var normalizedCat = CategoryNormalizer.Normalize(rawCat)!; // safe: rawCat is not whitespace
+        var categoryType  = amount >= 0 ? CategoryType.Income : CategoryType.Expense;
 
         // PCE-3a/3b/3c: find or create user category
-        var category = await FindOrCreateCategoryAsync(userId, rawCat, normalizedCat);
+        var category = await FindOrCreateCategoryAsync(userId, rawCat, normalizedCat, categoryType);
 
         // PCE-4a/4b/4c/4d: find or create subcategory (scoped by categoryId)
         SubcategoryId? subcategoryId = null;
@@ -106,14 +107,14 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
     }
 
     /// <summary>
-    /// Find an existing user-owned category by normalized key, or create a new one.
+    /// Find an existing user-owned category by normalized key and type, or create a new one.
     /// PCE-3c: system defaults are bypassed — a user-owned category is always returned.
     /// PCE-3e: concurrent 23505 → <see cref="DuplicateEntityException"/> → retry-get.
     /// </summary>
     private async Task<Category> FindOrCreateCategoryAsync(
-        UserId userId, string rawName, string normalizedName)
+        UserId userId, string rawName, string normalizedName, CategoryType type)
     {
-        var existing = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName);
+        var existing = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName, type);
 
         // PCE-3a: found and user-owned → reuse
         // PCE-3c: found but system default → bypass (system defaults must never enter import path)
@@ -126,7 +127,7 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
             new CategoryId(Guid.NewGuid()),
             userId,
             CategoryName.Create(safeName),
-            CategoryType.Expense,
+            type,
             ColorHex.Create("#607D8B"),
             "tag");
 
@@ -138,7 +139,7 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
         catch (DuplicateEntityException)
         {
             // PCE-3e: concurrent insert won the race — retry-get to return the winner
-            var retried = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName);
+            var retried = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName, type);
             return retried ?? throw new InvalidOperationException(
                 $"Category '{normalizedName}' not found after 23505 conflict. Data integrity error.");
         }

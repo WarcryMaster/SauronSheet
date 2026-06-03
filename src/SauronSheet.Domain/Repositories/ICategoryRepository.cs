@@ -19,11 +19,12 @@ public interface ICategoryRepository
     Task<Category?> FindByNameAsync(string name);
 
     /// <summary>
-    /// Find a user-scoped category by its normalized deduplication key.
+    /// Find a user-scoped category by its normalized deduplication key and type.
     /// Used by PDF import resolver to detect existing categories before creating new ones.
     /// normalizedName must be pre-computed via CategoryNormalizer.Normalize().
+    /// type filters by Income or Expense — the same name can exist with both types.
     /// </summary>
-    Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName);
+    Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName, CategoryType type);
 
     /// <summary>
     /// Insert a new category and its pre-computed normalized name.

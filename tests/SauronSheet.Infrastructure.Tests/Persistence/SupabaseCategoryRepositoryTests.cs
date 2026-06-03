@@ -39,9 +39,10 @@ public class SupabaseCategoryRepositoryTests
 
         var parameters = method!.GetParameters();
 
-        Assert.Equal(2, parameters.Length);
+        Assert.Equal(3, parameters.Length);
         Assert.Equal(typeof(UserId), parameters[0].ParameterType);
         Assert.Equal(typeof(string), parameters[1].ParameterType);
+        Assert.Equal(typeof(CategoryType), parameters[2].ParameterType);
     }
 
     [Fact]

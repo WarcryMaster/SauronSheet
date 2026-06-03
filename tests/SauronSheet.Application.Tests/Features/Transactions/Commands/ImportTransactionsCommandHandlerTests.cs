@@ -57,7 +57,7 @@ public class ImportTransactionsCommandHandlerTests
             .ReturnsAsync(false);
         _mockResolutionService
             .Setup(x => x.ResolveOrCreateAsync(
-                It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<UserId>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResolutionResult(null, null, CategorySource.RawOnly));
     }
 
@@ -332,6 +332,7 @@ public class ImportTransactionsCommandHandlerTests
                 It.IsAny<UserId>(),
                 It.Is<string?>(v => v == "Compras"),
                 It.Is<string?>(v => v == "Ropa"),
+                It.IsAny<decimal>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ResolutionResult(categoryId, subcategoryId, CategorySource.AutoMatched));
 
@@ -367,7 +368,7 @@ public class ImportTransactionsCommandHandlerTests
 
         _mockResolutionService.Verify(
             x => x.ResolveOrCreateAsync(
-                It.IsAny<UserId>(), "Compras", "Ropa", It.IsAny<CancellationToken>()),
+                It.IsAny<UserId>(), "Compras", "Ropa", It.IsAny<decimal>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

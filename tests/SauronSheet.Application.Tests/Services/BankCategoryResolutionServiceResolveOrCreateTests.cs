@@ -43,12 +43,12 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
-    private Category MakeUserCategory(string name) =>
+    private Category MakeUserCategory(string name, CategoryType type = CategoryType.Expense) =>
         new Category(
             new CategoryId(Guid.NewGuid()),
             _userId,
             CategoryName.Create(name),
-            CategoryType.Expense,
+            type,
             ColorHex.Create("#607D8B"),
             "tag");
 
@@ -78,11 +78,11 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
         // Arrange
         var existing = MakeUserCategory("Compras");
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", It.IsAny<CategoryType>()))
             .ReturnsAsync(existing);
 
         // Act
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, -10m, _ct);
 
         // Assert: existing category reused, no insert
         Assert.NotNull(result.CategoryId);
@@ -97,10 +97,10 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     {
         var existing = MakeUserCategory("Alimentación");
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "alimentacion"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "alimentacion", It.IsAny<CategoryType>()))
             .ReturnsAsync(existing);
 
-        var result = await _service.ResolveOrCreateAsync(_userId, "Alimentación", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Alimentación", null, -20m, _ct);
 
         Assert.Equal(existing.Id.Value, result.CategoryId!.Value);
         Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
@@ -116,7 +116,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     {
         // Arrange: lookup returns null → service should create
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "viajes y turismo"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "viajes y turismo", CategoryType.Expense))
             .ReturnsAsync((Category?)null);
 
         Category? capturedCategory = null;
@@ -126,11 +126,12 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.ResolveOrCreateAsync(_userId, "Viajes y turismo", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Viajes y turismo", null, -100m, _ct);
 
         // Assert
         Assert.NotNull(capturedCategory);
         Assert.False(capturedCategory!.IsSystemDefault);
+        Assert.Equal(CategoryType.Expense, capturedCategory.Type);
         Assert.Equal(capturedCategory.Id.Value, result.CategoryId!.Value);
         Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
         _categoryRepo.Verify(r => r.AddAsync(It.IsAny<Category>(), "viajes y turismo"), Times.Once);
@@ -141,7 +142,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     public async Task ResolveOrCreateAsync_CategoryWithDiacritics_NormalizedKeyUsed()
     {
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "educacion y salud"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "educacion y salud", CategoryType.Expense))
             .ReturnsAsync((Category?)null);
 
         Category? capturedCategory = null;
@@ -150,11 +151,12 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .Callback<Category, string>((cat, _) => capturedCategory = cat)
             .Returns(Task.CompletedTask);
 
-        var result = await _service.ResolveOrCreateAsync(_userId, "Educación y salud", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Educación y salud", null, -100m, _ct);
 
         Assert.NotNull(capturedCategory);
         // Raw name stored, normalized key used for dedup
         Assert.Equal("Educación y salud", capturedCategory!.Name.Value);
+        Assert.Equal(CategoryType.Expense, capturedCategory.Type);
         Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
     }
 
@@ -165,12 +167,12 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     [Fact]
     public async Task ResolveOrCreateAsync_NullRawCategory_ReturnsRawOnly()
     {
-        var result = await _service.ResolveOrCreateAsync(_userId, null, null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, null, null, 0m, _ct);
 
         Assert.Null(result.CategoryId);
         Assert.Null(result.SubcategoryId);
         Assert.Equal(CategorySource.RawOnly, result.CategorySource);
-        _categoryRepo.Verify(r => r.FindByNormalizedNameAndUserAsync(It.IsAny<UserId>(), It.IsAny<string>()), Times.Never);
+        _categoryRepo.Verify(r => r.FindByNormalizedNameAndUserAsync(It.IsAny<UserId>(), It.IsAny<string>(), It.IsAny<CategoryType>()), Times.Never);
         _categoryRepo.Verify(r => r.AddAsync(It.IsAny<Category>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -178,7 +180,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     [Fact]
     public async Task ResolveOrCreateAsync_WhitespaceRawCategory_ReturnsRawOnly()
     {
-        var result = await _service.ResolveOrCreateAsync(_userId, "   ", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "   ", null, 0m, _ct);
 
         Assert.Null(result.CategoryId);
         Assert.Equal(CategorySource.RawOnly, result.CategorySource);
@@ -196,7 +198,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
         var raceWinner = MakeUserCategory("Compras");
 
         _categoryRepo
-            .SetupSequence(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .SetupSequence(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", CategoryType.Expense))
             .ReturnsAsync((Category?)null)    // first call: not found → triggers insert
             .ReturnsAsync(raceWinner);         // second call: retry-get after conflict
 
@@ -205,12 +207,12 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .ThrowsAsync(new DuplicateEntityException("category", "compras"));
 
         // Act
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, -50m, _ct);
 
         // Assert: race winner returned, AutoMatched
         Assert.Equal(raceWinner.Id.Value, result.CategoryId!.Value);
         Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
-        _categoryRepo.Verify(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"), Times.Exactly(2));
+        _categoryRepo.Verify(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", CategoryType.Expense), Times.Exactly(2));
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -224,7 +226,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
         var systemDefault = MakeSystemDefaultCategory("Compras");
 
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", CategoryType.Expense))
             .ReturnsAsync(systemDefault);   // repo returns system default (should be bypassed)
 
         Category? capturedNewCat = null;
@@ -234,11 +236,12 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, -75m, _ct);
 
         // Assert: system default NOT returned; new user category created
         Assert.NotNull(capturedNewCat);
         Assert.False(capturedNewCat!.IsSystemDefault);
+        Assert.Equal(CategoryType.Expense, capturedNewCat.Type);
         Assert.Equal(capturedNewCat.Id.Value, result.CategoryId!.Value);
         Assert.NotEqual(systemDefault.Id.Value, result.CategoryId.Value);
         Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
@@ -257,7 +260,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
         var sub  = MakeSubcategory("Ropa y complementos", cat.Id);
 
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", It.IsAny<CategoryType>()))
             .ReturnsAsync(cat);
 
         _subcategoryRepo
@@ -265,7 +268,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .ReturnsAsync(sub);
 
         // Act
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "Ropa y complementos", _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "Ropa y complementos", -200m, _ct);
 
         // Assert: subcategory reused, no insert
         Assert.Equal(sub.Id.Value, result.SubcategoryId!.Value);
@@ -284,7 +287,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
         var cat = MakeUserCategory("Compras");
 
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", It.IsAny<CategoryType>()))
             .ReturnsAsync(cat);
 
         _subcategoryRepo
@@ -298,7 +301,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "Ropa y complementos", _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "Ropa y complementos", -150m, _ct);
 
         // Assert: subcategory created with IsAutoCreated=true, scoped to category
         Assert.NotNull(capturedSub);
@@ -316,10 +319,10 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     {
         var cat = MakeUserCategory("Compras");
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", It.IsAny<CategoryType>()))
             .ReturnsAsync(cat);
 
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", null, -50m, _ct);
 
         Assert.Null(result.SubcategoryId);
         _subcategoryRepo.Verify(r => r.FindByNormalizedNameAsync(It.IsAny<UserId>(), It.IsAny<CategoryId>(), It.IsAny<string>()), Times.Never);
@@ -332,10 +335,10 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
     {
         var cat = MakeUserCategory("Compras");
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", It.IsAny<CategoryType>()))
             .ReturnsAsync(cat);
 
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "  ", _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "  ", -50m, _ct);
 
         Assert.Null(result.SubcategoryId);
     }
@@ -353,7 +356,7 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
         var subInCatA = MakeSubcategory("Online", catA.Id);
 
         _categoryRepo
-            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras"))
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "compras", It.IsAny<CategoryType>()))
             .ReturnsAsync(catA);
 
         _subcategoryRepo
@@ -366,10 +369,99 @@ public class BankCategoryResolutionServiceResolveOrCreateTests
             .ReturnsAsync((Subcategory?)null);
 
         // Act: resolve for catA
-        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "Online", _ct);
+        var result = await _service.ResolveOrCreateAsync(_userId, "Compras", "Online", -50m, _ct);
 
         // Assert: subcategory scoped to catA, not catB
         Assert.Equal(subInCatA.Id.Value, result.SubcategoryId!.Value);
         _subcategoryRepo.Verify(r => r.FindByNormalizedNameAsync(_userId, catB.Id, It.IsAny<string>()), Times.Never);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CategoryType resolution from amount sign
+    // ════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ResolveOrCreateAsync_PositiveAmount_CreatesIncomeCategory()
+    {
+        _categoryRepo
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "transferencias", CategoryType.Income))
+            .ReturnsAsync((Category?)null);
+
+        Category? capturedCategory = null;
+        _categoryRepo
+            .Setup(r => r.AddAsync(It.IsAny<Category>(), "transferencias"))
+            .Callback<Category, string>((cat, _) => capturedCategory = cat)
+            .Returns(Task.CompletedTask);
+
+        var result = await _service.ResolveOrCreateAsync(_userId, "Transferencias", null, 500m, _ct);
+
+        Assert.NotNull(capturedCategory);
+        Assert.Equal(CategoryType.Income, capturedCategory!.Type);
+        Assert.Equal(capturedCategory.Id.Value, result.CategoryId!.Value);
+        Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
+    }
+
+    [Fact]
+    public async Task ResolveOrCreateAsync_NegativeAmount_CreatesExpenseCategory()
+    {
+        _categoryRepo
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "transferencias", CategoryType.Expense))
+            .ReturnsAsync((Category?)null);
+
+        Category? capturedCategory = null;
+        _categoryRepo
+            .Setup(r => r.AddAsync(It.IsAny<Category>(), "transferencias"))
+            .Callback<Category, string>((cat, _) => capturedCategory = cat)
+            .Returns(Task.CompletedTask);
+
+        var result = await _service.ResolveOrCreateAsync(_userId, "Transferencias", null, -500m, _ct);
+
+        Assert.NotNull(capturedCategory);
+        Assert.Equal(CategoryType.Expense, capturedCategory!.Type);
+        Assert.Equal(capturedCategory.Id.Value, result.CategoryId!.Value);
+        Assert.Equal(CategorySource.AutoMatched, result.CategorySource);
+    }
+
+    [Fact]
+    public async Task ResolveOrCreateAsync_SameNameDifferentTypes_CreatesSeparateCategories()
+    {
+        // First call: positive amount → Income
+        _categoryRepo
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "transferencias", CategoryType.Expense))
+            .ReturnsAsync((Category?)null);
+        _categoryRepo
+            .Setup(r => r.FindByNormalizedNameAndUserAsync(_userId, "transferencias", CategoryType.Income))
+            .ReturnsAsync((Category?)null);
+
+        var incomeCat = MakeUserCategory("Transferencias", CategoryType.Income);
+        var expenseCat = MakeUserCategory("Transferencias", CategoryType.Expense);
+
+        Category? capturedIncome = null;
+        Category? capturedExpense = null;
+
+        _categoryRepo
+            .Setup(r => r.AddAsync(It.Is<Category>(c => c.Type == CategoryType.Income), "transferencias"))
+            .Callback<Category, string>((cat, _) => capturedIncome = cat)
+            .Returns(Task.CompletedTask);
+
+        _categoryRepo
+            .Setup(r => r.AddAsync(It.Is<Category>(c => c.Type == CategoryType.Expense), "transferencias"))
+            .Callback<Category, string>((cat, _) => capturedExpense = cat)
+            .Returns(Task.CompletedTask);
+
+        // Act: first as Income, second as Expense
+        var resultIncome = await _service.ResolveOrCreateAsync(_userId, "Transferencias", null, 1000m, _ct);
+        var resultExpense = await _service.ResolveOrCreateAsync(_userId, "Transferencias", null, -200m, _ct);
+
+        // Assert: two separate categories created
+        Assert.NotNull(capturedIncome);
+        Assert.NotNull(capturedExpense);
+        Assert.Equal(CategoryType.Income, capturedIncome!.Type);
+        Assert.Equal(CategoryType.Expense, capturedExpense!.Type);
+        Assert.NotEqual(capturedIncome.Id.Value, capturedExpense.Id.Value);
+
+        Assert.Equal(CategorySource.AutoMatched, resultIncome.CategorySource);
+        Assert.Equal(CategorySource.AutoMatched, resultExpense.CategorySource);
+        _categoryRepo.Verify(r => r.AddAsync(It.IsAny<Category>(), "transferencias"), Times.Exactly(2));
     }
 }

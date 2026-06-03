@@ -201,7 +201,7 @@ public class ImportTransactionsCommandHandler
 
                     // Resolve bank category via get-or-add (spec PCE-3 / PCE-4).
                     var resolution = await _resolutionService.ResolveOrCreateAsync(
-                        userId, row.Category, row.SubCategory, cancellationToken);
+                        userId, row.Category, row.SubCategory, amount, cancellationToken);
 
                     // Persist transaction.
                     // CR-1c: trim bank category/subcategory to remove any surrounding whitespace.

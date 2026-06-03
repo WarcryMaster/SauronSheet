@@ -38,10 +38,11 @@ public interface IBankCategoryResolutionService
     /// <param name="userId">The current user's ID.</param>
     /// <param name="rawCategory">Raw category literal from bank statement (e.g. "Viajes y turismo").</param>
     /// <param name="rawSubcategory">Optional raw subcategory literal from bank statement.</param>
+    /// <param name="amount">Transaction amount. Determines CategoryType: >= 0 → Income, &lt; 0 → Expense.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// ResolutionResult with CategoryId + SubcategoryId resolved/created (AutoMatched),
     /// or RawOnly when rawCategory is null/whitespace.
     /// </returns>
-    Task<ResolutionResult> ResolveOrCreateAsync(UserId userId, string? rawCategory, string? rawSubcategory, CancellationToken ct);
+    Task<ResolutionResult> ResolveOrCreateAsync(UserId userId, string? rawCategory, string? rawSubcategory, decimal amount, CancellationToken ct);
 }

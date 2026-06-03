@@ -278,14 +278,16 @@ public class SupabaseCategoryRepository : ICategoryRepository
         }
     }
 
-    public async Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName)
+    public async Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName, CategoryType type)
     {
         try
         {
             var userIdString = userId.Value;
+            var typeString = type.ToString();
             var response = await _client.From<CategoryRow>()
                 .Where(x => x.UserId == userIdString)
                 .Where(x => x.NormalizedName == normalizedName)
+                .Where(x => x.Type == typeString)
                 .Limit(1)
                 .Get();
 
@@ -298,6 +300,7 @@ public class SupabaseCategoryRepository : ICategoryRepository
                 scope.SetTag("repo", "SupabaseCategoryRepository.FindByNormalizedNameAndUserAsync");
                 scope.SetTag("userId", userId.Value);
                 scope.SetTag("normalizedName", normalizedName);
+                scope.SetTag("type", type.ToString());
                 scope.Level = Sentry.SentryLevel.Error;
             });
             throw;

@@ -258,15 +258,18 @@ supabase migration new descriptive_name
 supabase migration up
 ```
 
-#### Applying Migrations
+#### Applying Migrations (Manual)
 
 ```bash
-# Apply all pending migrations to local database
+# Apply all pending migrations to local Supabase database
 supabase migration up
 
-# Push migrations to remote (production) database
+# Push pending migrations to the remote (production) Supabase database
+# This is the manual equivalent of what CI/CD does automatically
 supabase db push --linked
 ```
+
+> **Nota:** `supabase db push --linked` usa el proyecto vinculado con `supabase link --project-ref <ref>`. Si no lo has vinculado antes, ejecutá `supabase link` primero.
 
 #### CI/CD Integration
 
