@@ -36,12 +36,19 @@
                                 </div>
                             </div>
                             <div>
-                                <button type="button" class="btn btn-sm btn-outline-primary me-2" 
-                                        onclick='openEditModal(@Html.Raw(Json.Serialize(category)))' 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary me-2 js-edit-category"
+                                        data-category-id="@category.Id"
+                                        data-category-name="@category.Name"
+                                        data-category-color="@category.Color"
+                                        data-category-icon="@category.IconName"
                                         aria-label="Edit @category.Name category">
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeleteConfirm('@category.Id', '@Html.Encode(category.Name)')" 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger js-delete-category"
+                                        data-category-id="@category.Id"
+                                        data-category-name="@category.Name"
                                         aria-label="Delete @category.Name category">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
@@ -74,12 +81,19 @@
                                 </div>
                             </div>
                             <div>
-                                <button type="button" class="btn btn-sm btn-outline-primary me-2" 
-                                        onclick='openEditModal(@Html.Raw(Json.Serialize(category)))' 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary me-2 js-edit-category"
+                                        data-category-id="@category.Id"
+                                        data-category-name="@category.Name"
+                                        data-category-color="@category.Color"
+                                        data-category-icon="@category.IconName"
                                         aria-label="Edit @category.Name category">
                                     <i class="bi bi-pencil"></i> Edit
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="showDeleteConfirm('@category.Id', '@Html.Encode(category.Name)')" 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger js-delete-category"
+                                        data-category-id="@category.Id"
+                                        data-category-name="@category.Name"
                                         aria-label="Delete @category.Name category">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
@@ -279,6 +293,32 @@
     });
 
     function setupEventListeners() {
+        // Delegated handlers for the per-category Edit/Delete buttons.
+        // Delegation (vs. one listener per button) keeps the wiring stable across
+        // list re-renders and lets us avoid embedding JSON in inline onclick
+        // attributes — which double-encodes non-ASCII names (e.g. "Alimentaci&#xF3;n").
+        document.addEventListener('click', function (event) {
+            const editButton = event.target.closest('.js-edit-category');
+            if (editButton) {
+                openEditModal({
+                    id: editButton.dataset.categoryId,
+                    name: editButton.dataset.categoryName,
+                    color: editButton.dataset.categoryColor,
+                    iconName: editButton.dataset.categoryIcon,
+                });
+                return;
+            }
+
+            const deleteButton = event.target.closest('.js-delete-category');
+            if (deleteButton) {
+                showDeleteConfirm(
+                    deleteButton.dataset.categoryId,
+                    deleteButton.dataset.categoryName
+                );
+                return;
+            }
+        });
+
         // Create form listeners
         const createNameInput = document.getElementById('createName');
         const createColorInput = document.getElementById('createColor');

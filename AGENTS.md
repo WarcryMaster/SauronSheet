@@ -203,6 +203,7 @@ These files are referenced by the editor/IDE through `applyTo`-style scoping and
 - ❌ Never put `_ViewImports.cshtml` in `Shared/` — only in `Pages/` (breaks Tag Helpers).
 - ❌ Never use `data-mdb-button-init` on `<button type="submit">` — breaks form submission in MDBootstrap v9+.
 - ❌ Never reference local CSS, JS, or image assets with hardcoded `/css/...`, `/js/...`, or `/img/...` paths in Razor. Use `~/...` + `asp-append-version="true"` to prevent stale-cache drift between local and production.
+- ❌ Never embed Razor data in JS via `@Html.Raw(Json.Serialize(model))` (in `on*` attributes or inside `<script>` blocks) or via `@Html.Encode(value)` inside an HTML attribute. Both produce double-encoding / XSS / attribute-breakage bugs. Use `data-*` + a delegated listener for per-item data, or `<script type="application/json">` + `JSON.parse` for larger payloads. Full rationale and patterns in [`docs/adr/0002-safe-json-data-passing.md`](docs/adr/0002-safe-json-data-passing.md).
 
 ### Supabase/Postgrest C# Client
 

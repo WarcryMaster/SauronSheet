@@ -133,6 +133,10 @@
     }
 </div>
 
+<script type="application/json" id="budgets-comparison-data">
+    @Json.Serialize(Model.Comparison)
+</script>
+
 <script>
     document.getElementById('monthPicker')?.closest('form')?.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -146,7 +150,9 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
-        var chartData = @Html.Raw(Json.Serialize(Model.Comparison));
+        // Read pre-serialized JSON from the <script type="application/json"> block above.
+        // See docs/adr/0002-safe-json-data-passing.md for the rationale.
+        var chartData = JSON.parse(document.getElementById('budgets-comparison-data').textContent);
         var ctx = document.getElementById('comparisonChart');
         if (ctx && chartData && chartData.length > 0) {
             new Chart(ctx, {

@@ -217,13 +217,29 @@
     }
 </div>
 
+<script type="application/json" id="dashboard-category-data">
+    @Json.Serialize(Model.SpendingByCategory)
+</script>
+<script type="application/json" id="dashboard-monthly-category-data">
+    @Json.Serialize(Model.MonthlySpendingByCategory)
+</script>
+<script type="application/json" id="dashboard-monthly-trends">
+    @Json.Serialize(Model.MonthlyTrends)
+</script>
+<script type="application/json" id="dashboard-yearly-comparison">
+    @Json.Serialize(Model.YearlyComparison)
+</script>
+
 <script src="~/js/charts.js" asp-append-version="true"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var categoryData = @Html.Raw(Json.Serialize(Model.SpendingByCategory));
-        var monthlyCategoryData = @Html.Raw(Json.Serialize(Model.MonthlySpendingByCategory));
-        var monthlyData = @Html.Raw(Json.Serialize(Model.MonthlyTrends));
-        var yearlyData = @Html.Raw(Json.Serialize(Model.YearlyComparison));
+        // Read pre-serialized JSON from <script type="application/json"> blocks above.
+        // See docs/adr/0002-safe-json-data-passing.md for the rationale.
+        const readJson = (id) => JSON.parse(document.getElementById(id).textContent);
+        const categoryData = readJson('dashboard-category-data');
+        const monthlyCategoryData = readJson('dashboard-monthly-category-data');
+        const monthlyData = readJson('dashboard-monthly-trends');
+        const yearlyData = readJson('dashboard-yearly-comparison');
 
         initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
         initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);

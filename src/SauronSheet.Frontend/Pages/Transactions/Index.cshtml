@@ -197,6 +197,9 @@
 @await Html.PartialAsync("~/Shared/Modals/_ConfirmDeleteModal.cshtml")
 
 @section Scripts {
+    <script type="application/json" id="transactions-available-sources">
+        @Json.Serialize(Model.AvailableSources)
+    </script>
     <script src="~/js/bulk-delete.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -209,7 +212,9 @@
                 return;
             }
 
-            const availableSources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableSources));
+            // Read pre-serialized JSON from the <script type="application/json"> block above.
+            // See docs/adr/0002-safe-json-data-passing.md for the rationale.
+            const availableSources = JSON.parse(document.getElementById('transactions-available-sources').textContent);
 
             function getSelectedSources() {
                 return Array.from(form.querySelectorAll('input[name="SelectedSources"]'))
