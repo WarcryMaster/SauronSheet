@@ -4,7 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const MAX_SELECTIONS = 1000;
-    const COUNTDOWN_DURATION = 5;
+    const COUNTDOWN_DURATION = 2;
 
     function initializeBulkDelete() {
         // Track selected IDs in a Set for efficient lookups
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         /**
-         * Start 5-second countdown timer
+         * Start 2-second countdown timer
          */
         function startCountdown() {
             let remaining = COUNTDOWN_DURATION;
