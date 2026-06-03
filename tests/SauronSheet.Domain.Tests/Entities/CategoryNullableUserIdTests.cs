@@ -131,7 +131,8 @@ public class CategoryNullableUserIdTests
                 categoryType,               // type
                 color,                      // color
                 icon,                       // iconName
-                false                       // isSystemDefault (FALSE - invalid!)
+                false,                      // isSystemDefault (FALSE - invalid!)
+                false                       // isAutoCreated
             });
         });
 

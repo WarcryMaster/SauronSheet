@@ -129,7 +129,8 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
             CategoryName.Create(safeName),
             type,
             ColorHex.Create("#607D8B"),
-            "tag");
+            "tag",
+            isAutoCreated: true);
 
         try
         {

@@ -46,7 +46,8 @@ public class GetCategoriesQueryHandler
             c.IconName,
             c.CreatedAt,
             c.UpdatedAt ?? DateTime.UtcNow,
-            TransactionCount: counts.GetValueOrDefault(c.Id, 0)
+            TransactionCount: counts.GetValueOrDefault(c.Id, 0),
+            IsAutoCreated: c.IsAutoCreated
         )).ToList();
 
         // Sort alphabetically by name (system defaults removed in Chunk 3)

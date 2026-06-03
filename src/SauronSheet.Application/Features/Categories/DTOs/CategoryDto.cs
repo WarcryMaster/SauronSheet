@@ -12,4 +12,5 @@ public record CategoryDto(
     string IconName,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    int TransactionCount = 0);
+    int TransactionCount = 0,
+    bool IsAutoCreated = false);

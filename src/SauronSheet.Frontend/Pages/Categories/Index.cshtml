@@ -33,6 +33,10 @@
                                 <div class="category-color-chip" style="background-color: @category.Color; width: 24px; height: 24px; border-radius: 4px;" aria-label="Category color @category.Color"></div>
                                 <div>
                                     <div class="fw-bold">@category.Name</div>
+                                    @if (category.IsAutoCreated)
+                                    {
+                                        <span class="badge bg-info">Auto-created</span>
+                                    }
                                 </div>
                             </div>
                             <div>
@@ -83,6 +87,10 @@
                                 <div class="category-color-chip" style="background-color: @category.Color; width: 24px; height: 24px; border-radius: 4px;" aria-label="Category color @category.Color"></div>
                                 <div>
                                     <div class="fw-bold">@category.Name</div>
+                                    @if (category.IsAutoCreated)
+                                    {
+                                        <span class="badge bg-info">Auto-created</span>
+                                    }
                                 </div>
                             </div>
                             <div>

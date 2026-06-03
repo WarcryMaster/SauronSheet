@@ -19,6 +19,7 @@ public class Category : AggregateRoot<CategoryId>
     public ColorHex Color { get; private set; }
     public string IconName { get; private set; }
     public bool IsSystemDefault { get; private set; }
+    public bool IsAutoCreated { get; private set; }
 
     /// <summary>
     /// Private constructor (use factory methods instead).
@@ -31,7 +32,8 @@ public class Category : AggregateRoot<CategoryId>
         CategoryType type,
         ColorHex color,
         string iconName,
-        bool isSystemDefault)
+        bool isSystemDefault,
+        bool isAutoCreated = false)
         : base(id)
     {
         // Domain invariant: NULL user_id requires IsSystemDefault=true
@@ -46,6 +48,7 @@ public class Category : AggregateRoot<CategoryId>
         Color = color ?? throw new ArgumentNullException(nameof(color));
         IconName = iconName ?? throw new ArgumentNullException(nameof(iconName));
         IsSystemDefault = isSystemDefault;
+        IsAutoCreated = isAutoCreated;
     }
 
     /// <summary>
@@ -66,7 +69,23 @@ public class Category : AggregateRoot<CategoryId>
             type,
             color,
             iconName,
-            isSystemDefault: false)
+            isSystemDefault: false,
+            isAutoCreated: false)
+    {
+    }
+
+    /// <summary>
+    /// Constructor for auto-created categories (from Excel import).
+    /// </summary>
+    public Category(
+        CategoryId id,
+        UserId userId,
+        CategoryName name,
+        CategoryType type,
+        ColorHex color,
+        string iconName,
+        bool isAutoCreated)
+        : this(id, userId, name, type, color, iconName, isSystemDefault: false, isAutoCreated: isAutoCreated)
     {
     }
 
@@ -89,7 +108,8 @@ public class Category : AggregateRoot<CategoryId>
             type,
             color,
             iconName,
-            isSystemDefault: true);
+            isSystemDefault: true,
+            isAutoCreated: false);
     }
 
     /// <summary>

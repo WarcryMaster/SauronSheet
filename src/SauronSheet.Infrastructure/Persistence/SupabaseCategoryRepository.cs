@@ -40,6 +40,9 @@ internal class CategoryRow : BaseModel
     [Column("is_system_default")]
     public bool IsSystemDefault { get; set; }
 
+    [Column("is_auto_created")]
+    public bool IsAutoCreated { get; set; }
+
     /// <summary>
     /// Normalized deduplication key for this category name.
     /// Computed by CategoryNormalizer.Normalize(Name); stored via migration 011.
@@ -82,7 +85,8 @@ internal class CategoryRow : BaseModel
             CategoryName.Create(Name),
             categoryType,
             ColorHex.Create(Color),
-            IconName);
+            IconName,
+            IsAutoCreated);
     }
 
     /// <summary>
@@ -104,6 +108,7 @@ internal class CategoryRow : BaseModel
             Color = c.Color.Value,
             IconName = c.IconName,
             IsSystemDefault = c.IsSystemDefault,
+            IsAutoCreated = c.IsAutoCreated,
             UpdatedAt = c.UpdatedAt
         };
     }
@@ -119,6 +124,7 @@ internal class CategoryRow : BaseModel
             Color = c.Color.Value,
             IconName = c.IconName,
             IsSystemDefault = c.IsSystemDefault,
+            IsAutoCreated = c.IsAutoCreated,
             CreatedAt = c.CreatedAt,
             UpdatedAt = c.UpdatedAt
         };
@@ -140,7 +146,8 @@ internal class CategoryRow : BaseModel
             Type = c.Type.ToString(),
             Color = c.Color.Value,
             IconName = c.IconName,
-            IsSystemDefault = c.IsSystemDefault
+            IsSystemDefault = c.IsSystemDefault,
+            IsAutoCreated = c.IsAutoCreated
             // NOTE: Do NOT set CreatedAt or UpdatedAt - let database triggers handle timestamps
         };
     }
