@@ -29,4 +29,10 @@ public class Subcategory : AggregateRoot<SubcategoryId>
         UserId = userId;
         IsAutoCreated = isAutoCreated;
     }
+
+    public void Update(SubcategoryName name)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

@@ -189,4 +189,71 @@ public class SupabaseSubcategoryRepository : ISubcategoryRepository
             throw;
         }
     }
+
+    public async Task UpdateAsync(Subcategory subcategory, string normalizedName)
+    {
+        try
+        {
+            var idString = subcategory.Id.Value.ToString();
+            var row = MappingExtensions.FromDomain(subcategory, normalizedName);
+            await _client.From<SubcategoryRow>()
+                .Where(x => x.Id == idString)
+                .Update(row);
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseSubcategoryRepository.UpdateAsync");
+                scope.SetTag("subcategoryId", subcategory.Id.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
+    public async Task DeleteAsync(SubcategoryId id)
+    {
+        try
+        {
+            var idString = id.Value.ToString();
+            await _client.From<SubcategoryRow>()
+                .Where(x => x.Id == idString)
+                .Delete();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseSubcategoryRepository.DeleteAsync");
+                scope.SetTag("subcategoryId", id.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
+
+    public async Task<bool> HasTransactionsAsync(SubcategoryId subcategoryId)
+    {
+        try
+        {
+            var subcatIdString = subcategoryId.Value.ToString();
+            var response = await _client.From<TransactionRow>()
+                .Where(x => x.SubcategoryId == subcatIdString)
+                .Limit(1)
+                .Get();
+
+            return response.Models.Any();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope =>
+            {
+                scope.SetTag("repo", "SupabaseSubcategoryRepository.HasTransactionsAsync");
+                scope.SetTag("subcategoryId", subcategoryId.Value.ToString());
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            throw;
+        }
+    }
 }

@@ -1,0 +1,521 @@
+@page "{categoryId:guid?}"
+@model SauronSheet.Frontend.Pages.Categories.SubcategoriesModel
+@{
+    ViewData["Title"] = "Subcategories - " + Model.ParentCategory?.Name;
+}
+
+<div class="container mt-5 mb-5">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Categories">Categories</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.ParentCategory?.Name</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-2">Subcategories of @Model.ParentCategory?.Name</h1>
+            <p class="text-muted">Manage subcategories for this category. Auto-created subcategories come from Excel imports.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/Categories" class="btn btn-outline-secondary" aria-label="Back to categories">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <button type="button" class="btn btn-primary" onclick="openCreateModal()" aria-label="Add new subcategory">
+                <i class="bi bi-plus-circle"></i> Add New Subcategory
+            </button>
+        </div>
+    </div>
+
+    <div class="list-group" role="region" aria-label="Subcategories list">
+        @if (Model.Subcategories.Any())
+        {
+            @foreach (var subcategory in Model.Subcategories.OrderBy(s => s.Name))
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center" role="listitem">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold">@subcategory.Name</span>
+                        @if (subcategory.IsAutoCreated)
+                        {
+                            <span class="badge bg-info">Auto-created</span>
+                        }
+                    </div>
+                    <div>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary me-2 js-edit-subcategory"
+                                data-subcategory-id="@subcategory.Id"
+                                data-subcategory-name="@subcategory.Name"
+                                aria-label="Edit @subcategory.Name subcategory">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger js-delete-subcategory"
+                                data-subcategory-id="@subcategory.Id"
+                                data-subcategory-name="@subcategory.Name"
+                                aria-label="Delete @subcategory.Name subcategory">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-muted text-center py-3">No subcategories yet</div>
+        }
+    </div>
+</div>
+
+<!-- Create Subcategory Modal -->
+<div class="modal fade" id="createSubcategoryModal" tabindex="-1" aria-labelledby="createSubcategoryLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createSubcategoryLabel">Add New Subcategory</h5>
+                <button type="button" class="btn-close" onclick="closeModal('createSubcategoryModal')" aria-label="Close"></button>
+            </div>
+            <form id="createForm" method="post" asp-page-handler="Create" onsubmit="return validateCreateForm(event)">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label for="createName" class="form-label">Subcategory Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required
+                               aria-describedby="nameError" aria-required="true" />
+                        <div id="nameError" class="invalid-feedback">Subcategory name is required</div>
+                        <div class="form-text text-end">Max 50 characters (<span id="charCounter">0</span>/50)</div>
+                    </div>
+
+                    <div id="createError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createSubcategoryModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="createSubmitBtn" disabled>Save Subcategory</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Subcategory Modal -->
+<div class="modal fade" id="editSubcategoryModal" tabindex="-1" aria-labelledby="editSubcategoryLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editSubcategoryLabel">Edit Subcategory</h5>
+                <button type="button" class="btn-close" onclick="closeModal('editSubcategoryModal')" aria-label="Close"></button>
+            </div>
+            <form id="editForm" method="post" asp-page-handler="Update" onsubmit="return validateEditForm(event)">
+                <div class="modal-body">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="editSubcategoryId" name="EditForm.SubcategoryId" />
+
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">Subcategory Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
+                        <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
+                    </div>
+
+                    <div id="editError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editSubcategoryModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="editSubmitBtn">Update Subcategory</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmLabel">Delete Subcategory</h5>
+                <button type="button" class="btn-close" onclick="closeModal('deleteConfirmModal')" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the subcategory <strong id="deleteSubcategoryName"></strong>?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+                <div id="deleteError" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus,
+    .form-select:focus {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+    }
+
+    .btn:focus {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+    }
+
+    .form-text.text-end {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+
+    .invalid-feedback {
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<script>
+    let currentDeleteSubcategoryId = null;
+
+    function openCreateModal() {
+        const modal = new mdb.Modal(document.getElementById('createSubcategoryModal'));
+        modal.show();
+    }
+
+    function openEditModal(subcategory) {
+        loadEditForm(subcategory);
+        const modal = new mdb.Modal(document.getElementById('editSubcategoryModal'));
+        modal.show();
+    }
+
+    function closeModal(modalId) {
+        mdb.Modal.getInstance(document.getElementById(modalId))?.hide();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        document.addEventListener('click', function (event) {
+            const editButton = event.target.closest('.js-edit-subcategory');
+            if (editButton) {
+                openEditModal({
+                    id: editButton.dataset.subcategoryId,
+                    name: editButton.dataset.subcategoryName,
+                });
+                return;
+            }
+
+            const deleteButton = event.target.closest('.js-delete-subcategory');
+            if (deleteButton) {
+                showDeleteConfirm(
+                    deleteButton.dataset.subcategoryId,
+                    deleteButton.dataset.subcategoryName
+                );
+                return;
+            }
+        });
+
+        const createNameInput = document.getElementById('createName');
+        const createModal = document.getElementById('createSubcategoryModal');
+
+        if (createNameInput) {
+            createNameInput.addEventListener('input', function() {
+                updateCharCounter('charCounter', this.value.length);
+                this.classList.remove('is-invalid');
+                validateCreateForm();
+            });
+        }
+
+        const editNameInput = document.getElementById('editName');
+
+        if (editNameInput) {
+            editNameInput.addEventListener('input', function() {
+                updateCharCounter('editCharCounter', this.value.length);
+            });
+        }
+
+        const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
+        if (deleteConfirmBtn) {
+            deleteConfirmBtn.addEventListener('click', performDelete);
+        }
+
+        let lastFocusedElement = null;
+        const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+        function setupModalFocusTrap(modalElement, initialFocusId) {
+            modalElement.addEventListener('shown.bs.modal', function() {
+                lastFocusedElement = document.activeElement;
+                const initialFocus = document.getElementById(initialFocusId);
+                if (initialFocus) initialFocus.focus();
+
+                const focusableElements = modalElement.querySelectorAll(focusableSelectors);
+                if (focusableElements.length > 0) {
+                    const firstElement = focusableElements[0];
+                    const lastElement = focusableElements[focusableElements.length - 1];
+
+                    modalElement.addEventListener('keydown', function(e) {
+                        if (e.key === 'Tab') {
+                            if (e.shiftKey) {
+                                if (document.activeElement === firstElement) {
+                                    lastElement.focus();
+                                    e.preventDefault();
+                                }
+                            } else {
+                                if (document.activeElement === lastElement) {
+                                    firstElement.focus();
+                                    e.preventDefault();
+                                }
+                            }
+                        }
+                        if (e.key === 'Escape') {
+                            mdb.Modal.getInstance(modalElement)?.hide();
+                        }
+                    });
+                }
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                if (lastFocusedElement) {
+                    lastFocusedElement.focus();
+                    lastFocusedElement = null;
+                }
+            });
+        }
+
+        if (createModal) {
+            setupModalFocusTrap(createModal, 'createName');
+        }
+
+        const editModal = document.getElementById('editSubcategoryModal');
+        if (editModal) {
+            setupModalFocusTrap(editModal, 'editName');
+        }
+
+        const deleteConfirmModalEl = document.getElementById('deleteConfirmModal');
+        if (deleteConfirmModalEl) {
+            setupModalFocusTrap(deleteConfirmModalEl, 'deleteConfirmBtn');
+        }
+    }
+
+    function updateCharCounter(elementId, length) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = length;
+        }
+    }
+
+    function validateCreateForm(event) {
+        const name = document.getElementById('createName').value.trim();
+        const submitBtn = document.getElementById('createSubmitBtn');
+
+        const isValid = name.length > 0;
+        submitBtn.disabled = !isValid;
+
+        if (event && event.submitter === submitBtn) {
+            if (!isValid) {
+                const nameInput = document.getElementById('createName');
+                nameInput.classList.add('is-invalid');
+                return false;
+            }
+
+            submitCreateForm(event);
+            return false;
+        }
+
+        return isValid;
+    }
+
+    function submitCreateForm(event) {
+        event.preventDefault();
+        const form = document.getElementById('createForm');
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Subcategory create request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'subcategory-create', http_status: String(r.status) }
+                    });
+                }
+                return isJson ? r.json().then(body => ({ ok: false, body }))
+                              : Promise.resolve({ ok: false, body: null });
+            }
+            return r.json().then(body => ({ ok: true, body }));
+        })
+        .then(payload => {
+            const data = payload.body;
+            if (data && data.success) {
+                mdb.Modal.getInstance(document.getElementById('createSubcategoryModal'))?.hide();
+                location.reload();
+            } else {
+                document.getElementById('createError').textContent =
+                    (data && data.error) || 'An error occurred';
+                document.getElementById('createError').classList.remove('d-none');
+                if (payload.ok && typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Subcategory create returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'subcategory-create' }
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            document.getElementById('createError').textContent = 'Request failed';
+            document.getElementById('createError').classList.remove('d-none');
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Subcategory create fetch failed'),
+                    { tags: { operation: 'subcategory-create', source: 'fetch-catch' } }
+                );
+            }
+        });
+    }
+
+    function validateEditForm(event) {
+        const name = document.getElementById('editName').value.trim();
+        const submitBtn = document.getElementById('editSubmitBtn');
+
+        if (!name) {
+            event.preventDefault();
+            return false;
+        }
+
+        submitEditForm(event);
+        return false;
+    }
+
+    function submitEditForm(event) {
+        event.preventDefault();
+        const form = document.getElementById('editForm');
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Subcategory update request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'subcategory-update', http_status: String(r.status) }
+                    });
+                }
+                return isJson ? r.json().then(body => ({ ok: false, body }))
+                              : Promise.resolve({ ok: false, body: null });
+            }
+            return r.json().then(body => ({ ok: true, body }));
+        })
+        .then(payload => {
+            const data = payload.body;
+            if (data && data.success) {
+                mdb.Modal.getInstance(document.getElementById('editSubcategoryModal'))?.hide();
+                location.reload();
+            } else {
+                document.getElementById('editError').textContent =
+                    (data && data.error) || 'An error occurred';
+                document.getElementById('editError').classList.remove('d-none');
+                if (payload.ok && typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Subcategory update returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'subcategory-update' }
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            document.getElementById('editError').textContent = 'Request failed';
+            document.getElementById('editError').classList.remove('d-none');
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Subcategory update fetch failed'),
+                    { tags: { operation: 'subcategory-update', source: 'fetch-catch' } }
+                );
+            }
+        });
+    }
+
+    function loadEditForm(subcategory) {
+        document.getElementById('editSubcategoryId').value = subcategory.id;
+        document.getElementById('editName').value = subcategory.name;
+        document.getElementById('editError').classList.add('d-none');
+        updateCharCounter('editCharCounter', subcategory.name.length);
+    }
+
+    function showDeleteConfirm(subcategoryId, subcategoryName) {
+        currentDeleteSubcategoryId = subcategoryId;
+        document.getElementById('deleteSubcategoryName').textContent = subcategoryName;
+        document.getElementById('deleteError').classList.add('d-none');
+        const modal = new mdb.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
+
+    function performDelete() {
+        if (!currentDeleteSubcategoryId) return;
+
+        fetch(`?handler=Delete&subcategoryId=${currentDeleteSubcategoryId}`, {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+            }
+        })
+        .then(r => {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Subcategory delete request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'subcategory-delete', http_status: String(r.status) }
+                    });
+                }
+                return isJson ? r.json().then(body => ({ ok: false, body }))
+                              : Promise.resolve({ ok: false, body: null });
+            }
+            return r.json().then(body => ({ ok: true, body }));
+        })
+        .then(payload => {
+            const data = payload.body;
+            if (data && data.success) {
+                mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+                location.reload();
+            } else {
+                document.getElementById('deleteError').textContent =
+                    (data && data.error) || 'An error occurred';
+                document.getElementById('deleteError').classList.remove('d-none');
+                if (payload.ok && typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Subcategory delete returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'subcategory-delete' }
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            document.getElementById('deleteError').textContent = 'Request failed';
+            document.getElementById('deleteError').classList.remove('d-none');
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Subcategory delete fetch failed'),
+                    { tags: { operation: 'subcategory-delete', source: 'fetch-catch' } }
+                );
+            }
+        });
+    }
+</script>

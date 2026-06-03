@@ -30,4 +30,8 @@ public interface ISubcategoryRepository
     /// Caller must use CategoryNormalizer.Normalize(subcategory.Name.Value).
     /// </summary>
     Task AddAsync(Subcategory subcategory, string normalizedName);
+
+    Task UpdateAsync(Subcategory subcategory, string normalizedName);
+    Task DeleteAsync(SubcategoryId id);
+    Task<bool> HasTransactionsAsync(SubcategoryId subcategoryId);
 }
