@@ -74,7 +74,7 @@
                 <h5 class="modal-title" id="createSubcategoryLabel">Add New Subcategory</h5>
                 <button type="button" class="btn-close" onclick="closeModal('createSubcategoryModal')" aria-label="Close"></button>
             </div>
-            <form id="createForm" method="post" asp-page-handler="Create" onsubmit="return validateCreateForm(event)">
+            <form id="createForm" method="post" asp-page-handler="Create" asp-route-categoryId="@Model.ParentCategory?.Id" onsubmit="return validateCreateForm(event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">

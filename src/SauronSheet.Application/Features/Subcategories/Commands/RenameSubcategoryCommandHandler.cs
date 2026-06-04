@@ -42,14 +42,16 @@ public class RenameSubcategoryCommandHandler
         if (category == null || category.UserId != userId)
             throw new EntityNotFoundException("Subcategory", request.SubcategoryId);
 
-        var duplicate = await _subcategoryRepo.FindByNameAsync(userId, subcategory.CategoryId, request.NewName);
+        // Normalize first — the UNIQUE constraint is on normalized_name,
+        // so the duplicate check must use the same key the DB enforces.
+        var normalizedName = CategoryNormalizer.Normalize(request.NewName)
+            ?? throw new DomainException("Subcategory name cannot be empty.");
+
+        var duplicate = await _subcategoryRepo.FindByNormalizedNameAsync(userId, subcategory.CategoryId, normalizedName);
         if (duplicate != null && duplicate.Id != subcategoryId)
             throw new DomainException($"Subcategory name '{request.NewName}' already exists in this category.");
 
         subcategory.Update(SubcategoryName.Create(request.NewName));
-
-        var normalizedName = CategoryNormalizer.Normalize(request.NewName)
-            ?? throw new DomainException("Subcategory name cannot be empty.");
 
         await _subcategoryRepo.UpdateAsync(subcategory, normalizedName);
         return Unit.Value;

@@ -60,10 +60,10 @@ public class RenameSubcategoryCommandHandlerTests
         _mockCategoryRepo.Setup(x => x.GetByIdAsync(_categoryId))
             .ReturnsAsync(category);
 
-        _mockSubcategoryRepo.Setup(x => x.FindByNameAsync(
+        _mockSubcategoryRepo.Setup(x => x.FindByNormalizedNameAsync(
                 _userId,
                 _categoryId,
-                "New Name"))
+                "new name"))
             .ReturnsAsync((Subcategory?)null);
 
         var command = new RenameSubcategoryCommand(

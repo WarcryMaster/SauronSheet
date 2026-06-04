@@ -46,10 +46,10 @@ public class CreateSubcategoryCommandHandlerTests
         _mockCategoryRepo.Setup(x => x.GetByIdAsync(new CategoryId(categoryId)))
             .ReturnsAsync(category);
 
-        _mockSubcategoryRepo.Setup(x => x.FindByNameAsync(
+        _mockSubcategoryRepo.Setup(x => x.FindByNormalizedNameAsync(
                 userId,
                 new CategoryId(categoryId),
-                "Ropa"))
+                "ropa"))
             .ReturnsAsync((Subcategory?)null);
 
         var command = new CreateSubcategoryCommand(
@@ -66,7 +66,7 @@ public class CreateSubcategoryCommandHandlerTests
                 s.Name.Value == "Ropa" &&
                 s.CategoryId.Value == categoryId &&
                 !s.IsAutoCreated),
-            It.IsAny<string>()), Times.Once);
+            It.Is<string>(n => n == "ropa")), Times.Once);
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class CreateSubcategoryCommandHandlerTests
             categoryId: new CategoryId(categoryId),
             name: "Ropa");
 
-        _mockSubcategoryRepo.Setup(x => x.FindByNameAsync(
+        _mockSubcategoryRepo.Setup(x => x.FindByNormalizedNameAsync(
                 userId,
                 new CategoryId(categoryId),
-                "Ropa"))
+                "ropa"))
             .ReturnsAsync(existing);
 
         var command = new CreateSubcategoryCommand(
@@ -105,6 +105,50 @@ public class CreateSubcategoryCommandHandlerTests
             Name: "Ropa");
 
         // Act & Assert
+        var ex = await Assert.ThrowsAsync<DomainException>(() =>
+            handler.Handle(command, CancellationToken.None));
+
+        Assert.Contains("already exists", ex.Message);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task CreateSubcategory_NormalizedCollision_ThrowsDomainException()
+    {
+        // "Café" and "Cafe" have different raw names but the same normalized key ("cafe").
+        // The duplicate check must use normalized_name to prevent UNIQUE constraint violations.
+        var handler = new CreateSubcategoryCommandHandler(
+            _mockSubcategoryRepo.Object,
+            _mockCategoryRepo.Object,
+            _mockUserContext.Object);
+
+        var categoryId = Guid.NewGuid();
+        var userId = new UserId("test-user-id");
+        var category = TestCategoryFactory.CreateUserCategory(
+            categoryId: new CategoryId(categoryId),
+            userId: userId,
+            name: "Food");
+
+        _mockCategoryRepo.Setup(x => x.GetByIdAsync(new CategoryId(categoryId)))
+            .ReturnsAsync(category);
+
+        var existing = TestSubcategoryFactory.CreateUserSubcategory(
+            userId: userId,
+            categoryId: new CategoryId(categoryId),
+            name: "Café");
+
+        // "cafe" is the normalized form of both "Café" and "Cafe"
+        _mockSubcategoryRepo.Setup(x => x.FindByNormalizedNameAsync(
+                userId,
+                new CategoryId(categoryId),
+                "cafe"))
+            .ReturnsAsync(existing);
+
+        var command = new CreateSubcategoryCommand(
+            CategoryId: categoryId,
+            Name: "Cafe");
+
+        // Act & Assert — must throw BEFORE hitting the DB UNIQUE constraint
         var ex = await Assert.ThrowsAsync<DomainException>(() =>
             handler.Handle(command, CancellationToken.None));
 

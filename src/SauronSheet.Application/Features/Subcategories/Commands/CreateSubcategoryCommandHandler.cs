@@ -42,7 +42,12 @@ public class CreateSubcategoryCommandHandler
         if (category.UserId != userId)
             throw new EntityNotFoundException("Category", request.CategoryId);
 
-        var duplicate = await _subcategoryRepo.FindByNameAsync(userId, categoryId, request.Name);
+        // Normalize first — the UNIQUE constraint is on normalized_name,
+        // so the duplicate check must use the same key the DB enforces.
+        var normalizedName = CategoryNormalizer.Normalize(request.Name)
+            ?? throw new DomainException("Subcategory name cannot be normalized to a valid key.");
+
+        var duplicate = await _subcategoryRepo.FindByNormalizedNameAsync(userId, categoryId, normalizedName);
         if (duplicate != null)
             throw new DomainException($"Subcategory name '{request.Name}' already exists in this category.");
 
@@ -55,9 +60,6 @@ public class CreateSubcategoryCommandHandler
             categoryId,
             subcategoryName,
             isAutoCreated: false);
-
-        var normalizedName = CategoryNormalizer.Normalize(request.Name)
-            ?? throw new DomainException("Subcategory name cannot be normalized to a valid key.");
 
         await _subcategoryRepo.AddAsync(subcategory, normalizedName);
         return subcategoryId.Value;
