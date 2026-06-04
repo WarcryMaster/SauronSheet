@@ -22,15 +22,17 @@
          x-show="period === 'custom'" x-transition>
         <div>
             <label for="CustomFromDate" class="form-label mb-0 small text-muted">From</label>
-            <input type="date" name="CustomFromDate" id="CustomFromDate"
+            <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                   type="text" name="CustomFromDate" id="CustomFromDate"
                    value="@ViewData["CustomFromDate"]"
-                   class="form-control form-control-sm" />
+                   class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
         </div>
         <div>
             <label for="CustomToDate" class="form-label mb-0 small text-muted">To</label>
-            <input type="date" name="CustomToDate" id="CustomToDate"
+            <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                   type="text" name="CustomToDate" id="CustomToDate"
                    value="@ViewData["CustomToDate"]"
-                   class="form-control form-control-sm" />
+                   class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
         </div>
     </div>
 

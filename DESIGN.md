@@ -342,6 +342,30 @@ openModal() { new mdb.Modal(document.getElementById('myModal')).show(); }
 </template>
 ```
 
+### Flatpickr Date Picker
+
+All date inputs use Flatpickr via Alpine.js. CDN is loaded in `_Layout.cshtml` (airbnb theme + Spanish locale).
+
+#### Basic Pattern
+```html
+<input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+       type="text" class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
+```
+
+#### Options Reference
+| Option | Value | Reason |
+|---|---|---|
+| `dateFormat` | `'Y-m-d'` | ISO format for server submission (ASP.NET model binding) |
+| `altInput` | `true` | Shows user-friendly format while keeping machine format in the real input |
+| `altFormat` | `'d/m/Y'` | Spanish date display (DD/MM/YYYY) |
+| `allowInput` | `true` | Users can type dates manually |
+| `maxDate` | `'today'` | Only for transaction/search dates (no future dates) |
+| `locale` | (auto via CDN) | Spanish locale loaded in `_Layout.cshtml` |
+
+#### DO NOT
+- ❌ Use `type="date"` — replaced by Flatpickr everywhere
+- ❌ Add `maxDate: 'today'` on budget effective dates — budgets can be set for future periods
+
 ### HTMX Patterns
 
 | Pattern | Attributes | Use |

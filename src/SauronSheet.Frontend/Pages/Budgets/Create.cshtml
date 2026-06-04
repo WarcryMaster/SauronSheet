@@ -133,16 +133,18 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label asp-for="EffectiveFrom" class="form-label fw-semibold">Effective From</label>
-                    <input type="date" asp-for="EffectiveFrom"
+                    <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                           type="text" asp-for="EffectiveFrom"
                            x-ref="fromInput"
-                           class="form-control" required />
+                           class="form-control" required placeholder="DD/MM/AAAA" autocomplete="off" />
                     <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="EffectiveUntil" class="form-label fw-semibold">Effective Until</label>
-                    <input type="date" asp-for="EffectiveUntil"
+                    <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                           type="text" asp-for="EffectiveUntil"
                            x-ref="untilInput"
-                           class="form-control" />
+                           class="form-control" placeholder="DD/MM/AAAA" autocomplete="off" />
                     <div class="form-text">Leave empty for a permanent budget.</div>
                     <span asp-validation-for="EffectiveUntil" class="text-danger small"></span>
                 </div>

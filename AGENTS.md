@@ -120,6 +120,7 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 - ❌ `d-flex`, `d-block`, `d-grid` (MDB classes with `!important`) on elements with `x-show` → wrap in inner div
 - ❌ `@Json.Serialize()` inside double-quoted HTML attributes → use single-quoted attributes (`x-data='...'`) and double-quoted JS strings
 - ❌ `@(decimal)` without invariant culture inside JavaScript → use `.ToString(System.Globalization.CultureInfo.InvariantCulture)`
+- ❌ `<input type="date">` — use Flatpickr via Alpine.js `x-init` instead
 
 **REQUIRED — ALWAYS USE:**
 - ✅ `x-data` on every interactive component (forms, filters, modals, toolbars)
@@ -132,6 +133,7 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 - ✅ `$refs` for DOM element references when unavoidable
 - ✅ MDB modals via `new mdb.Modal(el).show()` from Alpine.js methods (DO NOT use `data-mdb-toggle` on buttons, call `show()` explicitly)
 - ✅ `htmx:beforeSwap` → `destroyAllCharts()` for any page with Chart.js + HTMX
+- ✅ Flatpickr via `x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"` for ALL date inputs. Never use `type="date"`.
 
 ### Cross-Attribute Compatibility
 - **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**

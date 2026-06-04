@@ -75,11 +75,13 @@
                 <div class="row g-3">
                     <div class="col-6">
                         <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase mb-1">Effective From</label>
-                        <input type="date" asp-for="EffectiveFrom" class="form-control form-control-sm" required />
+                        <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                               type="text" asp-for="EffectiveFrom" class="form-control form-control-sm" required placeholder="DD/MM/AAAA" autocomplete="off" />
                     </div>
                     <div class="col-6">
                         <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase mb-1">Effective Until</label>
-                        <input type="date" asp-for="EffectiveUntil" class="form-control form-control-sm" />
+                        <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                               type="text" asp-for="EffectiveUntil" class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
                         <small class="text-muted">Leave empty for permanent budget.</small>
                     </div>
                 </div>
