@@ -78,14 +78,14 @@
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
-                        <label for="createName" class="form-label">Subcategory Name <span class="text-danger">*</span></label>
+                        <label for="createName" class="form-label fw-semibold">Subcategory Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required
                                aria-describedby="nameError" aria-required="true" />
                         <div id="nameError" class="invalid-feedback">Subcategory name is required</div>
                         <div class="form-text text-end">Max 50 characters (<span id="charCounter">0</span>/50)</div>
                     </div>
 
-                    <div id="createError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                    <div id="createError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('createSubcategoryModal')">Cancel</button>
@@ -110,12 +110,12 @@
                     <input type="hidden" id="editSubcategoryId" name="EditForm.SubcategoryId" />
 
                     <div class="mb-3">
-                        <label for="editName" class="form-label">Subcategory Name <span class="text-danger">*</span></label>
+                        <label for="editName" class="form-label fw-semibold">Subcategory Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
                         <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
                     </div>
 
-                    <div id="editError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                    <div id="editError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editSubcategoryModal')">Cancel</button>
@@ -137,7 +137,7 @@
             <div class="modal-body">
                 <p>Are you sure you want to delete the subcategory <strong id="deleteSubcategoryName"></strong>?</p>
                 <p class="text-muted small">This action cannot be undone.</p>
-                <div id="deleteError" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
+                <div id="deleteError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>

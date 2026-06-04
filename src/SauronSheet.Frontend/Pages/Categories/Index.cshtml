@@ -140,7 +140,7 @@
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
-                        <label for="createName" class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <label for="createName" class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required 
                                aria-describedby="nameError" aria-required="true" />
                         <div id="nameError" class="invalid-feedback">Category name is required</div>
@@ -148,7 +148,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="createType" class="form-label">Type <span class="text-danger">*</span></label>
+                        <label for="createType" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="createType" name="CreateForm.Type" required aria-required="true">
                             <option value="">Select type...</option>
                             <option value="0">Income</option>
@@ -157,7 +157,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="createColor" class="form-label">Color <span class="text-danger">*</span></label>
+                        <label for="createColor" class="form-label fw-semibold">Color <span class="text-danger">*</span></label>
                         <div class="d-flex gap-2 align-items-center">
                             <input type="color" class="form-control form-control-color" id="createColor" name="CreateForm.Color" value="#3498DB" required 
                                    style="width: 60px;" aria-label="Select category color" />
@@ -166,7 +166,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="createIcon" class="form-label">Icon <span class="text-danger">*</span></label>
+                        <label for="createIcon" class="form-label fw-semibold">Icon <span class="text-danger">*</span></label>
                         <select class="form-select" id="createIcon" name="CreateForm.IconName" required aria-required="true">
                             <option value="">Select icon...</option>
                             @foreach (var icon in Model.AvailableIcons)
@@ -176,7 +176,7 @@
                         </select>
                     </div>
 
-                    <div id="createError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                    <div id="createError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('createCategoryModal')">Cancel</button>
@@ -201,13 +201,13 @@
                     <input type="hidden" id="editCategoryId" name="EditForm.CategoryId" />
                     
                     <div class="mb-3">
-                        <label for="editName" class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <label for="editName" class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
                         <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="editColor" class="form-label">Color <span class="text-danger">*</span></label>
+                        <label for="editColor" class="form-label fw-semibold">Color <span class="text-danger">*</span></label>
                         <div class="d-flex gap-2 align-items-center">
                             <input type="color" class="form-control form-control-color" id="editColor" name="EditForm.Color" required 
                                    style="width: 60px;" aria-label="Select category color" />
@@ -216,7 +216,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="editIcon" class="form-label">Icon <span class="text-danger">*</span></label>
+                        <label for="editIcon" class="form-label fw-semibold">Icon <span class="text-danger">*</span></label>
                         <select class="form-select" id="editIcon" name="EditForm.IconName" required aria-required="true">
                             @foreach (var icon in Model.AvailableIcons)
                             {
@@ -225,7 +225,7 @@
                         </select>
                     </div>
 
-                    <div id="editError" class="alert alert-danger d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                    <div id="editError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('editCategoryModal')">Cancel</button>
@@ -247,7 +247,7 @@
             <div class="modal-body">
                 <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
                 <p class="text-muted small">This action cannot be undone.</p>
-                <div id="deleteError" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
+                <div id="deleteError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite"></div>
             </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>

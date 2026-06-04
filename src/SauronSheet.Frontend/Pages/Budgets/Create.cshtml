@@ -7,7 +7,7 @@
 <div class="mx-auto d-flex flex-column gap-4" style="max-width:640px">
     <div class="d-flex align-items-center gap-3">
         <a href="/budgets" class="btn btn-link btn-sm text-muted text-decoration-none">&larr; Back to Budgets</a>
-        <h2 class="h3 fw-bold mb-0">Create Budget</h2>
+        <h3 class="h3 fw-bold mb-0">Create Budget</h3>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -34,7 +34,7 @@
                             </span>
                         </span>
                     </label>
-                    <label class="budget-type-card flex-fill" id="label-expense">
+                    <label class="budget-type-card flex-fill" id="label-expense" data-toggle-accent="danger">
                         <input type="radio" name="BudgetType" value="Expense"
                                class="budget-type-radio" required
                                @(Model.BudgetType == "Expense" ? "checked" : "") />
@@ -128,59 +128,7 @@
     </div>
 </div>
 
-@* ── Styles ── *@
-<style>
-    /* Budget type cards — segmented toggle */
-    .budget-type-radio {
-        position: absolute;
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-
-    .budget-type-content {
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border-color: var(--bs-border-color, #dee2e6);
-        background: #fff;
-    }
-
-    .budget-type-radio:checked + .budget-type-content {
-        border-color: #556B2F;
-        background: #f4f7ee;
-        box-shadow: 0 0 0 2px rgba(85, 107, 47, 0.25);
-    }
-
-    .budget-type-content:hover {
-        border-color: #556B2F;
-        background: #fafbf6;
-    }
-
-    .budget-type-radio:focus-visible + .budget-type-content {
-        box-shadow: 0 0 0 3px rgba(85, 107, 47, 0.35);
-    }
-
-    .budget-type-icon {
-        font-size: 1.5rem;
-        line-height: 1;
-    }
-
-    /* Expense type card red accent */
-    #label-expense .budget-type-radio:checked + .budget-type-content {
-        border-color: #dc4c64;
-        background: #fef5f6;
-        box-shadow: 0 0 0 2px rgba(220, 76, 100, 0.25);
-    }
-
-    #label-expense .budget-type-content:hover {
-        border-color: #dc4c64;
-        background: #fef8f9;
-    }
-
-    #label-expense .budget-type-radio:focus-visible + .budget-type-content {
-        box-shadow: 0 0 0 3px rgba(220, 76, 100, 0.35);
-    }
-</style>
+@* ── Styles live in wwwroot/css/site.css (.budget-type-*) ── *@
 
 @section Scripts {
     <script>

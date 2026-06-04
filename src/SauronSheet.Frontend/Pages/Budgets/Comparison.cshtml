@@ -11,7 +11,7 @@
 
 <div class="d-flex flex-column gap-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h2 class="h3 fw-bold mb-0">📊 Budget vs Actual</h2>
+        <h3 class="h3 fw-bold mb-0">📊 Budget vs Actual</h3>
         <a href="/budgets" class="small text-brand text-decoration-none">&larr; Back to Budgets</a>
     </div>
 
@@ -155,6 +155,14 @@
         var chartData = JSON.parse(document.getElementById('budgets-comparison-data').textContent);
         var ctx = document.getElementById('comparisonChart');
         if (ctx && chartData && chartData.length > 0) {
+            // Resolve design tokens at runtime so chart colors track DESIGN.md
+            // (defined as CSS custom properties in wwwroot/css/site.css).
+            var rootStyle = getComputedStyle(document.documentElement);
+            var brand = rootStyle.getPropertyValue('--brand').trim();
+            var brandFill = 'color-mix(in srgb, ' + brand + ' 60%, transparent)';
+            var danger = rootStyle.getPropertyValue('--semantic-danger').trim();
+            var dangerFill = 'color-mix(in srgb, ' + danger + ' 60%, transparent)';
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -163,15 +171,15 @@
                         {
                             label: 'Budget',
                             data: chartData.map(function(d) { return d.budgetLimit || 0; }),
-                            backgroundColor: 'rgba(85, 107, 47, 0.6)',
-                            borderColor: 'rgb(85, 107, 47)',
+                            backgroundColor: brandFill,
+                            borderColor: brand,
                             borderWidth: 1
                         },
                         {
                             label: 'Actual',
                             data: chartData.map(function(d) { return d.actualSpend; }),
-                            backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: dangerFill,
+                            borderColor: danger,
                             borderWidth: 1
                         }
                     ]

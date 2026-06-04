@@ -7,12 +7,12 @@
 <div class="mx-auto d-flex flex-column gap-4" style="max-width:560px">
     <div class="d-flex align-items-center gap-3">
         <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
-        <h2 class="h4 fw-bold mb-0">Edit Budget</h2>
+        <h3 class="h3 fw-bold mb-0">Edit Budget</h3>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+        <div class="alert alert-danger rounded-3" role="alert">@Model.ErrorMessage</div>
     }
 
     @if (Model.Budget != null)
@@ -50,7 +50,7 @@
 
                 @* Spending limit *@
                 <div>
-                    <label asp-for="NewLimitAmount" class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
+                    <label asp-for="NewLimitAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">Spending Limit</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text">&euro;</span>
                         <input type="number" asp-for="NewLimitAmount" step="0.01" min="0.01"
@@ -61,7 +61,7 @@
 
                 @* Period granularity *@
                 <div>
-                    <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase">Period Granularity</label>
+                    <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase mb-1">Period Granularity</label>
                     <select asp-for="PeriodGranularity" class="form-select form-select-sm" required>
                         <option value="Monthly">Monthly</option>
                         <option value="Quarterly">Quarterly</option>
@@ -73,11 +73,11 @@
                 @* Effective dates *@
                 <div class="row g-3">
                     <div class="col-6">
-                        <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase">Effective From</label>
+                        <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase mb-1">Effective From</label>
                         <input type="date" asp-for="EffectiveFrom" class="form-control form-control-sm" required />
                     </div>
                     <div class="col-6">
-                        <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase">Effective Until</label>
+                        <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase mb-1">Effective Until</label>
                         <input type="date" asp-for="EffectiveUntil" class="form-control form-control-sm" />
                         <small class="text-muted">Leave empty for permanent budget.</small>
                     </div>
