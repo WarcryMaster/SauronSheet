@@ -9,6 +9,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="htmx-config" content='{"historyCacheSize":0}'>
     <title>@ViewData["Title"] - SauronSheet</title>
 
     <!-- Favicon: SVG first (modern browsers), PNG fallback (legacy) -->
@@ -87,6 +88,11 @@
     <!-- Font Awesome via CDN (jsdelivr - allowed by CSP) -->
     <link rel="stylesheet" href="@fontAwesomeUrl" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- Alpine.js v3 — reactive, declarative interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <!-- HTMX v2 — Ajax from HTML attributes -->
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
 

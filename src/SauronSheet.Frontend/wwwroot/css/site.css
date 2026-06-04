@@ -254,3 +254,26 @@
 [data-toggle-accent="danger"] .budget-type-radio:focus-visible + .budget-type-content {
     box-shadow: 0 0 0 3px var(--danger-ring-strong);
 }
+
+/* Pill selector active state enhancement */
+.btn-outline-secondary.rounded-pill.active,
+.btn-outline-secondary.rounded-pill:active {
+    background-color: var(--brand, #556B2F);
+    border-color: var(--brand, #556B2F);
+    color: #fff;
+}
+
+/* HTMX indicator overlay */
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    opacity: 1;
+}
+
+/* Counter animation (prevent layout shift during count-up) */
+.counter-value {
+    font-variant-numeric: tabular-nums;
+}

@@ -5,244 +5,324 @@
 
 @{
     ViewData["Title"] = "Dashboard";
-    ViewData["DateFilter"] = Model.DateFilter;
-    ViewData["CustomFromDate"] = Model.CustomFromDate?.ToString("yyyy-MM-dd");
-    ViewData["CustomToDate"] = Model.CustomToDate?.ToString("yyyy-MM-dd");
 }
 
-<div class="d-flex flex-column gap-4">
-    <!-- Date Range Filter -->
-    <form method="get" action="/dashboard">
-        <partial name="Shared/Components/_DateRangeFilter" />
-    </form>
+<div id="dashboard-content"
+     x-data="{
+         hasData: @(Model.Summary?.TransactionCount > 0 ? "true" : "false"),
+         init() {
+             document.addEventListener('htmx:beforeSwap', (e) => {
+                 if (e.detail.target.id === 'dashboard-content') {
+                     if (typeof destroyAllCharts === 'function') destroyAllCharts();
+                 }
+             });
+             this.$nextTick(() => this.initCharts());
+         },
+         initCharts() {
+             const readJson = (id) => {
+                 const el = document.getElementById(id);
+                 if (!el) return null;
+                 try { return JSON.parse(el.textContent); } catch(e) { return null; }
+             };
+             const monthlyCategoryData = readJson('dashboard-monthly-category-data');
+             const monthlyData = readJson('dashboard-monthly-trends');
+             const yearlyData = readJson('dashboard-yearly-comparison');
 
-    @if (Model.Summary?.TransactionCount == 0)
-    {
+             if (!monthlyCategoryData && !monthlyData && !yearlyData) return;
+
+             if (monthlyCategoryData && monthlyCategoryData.length > 0) {
+                 initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
+             }
+             if (monthlyData && monthlyData.length > 0) {
+                 initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);
+             }
+             if (yearlyData && yearlyData.length > 0) {
+                 initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(Model.AnalyticsYear - 1)', '@Model.AnalyticsYear');
+             }
+         }
+     }"
+     class="d-flex flex-column gap-4">
+
+    <!-- Full-page spinner overlay during HTMX requests -->
+    <div id="dashboard-spinner" class="htmx-indicator position-fixed top-50 start-50 translate-middle z-3" style="display:none">
+        <div class="spinner-border text-brand" role="status" style="width:3rem;height:3rem">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+        <!-- Pill-style period selector -->
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3" x-data="{ period: '@Model.DateFilter' }">
+            <button @@click="period = 'all'"
+                    hx-get="/dashboard?DateFilter=all"
+                    hx-target="#dashboard-content"
+                    hx-select="#dashboard-content"
+                    hx-swap="outerHTML"
+                    hx-indicator="#dashboard-spinner"
+                    :class="period === 'all' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
+                All Time
+            </button>
+            <button @@click="period = 'this-month'"
+                    hx-get="/dashboard?DateFilter=this-month"
+                    hx-target="#dashboard-content"
+                    hx-select="#dashboard-content"
+                    hx-swap="outerHTML"
+                    hx-indicator="#dashboard-spinner"
+                    :class="period === 'this-month' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
+                This Month
+            </button>
+            <button @@click="period = 'last-3-months'"
+                    hx-get="/dashboard?DateFilter=last-3-months"
+                    hx-target="#dashboard-content"
+                    hx-select="#dashboard-content"
+                    hx-swap="outerHTML"
+                    hx-indicator="#dashboard-spinner"
+                    :class="period === 'last-3-months' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
+                Last 3 Months
+            </button>
+            <button @@click="period = 'this-year'"
+                    hx-get="/dashboard?DateFilter=this-year"
+                    hx-target="#dashboard-content"
+                    hx-select="#dashboard-content"
+                    hx-swap="outerHTML"
+                    hx-indicator="#dashboard-spinner"
+                    :class="period === 'this-year' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
+                This Year
+            </button>
+        </div>
+
         <!-- Empty State -->
-        <div class="card border-0 shadow-sm p-5 text-center">
-            <div class="fs-1 mb-3">📊</div>
-            <p class="h5 fw-semibold mb-2">No spending data yet</p>
-            <p class="text-muted mb-4">Import a bank statement or add transactions to see analytics.</p>
-            <div class="d-flex justify-content-center gap-3">
-                <a href="/transactions/upload" class="btn btn-brand">📊 Upload Statement</a>
-                <a href="/transactions/add" class="btn btn-outline-secondary">➕ Add Transaction</a>
+        <template x-if="!hasData">
+        <div x-show="!hasData" x-transition.opacity>
+            <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
+                <div class="fs-1 mb-3">📊</div>
+                <p class="h5 fw-semibold mb-2">No spending data yet</p>
+                <p class="text-muted mb-4">Import a bank statement or add transactions to see analytics.</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="/transactions/upload" class="btn btn-brand">📊 Upload Statement</a>
+                    <a href="/transactions/add" class="btn btn-outline-secondary">➕ Add Transaction</a>
+                </div>
             </div>
         </div>
-    }
-    else
-    {
-        <!-- Summary Cards -->
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
-            <div class="col">
-                <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">Total Income</div>
-                    <div class="h4 fw-bold text-success mb-0">€@Model.Summary?.TotalIncome.ToString("N2")</div>
+        </template>
+
+        <!-- Data State -->
+        <template x-if="hasData">
+        <div x-show="hasData" x-transition.opacity>
+            <!-- Summary Cards with counter animation -->
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+                <!-- Total Income -->
+                <div class="col">
+                    <div class="card border-0 shadow-sm h-100 p-3" x-transition
+                         x-data="{ display: 0, target: @(Model.Summary?.TotalIncome ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">Total Income</div>
+                        <div class="h4 fw-bold text-success mb-0 counter-value">
+                            <span x-text="'€' + display.toFixed(2)"></span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col">
-                <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">Total Expenses</div>
-                    <div class="h4 fw-bold text-danger mb-0">€@Model.Summary?.TotalExpenses.ToString("N2")</div>
+                <!-- Total Expenses -->
+                <div class="col">
+                    <div class="card border-0 shadow-sm h-100 p-3" x-transition
+                         x-data="{ display: 0, target: @(Model.Summary?.TotalExpenses ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">Total Expenses</div>
+                        <div class="h4 fw-bold text-danger mb-0 counter-value">
+                            <span x-text="'€' + display.toFixed(2)"></span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col">
-                <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">Net Amount</div>
-                    <div class="h4 fw-bold mb-0 @(Model.Summary?.NetAmount >= 0 ? "text-success" : "text-danger")">
-                        €@Model.Summary?.NetAmount.ToString("N2")
+                <!-- Net Amount -->
+                <div class="col">
+                    <div class="card border-0 shadow-sm h-100 p-3" x-transition
+                         x-data="{ display: 0, target: @(Model.Summary?.NetAmount ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">Net Amount</div>
+                        <div class="h4 fw-bold mb-0 counter-value @(Model.Summary?.NetAmount >= 0 ? "text-success" : "text-danger")">
+                            <span x-text="'€' + display.toFixed(2)"></span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Transactions Count -->
+                <div class="col">
+                    <div class="card border-0 shadow-sm h-100 p-3" x-transition
+                         x-data="{ display: 0, target: @(Model.Summary?.TransactionCount ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">Transactions</div>
+                        <div class="h4 fw-bold text-dark mb-0 counter-value">
+                            <span x-text="Math.round(display)"></span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col">
-                <div class="card border-0 shadow-sm h-100 p-3">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">Transactions</div>
-                    <div class="h4 fw-bold text-dark mb-0">@Model.Summary?.TransactionCount</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Charts -->
-        <div class="row g-4">
-            <div class="col-12 col-lg-6">
-                <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                    <h3 class="h6 fw-semibold mb-3">Spending by Category</h3>
-                    <div class="chart-wrapper flex-grow-1">
-                        @if (Model.MonthlySpendingByCategory.Any())
-                        {
-                            <canvas id="categoryStackedChart"></canvas>
-                        }
-                        else
-                        {
-                            <p class="text-muted text-center py-4">No expense data for this period.</p>
-                        }
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                    <h3 class="h6 fw-semibold mb-3">Monthly Trends</h3>
-                    <div class="chart-wrapper flex-grow-1">
-                        <canvas id="monthlyTrendsChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card border-0 shadow-sm p-4">
-            <h3 class="h6 fw-semibold mb-3">Year over Year Comparison</h3>
-            <div class="chart-wrapper" style="height: 320px;">
-                <canvas id="yearlyComparisonChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Recent Transactions -->
-        <div class="card border-0 shadow-sm p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="h6 fw-semibold mb-0">Recent Transactions</h3>
-                <a href="/transactions" class="small text-brand">View all →</a>
-            </div>
-            @if (Model.RecentTransactions.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="text-uppercase small fw-semibold text-muted">Date</th>
-                                <th class="text-uppercase small fw-semibold text-muted">Description</th>
-                                <th class="text-uppercase small fw-semibold text-muted text-end">Amount</th>
-                                <th class="text-uppercase small fw-semibold text-muted">Category</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var tx in Model.RecentTransactions)
+            <!-- Charts -->
+            <div class="row g-4">
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
+                        <h3 class="h6 fw-semibold mb-3">Spending by Category</h3>
+                        <div class="chart-wrapper flex-grow-1">
+                            @if (Model.MonthlySpendingByCategory.Any())
                             {
-                                <tr>
-                                    <td class="text-muted small">@tx.Date.ToString("dd/MM/yyyy")</td>
-                                    <td class="small">@tx.Description</td>
-                                    <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-success" : "text-danger")">
-                                        €@tx.Amount.ToString("N2")
-                                    </td>
-                                    <td>
-                                        <partial name="Shared/_CategoryBadge" model="TransactionCategoryDisplayHelper.BuildBadge(tx)" />
-                                    </td>
-                                </tr>
+                                <canvas id="categoryStackedChart"></canvas>
                             }
-                        </tbody>
-                    </table>
+                            else
+                            {
+                                <p class="text-muted text-center py-4">No expense data for this period.</p>
+                            }
+                        </div>
+                    </div>
                 </div>
-            }
-            else
-            {
-                <p class="text-muted text-center py-3">No recent transactions.</p>
-            }
-        </div>
-
-        <!-- Budget Status Widget -->
-        <div class="card border-0 shadow-sm p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="h6 fw-semibold mb-0">Budget Status</h3>
-                <a href="/budgets" class="small text-brand">Manage &rarr;</a>
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
+                        <h3 class="h6 fw-semibold mb-3">Monthly Trends</h3>
+                        <div class="chart-wrapper flex-grow-1">
+                            <canvas id="monthlyTrendsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            @if (!Model.BudgetMetrics.Any())
-            {
-                <p class="text-muted small">No budgets set.
-                   <a href="/budgets/create" class="text-brand fw-semibold">Create budgets to track spending.</a>
-                </p>
-            }
-            else
-            {
-                <!-- Overall summary line -->
-                <p class="small text-muted mb-3">
-                    @Model.BudgetMetrics.Count budget(s) this month
-                    —
-                    <span class="fw-semibold @(Model.BudgetTotalPercentageUsed > 100 ? "text-danger" : Model.BudgetTotalPercentageUsed >= 75 ? "text-warning" : "text-success")">
-                        @Model.BudgetTotalPercentageUsed.ToString("N1")% consumed
-                    </span>
-                </p>
 
-                <!-- Status count chips -->
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    @if (Model.BudgetGreenCount > 0)
-                    {
-                        <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount On Track</span>
-                    }
-                    @if (Model.BudgetYellowCount > 0)
-                    {
-                        <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount Warning</span>
-                    }
-                    @if (Model.BudgetRedCount > 0)
-                    {
-                        <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount Near Limit</span>
-                    }
-                    @if (Model.BudgetOverageCount > 0)
-                    {
-                        <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount Over</span>
-                    }
+            <div class="card border-0 shadow-sm p-4">
+                <h3 class="h6 fw-semibold mb-3">Year over Year Comparison</h3>
+                <div class="chart-wrapper" style="height: 320px;">
+                    <canvas id="yearlyComparisonChart"></canvas>
                 </div>
+            </div>
 
-                <!-- Per-budget progress bars -->
-                @foreach (var metric in Model.BudgetMetrics)
+            <!-- Recent Transactions -->
+            <div class="card border-0 shadow-sm p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h6 fw-semibold mb-0">Recent Transactions</h3>
+                    <a href="/transactions" class="small text-brand">View all →</a>
+                </div>
+                @if (Model.RecentTransactions.Any())
                 {
-                    var pct = Math.Min(metric.PercentageUsed, 100);
-                    var barColor = metric.StatusLevel switch
-                    {
-                        "Green" => "bg-success",
-                        "Yellow" => "bg-warning",
-                        "Red" => "bg-danger",
-                        "Overage" => "bg-danger",
-                        _ => "bg-secondary"
-                    };
-
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between small mb-1">
-                            <a href="/budgets/metrics" class="text-decoration-none">
-                                <span class="fw-medium">@metric.CategoryName</span>
-                            </a>
-                            <span>&euro;@metric.Spent.ToString("N0") / &euro;@metric.AccumulatedLimit.ToString("N0")</span>
-                        </div>
-                        <div class="progress rounded-pill" style="height:10px" role="progressbar"
-                             aria-valuenow="@((int)pct)" aria-valuemin="0" aria-valuemax="100">
-                            <div class="progress-bar @barColor transition" style="width:@(pct)%"></div>
-                        </div>
-                        <div class="d-flex justify-content-between small text-muted mt-1">
-                            <span>                            @Math.Round(metric.PercentageUsed, 1)% used</span>
-                            <span class="@(metric.Remaining >= 0 ? "text-success" : "text-danger")">
-                                &euro;@metric.Remaining.ToString("N0") left
-                            </span>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-uppercase small fw-semibold text-muted">Date</th>
+                                    <th class="text-uppercase small fw-semibold text-muted">Description</th>
+                                    <th class="text-uppercase small fw-semibold text-muted text-end">Amount</th>
+                                    <th class="text-uppercase small fw-semibold text-muted">Category</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var tx in Model.RecentTransactions)
+                                {
+                                    <tr>
+                                        <td class="text-muted small">@tx.Date.ToString("dd/MM/yyyy")</td>
+                                        <td class="small">@tx.Description</td>
+                                        <td class="small text-end fw-semibold @(tx.Amount >= 0 ? "text-success" : "text-danger")">
+                                            €@tx.Amount.ToString("N2")
+                                        </td>
+                                        <td>
+                                            <partial name="Shared/_CategoryBadge" model="TransactionCategoryDisplayHelper.BuildBadge(tx)" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 }
-            }
+                else
+                {
+                    <p class="text-muted text-center py-3">No recent transactions.</p>
+                }
+            </div>
+
+            <!-- Budget Status Widget -->
+            <div class="card border-0 shadow-sm p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h6 fw-semibold mb-0">Budget Status</h3>
+                    <a href="/budgets" class="small text-brand">Manage &rarr;</a>
+                </div>
+                @if (!Model.BudgetMetrics.Any())
+                {
+                    <p class="text-muted small">No budgets set.
+                       <a href="/budgets/create" class="text-brand fw-semibold">Create budgets to track spending.</a>
+                    </p>
+                }
+                else
+                {
+                    <!-- Overall summary line -->
+                    <p class="small text-muted mb-3">
+                        @Model.BudgetMetrics.Count budget(s) this month
+                        —
+                        <span class="fw-semibold @(Model.BudgetTotalPercentageUsed > 100 ? "text-danger" : Model.BudgetTotalPercentageUsed >= 75 ? "text-warning" : "text-success")">
+                            @Model.BudgetTotalPercentageUsed.ToString("N1")% consumed
+                        </span>
+                    </p>
+
+                    <!-- Status count chips -->
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        @if (Model.BudgetGreenCount > 0)
+                        {
+                            <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount On Track</span>
+                        }
+                        @if (Model.BudgetYellowCount > 0)
+                        {
+                            <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount Warning</span>
+                        }
+                        @if (Model.BudgetRedCount > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount Near Limit</span>
+                        }
+                        @if (Model.BudgetOverageCount > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount Over</span>
+                        }
+                    </div>
+
+                    <!-- Per-budget progress bars -->
+                    @foreach (var metric in Model.BudgetMetrics)
+                    {
+                        var pct = Math.Min(metric.PercentageUsed, 100);
+                        var barColor = metric.StatusLevel switch
+                        {
+                            "Green" => "bg-success",
+                            "Yellow" => "bg-warning",
+                            "Red" => "bg-danger",
+                            "Overage" => "bg-danger",
+                            _ => "bg-secondary"
+                        };
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <a href="/budgets/metrics" class="text-decoration-none">
+                                    <span class="fw-medium">@metric.CategoryName</span>
+                                </a>
+                                <span>&euro;@metric.Spent.ToString("N0") / &euro;@metric.AccumulatedLimit.ToString("N0")</span>
+                            </div>
+                            <div class="progress rounded-pill" style="height:10px" role="progressbar"
+                                 aria-valuenow="@((int)pct)" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar @barColor transition" style="width:@(pct)%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted mt-1">
+                                <span>@Math.Round(metric.PercentageUsed, 1)% used</span>
+                                <span class="@(metric.Remaining >= 0 ? "text-success" : "text-danger")">
+                                    &euro;@metric.Remaining.ToString("N0") left
+                                </span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
         </div>
-    }
+        </template>
+
+        <!-- JSON data blocks for Chart.js (ADR-0002 compliant) -->
+        @if (Model.Summary?.TransactionCount > 0)
+        {
+            <script type="application/json" id="dashboard-category-data">
+                @Json.Serialize(Model.SpendingByCategory)
+            </script>
+            <script type="application/json" id="dashboard-monthly-category-data">
+                @Json.Serialize(Model.MonthlySpendingByCategory)
+            </script>
+            <script type="application/json" id="dashboard-monthly-trends">
+                @Json.Serialize(Model.MonthlyTrends)
+            </script>
+            <script type="application/json" id="dashboard-yearly-comparison">
+                @Json.Serialize(Model.YearlyComparison)
+            </script>
+        }
 </div>
 
-<script type="application/json" id="dashboard-category-data">
-    @Json.Serialize(Model.SpendingByCategory)
-</script>
-<script type="application/json" id="dashboard-monthly-category-data">
-    @Json.Serialize(Model.MonthlySpendingByCategory)
-</script>
-<script type="application/json" id="dashboard-monthly-trends">
-    @Json.Serialize(Model.MonthlyTrends)
-</script>
-<script type="application/json" id="dashboard-yearly-comparison">
-    @Json.Serialize(Model.YearlyComparison)
-</script>
-
 <script src="~/js/charts.js" asp-append-version="true"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Read pre-serialized JSON from <script type="application/json"> blocks above.
-        // See docs/adr/0002-safe-json-data-passing.md for the rationale.
-        const readJson = (id) => JSON.parse(document.getElementById(id).textContent);
-        const categoryData = readJson('dashboard-category-data');
-        const monthlyCategoryData = readJson('dashboard-monthly-category-data');
-        const monthlyData = readJson('dashboard-monthly-trends');
-        const yearlyData = readJson('dashboard-yearly-comparison');
-
-        initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
-        initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);
-        initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(Model.AnalyticsYear - 1)', '@Model.AnalyticsYear');
-    });
-</script>

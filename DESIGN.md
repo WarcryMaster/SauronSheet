@@ -262,6 +262,81 @@ When two or more mutually exclusive choices share a single field (e.g. Income vs
 - **Font Awesome** (via CDN in the layout) is used for functional icons inside forms and buttons.
 - **Bootstrap Icons** (`bi bi-*`) are **not loaded** and must not be used — they render as missing glyphs.
 
+## Interactive Layer (Alpine.js + HTMX + Chart.js)
+
+SauronSheet uses a lightweight reactive stack on top of MDBootstrap:
+- **Alpine.js v3** (<15 KB, CDN): Declarative reactivity (`x-data`, `x-show`, `x-transition`, `x-on`)
+- **HTMX v2** (<14 KB, CDN): Ajax from HTML attributes (`hx-get`, `hx-target`, `hx-swap`)
+- **Chart.js** (latest, CDN): Interactive charts with CSS custom property tokens
+
+### Alpine.js Patterns
+
+| Pattern | Directive | Use |
+|---|---|---|
+| Toggle visibility | `x-show` + `x-transition` | Show/hide elements reactively (custom date range, empty state vs data, modals) |
+| Form binding | `x-model` | Two-way bind inputs and selects without manual JS |
+| Event handling | `@@click`, `@@change`, `@@submit` | Replace inline `onclick` / `onchange` attributes |
+| Component state | `x-data="{ key: value }"` | Scoped reactive state for a DOM subtree |
+| Lifecycle | `x-init` | Run code when Alpine component mounts (replaces `DOMContentLoaded`) |
+| Conditional rendering | `x-if` / `template` | Lazily create/destroy DOM (vs `x-show` which toggles visibility) |
+| Class binding | `:class="condition ? 'class-a' : 'class-b'"` | Dynamic CSS classes reactively |
+| Outside click | `@@click.outside` | Close dropdowns/modals when clicking outside |
+
+### HTMX Patterns
+
+| Pattern | Attributes | Use |
+|---|---|---|
+| Ajax GET | `hx-get="/endpoint"` | Load HTML fragment from server |
+| Target swap | `hx-target="#element"` + `hx-swap="outerHTML"` | Replace specific DOM region |
+| Select from response | `hx-select="#content"` | Extract only the target from a full-page response |
+| Loading indicator | `hx-indicator="#spinner"` | Show element during request |
+| Push URL | `hx-push-url="true"` | Update browser URL for bookmarkable state |
+| Trigger | `hx-trigger="click"` | Explicit trigger (default depends on element) |
+
+### Chart.js Configuration
+
+| Setting | Value | Reason |
+|---|---|---|
+| `responsive` | `true` | Charts fill their container card |
+| `maintainAspectRatio` | `false` | Let CSS height control the chart area |
+| `interaction.mode` | `'index'` | Show all datasets at hover point |
+| `interaction.intersect` | `false` | Trigger tooltip without exact hover |
+| Colors | `cssVar('--brand')` | Resolve design tokens at runtime, fallback to hex |
+
+### HTMX + Chart.js Lifecycle
+
+Chart instances must be destroyed before HTMX replaces the DOM:
+
+```js
+// In x-init or global listener
+document.addEventListener('htmx:beforeSwap', (e) => {
+    if (e.detail.target.id === 'dashboard-content') {
+        destroyAllCharts(); // Chart.getChart(canvas)?.destroy()
+    }
+});
+document.addEventListener('htmx:afterSwap', (e) => {
+    if (e.detail.target.id === 'dashboard-content') {
+        initCharts(); // Re-read JSON blocks, recreate charts
+    }
+});
+```
+
+### Forbidden Interactive Patterns
+
+- ❌ `onclick` / `onchange` / `onsubmit` inline — use `x-on:` / `@@event`
+- ❌ `DOMContentLoaded` for chart init — use `x-init` or HTMX `afterSwap`
+- ❌ `document.getElementById` in Alpine components — use `$refs`
+- ❌ `innerHTML` manipulation — use `x-html` or HTMX swap
+- ❌ Hardcoded chart colors — use `cssVar('--token', fallback)`
+
+### Script Loading Order
+
+1. MDB CSS (render-critical)
+2. Alpine.js (defer — non-blocking)
+3. HTMX (immediate — must register before DOM)
+4. Chart.js (loaded first in _Layout head, executes before charts.js)
+5. charts.js (executes last, depends on Chart.js global)
+
 ## Do's and Don'ts
 
 ### Do

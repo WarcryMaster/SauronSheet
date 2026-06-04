@@ -95,7 +95,15 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 ## Frontend Rules
 
 - Razor Pages should use PageModel patterns and antiforgery protection.
-- Use MDBootstrap via CDN (mdb-ui-kit v9.2.0), not Bootstrap or local alternatives.
+- Interactive layer: Alpine.js v3 + HTMX v2 + Chart.js (latest), all via CDN.
+  - Alpine.js for declarative reactivity: `x-data`, `x-show`, `x-transition`, `x-model`, `x-on`, `x-init`.
+  - HTMX for Ajax from HTML: `hx-get`, `hx-target`, `hx-swap`, `hx-select`, `hx-indicator`.
+  - Chart.js for interactive analytics; colors resolved from CSS custom properties via `getComputedStyle`.
+- Do NOT use inline `onclick`, `onchange`, `onsubmit` attributes — use Alpine.js `x-on:` / `@@event` directives.
+- Do NOT use `DOMContentLoaded` for initialization — use Alpine.js `x-init` or HTMX lifecycle events (`htmx:afterSwap`).
+- Chart instances must be destroyed via `Chart.getChart(canvas)?.destroy()` before any HTMX swap that replaces canvas elements.
+- All CDN scripts load in this order: MDB CSS → Alpine.js (defer) → HTMX → Chart.js → charts.js.
+- Use MDBootstrap via CDN (mdb-ui-kit v9.2.0) for CSS layout, components, and grid. Not Bootstrap or local alternatives.
 - All local static assets referenced from Razor (`wwwroot/css`, `wwwroot/js`, `wwwroot/img`) MUST use `~/...` paths plus `asp-append-version="true"`. Never hardcode `/css/...`, `/js/...`, or `/img/...` for local assets.
 - **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**
   - `data-mdb-toggle="dropdown"` (not `data-bs-toggle`)
@@ -103,6 +111,8 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
   - `data-mdb-dismiss="modal"` (not `data-bs-dismiss`)
   - `data-mdb-auto-close="outside"` (not `data-bs-auto-close`)
   - `data-mdb-ripple-init` (not `data-bs-ripple`)
+  - Alpine.js uses its own attributes: `x-data`, `x-show`, `x-on`, `x-model`, `x-bind` — these do NOT conflict with `data-mdb-*`
+  - HTMX uses its own attributes: `hx-get`, `hx-target`, `hx-swap` — these do NOT conflict with `data-mdb-*`
 - **DESIGN.md is the visual source of truth for all UI work.** Read `DESIGN.md` BEFORE changing any `.cshtml`, CSS, component layout, spacing, or interaction pattern.
 - When delegating frontend/UI work to any sub-agent, ALWAYS include `DESIGN.md` and the Frontend Rules section of this file in the prompt/context.
 - Keep JavaScript modern: `const` / `let`, event listeners, null checks, and server-side revalidation.

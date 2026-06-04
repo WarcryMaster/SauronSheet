@@ -1,23 +1,25 @@
 ﻿@* _DateRangeFilter partial view - Reusable date range filter component *@
-@* Phase 4: Used on Dashboard and Transaction list pages *@
+@* Phase 7: Alpine.js reactive filter — no inline onchange JS *@
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-1">
+<div x-data="{ period: '@(ViewData["DateFilter"]?.ToString() ?? "all")' }" 
+     class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-1">
     <div class="d-flex flex-wrap align-items-center gap-2">
         <label for="DateFilter" class="form-label mb-0 small fw-semibold text-muted text-uppercase">Period</label>
         <select name="DateFilter" id="DateFilter"
-                onchange="document.getElementById('dateRangeCustom').style.display = (this.value === 'custom') ? 'flex' : 'none'"
+                x-model="period"
+                @@change="$el.form.requestSubmit()"
                 class="form-select form-select-sm" style="width: auto; min-width: 160px;">
-            <option value="all" selected="@(ViewData["DateFilter"]?.ToString() == "all" ? "selected" : null)">All Time</option>
-            <option value="this-month" selected="@(ViewData["DateFilter"]?.ToString() == "this-month" ? "selected" : null)">This Month</option>
-            <option value="last-month" selected="@(ViewData["DateFilter"]?.ToString() == "last-month" ? "selected" : null)">Last Month</option>
-            <option value="last-3-months" selected="@(ViewData["DateFilter"]?.ToString() == "last-3-months" ? "selected" : null)">Last 3 Months</option>
-            <option value="this-year" selected="@(ViewData["DateFilter"]?.ToString() == "this-year" ? "selected" : null)">This Year</option>
-            <option value="custom" selected="@(ViewData["DateFilter"]?.ToString() == "custom" ? "selected" : null)">Custom Range</option>
+            <option value="all">All Time</option>
+            <option value="this-month">This Month</option>
+            <option value="last-month">Last Month</option>
+            <option value="last-3-months">Last 3 Months</option>
+            <option value="this-year">This Year</option>
+            <option value="custom">Custom Range</option>
         </select>
     </div>
 
     <div id="dateRangeCustom" class="d-flex align-items-center gap-2"
-         style="display:@(ViewData["DateFilter"]?.ToString() == "custom" ? "flex" : "none") !important">
+         x-show="period === 'custom'" x-transition>
         <div>
             <label for="CustomFromDate" class="form-label mb-0 small text-muted">From</label>
             <input type="date" name="CustomFromDate" id="CustomFromDate"

@@ -1,43 +1,60 @@
 /**
  * charts.js — Chart.js initialization functions for SauronSheet analytics.
- * Phase 4: Dashboard charts (stacked area, line, bar).
+ * Phase 7.1: Counters, skeleton loading, HTMX pill selector integration.
  * Requires Chart.js (latest) CDN loaded in _Layout.cshtml.
  *
- * Color palette from DESIGN.md (SauronSheet Olive):
- *   primary:        #556B2F
- *   primary-active: #435425
- *   semantic-info:    #3b71ca
- *   semantic-success: #14a44d
- *   semantic-warning: #e4a11b
- *   semantic-danger:  #dc4c64
+ * Colors: read from CSS custom properties (DESIGN.md tokens).
+ * Fallback hex values provided for when CSS vars are unavailable.
  */
+'use strict';
+
+// Resolve a CSS custom property to its computed value, with fallback.
+function cssVar(name, fallback) {
+    if (typeof getComputedStyle === 'undefined') return fallback;
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+}
+
+// Design token palette resolved from CSS — with hardcoded fallbacks matching DESIGN.md
+const tokens = {
+    brand:       cssVar('--brand', '#556B2F'),
+    brandDark:   cssVar('--brand-dark', '#435425'),
+    brandLight:  cssVar('--brand-light', '#f4f7ee'),
+    success:     cssVar('--semantic-success', '#14a44d'),
+    danger:      cssVar('--semantic-danger', '#dc4c64'),
+    warning:     cssVar('--semantic-warning', '#e4a11b'),
+    info:        cssVar('--semantic-info', '#3b71ca'),
+    ink:         cssVar('--ink', '#212529'),
+    muted:       cssVar('--muted', '#6c757d'),
+    hairline:    cssVar('--hairline', '#dee2e6')
+};
 
 const designColors = [
-    '#556B2F', // primary — Olive Green
-    '#3b71ca', // semantic-info
-    '#14a44d', // semantic-success
-    '#e4a11b', // semantic-warning
-    '#dc4c64', // semantic-danger
-    '#435425', // primary-active
-    '#9b59b6', // amethyst
-    '#e67e22', // carrot
-    '#1abc9c', // turquoise
-    '#e84393', // prunus avium
-    '#6c5ce7', // blurple
-    '#00b894', // mint
-    '#fdcb6e', // sun
-    '#0984e3', // electron blue
-    '#ff9f43', // bright orange
-    '#10ac84', // sea green
-    '#ff6b6b', // coral red
-    '#48dbfb', // sky blue
-    '#feca57', // bright gold
-    '#ff9ff3', // light pink
-    '#5f27cd', // deep purple
-    '#01a3a4', // aqua
-    '#ee5253', // bright red
-    '#22a6b3', // cyan
-    '#badc58'  // light lime
+    tokens.brand,       // Olive Green
+    tokens.info,        // Info blue
+    tokens.success,     // Success green
+    tokens.warning,     // Warning amber
+    tokens.danger,      // Danger red
+    tokens.brandDark,   // Olive dark
+    '#9b59b6',          // amethyst
+    '#e67e22',          // carrot
+    '#1abc9c',          // turquoise
+    '#e84393',          // prunus avium
+    '#6c5ce7',          // blurple
+    '#00b894',          // mint
+    '#fdcb6e',          // sun
+    '#0984e3',          // electron blue
+    '#ff9f43',          // bright orange
+    '#10ac84',          // sea green
+    '#ff6b6b',          // coral red
+    '#48dbfb',          // sky blue
+    '#feca57',          // bright gold
+    '#ff9ff3',          // light pink
+    '#5f27cd',          // deep purple
+    '#01a3a4',          // aqua
+    '#ee5253',          // bright red
+    '#22a6b3',          // cyan
+    '#badc58'           // light lime
 ];
 
 // Shared chart defaults — DESIGN.md aligned
@@ -51,33 +68,38 @@ const chartDefaults = {
                 usePointStyle: true,
                 pointStyle: 'circle',
                 padding: 16,
-                font: {
-                    size: 12
-                }
+                font: { size: 12 }
             }
         }
     },
     scales: {
         x: {
-            grid: {
-                display: false
-            }
+            grid: { display: false }
         },
         y: {
             beginAtZero: true,
-            grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-            },
-            ticks: {
-                callback: v => '€' + v
-            }
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: { callback: v => '€' + v }
         }
     }
 };
 
 /**
+ * Destroy all Chart.js instances on the page.
+ * Called by HTMX before-swap to prevent memory leaks.
+ */
+function destroyAllCharts() {
+    // Chart.js auto-registers instances — find all canvas elements with charts
+    document.querySelectorAll('canvas').forEach(canvas => {
+        const instance = Chart.getChart(canvas);
+        if (instance) {
+            instance.destroy();
+        }
+    });
+}
+
+/**
  * Initialize a stacked area chart for spending by category over months.
- * Each category becomes a filled dataset stacked on top of others.
  * @param {string} canvasId - Canvas element ID
  * @param {Array} monthlyCategoryData - Array of {month, monthName, categoryName, amount}
  */
@@ -85,7 +107,10 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !monthlyCategoryData || monthlyCategoryData.length === 0) return;
 
-    // Collect all unique months (sorted) and categories
+    // Destroy existing instance before recreating
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
     const months = [...new Set(monthlyCategoryData.map(d => d.month))]
         .sort((a, b) => a - b);
     const monthLabels = months.map(m => {
@@ -95,7 +120,6 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
 
     const categories = [...new Set(monthlyCategoryData.map(d => d.categoryName))];
 
-    // Build one dataset per category
     const datasets = categories.map((cat, idx) => {
         const color = designColors[idx % designColors.length];
         const data = months.map(m => {
@@ -117,24 +141,15 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
     });
 
     const ctx = canvas.getContext('2d');
-    if (canvas._chartInstance) {
-        canvas._chartInstance.destroy();
-    }
-    canvas._chartInstance = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'line',
         data: { labels: monthLabels, datasets: datasets },
         options: {
             ...chartDefaults,
             scales: {
                 ...chartDefaults.scales,
-                x: {
-                    ...chartDefaults.scales.x,
-                    stacked: true
-                },
-                y: {
-                    ...chartDefaults.scales.y,
-                    stacked: true
-                }
+                x: { ...chartDefaults.scales.x, stacked: true },
+                y: { ...chartDefaults.scales.y, stacked: true }
             },
             interaction: {
                 mode: 'index',
@@ -163,13 +178,13 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !monthlyData || monthlyData.length === 0) return;
 
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
     const labels = monthlyData.map(d => d.monthName);
 
     const ctx = canvas.getContext('2d');
-    if (canvas._chartInstance) {
-        canvas._chartInstance.destroy();
-    }
-    canvas._chartInstance = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -177,8 +192,8 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
                 {
                     label: 'Expenses',
                     data: monthlyData.map(d => d.totalExpenses),
-                    borderColor: '#dc4c64', // semantic-danger — DESIGN.md
-                    backgroundColor: hexToRgba('#dc4c64', 0.1),
+                    borderColor: tokens.danger,
+                    backgroundColor: hexToRgba(tokens.danger, 0.1),
                     tension: 0.3,
                     fill: true,
                     pointRadius: 2,
@@ -188,8 +203,8 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
                 {
                     label: 'Income',
                     data: monthlyData.map(d => d.totalIncome),
-                    borderColor: '#14a44d', // semantic-success — DESIGN.md
-                    backgroundColor: hexToRgba('#14a44d', 0.1),
+                    borderColor: tokens.success,
+                    backgroundColor: hexToRgba(tokens.success, 0.1),
                     tension: 0.3,
                     fill: true,
                     pointRadius: 2,
@@ -210,8 +225,6 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
 
 /**
  * Initialize a bar chart for yearly spending comparison.
- * Shows 4 bars per month: Income Y1, Expenses Y1, Income Y2, Expenses Y2.
- * Uses solid borders with semi-transparent fills.
  * @param {string} canvasId - Canvas element ID
  * @param {Array} yearlyData - Array of {monthName, year1Income, year1Expenses, year2Income, year2Expenses}
  * @param {string} year1Label - Label for year 1
@@ -221,17 +234,15 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
     const canvas = document.getElementById(canvasId);
     if (!canvas || !yearlyData || yearlyData.length === 0) return;
 
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
     const labels = yearlyData.map(d => d.monthName);
-
-    const ctx = canvas.getContext('2d');
-    if (canvas._chartInstance) {
-        canvas._chartInstance.destroy();
-    }
-
     const y1 = year1Label || 'Year 1';
     const y2 = year2Label || 'Year 2';
 
-    canvas._chartInstance = new Chart(ctx, {
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -239,8 +250,8 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                 {
                     label: `${y1} Income`,
                     data: yearlyData.map(d => d.year1Income),
-                    backgroundColor: 'rgba(20, 164, 77, 0.2)',
-                    borderColor: '#14a44d',
+                    backgroundColor: hexToRgba(tokens.success, 0.2),
+                    borderColor: tokens.success,
                     borderWidth: 2,
                     borderRadius: 4,
                     borderSkipped: false
@@ -248,8 +259,8 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                 {
                     label: `${y1} Expenses`,
                     data: yearlyData.map(d => d.year1Expenses),
-                    backgroundColor: 'rgba(220, 76, 100, 0.2)',
-                    borderColor: '#dc4c64',
+                    backgroundColor: hexToRgba(tokens.danger, 0.2),
+                    borderColor: tokens.danger,
                     borderWidth: 2,
                     borderRadius: 4,
                     borderSkipped: false
@@ -257,7 +268,7 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                 {
                     label: `${y2} Income`,
                     data: yearlyData.map(d => d.year2Income),
-                    backgroundColor: 'rgba(13, 110, 53, 0.2)',
+                    backgroundColor: hexToRgba('#0d6e35', 0.2),
                     borderColor: '#0d6e35',
                     borderWidth: 2,
                     borderRadius: 4,
@@ -266,7 +277,7 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                 {
                     label: `${y2} Expenses`,
                     data: yearlyData.map(d => d.year2Expenses),
-                    backgroundColor: 'rgba(180, 50, 70, 0.2)',
+                    backgroundColor: hexToRgba('#b43246', 0.2),
                     borderColor: '#b43246',
                     borderWidth: 2,
                     borderRadius: 4,
