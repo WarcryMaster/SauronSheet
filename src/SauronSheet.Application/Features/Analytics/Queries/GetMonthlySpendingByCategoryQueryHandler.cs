@@ -12,6 +12,7 @@ using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
+using SauronSheet.Application.Helpers;
 
 /// <summary>
 /// Handler for GetMonthlySpendingByCategoryQuery.
@@ -59,7 +60,7 @@ public class GetMonthlySpendingByCategoryQueryHandler
 
         // Group by month and category
         var grouped = expenses
-            .GroupBy(t => new { t.Date.Month, CategoryId = t.CategoryId })
+            .GroupBy(t => new { Month = t.Date.GetSpainMonth(), CategoryId = t.CategoryId })
             .Select(g =>
             {
                 var amount = g.Sum(t => Math.Abs(t.Amount.Amount));

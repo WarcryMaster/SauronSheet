@@ -12,6 +12,7 @@ using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
+using SauronSheet.Application.Helpers;
 
 /// <summary>
 /// Handler for GetYearlyComparisonQuery.
@@ -56,23 +57,23 @@ public class GetYearlyComparisonQueryHandler
         // Separate income and expenses by month for Year 1
         var y1IncomeByMonth = year1Transactions
             .Where(t => t.Amount.IsPositive)
-            .GroupBy(t => t.Date.Month)
+            .GroupBy(t => t.Date.GetSpainMonth())
             .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount.Amount));
 
         var y1ExpensesByMonth = year1Transactions
             .Where(t => t.Amount.IsNegative)
-            .GroupBy(t => t.Date.Month)
+            .GroupBy(t => t.Date.GetSpainMonth())
             .ToDictionary(g => g.Key, g => g.Sum(t => Math.Abs(t.Amount.Amount)));
 
         // Separate income and expenses by month for Year 2
         var y2IncomeByMonth = year2Transactions
             .Where(t => t.Amount.IsPositive)
-            .GroupBy(t => t.Date.Month)
+            .GroupBy(t => t.Date.GetSpainMonth())
             .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount.Amount));
 
         var y2ExpensesByMonth = year2Transactions
             .Where(t => t.Amount.IsNegative)
-            .GroupBy(t => t.Date.Month)
+            .GroupBy(t => t.Date.GetSpainMonth())
             .ToDictionary(g => g.Key, g => g.Sum(t => Math.Abs(t.Amount.Amount)));
 
         var result = new List<YearlyComparisonDto>();

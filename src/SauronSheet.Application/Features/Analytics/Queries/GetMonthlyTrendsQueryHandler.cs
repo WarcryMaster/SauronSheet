@@ -12,6 +12,7 @@ using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
+using SauronSheet.Application.Helpers;
 
 /// <summary>
 /// Handler for GetMonthlyTrendsQuery.
@@ -46,7 +47,7 @@ public class GetMonthlyTrendsQueryHandler
 
         var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
 
-        var byMonth = transactions.GroupBy(t => t.Date.Month)
+        var byMonth = transactions.GroupBy(t => t.Date.GetSpainMonth())
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var result = new List<MonthlyTrendDto>();
