@@ -6,6 +6,9 @@
     --brand: #556B2F;
     --brand-dark: #435425;
     --brand-light: #f4f7ee;
+    --brand-hover-light: #fafbf6;
+    --brand-ring: rgba(85, 107, 47, 0.25);
+    --brand-ring-strong: rgba(85, 107, 47, 0.35);
 
     /* Surface */
     --canvas: #f8f9fa;
@@ -24,6 +27,13 @@
     --semantic-success: #14a44d;
     --semantic-warning: #e4a11b;
     --semantic-danger: #dc4c64;
+
+    /* Semantic tinted backgrounds (for selected states, badges) */
+    --danger-light: #fef5f6;
+    --danger-hover-light: #fef8f9;
+    --warning-badge-bg: #fff6e6;
+    --warning-badge-border: #f1d08a;
+    --warning-badge-text: #9c6b00;
 
     /* Rounded */
     --rounded-sm: 0.25rem;
@@ -71,10 +81,13 @@
     color: rgba(0, 0, 0, 0.9);
 }
 
-/* Card — DESIGN.md card component */
+/* Card — DESIGN.md card component
+   Cards rely on shadow-sm for elevation, not on a visible border.
+   The default MDBootstrap card border is removed to match the
+   de-facto convention used across all pages. */
 .card {
     background-color: var(--surface-card);
-    border: 1px solid var(--hairline);
+    border: 0;
     border-radius: var(--rounded-md);
 }
 
@@ -164,9 +177,9 @@
 }
 
 .category-badge-warning {
-    background-color: #fff6e6;
-    border-color: #f1d08a;
-    color: #9c6b00;
+    background-color: var(--warning-badge-bg);
+    border-color: var(--warning-badge-border);
+    color: var(--warning-badge-text);
 }
 
 .category-badge-uncategorized {
