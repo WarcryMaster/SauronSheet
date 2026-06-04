@@ -12,35 +12,37 @@
 
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
     {
-        <div class="alert alert-success rounded-3" role="alert">@Model.SuccessMessage</div>
+        <div class="alert alert-success rounded-3" role="alert" x-transition.opacity>@Model.SuccessMessage</div>
     }
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success rounded-3" role="alert">@TempData["SuccessMessage"]</div>
+        <div class="alert alert-success rounded-3" role="alert" x-transition.opacity>@TempData["SuccessMessage"]</div>
     }
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger rounded-3" role="alert">@Model.ErrorMessage</div>
+        <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity>@Model.ErrorMessage</div>
     }
 
     @* Filters *@
-    <form method="get" action="/budgets" class="card border-0 shadow-sm p-3">
+    <form method="get" action="/budgets" class="card border-0 shadow-sm p-3"
+          x-data="{ showActiveOnly: @Model.ShowActiveOnly.ToString().ToLower(), categoryFilter: '@(Model.CategoryFilter?.ToString() ?? "")' }">
         <div class="d-flex flex-wrap align-items-center gap-3">
             @* Active only toggle *@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" id="ShowActiveOnly"
-                       name="ShowActiveOnly" value="true" @(Model.ShowActiveOnly ? "checked" : "") />
+                       name="ShowActiveOnly" value="true" x-model="showActiveOnly"
+                       @@change="$el.form.requestSubmit()" />
                 <label class="form-check-label small fw-semibold text-muted text-uppercase" for="ShowActiveOnly">Active Only</label>
             </div>
 
             @* Category filter *@
             <div>
-                <select id="CategoryFilter" name="CategoryFilter" class="form-select form-select-sm" style="width:auto">
+                <select id="CategoryFilter" name="CategoryFilter" class="form-select form-select-sm" style="width:auto"
+                        x-model="categoryFilter" @@change="$el.form.requestSubmit()">
                     <option value="">All Categories</option>
                     @foreach (var cat in Model.Categories)
                     {
-                        bool selected = Model.CategoryFilter.HasValue && Model.CategoryFilter.Value == cat.Id;
-                        <option value="@cat.Id" selected="@selected">@cat.Name</option>
+                        <option value="@cat.Id">@cat.Name</option>
                     }
                 </select>
             </div>

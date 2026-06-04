@@ -5,7 +5,72 @@
     ViewData["Title"] = "Transactions";
 }
 
-<div class="d-flex flex-column gap-4">
+<div class="d-flex flex-column gap-4"
+     x-data='{
+         selectedIds: [],
+         maxSelections: @Math.Min(Model.Transactions.TotalCount, 1000),
+         countdown: 2,
+         countdownInterval: null,
+         canConfirm: false,
+
+         get selectionCount() { return this.selectedIds.length; },
+         get canDelete() { return this.selectionCount > 0; },
+         get pluralS() { return this.selectionCount === 1 ? "" : "s"; },
+         get countdownWidth() { return (this.countdown / 2) * 100; },
+
+         toggleAll(checked) {
+             const checkboxes = document.querySelectorAll(".transaction-checkbox");
+             if (checked) {
+                 this.selectedIds = Array.from(checkboxes).slice(0, this.maxSelections).map(cb => cb.value);
+             } else {
+                 this.selectedIds = [];
+             }
+             this.$nextTick(() => {
+                 checkboxes.forEach(cb => { cb.checked = this.selectedIds.includes(cb.value); });
+             });
+         },
+
+         toggleOne(id, checked, el) {
+             if (checked) {
+                 if (this.selectedIds.length < this.maxSelections) {
+                     if (!this.selectedIds.includes(id)) this.selectedIds = [...this.selectedIds, id];
+                 } else {
+                     el.checked = false;
+                     return;
+                 }
+             } else {
+                 this.selectedIds = this.selectedIds.filter(sid => sid !== id);
+             }
+         },
+
+         isSelected(id) { return this.selectedIds.includes(id); },
+
+         openDeleteModal() {
+             this.countdown = 2;
+             this.canConfirm = false;
+             try {
+                 new mdb.Modal(document.getElementById("confirmDeleteModal")).show();
+             } catch(e) { return; }
+             this.countdownInterval = setInterval(() => {
+                 this.countdown--;
+                 if (this.countdown <= 0) {
+                     clearInterval(this.countdownInterval);
+                     this.canConfirm = true;
+                 }
+             }, 1000);
+         },
+
+         cancelDelete() {
+             if (this.countdownInterval) clearInterval(this.countdownInterval);
+             const instance = mdb.Modal.getInstance(document.getElementById("confirmDeleteModal"));
+             if (instance) instance.hide();
+         },
+
+         submitBulkDelete() {
+             document.getElementById("selectedIds").value = JSON.stringify(this.selectedIds);
+             document.getElementById("bulkDeleteForm").submit();
+         }
+     }'>
     <div class="d-flex justify-content-between align-items-center">
         <h3 class="h3 fw-bold mb-0">Transactions</h3>
         <div class="d-flex gap-2">
@@ -32,43 +97,65 @@
                 <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
             </div>
             <div class="col-12">
-                <div class="source-filter-panel">
+                <div class="source-filter-panel"
+                     x-data='{
+                         selectedSources: @Json.Serialize(Model.SelectedSources),
+                         sourceInput: "",
+                         availableSources: @Json.Serialize(Model.AvailableSources),
+                         addSource() {
+                             const s = this.sourceInput.trim();
+                             if (!s || !this.availableSources.includes(s) || this.selectedSources.includes(s)) {
+                                 this.sourceInput = "";
+                                 return;
+                             }
+                             this.selectedSources = [...this.selectedSources, s];
+                             this.sourceInput = "";
+                         },
+                         removeSource(source) {
+                             this.selectedSources = this.selectedSources.filter(s => s !== source);
+                         },
+                         get summaryText() {
+                             const count = this.selectedSources.length;
+                             return count === 0
+                                 ? `Search and add one or more sources. If none are selected, all sources are shown.`
+                                 : `${count} selected source(s)`;
+                         }
+                     }'>
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
                         <div>
                             <label class="form-label small fw-semibold text-muted text-uppercase mb-1 d-block">Source</label>
-                            <span id="selectedSourcesSummary"
-                                  class="@(Model.SelectedSources.Any() ? "badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2" : "small text-muted")"
-                                  data-empty-text="Search and add one or more sources. If none are selected, all sources are shown.">
-                                @(Model.SelectedSources.Any()
-                                    ? $"{Model.SelectedSources.Count} selected source(s)"
-                                    : "Search and add one or more sources. If none are selected, all sources are shown.")
-                            </span>
+                            <span x-text="summaryText"
+                                  :class="selectedSources.length === 0 ? 'small text-muted' : 'badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2'"
+                                  x-cloak>@(Model.SelectedSources.Any() ? $"{Model.SelectedSources.Count} selected source(s)" : "Search and add one or more sources. If none are selected, all sources are shown.")</span>
                         </div>
                     </div>
                     <div class="source-picker">
-                        <div id="selectedSourcesContainer" class="d-flex flex-wrap gap-2 mb-3">
-                            @foreach (string source in Model.SelectedSources)
-                            {
-                                <span class="badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2 source-chip-selected">
-                                    <span>@source</span>
-                                    <button type="button"
-                                            class="source-chip-remove"
-                                            data-source="@source"
-                                            aria-label="Remove source @source">
-                                        ×
-                                    </button>
-                                </span>
-                                <input type="hidden" name="SelectedSources" value="@source" data-selected-source="@source" />
-                            }
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <template x-for="source in selectedSources" :key="source">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2 source-chip-selected">
+                                        <span x-text="source"></span>
+                                        <button type="button"
+                                                class="source-chip-remove"
+                                                @@click="removeSource(source)"
+                                                :aria-label="'Remove source ' + source">
+                                            ×
+                                        </button>
+                                    </span>
+                                    <input type="hidden" name="SelectedSources" :value="source" />
+                                </div>
+                            </template>
                         </div>
 
                         <div class="position-relative">
                             <input type="text"
-                                   id="SourceAutocomplete"
+                                   x-model="sourceInput"
                                    list="availableSourcesList"
                                    class="form-control form-control-sm"
                                    placeholder="Search source and select it..."
-                                   autocomplete="off" />
+                                   autocomplete="off"
+                                   @@change="addSource()"
+                                   @@keydown.enter.prevent="addSource()" />
                             <datalist id="availableSourcesList">
                                 @foreach (string source in Model.AvailableSources)
                                 {
@@ -99,14 +186,14 @@
         <!-- Bulk Delete Toolbar -->
         <div class="d-flex justify-content-between align-items-center">
             <div class="small text-muted">
-                <span id="selectionCounter">0 / @Math.Min(Model.Transactions.TotalCount, 1000) selected</span>
+                <span x-text="selectionCount + ' / ' + maxSelections + ' selected'">0 / @Math.Min(Model.Transactions.TotalCount, 1000) selected</span>
                 @if (Model.Transactions.TotalCount > 1000)
                 {
                     <span class="badge bg-warning text-dark ms-2">⚠️ Limited to 1000 per transaction</span>
                 }
             </div>
-            <button type="button" id="deleteSelectedBtn" class="btn btn-danger btn-sm" disabled
-                    data-mdb-toggle="modal" data-mdb-target="#confirmDeleteModal">
+            <button type="button" id="deleteSelectedBtn" class="btn btn-danger btn-sm"
+                    :disabled="!canDelete" @@click="openDeleteModal()">
                 🗑️ Delete Selected
             </button>
         </div>
@@ -118,7 +205,7 @@
                         <tr>
                             <th style="width: 40px;">
                                 <div class="form-check m-0">
-                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox" />
+                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox" @@change="toggleAll($el.checked)" />
                                     <label class="form-check-label" for="selectAllCheckbox" title="Select all"></label>
                                 </div>
                             </th>
@@ -136,7 +223,9 @@
                                 <td style="width: 40px;">
                                     <div class="form-check m-0">
                                         <input class="form-check-input transaction-checkbox" type="checkbox"
-                                               value="@transaction.Id" id="cb_@transaction.Id" />
+                                               value="@transaction.Id" id="cb_@transaction.Id"
+                                               @@change="toggleOne('@transaction.Id', $el.checked, $el)"
+                                               :checked="isSelected('@transaction.Id')" />
                                         <label class="form-check-label" for="cb_@transaction.Id"></label>
                                     </div>
                                 </td>
@@ -157,7 +246,7 @@
                                 <td>
                                     <form method="post" asp-page-handler="Delete" asp-route-id="@transaction.Id" class="d-inline">
                                         <button type="submit" class="btn btn-link btn-sm text-danger p-0"
-                                                onclick="return confirm('Are you sure you want to delete this transaction?')">
+                                                @@click="if(!confirm('Are you sure you want to delete this transaction?')) $event.preventDefault()">
                                             🗑️ Delete
                                         </button>
                                     </form>
@@ -191,118 +280,7 @@
             }
         </div>
     }
+
+    <!-- Include Confirmation Modal Partial (inside x-data scope) -->
+    @await Html.PartialAsync("~/Shared/Modals/_ConfirmDeleteModal.cshtml")
 </div>
-
-<!-- Include Confirmation Modal Partial -->
-@await Html.PartialAsync("~/Shared/Modals/_ConfirmDeleteModal.cshtml")
-
-@section Scripts {
-    <script type="application/json" id="transactions-available-sources">
-        @Json.Serialize(Model.AvailableSources)
-    </script>
-    <script src="~/js/bulk-delete.js" asp-append-version="true"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const sourceInput = document.getElementById('SourceAutocomplete');
-            const selectedContainer = document.getElementById('selectedSourcesContainer');
-            const summary = document.getElementById('selectedSourcesSummary');
-            const form = sourceInput?.closest('form');
-
-            if (!sourceInput || !selectedContainer || !form || !summary) {
-                return;
-            }
-
-            // Read pre-serialized JSON from the <script type="application/json"> block above.
-            // See docs/adr/0002-safe-json-data-passing.md for the rationale.
-            const availableSources = JSON.parse(document.getElementById('transactions-available-sources').textContent);
-
-            function getSelectedSources() {
-                return Array.from(form.querySelectorAll('input[name="SelectedSources"]'))
-                    .map(input => input.value);
-            }
-
-            function updateSummary() {
-                const count = getSelectedSources().length;
-                if (count === 0) {
-                    summary.className = 'small text-muted';
-                    summary.textContent = summary.dataset.emptyText || 'All sources are shown.';
-                    return;
-                }
-
-                summary.className = 'badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2';
-                summary.textContent = `${count} selected source(s)`;
-            }
-
-            function addSource(source) {
-                const normalized = source?.trim();
-                if (!normalized) {
-                    return;
-                }
-
-                const existsInAvailable = availableSources.includes(normalized);
-                const alreadySelected = getSelectedSources().includes(normalized);
-
-                if (!existsInAvailable || alreadySelected) {
-                    sourceInput.value = '';
-                    return;
-                }
-
-                const chip = document.createElement('span');
-                chip.className = 'badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2 source-chip-selected';
-
-                const chipText = document.createElement('span');
-                chipText.textContent = normalized;
-
-                const removeButton = document.createElement('button');
-                removeButton.type = 'button';
-                removeButton.className = 'source-chip-remove';
-                removeButton.setAttribute('data-source', normalized);
-                removeButton.setAttribute('aria-label', `Remove source ${normalized}`);
-                removeButton.textContent = '×';
-
-                chip.appendChild(chipText);
-                chip.appendChild(removeButton);
-
-                const hidden = document.createElement('input');
-                hidden.type = 'hidden';
-                hidden.name = 'SelectedSources';
-                hidden.value = normalized;
-                hidden.setAttribute('data-selected-source', normalized);
-
-                selectedContainer.appendChild(chip);
-                selectedContainer.appendChild(hidden);
-                sourceInput.value = '';
-                updateSummary();
-            }
-
-            sourceInput.addEventListener('change', function () {
-                addSource(sourceInput.value);
-            });
-
-            sourceInput.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    addSource(sourceInput.value);
-                }
-            });
-
-            selectedContainer.addEventListener('click', function (event) {
-                const button = event.target.closest('.source-chip-remove');
-                if (!button) {
-                    return;
-                }
-
-                const source = button.getAttribute('data-source');
-                const hiddenInput = Array.from(form.querySelectorAll('input[name="SelectedSources"]'))
-                    .find(input => input.getAttribute('data-selected-source') === source);
-                const chip = button.closest('.source-chip-selected');
-
-                hiddenInput?.remove();
-                chip?.remove();
-                updateSummary();
-            });
-
-            updateSummary();
-        });
-    </script>
-}

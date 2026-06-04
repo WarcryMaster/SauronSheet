@@ -282,6 +282,66 @@ SauronSheet uses a lightweight reactive stack on top of MDBootstrap:
 | Class binding | `:class="condition ? 'class-a' : 'class-b'"` | Dynamic CSS classes reactively |
 | Outside click | `@@click.outside` | Close dropdowns/modals when clicking outside |
 
+### Mandatory Component Patterns
+
+Every interactive UI element MUST follow one of these Alpine.js patterns. No exceptions.
+
+#### Form with Submit State
+```html
+<form method="post" x-data="{ loading: false }" @@submit="loading = true">
+    <button type="submit" :disabled="loading">
+        <span x-show="!loading">Submit</span>
+        <span x-show="loading">Submitting…</span>
+        <span x-show="loading" class="spinner-border spinner-border-sm ms-1" role="status"></span>
+    </button>
+</form>
+```
+
+#### Modal (MDB + Alpine.js)
+```html
+<!-- Trigger -->
+<button @@click="openModal()">Open</button>
+
+<!-- Modal (MDB structure kept for accessibility) -->
+<div class="modal fade" id="myModal" tabindex="-1">
+    <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+    <button @@click="submit()" :disabled="!valid">Confirm</button>
+</div>
+
+<!-- In x-data -->
+openModal() { new mdb.Modal(document.getElementById('myModal')).show(); }
+```
+
+#### Conditional Section
+```html
+<div x-show="showSection" x-transition>
+    Content that appears/disappears with animation.
+</div>
+```
+
+#### Reactive Input with Validation
+```html
+<input x-model="email" type="email" />
+<span x-show="!email.includes('@')" class="text-danger">Invalid email</span>
+<button :disabled="!email.includes('@')">Continue</button>
+```
+
+#### Select/Dropdown with Auto-Submit
+```html
+<select x-model="filter" @@change="$el.form.requestSubmit()">
+    <option value="all">All</option>
+</select>
+```
+
+#### List with Selection (Bulk Actions)
+```html
+<template x-for="item in items">
+    <input type="checkbox" :value="item.id" 
+           @@change="toggleOne(item.id, $el.checked)" 
+           :checked="isSelected(item.id)" />
+</template>
+```
+
 ### HTMX Patterns
 
 | Pattern | Attributes | Use |

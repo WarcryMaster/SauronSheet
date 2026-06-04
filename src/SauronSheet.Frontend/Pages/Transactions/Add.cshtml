@@ -12,11 +12,12 @@
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger rounded-3" role="alert">@Model.ErrorMessage</div>
+        <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity>@Model.ErrorMessage</div>
     }
 
     <div class="card border-0 shadow-sm p-4">
-        <form method="post" class="d-flex flex-column gap-3">
+        <form method="post" class="d-flex flex-column gap-3"
+              x-data="{ loading: false }" @@submit="loading = true">
             <div>
                 <label for="Date" class="form-label fw-semibold">Date</label>
                 <input type="date" id="Date" name="Input.Date" asp-for="Input.Date"
@@ -62,7 +63,11 @@
 
             <div class="d-flex justify-content-end gap-2 mt-2">
                 <a href="/transactions" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-brand">Add Transaction</button>
+                <button type="submit" class="btn btn-brand" :disabled="loading">
+                    <span x-show="!loading">Add Transaction</span>
+                    <span x-show="loading">Adding…</span>
+                    <span x-show="loading" class="spinner-border spinner-border-sm ms-1" role="status" aria-hidden="true"></span>
+                </button>
             </div>
         </form>
     </div>

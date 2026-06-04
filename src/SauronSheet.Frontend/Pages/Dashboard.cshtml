@@ -112,7 +112,7 @@
                 <!-- Total Income -->
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
-                         x-data="{ display: 0, target: @(Model.Summary?.TotalIncome ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                         x-data="{ display: 0, target: @((Model.Summary?.TotalIncome ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
                         <div class="small fw-semibold text-muted text-uppercase mb-1">Total Income</div>
                         <div class="h4 fw-bold text-success mb-0 counter-value">
                             <span x-text="'€' + display.toFixed(2)"></span>
@@ -122,7 +122,7 @@
                 <!-- Total Expenses -->
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
-                         x-data="{ display: 0, target: @(Model.Summary?.TotalExpenses ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                         x-data="{ display: 0, target: @((Model.Summary?.TotalExpenses ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
                         <div class="small fw-semibold text-muted text-uppercase mb-1">Total Expenses</div>
                         <div class="h4 fw-bold text-danger mb-0 counter-value">
                             <span x-text="'€' + display.toFixed(2)"></span>
@@ -132,7 +132,7 @@
                 <!-- Net Amount -->
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
-                         x-data="{ display: 0, target: @(Model.Summary?.NetAmount ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                         x-data="{ display: 0, target: @((Model.Summary?.NetAmount ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
                         <div class="small fw-semibold text-muted text-uppercase mb-1">Net Amount</div>
                         <div class="h4 fw-bold mb-0 counter-value @(Model.Summary?.NetAmount >= 0 ? "text-success" : "text-danger")">
                             <span x-text="'€' + display.toFixed(2)"></span>
@@ -142,7 +142,7 @@
                 <!-- Transactions Count -->
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
-                         x-data="{ display: 0, target: @(Model.Summary?.TransactionCount ?? 0), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                         x-data="{ display: 0, target: @((Model.Summary?.TransactionCount ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
                         <div class="small fw-semibold text-muted text-uppercase mb-1">Transactions</div>
                         <div class="h4 fw-bold text-dark mb-0 counter-value">
                             <span x-text="Math.round(display)"></span>

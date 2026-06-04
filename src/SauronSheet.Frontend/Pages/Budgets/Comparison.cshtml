@@ -16,10 +16,12 @@
     </div>
 
     <!-- Month Filter -->
-    <form method="get" action="/budgets/comparison" class="card border-0 shadow-sm p-3">
+    <form method="get" action="/budgets/comparison" class="card border-0 shadow-sm p-3"
+          x-data @@submit.prevent="const val = $refs.monthPicker.value; if (val) { const [y, m] = val.split('-'); window.location.href = '/budgets/comparison?Year=' + y + '&Month=' + parseInt(m); } else { window.location.href = '/budgets/comparison'; }">
         <div class="d-flex flex-wrap align-items-center gap-3">
             <label class="small fw-semibold text-muted text-uppercase mb-0">Month:</label>
             <input type="month" name="month" id="monthPicker"
+                   x-ref="monthPicker"
                    value="@($"{currentYear:D4}-{currentMonth:D2}")"
                    class="form-control form-control-sm" style="width:auto" />
             <button type="submit" class="btn btn-brand btn-sm">Filter</button>
@@ -51,9 +53,54 @@
         </div>
 
         <!-- Horizontal Bar Chart -->
-        <div class="card border-0 shadow-sm p-4">
+        <div class="card border-0 shadow-sm p-4"
+             x-data="{
+                 init() {
+                     const el = document.getElementById('budgets-comparison-data');
+                     const chartData = el ? JSON.parse(el.textContent) : null;
+                     const canvas = $refs.comparisonCanvas;
+                     if (!canvas || !chartData || chartData.length === 0) return;
+                     const rootStyle = getComputedStyle(document.documentElement);
+                     const brand = rootStyle.getPropertyValue('--brand').trim();
+                     const danger = rootStyle.getPropertyValue('--semantic-danger').trim();
+                     new Chart(canvas, {
+                         type: 'bar',
+                         data: {
+                             labels: chartData.map(d => d.categoryName),
+                             datasets: [
+                                 {
+                                     label: 'Budget',
+                                     data: chartData.map(d => d.budgetLimit || 0),
+                                     backgroundColor: 'color-mix(in srgb, ' + brand + ' 60%, transparent)',
+                                     borderColor: brand,
+                                     borderWidth: 1
+                                 },
+                                 {
+                                     label: 'Actual',
+                                     data: chartData.map(d => d.actualSpend),
+                                     backgroundColor: 'color-mix(in srgb, ' + danger + ' 60%, transparent)',
+                                     borderColor: danger,
+                                     borderWidth: 1
+                                 }
+                             ]
+                         },
+                         options: {
+                             indexAxis: 'y',
+                             responsive: true,
+                             maintainAspectRatio: false,
+                             plugins: { legend: { position: 'top' } },
+                             scales: {
+                                 x: {
+                                     beginAtZero: true,
+                                     ticks: { callback: value => '\u20AC' + value }
+                                 }
+                             }
+                         }
+                     });
+                 }
+             }">
             <h3 class="h6 fw-semibold mb-3">Budget vs Actual by Category</h3>
-            <canvas id="comparisonChart" style="height: 300px;"></canvas>
+            <canvas x-ref="comparisonCanvas" style="height: 300px;"></canvas>
         </div>
 
         <!-- Comparison Table -->
@@ -135,68 +182,4 @@
 
 <script type="application/json" id="budgets-comparison-data">
     @Json.Serialize(Model.Comparison)
-</script>
-
-<script>
-    document.getElementById('monthPicker')?.closest('form')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var val = document.getElementById('monthPicker').value;
-        if (val) {
-            var parts = val.split('-');
-            window.location.href = '/budgets/comparison?Year=' + parts[0] + '&Month=' + parseInt(parts[1]);
-        } else {
-            window.location.href = '/budgets/comparison';
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Read pre-serialized JSON from the <script type="application/json"> block above.
-        // See docs/adr/0002-safe-json-data-passing.md for the rationale.
-        var chartData = JSON.parse(document.getElementById('budgets-comparison-data').textContent);
-        var ctx = document.getElementById('comparisonChart');
-        if (ctx && chartData && chartData.length > 0) {
-            // Resolve design tokens at runtime so chart colors track DESIGN.md
-            // (defined as CSS custom properties in wwwroot/css/site.css).
-            var rootStyle = getComputedStyle(document.documentElement);
-            var brand = rootStyle.getPropertyValue('--brand').trim();
-            var brandFill = 'color-mix(in srgb, ' + brand + ' 60%, transparent)';
-            var danger = rootStyle.getPropertyValue('--semantic-danger').trim();
-            var dangerFill = 'color-mix(in srgb, ' + danger + ' 60%, transparent)';
-
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartData.map(function(d) { return d.categoryName; }),
-                    datasets: [
-                        {
-                            label: 'Budget',
-                            data: chartData.map(function(d) { return d.budgetLimit || 0; }),
-                            backgroundColor: brandFill,
-                            borderColor: brand,
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Actual',
-                            data: chartData.map(function(d) { return d.actualSpend; }),
-                            backgroundColor: dangerFill,
-                            borderColor: danger,
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: { callback: function(value) { return '\u20AC' + value; } }
-                        }
-                    }
-                }
-            });
-        }
-    });
 </script>

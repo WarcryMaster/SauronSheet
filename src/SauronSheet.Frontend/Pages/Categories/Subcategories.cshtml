@@ -4,7 +4,7 @@
     ViewData["Title"] = "Subcategories - " + Model.ParentCategory?.Name;
 }
 
-<div class="d-flex flex-column gap-4">
+<div class="d-flex flex-column gap-4" x-data x-init="setupEventListeners()">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/Categories">Categories</a></li>
@@ -21,7 +21,7 @@
             <a href="/Categories" class="btn btn-outline-secondary" aria-label="Back to categories">
                 &larr; Back
             </a>
-            <button type="button" class="btn btn-brand" onclick="openCreateModal()" aria-label="Add new subcategory">
+            <button type="button" class="btn btn-brand" @@click="openCreateModal()" aria-label="Add new subcategory">
                 + Add New Subcategory
             </button>
         </div>
@@ -45,6 +45,7 @@
                                 class="btn btn-sm btn-outline-secondary me-2 js-edit-subcategory"
                                 data-subcategory-id="@subcategory.Id"
                                 data-subcategory-name="@subcategory.Name"
+                                @@click="openEditModal({ id: $el.dataset.subcategoryId, name: $el.dataset.subcategoryName })"
                                 aria-label="Edit @subcategory.Name subcategory">
                             Edit
                         </button>
@@ -52,6 +53,7 @@
                                 class="btn btn-sm btn-outline-danger js-delete-subcategory"
                                 data-subcategory-id="@subcategory.Id"
                                 data-subcategory-name="@subcategory.Name"
+                                @@click="showDeleteConfirm($el.dataset.subcategoryId, $el.dataset.subcategoryName)"
                                 aria-label="Delete @subcategory.Name subcategory">
                             Delete
                         </button>
@@ -72,15 +74,16 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="createSubcategoryLabel">Add New Subcategory</h5>
-                <button type="button" class="btn-close" onclick="closeModal('createSubcategoryModal')" aria-label="Close"></button>
+                <button type="button" class="btn-close" @@click="closeModal('createSubcategoryModal')" aria-label="Close"></button>
             </div>
-            <form id="createForm" method="post" asp-page-handler="Create" asp-route-categoryId="@Model.ParentCategory?.Id" onsubmit="return validateCreateForm(event)">
+            <form id="createForm" method="post" asp-page-handler="Create" asp-route-categoryId="@Model.ParentCategory?.Id" @@submit.prevent="validateCreateForm($event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
                         <label for="createName" class="form-label fw-semibold">Subcategory Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required
-                               aria-describedby="nameError" aria-required="true" />
+                               aria-describedby="nameError" aria-required="true"
+                               @@input="updateCharCounter('charCounter', $el.value.length); $el.classList.remove('is-invalid'); validateCreateForm()" />
                         <div id="nameError" class="invalid-feedback">Subcategory name is required</div>
                         <div class="form-text text-end">Max 50 characters (<span id="charCounter">0</span>/50)</div>
                     </div>
@@ -88,7 +91,7 @@
                     <div id="createError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('createSubcategoryModal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('createSubcategoryModal')">Cancel</button>
                     <button type="submit" class="btn btn-brand" id="createSubmitBtn" disabled>Save Subcategory</button>
                 </div>
             </form>
@@ -102,23 +105,24 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editSubcategoryLabel">Edit Subcategory</h5>
-                <button type="button" class="btn-close" onclick="closeModal('editSubcategoryModal')" aria-label="Close"></button>
+                <button type="button" class="btn-close" @@click="closeModal('editSubcategoryModal')" aria-label="Close"></button>
             </div>
-            <form id="editForm" method="post" asp-page-handler="Update" onsubmit="return validateEditForm(event)">
+            <form id="editForm" method="post" asp-page-handler="Update" @@submit.prevent="validateEditForm($event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="editSubcategoryId" name="EditForm.SubcategoryId" />
 
                     <div class="mb-3">
                         <label for="editName" class="form-label fw-semibold">Subcategory Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
+                        <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true"
+                               @@input="updateCharCounter('editCharCounter', $el.value.length)" />
                         <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
                     </div>
 
                     <div id="editError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('editSubcategoryModal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('editSubcategoryModal')">Cancel</button>
                     <button type="submit" class="btn btn-brand" id="editSubmitBtn">Update Subcategory</button>
                 </div>
             </form>
@@ -132,7 +136,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deleteConfirmLabel">Delete Subcategory</h5>
-                <button type="button" class="btn-close" onclick="closeModal('deleteConfirmModal')" aria-label="Close"></button>
+                <button type="button" class="btn-close" @@click="closeModal('deleteConfirmModal')" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete the subcategory <strong id="deleteSubcategoryName"></strong>?</p>
@@ -140,8 +144,8 @@
                 <div id="deleteError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>
-                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+                <button type="button" class="btn btn-secondary" @@click="closeModal('deleteConfirmModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn" @@click="performDelete()">Delete</button>
             </div>
         </div>
     </div>
@@ -188,54 +192,10 @@
         mdb.Modal.getInstance(document.getElementById(modalId))?.hide();
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        setupEventListeners();
-    });
+    // setupEventListeners() is called from Alpine.js x-init on the wrapper div.
 
     function setupEventListeners() {
-        document.addEventListener('click', function (event) {
-            const editButton = event.target.closest('.js-edit-subcategory');
-            if (editButton) {
-                openEditModal({
-                    id: editButton.dataset.subcategoryId,
-                    name: editButton.dataset.subcategoryName,
-                });
-                return;
-            }
-
-            const deleteButton = event.target.closest('.js-delete-subcategory');
-            if (deleteButton) {
-                showDeleteConfirm(
-                    deleteButton.dataset.subcategoryId,
-                    deleteButton.dataset.subcategoryName
-                );
-                return;
-            }
-        });
-
-        const createNameInput = document.getElementById('createName');
         const createModal = document.getElementById('createSubcategoryModal');
-
-        if (createNameInput) {
-            createNameInput.addEventListener('input', function() {
-                updateCharCounter('charCounter', this.value.length);
-                this.classList.remove('is-invalid');
-                validateCreateForm();
-            });
-        }
-
-        const editNameInput = document.getElementById('editName');
-
-        if (editNameInput) {
-            editNameInput.addEventListener('input', function() {
-                updateCharCounter('editCharCounter', this.value.length);
-            });
-        }
-
-        const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
-        if (deleteConfirmBtn) {
-            deleteConfirmBtn.addEventListener('click', performDelete);
-        }
 
         let lastFocusedElement = null;
         const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';

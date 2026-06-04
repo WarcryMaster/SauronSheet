@@ -39,7 +39,9 @@
                 }
 
                 <!-- Form -->
-                <form method="post" autocomplete="off" id="loginForm">
+                <form method="post" autocomplete="off" id="loginForm"
+                      x-data="{ loading: false, showPassword: false, init() { this.$nextTick(() => { [document.getElementById('loginEmail'), document.getElementById('loginPassword')].forEach(el => { if (el && typeof mdb !== 'undefined') new mdb.Input(el); }); }); } }"
+                      @@submit="loading = true; setTimeout(() => { if (loading) loading = false; }, 10000)">
                     @Html.AntiForgeryToken()
 
                     <!-- Email input (label always above) -->
@@ -59,6 +61,7 @@
                     <div class="mb-3">
                         <label for="loginPassword" class="form-label fw-semibold">Password</label>
                         <input type="password"
+                               x-ref="loginPwd"
                                id="loginPassword"
                                name="Input.Password"
                                class="form-control"
@@ -82,10 +85,11 @@
                         </div>
                         <div class="col text-end">
                             <a href="#" class="small"
-                               onclick="togglePassword(event)"
+                               @@click.prevent="showPassword = !showPassword; $refs.loginPwd.type = showPassword ? 'text' : 'password'"
                                tabindex="4"
                                id="togglePwdLink">
-                                <span id="eyeIcon">👁</span> Show password
+                                <span x-show="!showPassword">👁 Show password</span>
+                                <span x-show="showPassword">🙈 Hide password</span>
                             </a>
                         </div>
                     </div>
@@ -95,10 +99,12 @@
                             data-mdb-ripple-init
                             class="btn btn-brand btn-block mb-4 text-uppercase fw-bold"
                             id="loginBtn"
+                            :disabled="loading"
                             tabindex="5">
-                        <span id="loginBtnText">Sign in</span>
-                        <span id="loginSpinner"
-                              class="spinner-border spinner-border-sm ms-2 d-none"
+                        <span x-show="!loading">Sign in</span>
+                        <span x-show="loading">Signing in…</span>
+                        <span x-show="loading"
+                              class="spinner-border spinner-border-sm ms-2"
                               role="status"
                               aria-hidden="true"></span>
                     </button>
@@ -119,72 +125,3 @@
         </p>
     </div>
 </div>
-
-<script>
-    function togglePassword(e) {
-        if (e) e.preventDefault();
-        const input = document.getElementById('loginPassword');
-        const link = document.getElementById('togglePwdLink');
-        if (input.type === 'password') {
-            input.type = 'text';
-            link.innerHTML = '<span id="eyeIcon">🙈</span> Hide password';
-        } else {
-            input.type = 'password';
-            link.innerHTML = '<span id="eyeIcon">👁</span> Show password';
-        }
-    }
-
-    function resetLoginButton() {
-        const btn = document.getElementById('loginBtn');
-        const text = document.getElementById('loginBtnText');
-        const spinner = document.getElementById('loginSpinner');
-        btn.disabled = false;
-        text.textContent = 'Sign in';
-        spinner.classList.add('d-none');
-    }
-
-    document.getElementById('loginForm').addEventListener('submit', function () {
-        const btn = document.getElementById('loginBtn');
-        const text = document.getElementById('loginBtnText');
-        const spinner = document.getElementById('loginSpinner');
-        btn.disabled = true;
-        text.textContent = 'Signing in…';
-        spinner.classList.remove('d-none');
-
-        setTimeout(() => {
-            if (btn.disabled) {
-                resetLoginButton();
-            }
-        }, 10000);
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const errorAlert = document.querySelector('.alert-danger');
-        if (errorAlert) {
-            resetLoginButton();
-        }
-
-        document.querySelectorAll('[data-mdb-input-init]').forEach(function (el) {
-            new mdb.Input(el);
-
-            const input = el.querySelector('input');
-            const label = el.querySelector('label');
-            if (!input || !label) return;
-
-            function updateLabel() {
-                if (input.value && input.value.length > 0) {
-                    label.classList.add('active');
-                }
-            }
-
-            updateLabel();
-            input.addEventListener('input', updateLabel);
-            input.addEventListener('blur', function () {
-                setTimeout(updateLabel, 50);
-            });
-            input.addEventListener('focus', function () {
-                label.classList.add('active');
-            });
-        });
-    });
-</script>

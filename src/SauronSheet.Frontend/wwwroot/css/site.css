@@ -273,6 +273,9 @@
     opacity: 1;
 }
 
+/* Alpine.js x-cloak: hide elements until Alpine initializes */
+[x-cloak] { display: none !important; }
+
 /* Counter animation (prevent layout shift during count-up) */
 .counter-value {
     font-variant-numeric: tabular-nums;

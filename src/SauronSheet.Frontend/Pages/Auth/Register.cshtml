@@ -17,12 +17,14 @@
 
             @if (!string.IsNullOrEmpty(Model.ErrorMessage))
             {
-                <div class="alert alert-danger rounded-3" role="alert">
+                <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity>
                     @Model.ErrorMessage
                 </div>
             }
 
-            <form method="post" id="registerForm">
+            <form method="post" id="registerForm"
+                  x-data="{ loading: false, init() { this.$nextTick(() => { ['email','password','confirmPassword'].forEach(id => { const el = document.getElementById(id); if (el && typeof mdb !== 'undefined') new mdb.Input(el); }); }); } }"
+                  @@submit="loading = true">
                 <div class="mb-3">
                     <label for="email" class="form-label fw-semibold">Email address</label>
                     <input id="email" name="Input.Email" type="email" required autofocus
@@ -44,9 +46,10 @@
                            class="form-control rounded-3" />
                 </div>
 
-                <button type="submit" id="registerBtn" class="btn btn-brand w-100 rounded-3 fw-bold">
-                    <span id="registerBtnText">Create account</span>
-                    <span id="registerSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                <button type="submit" id="registerBtn" class="btn btn-brand w-100 rounded-3 fw-bold" :disabled="loading">
+                    <span x-show="!loading">Create account</span>
+                    <span x-show="loading">Creating...</span>
+                    <span x-show="loading" class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
                 </button>
             </form>
 
@@ -57,14 +60,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    document.getElementById('registerForm').addEventListener('submit', function () {
-        var btn = document.getElementById('registerBtn');
-        var text = document.getElementById('registerBtnText');
-        var spinner = document.getElementById('registerSpinner');
-        btn.disabled = true;
-        text.textContent = 'Creating...';
-        spinner.classList.remove('d-none');
-    });
-</script>

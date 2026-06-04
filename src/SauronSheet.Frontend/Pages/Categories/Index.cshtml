@@ -5,13 +5,216 @@
     ViewData["Title"] = "Category Management";
 }
 
-<div class="d-flex flex-column gap-4">
+<div class="d-flex flex-column gap-4" x-data="{
+    currentDeleteCategoryId: null,
+    deleteCategoryName: '',
+    createName: '',
+    createType: '',
+    createIcon: '',
+    createColor: '#3498DB',
+    createError: '',
+    createCharCount: 0,
+    editCategoryId: '',
+    editName: '',
+    editColor: '',
+    editIcon: '',
+    editError: '',
+    editCharCount: 0,
+    deleteError: '',
+
+    get createValid() {
+        return this.createName.trim() && this.createType && this.createIcon;
+    },
+    get editValid() {
+        return this.editName.trim();
+    },
+
+    openCreateModal() {
+        this.createName = '';
+        this.createType = '';
+        this.createColor = '#3498DB';
+        this.createIcon = '';
+        this.createError = '';
+        this.createCharCount = 0;
+        new mdb.Modal(document.getElementById('createCategoryModal')).show();
+    },
+
+    openEditModal(category) {
+        this.editCategoryId = category.id;
+        this.editName = category.name;
+        this.editColor = category.color;
+        this.editIcon = category.iconName;
+        this.editError = '';
+        this.editCharCount = category.name.length;
+        new mdb.Modal(document.getElementById('editCategoryModal')).show();
+    },
+
+    closeModal(modalId) {
+        mdb.Modal.getInstance(document.getElementById(modalId))?.hide();
+    },
+
+    showDeleteConfirm(categoryId, categoryName) {
+        this.currentDeleteCategoryId = categoryId;
+        this.deleteCategoryName = categoryName;
+        this.deleteError = '';
+        new mdb.Modal(document.getElementById('deleteConfirmModal')).show();
+    },
+
+    async submitCreateForm(event) {
+        event.preventDefault();
+        if (!this.createValid) return;
+        const form = document.getElementById('createForm');
+        const formData = new FormData(form);
+        const csrfToken = document.querySelector(`[name='__RequestVerificationToken']`)?.value || '';
+
+        try {
+            const r = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'RequestVerificationToken': csrfToken }
+            });
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category create request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'category-create', http_status: String(r.status) }
+                    });
+                }
+                const body = isJson ? await r.json() : null;
+                this.createError = (body && body.error) || 'An error occurred';
+                return;
+            }
+            const data = await r.json();
+            if (data && data.success) {
+                mdb.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
+                location.reload();
+            } else {
+                this.createError = (data && data.error) || 'An error occurred';
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category create returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'category-create' }
+                    });
+                }
+            }
+        } catch (err) {
+            this.createError = 'Request failed';
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Category create fetch failed'),
+                    { tags: { operation: 'category-create', source: 'fetch-catch' } }
+                );
+            }
+        }
+    },
+
+    async submitEditForm(event) {
+        event.preventDefault();
+        if (!this.editValid) return;
+        const form = document.getElementById('editForm');
+        const formData = new FormData(form);
+        const csrfToken = document.querySelector(`[name='__RequestVerificationToken']`)?.value || '';
+
+        try {
+            const r = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'RequestVerificationToken': csrfToken }
+            });
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category update request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'category-update', http_status: String(r.status) }
+                    });
+                }
+                const body = isJson ? await r.json() : null;
+                this.editError = (body && body.error) || 'An error occurred';
+                return;
+            }
+            const data = await r.json();
+            if (data && data.success) {
+                mdb.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
+                location.reload();
+            } else {
+                this.editError = (data && data.error) || 'An error occurred';
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category update returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'category-update' }
+                    });
+                }
+            }
+        } catch (err) {
+            this.editError = 'Request failed';
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Category update fetch failed'),
+                    { tags: { operation: 'category-update', source: 'fetch-catch' } }
+                );
+            }
+        }
+    },
+
+    async performDelete() {
+        if (!this.currentDeleteCategoryId) return;
+        const csrfToken = document.querySelector(`[name='__RequestVerificationToken']`)?.value || '';
+
+        try {
+            const r = await fetch(`?handler=Delete&categoryId=${encodeURIComponent(this.currentDeleteCategoryId)}`, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': csrfToken }
+            });
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+
+            if (!r.ok) {
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category delete request failed with HTTP error', {
+                        level: 'error',
+                        tags: { operation: 'category-delete', http_status: String(r.status) }
+                    });
+                }
+                const body = isJson ? await r.json() : null;
+                this.deleteError = (body && body.error) || 'An error occurred';
+                return;
+            }
+            const data = await r.json();
+            if (data && data.success) {
+                mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+                location.reload();
+            } else {
+                this.deleteError = (data && data.error) || 'An error occurred';
+                if (typeof Sentry !== 'undefined') {
+                    Sentry.captureMessage('Category delete returned success:false', {
+                        level: 'warning',
+                        tags: { operation: 'category-delete' }
+                    });
+                }
+            }
+        } catch (err) {
+            this.deleteError = 'Request failed';
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(
+                    err instanceof Error ? err : new Error('Category delete fetch failed'),
+                    { tags: { operation: 'category-delete', source: 'fetch-catch' } }
+                );
+            }
+        }
+    }
+}" x-init="setupModalFocusTraps()">
     <div class="d-flex justify-content-between align-items-center">
         <div>
             <h3 class="h3 fw-bold mb-2">Manage Categories</h3>
             <p class="text-muted mb-0">Create and organize custom expense categories. System categories are read-only.</p>
         </div>
-        <button type="button" class="btn btn-brand" onclick="openCreateModal()" aria-label="Add new category">
+        <button type="button" class="btn btn-brand" @@click="openCreateModal()" aria-label="Add new category">
             + Add New Category
         </button>
     </div>
@@ -51,6 +254,7 @@
                                         data-category-name="@category.Name"
                                         data-category-color="@category.Color"
                                         data-category-icon="@category.IconName"
+                                        @@click="openEditModal({ id: $el.dataset.categoryId, name: $el.dataset.categoryName, color: $el.dataset.categoryColor, iconName: $el.dataset.categoryIcon })"
                                         aria-label="Edit @category.Name category">
                                     Edit
                                 </button>
@@ -58,6 +262,7 @@
                                         class="btn btn-sm btn-outline-danger js-delete-category"
                                         data-category-id="@category.Id"
                                         data-category-name="@category.Name"
+                                        @@click="showDeleteConfirm($el.dataset.categoryId, $el.dataset.categoryName)"
                                         aria-label="Delete @category.Name category">
                                     Delete
                                 </button>
@@ -105,6 +310,7 @@
                                         data-category-name="@category.Name"
                                         data-category-color="@category.Color"
                                         data-category-icon="@category.IconName"
+                                        @@click="openEditModal({ id: $el.dataset.categoryId, name: $el.dataset.categoryName, color: $el.dataset.categoryColor, iconName: $el.dataset.categoryIcon })"
                                         aria-label="Edit @category.Name category">
                                     Edit
                                 </button>
@@ -112,6 +318,7 @@
                                         class="btn btn-sm btn-outline-danger js-delete-category"
                                         data-category-id="@category.Id"
                                         data-category-name="@category.Name"
+                                        @@click="showDeleteConfirm($el.dataset.categoryId, $el.dataset.categoryName)"
                                         aria-label="Delete @category.Name category">
                                     Delete
                                 </button>
@@ -126,7 +333,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <!-- Create Category Modal -->
 <div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryLabel" aria-hidden="true">
@@ -134,22 +340,26 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="createCategoryLabel">Add New Category</h5>
-                <button type="button" class="btn-close" onclick="closeModal('createCategoryModal')" aria-label="Close"></button>
+                <button type="button" class="btn-close" @@click="closeModal('createCategoryModal')" aria-label="Close"></button>
             </div>
-            <form id="createForm" method="post" asp-page-handler="Create" onsubmit="return validateCreateForm(event)">
+            <form id="createForm" method="post" asp-page-handler="Create" @@submit.prevent="submitCreateForm($event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
                         <label for="createName" class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required 
-                               aria-describedby="nameError" aria-required="true" />
+                        <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required
+                               aria-describedby="nameError" aria-required="true"
+                               x-model="createName"
+                               @@input="createCharCount = $el.value.length"
+                               :class="{ 'is-invalid': createError && !createName.trim() }" />
                         <div id="nameError" class="invalid-feedback">Category name is required</div>
-                        <div class="form-text text-end">Max 50 characters (<span id="charCounter">0</span>/50)</div>
+                        <div class="form-text text-end">Max 50 characters (<span x-text="createCharCount">0</span>/50)</div>
                     </div>
 
                     <div class="mb-3">
                         <label for="createType" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
-                        <select class="form-select" id="createType" name="CreateForm.Type" required aria-required="true">
+                        <select class="form-select" id="createType" name="CreateForm.Type" required aria-required="true"
+                                x-model="createType">
                             <option value="">Select type...</option>
                             <option value="0">Income</option>
                             <option value="1">Expense</option>
@@ -159,15 +369,17 @@
                     <div class="mb-3">
                         <label for="createColor" class="form-label fw-semibold">Color <span class="text-danger">*</span></label>
                         <div class="d-flex gap-2 align-items-center">
-                            <input type="color" class="form-control form-control-color" id="createColor" name="CreateForm.Color" value="#3498DB" required 
-                                   style="width: 60px;" aria-label="Select category color" />
-                            <span id="colorPreview" class="badge" style="background-color: #3498DB;">Preview</span>
+                            <input type="color" class="form-control form-control-color" id="createColor" name="CreateForm.Color" value="#3498DB" required
+                                   style="width: 60px;" aria-label="Select category color"
+                                   x-model="createColor" />
+                            <span class="badge" :style="'background-color: ' + createColor" x-text="createColor"></span>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="createIcon" class="form-label fw-semibold">Icon <span class="text-danger">*</span></label>
-                        <select class="form-select" id="createIcon" name="CreateForm.IconName" required aria-required="true">
+                        <select class="form-select" id="createIcon" name="CreateForm.IconName" required aria-required="true"
+                                x-model="createIcon">
                             <option value="">Select icon...</option>
                             @foreach (var icon in Model.AvailableIcons)
                             {
@@ -176,11 +388,11 @@
                         </select>
                     </div>
 
-                    <div id="createError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                    <div id="createError" class="alert alert-danger rounded-3" x-show="createError" x-text="createError" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('createCategoryModal')">Cancel</button>
-                    <button type="submit" class="btn btn-brand" id="createSubmitBtn" disabled>Save Category</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('createCategoryModal')">Cancel</button>
+                    <button type="submit" class="btn btn-brand" id="createSubmitBtn" :disabled="!createValid">Save Category</button>
                 </div>
             </form>
         </div>
@@ -193,31 +405,36 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editCategoryLabel">Edit Category</h5>
-                <button type="button" class="btn-close" onclick="closeModal('editCategoryModal')" aria-label="Close"></button>
+                <button type="button" class="btn-close" @@click="closeModal('editCategoryModal')" aria-label="Close"></button>
             </div>
-            <form id="editForm" method="post" asp-page-handler="Update" onsubmit="return validateEditForm(event)">
+            <form id="editForm" method="post" asp-page-handler="Update" @@submit.prevent="submitEditForm($event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" id="editCategoryId" name="EditForm.CategoryId" />
-                    
+                    <input type="hidden" id="editCategoryId" name="EditForm.CategoryId" x-model="editCategoryId" />
+
                     <div class="mb-3">
                         <label for="editName" class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true" />
-                        <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
+                        <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true"
+                               x-model="editName"
+                               @@input="editCharCount = $el.value.length"
+                               :class="{ 'is-invalid': editError && !editName.trim() }" />
+                        <div class="form-text text-end">Max 50 characters (<span x-text="editCharCount">0</span>/50)</div>
                     </div>
 
                     <div class="mb-3">
                         <label for="editColor" class="form-label fw-semibold">Color <span class="text-danger">*</span></label>
                         <div class="d-flex gap-2 align-items-center">
-                            <input type="color" class="form-control form-control-color" id="editColor" name="EditForm.Color" required 
-                                   style="width: 60px;" aria-label="Select category color" />
-                            <span id="editColorPreview" class="badge">Preview</span>
+                            <input type="color" class="form-control form-control-color" id="editColor" name="EditForm.Color" required
+                                   style="width: 60px;" aria-label="Select category color"
+                                   x-model="editColor" />
+                            <span class="badge" :style="'background-color: ' + editColor" x-text="editColor"></span>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="editIcon" class="form-label fw-semibold">Icon <span class="text-danger">*</span></label>
-                        <select class="form-select" id="editIcon" name="EditForm.IconName" required aria-required="true">
+                        <select class="form-select" id="editIcon" name="EditForm.IconName" required aria-required="true"
+                                x-model="editIcon">
                             @foreach (var icon in Model.AvailableIcons)
                             {
                                 <option value="@icon">@icon</option>
@@ -225,11 +442,11 @@
                         </select>
                     </div>
 
-                    <div id="editError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
+                    <div id="editError" class="alert alert-danger rounded-3" x-show="editError" x-text="editError" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('editCategoryModal')">Cancel</button>
-                    <button type="submit" class="btn btn-brand" id="editSubmitBtn">Update Category</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('editCategoryModal')">Cancel</button>
+                    <button type="submit" class="btn btn-brand" id="editSubmitBtn" :disabled="!editValid">Update Category</button>
                 </div>
             </form>
         </div>
@@ -242,19 +459,20 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deleteConfirmLabel">Delete Category</h5>
-                <button type="button" class="btn-close" onclick="closeModal('deleteConfirmModal')" aria-label="Close"></button>
+                <button type="button" class="btn-close" @@click="closeModal('deleteConfirmModal')" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
+                <p>Are you sure you want to delete the category <strong x-text="deleteCategoryName"></strong>?</p>
                 <p class="text-muted small">This action cannot be undone.</p>
-                <div id="deleteError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite"></div>
+                <div id="deleteError" class="alert alert-danger rounded-3" x-show="deleteError" x-text="deleteError" role="alert" aria-live="polite"></div>
             </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('deleteConfirmModal')">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="deleteConfirmBtn" @@click="performDelete()">Delete</button>
                 </div>
         </div>
     </div>
+</div>
 </div>
 
 <style>
@@ -288,125 +506,21 @@
 </style>
 
 <script>
-    let currentDeleteCategoryId = null;
-
-    function openCreateModal() {
-        const modal = new mdb.Modal(document.getElementById('createCategoryModal'));
-        modal.show();
-    }
-
-    function openEditModal(category) {
-        loadEditForm(category);
-        const modal = new mdb.Modal(document.getElementById('editCategoryModal'));
-        modal.show();
-    }
-
-    function closeModal(modalId) {
-        mdb.Modal.getInstance(document.getElementById(modalId))?.hide();
-    }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        setupEventListeners();
-    });
-
-    function setupEventListeners() {
-        // Delegated handlers for the per-category Edit/Delete buttons.
-        // Delegation (vs. one listener per button) keeps the wiring stable across
-        // list re-renders and lets us avoid embedding JSON in inline onclick
-        // attributes — which double-encodes non-ASCII names (e.g. "Alimentaci&#xF3;n").
-        document.addEventListener('click', function (event) {
-            const editButton = event.target.closest('.js-edit-category');
-            if (editButton) {
-                openEditModal({
-                    id: editButton.dataset.categoryId,
-                    name: editButton.dataset.categoryName,
-                    color: editButton.dataset.categoryColor,
-                    iconName: editButton.dataset.categoryIcon,
-                });
-                return;
-            }
-
-            const deleteButton = event.target.closest('.js-delete-category');
-            if (deleteButton) {
-                showDeleteConfirm(
-                    deleteButton.dataset.categoryId,
-                    deleteButton.dataset.categoryName
-                );
-                return;
-            }
-        });
-
-        // Create form listeners
-        const createNameInput = document.getElementById('createName');
-        const createColorInput = document.getElementById('createColor');
-        const createTypeSelect = document.getElementById('createType');
-        const createIconSelect = document.getElementById('createIcon');
-        const createModal = document.getElementById('createCategoryModal');
-
-        if (createNameInput) {
-            createNameInput.addEventListener('input', function() {
-                updateCharCounter('charCounter', this.value.length);
-                this.classList.remove('is-invalid');
-                validateCreateForm();
-            });
-        }
-
-        if (createColorInput) {
-            createColorInput.addEventListener('change', function() {
-                document.getElementById('colorPreview').style.backgroundColor = this.value;
-                validateCreateForm();
-            });
-        }
-
-        if (createTypeSelect) {
-            createTypeSelect.addEventListener('change', validateCreateForm);
-        }
-
-        if (createIconSelect) {
-            createIconSelect.addEventListener('change', validateCreateForm);
-        }
-
-        // Edit form listeners
-        const editNameInput = document.getElementById('editName');
-        const editColorInput = document.getElementById('editColor');
-
-        if (editNameInput) {
-            editNameInput.addEventListener('input', function() {
-                updateCharCounter('editCharCounter', this.value.length);
-            });
-        }
-
-        if (editColorInput) {
-            editColorInput.addEventListener('change', function() {
-                document.getElementById('editColorPreview').style.backgroundColor = this.value;
-            });
-        }
-
-        // Delete confirmation
-        const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
-        if (deleteConfirmBtn) {
-            deleteConfirmBtn.addEventListener('click', performDelete);
-        }
-
-        // Enhanced Modal focus management with focus trap
-        let lastFocusedElement = null;
-        
+    function setupModalFocusTraps() {
         const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-        
-        function setupModalFocusTrap(modalElement, initialFocusId) {
-            // Save the element that triggered the modal
+        let lastFocusedElement = null;
+
+        function trapFocus(modalElement, initialFocusId) {
             modalElement.addEventListener('shown.bs.modal', function() {
                 lastFocusedElement = document.activeElement;
                 const initialFocus = document.getElementById(initialFocusId);
                 if (initialFocus) initialFocus.focus();
-                
-                // Implement focus trap on Tab/Shift+Tab
+
                 const focusableElements = modalElement.querySelectorAll(focusableSelectors);
                 if (focusableElements.length > 0) {
                     const firstElement = focusableElements[0];
                     const lastElement = focusableElements[focusableElements.length - 1];
-                    
+
                     modalElement.addEventListener('keydown', function(e) {
                         if (e.key === 'Tab') {
                             if (e.shiftKey) {
@@ -421,15 +535,13 @@
                                 }
                             }
                         }
-                        // Escape key closes modal
                         if (e.key === 'Escape') {
                             mdb.Modal.getInstance(modalElement)?.hide();
                         }
                     });
                 }
             });
-            
-            // Return focus to trigger element when modal closes
+
             modalElement.addEventListener('hidden.bs.modal', function() {
                 if (lastFocusedElement) {
                     lastFocusedElement.focus();
@@ -437,261 +549,14 @@
                 }
             });
         }
-        
-        // Setup focus traps for all modals
-        if (createModal) {
-            setupModalFocusTrap(createModal, 'createName');
-        }
-        
+
+        const createModal = document.getElementById('createCategoryModal');
+        if (createModal) trapFocus(createModal, 'createName');
+
         const editModal = document.getElementById('editCategoryModal');
-        if (editModal) {
-            setupModalFocusTrap(editModal, 'editName');
-        }
-        
+        if (editModal) trapFocus(editModal, 'editName');
+
         const deleteConfirmModal = document.getElementById('deleteConfirmModal');
-        if (deleteConfirmModal) {
-            setupModalFocusTrap(deleteConfirmModal, 'deleteConfirmBtn');
-        }
-    }
-
-    function updateCharCounter(elementId, length) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = length;
-        }
-    }
-
-    function validateCreateForm(event) {
-        const name = document.getElementById('createName').value.trim();
-        const type = document.getElementById('createType').value;
-        const icon = document.getElementById('createIcon').value;
-        const submitBtn = document.getElementById('createSubmitBtn');
-
-        const isValid = name && type && icon;
-        submitBtn.disabled = !isValid;
-
-        if (event && event.submitter === submitBtn) {
-            if (!isValid) {
-                const nameInput = document.getElementById('createName');
-                if (!name) {
-                    nameInput.classList.add('is-invalid');
-                } else {
-                    nameInput.classList.remove('is-invalid');
-                }
-                return false;
-            }
-
-            submitCreateForm(event);
-            return false;
-        }
-
-        return isValid;
-    }
-
-    function submitCreateForm(event) {
-        event.preventDefault();
-        const form = document.getElementById('createForm');
-        const formData = new FormData(form);
-
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-            }
-        })
-        .then(r => {
-            const contentType = r.headers.get('content-type') || '';
-            const isJson = contentType.includes('application/json');
-
-            if (!r.ok) {
-                if (typeof Sentry !== 'undefined') {
-                    Sentry.captureMessage('Category create request failed with HTTP error', {
-                        level: 'error',
-                        tags: { operation: 'category-create', http_status: String(r.status) }
-                    });
-                }
-                // Do NOT call r.json() on non-OK non-JSON responses — it would
-                // throw a parsing error that triggers a second Sentry report.
-                return isJson ? r.json().then(body => ({ ok: false, body }))
-                              : Promise.resolve({ ok: false, body: null });
-            }
-            return r.json().then(body => ({ ok: true, body }));
-        })
-        .then(payload => {
-            const data = payload.body;
-            if (data && data.success) {
-                mdb.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
-                location.reload();
-            } else {
-                document.getElementById('createError').textContent =
-                    (data && data.error) || 'An error occurred';
-                document.getElementById('createError').classList.remove('d-none');
-                // Only capture when the HTTP request itself succeeded (payload.ok is true).
-                // When !r.ok we already captured at the !r.ok branch above.
-                if (payload.ok && typeof Sentry !== 'undefined') {
-                    Sentry.captureMessage('Category create returned success:false', {
-                        level: 'warning',
-                        tags: { operation: 'category-create' }
-                    });
-                }
-            }
-        })
-        .catch(err => {
-            document.getElementById('createError').textContent = 'Request failed';
-            document.getElementById('createError').classList.remove('d-none');
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(
-                    err instanceof Error ? err : new Error('Category create fetch failed'),
-                    { tags: { operation: 'category-create', source: 'fetch-catch' } }
-                );
-            }
-        });
-    }
-
-    function validateEditForm(event) {
-        const name = document.getElementById('editName').value.trim();
-        const submitBtn = document.getElementById('editSubmitBtn');
-
-        if (!name) {
-            event.preventDefault();
-            return false;
-        }
-
-        submitEditForm(event);
-        return false;
-    }
-
-    function submitEditForm(event) {
-        event.preventDefault();
-        const form = document.getElementById('editForm');
-        const formData = new FormData(form);
-
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-            }
-        })
-        .then(r => {
-            const contentType = r.headers.get('content-type') || '';
-            const isJson = contentType.includes('application/json');
-
-            if (!r.ok) {
-                if (typeof Sentry !== 'undefined') {
-                    Sentry.captureMessage('Category update request failed with HTTP error', {
-                        level: 'error',
-                        tags: { operation: 'category-update', http_status: String(r.status) }
-                    });
-                }
-                return isJson ? r.json().then(body => ({ ok: false, body }))
-                              : Promise.resolve({ ok: false, body: null });
-            }
-            return r.json().then(body => ({ ok: true, body }));
-        })
-        .then(payload => {
-            const data = payload.body;
-            if (data && data.success) {
-                mdb.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
-                location.reload();
-            } else {
-                document.getElementById('editError').textContent =
-                    (data && data.error) || 'An error occurred';
-                document.getElementById('editError').classList.remove('d-none');
-                // Only capture when the HTTP request itself succeeded (payload.ok is true).
-                // When !r.ok we already captured at the !r.ok branch above.
-                if (payload.ok && typeof Sentry !== 'undefined') {
-                    Sentry.captureMessage('Category update returned success:false', {
-                        level: 'warning',
-                        tags: { operation: 'category-update' }
-                    });
-                }
-            }
-        })
-        .catch(err => {
-            document.getElementById('editError').textContent = 'Request failed';
-            document.getElementById('editError').classList.remove('d-none');
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(
-                    err instanceof Error ? err : new Error('Category update fetch failed'),
-                    { tags: { operation: 'category-update', source: 'fetch-catch' } }
-                );
-            }
-        });
-    }
-
-    function loadEditForm(category) {
-        document.getElementById('editCategoryId').value = category.id;
-        document.getElementById('editName').value = category.name;
-        document.getElementById('editColor').value = category.color;
-        document.getElementById('editColorPreview').style.backgroundColor = category.color;
-        document.getElementById('editIcon').value = category.iconName;
-        document.getElementById('editError').classList.add('d-none');
-        updateCharCounter('editCharCounter', category.name.length);
-    }
-
-    function showDeleteConfirm(categoryId, categoryName) {
-        currentDeleteCategoryId = categoryId;
-        document.getElementById('deleteCategoryName').textContent = categoryName;
-        document.getElementById('deleteError').classList.add('d-none');
-        const modal = new mdb.Modal(document.getElementById('deleteConfirmModal'));
-        modal.show();
-    }
-
-    function performDelete() {
-        if (!currentDeleteCategoryId) return;
-
-        fetch(`?handler=Delete&categoryId=${currentDeleteCategoryId}`, {
-            method: 'POST',
-            headers: {
-                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-            }
-        })
-        .then(r => {
-            const contentType = r.headers.get('content-type') || '';
-            const isJson = contentType.includes('application/json');
-
-            if (!r.ok) {
-                if (typeof Sentry !== 'undefined') {
-                    Sentry.captureMessage('Category delete request failed with HTTP error', {
-                        level: 'error',
-                        tags: { operation: 'category-delete', http_status: String(r.status) }
-                    });
-                }
-                return isJson ? r.json().then(body => ({ ok: false, body }))
-                              : Promise.resolve({ ok: false, body: null });
-            }
-            return r.json().then(body => ({ ok: true, body }));
-        })
-        .then(payload => {
-            const data = payload.body;
-            if (data && data.success) {
-                mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
-                location.reload();
-            } else {
-                document.getElementById('deleteError').textContent =
-                    (data && data.error) || 'An error occurred';
-                document.getElementById('deleteError').classList.remove('d-none');
-                // Only capture when the HTTP request itself succeeded (payload.ok is true).
-                // When !r.ok we already captured at the !r.ok branch above.
-                if (payload.ok && typeof Sentry !== 'undefined') {
-                    Sentry.captureMessage('Category delete returned success:false', {
-                        level: 'warning',
-                        tags: { operation: 'category-delete' }
-                    });
-                }
-            }
-        })
-        .catch(err => {
-            document.getElementById('deleteError').textContent = 'Request failed';
-            document.getElementById('deleteError').classList.remove('d-none');
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(
-                    err instanceof Error ? err : new Error('Category delete fetch failed'),
-                    { tags: { operation: 'category-delete', source: 'fetch-catch' } }
-                );
-            }
-        });
+        if (deleteConfirmModal) trapFocus(deleteConfirmModal, 'deleteConfirmBtn');
     }
 </script>

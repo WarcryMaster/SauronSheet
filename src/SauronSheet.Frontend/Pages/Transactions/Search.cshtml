@@ -10,7 +10,8 @@
     <h3 class="h3 fw-bold mb-0">🔍 Search Transactions</h3>
 
     <!-- Filter Panel -->
-    <form method="get" action="/transactions/search" class="card border-0 shadow-sm p-4">
+    <form method="get" action="/transactions/search" class="card border-0 shadow-sm p-4"
+          x-data="{ loading: false }" @@submit="loading = true">
         <div class="row g-3 mb-3">
             <div class="col-12 col-sm-6 col-lg-4">
                 <label for="Keyword" class="form-label small fw-semibold text-muted text-uppercase mb-1">Keyword</label>
@@ -50,13 +51,19 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <button type="submit" class="btn btn-brand btn-sm">Search</button>
+            <button type="submit" class="btn btn-brand btn-sm" :disabled="loading">
+                <span x-show="!loading">Search</span>
+                <span x-show="loading" class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </span>
+            </button>
             <a href="/transactions/search" class="btn btn-link btn-sm text-muted text-decoration-none">Clear all filters</a>
         </div>
     </form>
 
     @if (Model.Results != null)
     {
+        <div x-transition.opacity>
         <!-- Results Summary -->
         <p class="small text-muted">
             Showing @Model.Results.Items.Count of @Model.Results.TotalCount transactions
@@ -128,5 +135,6 @@
                 <p class="text-muted">Try adjusting your filters or search terms.</p>
             </div>
         }
+        </div>
     }
 </div>

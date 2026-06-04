@@ -12,11 +12,53 @@
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger rounded-3" role="alert">@Model.ErrorMessage</div>
+        <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity>@Model.ErrorMessage</div>
     }
 
     <div class="card shadow-sm p-4">
-        <form method="post" class="d-flex flex-column gap-4">
+        <form method="post" class="d-flex flex-column gap-4"
+              x-data='{
+                  budgetType: "@Model.BudgetType",
+                  categoryId: "@Model.CategoryId.ToString()",
+                  categories: @Json.Serialize(Model.Categories.Select(c => new { c.Id, c.Name, c.Type })),
+                  limitLabel: "@(Model.BudgetType == "Income" ? "Income Target" : "Spending Limit")",
+                  limitHint: "@(Model.BudgetType == "Income" ? "Minimum earnings expected per period." : "Maximum spending allowed per period.")",
+                  init() {
+                      if (this.budgetType) {
+                          this.updateLabels();
+                      }
+                  },
+                  get filteredCategories() {
+                      if (!this.budgetType) return this.categories;
+                      return this.categories.filter(c => c.Type === this.budgetType);
+                  },
+                  updateLabels() {
+                      if (this.budgetType === "Income") {
+                          this.limitLabel = "Income Target";
+                          this.limitHint = "Minimum earnings expected per period.";
+                      } else {
+                          this.limitLabel = "Spending Limit";
+                          this.limitHint = "Maximum spending allowed per period.";
+                      }
+                  },
+                  validateForm(e) {
+                      const limit = parseFloat(this.$refs.limitInput?.value ?? "");
+                      if (isNaN(limit) || limit <= 0) {
+                          e.preventDefault();
+                          const errSpan = this.$refs.limitInput?.closest("div")?.querySelector(".text-danger");
+                          if (errSpan) errSpan.textContent = "Limit must be a positive number.";
+                          return;
+                      }
+                      const fromVal = this.$refs.fromInput?.value;
+                      const untilVal = this.$refs.untilInput?.value;
+                      if (fromVal && untilVal && new Date(untilVal) < new Date(fromVal)) {
+                          e.preventDefault();
+                          const errSpan = this.$refs.untilInput?.closest("div")?.querySelector(".text-danger");
+                          if (errSpan) errSpan.textContent = "Effective Until must be on or after Effective From.";
+                      }
+                  }
+              }'
+              @@submit="validateForm">
 
             @* ── Budget Type ── *@
             <fieldset class="border-0 p-0 m-0">
@@ -24,8 +66,9 @@
                 <div class="d-flex gap-3" role="radiogroup" aria-label="Budget type">
                     <label class="budget-type-card flex-fill" id="label-income">
                         <input type="radio" name="BudgetType" value="Income"
+                               x-model="budgetType"
                                class="budget-type-radio" required
-                               @(Model.BudgetType == "Income" ? "checked" : "") />
+                               @@change="updateLabels()" />
                         <span class="budget-type-content text-center p-3 rounded-3 border d-flex flex-column align-items-center gap-2">
                             <span class="budget-type-icon">&#x1F4C8;</span>
                             <span>
@@ -36,8 +79,9 @@
                     </label>
                     <label class="budget-type-card flex-fill" id="label-expense" data-toggle-accent="danger">
                         <input type="radio" name="BudgetType" value="Expense"
+                               x-model="budgetType"
                                class="budget-type-radio" required
-                               @(Model.BudgetType == "Expense" ? "checked" : "") />
+                               @@change="updateLabels()" />
                         <span class="budget-type-content text-center p-3 rounded-3 border d-flex flex-column align-items-center gap-2">
                             <span class="budget-type-icon">&#x1F4C9;</span>
                             <span>
@@ -54,36 +98,34 @@
             <hr class="my-0" />
 
             @* ── Category ── *@
-            <div id="category-section" style="display: @(string.IsNullOrEmpty(Model.BudgetType) ? "none" : "block")">
+            <div id="category-section" x-show="budgetType" x-transition.opacity>
                 <label asp-for="CategoryId" class="form-label fw-semibold">
                     <span id="category-label-text">Category</span>
                 </label>
-                <select asp-for="CategoryId" id="CategoryId" class="form-select" required>
+                <select asp-for="CategoryId" id="CategoryId" class="form-select" required
+                        x-model="categoryId" x-init="categoryId = '@Model.CategoryId.ToString()'">
                     <option value="">-- Select a category --</option>
-                    @foreach (var cat in Model.Categories)
-                    {
-                        <option value="@cat.Id" data-type="@cat.Type"
-                            selected="@(Model.CategoryId == cat.Id ? "selected" : null)">
-                            @cat.Name
-                        </option>
-                    }
+                    <template x-for="cat in filteredCategories" :key="cat.Id">
+                        <option :value="cat.Id" x-text="cat.Name"></option>
+                    </template>
                 </select>
                 <div class="form-text" id="category-hint">Choose the category this budget applies to.</div>
                 <span asp-validation-for="CategoryId" class="text-danger small"></span>
             </div>
 
             @* ── Limit ── *@
-            <div id="limit-section" style="display: @(string.IsNullOrEmpty(Model.BudgetType) ? "none" : "block")">
+            <div id="limit-section" x-show="budgetType" x-transition.opacity>
                 <label asp-for="LimitAmount" class="form-label fw-semibold">
-                    <span id="limit-label-text">Limit</span>
+                    <span id="limit-label-text" x-text="limitLabel">@(Model.BudgetType == "Income" ? "Income Target" : "Spending Limit")</span>
                 </label>
                 <div class="input-group">
                     <span class="input-group-text">&euro;</span>
                     <input type="number" asp-for="LimitAmount" step="0.01" min="0.01"
+                           x-ref="limitInput"
                            class="form-control" placeholder="500.00" required />
                     <span class="input-group-text">EUR</span>
                 </div>
-                <div class="form-text" id="limit-hint">Maximum spending allowed per period.</div>
+                <div class="form-text" id="limit-hint" x-text="limitHint">@(Model.BudgetType == "Income" ? "Minimum earnings expected per period." : "Maximum spending allowed per period.")</div>
                 <span asp-validation-for="LimitAmount" class="text-danger small"></span>
             </div>
 
@@ -92,12 +134,14 @@
                 <div class="col-md-6">
                     <label asp-for="EffectiveFrom" class="form-label fw-semibold">Effective From</label>
                     <input type="date" asp-for="EffectiveFrom"
+                           x-ref="fromInput"
                            class="form-control" required />
                     <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="EffectiveUntil" class="form-label fw-semibold">Effective Until</label>
                     <input type="date" asp-for="EffectiveUntil"
+                           x-ref="untilInput"
                            class="form-control" />
                     <div class="form-text">Leave empty for a permanent budget.</div>
                     <span asp-validation-for="EffectiveUntil" class="text-danger small"></span>
@@ -122,125 +166,10 @@
             <div class="d-flex justify-content-end gap-2 pt-2">
                 <a href="/budgets" class="btn btn-outline-secondary">Cancel</a>
                 <button type="submit" id="submit-btn" data-mdb-ripple-init
-                        class="btn btn-brand" disabled>Create Budget</button>
+                        class="btn btn-brand" :disabled="!budgetType">Create Budget</button>
             </div>
         </form>
     </div>
 </div>
 
 @* ── Styles live in wwwroot/css/site.css (.budget-type-*) ── *@
-
-@section Scripts {
-    <script>
-        // ── Elements ──
-        const incomeRadio  = document.querySelector('input[value="Income"]');
-        const expenseRadio = document.querySelector('input[value="Expense"]');
-        const categorySelect = document.getElementById('CategoryId');
-        const categorySection = document.getElementById('category-section');
-        const limitSection    = document.getElementById('limit-section');
-        const limitLabel      = document.getElementById('limit-label-text');
-        const limitHint       = document.getElementById('limit-hint');
-        const submitBtn       = document.getElementById('submit-btn');
-
-        // ── Labels per type ──
-        const labels = {
-            Income:  { limit: 'Income Target', hint: 'Minimum earnings expected per period.' },
-            Expense: { limit: 'Spending Limit', hint: 'Maximum spending allowed per period.' }
-        };
-
-        /** Filter category <option> elements by data-type */
-        function filterCategories(type) {
-            const options = categorySelect.querySelectorAll('option');
-            let firstVisible = null;
-            let currentSelectedVisible = false;
-
-            options.forEach(function(opt) {
-                if (opt.value === '') return; // skip placeholder
-                const optType = opt.getAttribute('data-type');
-                if (optType === type) {
-                    opt.style.display = '';
-                    if (!firstVisible) firstVisible = opt;
-                    if (opt.selected) currentSelectedVisible = true;
-                } else {
-                    opt.style.display = 'none';
-                }
-            });
-
-            // If the previously selected category is not of this type, reset
-            if (!currentSelectedVisible) {
-                categorySelect.value = '';
-            }
-
-            return firstVisible;
-        }
-
-        /** Update UI when budget type changes */
-        function onTypeChange(type) {
-            categorySection.style.display = 'block';
-            limitSection.style.display    = 'block';
-            submitBtn.disabled            = false;
-
-            filterCategories(type);
-
-            // Update labels
-            const l = labels[type] || labels['Expense'];
-            limitLabel.textContent = l.limit;
-            limitHint.textContent  = l.hint;
-        }
-
-        /** Check initial state on page load */
-        function init() {
-            if (incomeRadio && incomeRadio.checked) {
-                onTypeChange('Income');
-            } else if (expenseRadio && expenseRadio.checked) {
-                onTypeChange('Expense');
-            } else {
-                // No type selected — hide dependent fields
-                categorySection.style.display = 'none';
-                limitSection.style.display    = 'none';
-                submitBtn.disabled            = true;
-            }
-        }
-
-        // ── Event listeners ──
-        incomeRadio?.addEventListener('change', function() {
-            if (this.checked) onTypeChange('Income');
-        });
-
-        expenseRadio?.addEventListener('change', function() {
-            if (this.checked) onTypeChange('Expense');
-        });
-
-        // ── Client-side validation ──
-        const form = document.querySelector('form');
-        form?.addEventListener('submit', function(e) {
-            const limitInput = document.getElementById('LimitAmount');
-            const limit = parseFloat(limitInput?.value ?? '');
-            if (isNaN(limit) || limit <= 0) {
-                e.preventDefault();
-                const errorSpan = limitInput?.closest('div')?.querySelector('.text-danger');
-                if (errorSpan) {
-                    errorSpan.textContent = 'Limit must be a positive number.';
-                }
-                return false;
-            }
-
-            const fromInput = document.getElementById('EffectiveFrom');
-            const untilInput = document.getElementById('EffectiveUntil');
-            if (fromInput?.value && untilInput?.value) {
-                const fromDate = new Date(fromInput.value);
-                const untilDate = new Date(untilInput.value);
-                if (untilDate < fromDate) {
-                    e.preventDefault();
-                    const errorSpan = untilInput?.closest('div')?.querySelector('.text-danger');
-                    if (errorSpan) {
-                        errorSpan.textContent = 'Effective Until must be on or after Effective From.';
-                    }
-                    return false;
-                }
-            }
-        });
-
-        init();
-    </script>
-}

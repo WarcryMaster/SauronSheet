@@ -12,7 +12,7 @@
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3" role="alert">
+        <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3" role="alert" x-transition.opacity>
             <span class="fw-bold">!</span>
             <p class="mb-0 small">@Model.ErrorMessage</p>
         </div>
@@ -20,7 +20,7 @@
 
     @if (Model.ImportResult != null)
     {
-        <div class="alert alert-success rounded-3">
+        <div class="alert alert-success rounded-3" x-transition.opacity>
             <p class="fw-semibold mb-1">
                 ✅ Import Complete: @Model.ImportResult.ImportedCount imported, @Model.ImportResult.SkippedCount skipped
             </p>
@@ -54,11 +54,13 @@
     </div>
 
     <div class="card border-0 shadow-sm p-4">
-        <form method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4">
+        <form method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4"
+              x-data="{ fileName: '', uploading: false }" @@submit="uploading = true">
             <div>
                 <label for="excelFile" class="form-label fw-semibold">Select Excel Bank Statement</label>
-                <div class="border border-2 border-dashed rounded-3 p-5 text-center" id="dropZone"
-                     style="cursor: pointer; border-color: #ced4da !important;">
+                <div class="border border-2 border-dashed rounded-3 p-5 text-center"
+                     style="cursor: pointer; border-color: #ced4da !important;"
+                     @@click="$refs.fileInput.click()">
                     <div class="fs-1 mb-2">📊</div>
                     <p class="mb-1 small">
                         <label for="excelFile" class="fw-semibold text-brand" style="cursor: pointer;">
@@ -67,22 +69,17 @@
                         <span class="text-muted"> or drag and drop</span>
                     </p>
                     <p class="text-muted small mb-2">Excel (.xls / .xlsx) up to 10MB</p>
-                    <input id="excelFile" name="ExcelFile" type="file" accept=".xls,.xlsx" class="visually-hidden" />
-                    <p class="text-muted small mb-0" id="fileNameDisplay"></p>
+                    <input x-ref="fileInput" id="excelFile" name="ExcelFile" type="file" accept=".xls,.xlsx" class="visually-hidden"
+                           @@change="fileName = $event.target.files[0]?.name ?? ''" />
+                    <p class="text-muted small mb-0" x-text="fileName || 'No file selected'" x-show="true"></p>
                 </div>
             </div>
-            <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold">
-                Upload and Import
+            <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold" :disabled="uploading">
+                <span x-show="!uploading">Upload and Import</span>
+                <span x-show="uploading" class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Uploading...</span>
+                </span>
             </button>
         </form>
     </div>
 </div>
-
-<script>
-    document.getElementById('excelFile')?.addEventListener('change', function() {
-        document.getElementById('fileNameDisplay').textContent = this.files[0]?.name ?? '';
-    });
-    document.getElementById('dropZone')?.addEventListener('click', function(e) {
-        if (e.target.tagName !== 'LABEL') document.getElementById('excelFile').click();
-    });
-</script>

@@ -12,7 +12,7 @@
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger rounded-3" role="alert">@Model.ErrorMessage</div>
+        <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity>@Model.ErrorMessage</div>
     }
 
     @if (Model.Budget != null)
@@ -45,7 +45,8 @@
             </div>
 
             @* Edit form *@
-            <form method="post" asp-page-handler="Update" class="d-flex flex-column gap-4">
+            <form method="post" asp-page-handler="Update" class="d-flex flex-column gap-4"
+                  x-data="{ loading: false }" @@submit="loading = true">
                 <input type="hidden" asp-for="BudgetId" />
 
                 @* Spending limit *@
@@ -96,11 +97,16 @@
                                 class="btn btn-sm @(isActive ? "btn-outline-danger" : "btn-outline-success")">@(isActive ? "Deactivate Budget" : "Activate Budget")</button>
                         <button type="submit" formmethod="post" asp-page-handler="Delete"
                                 id="deleteBudgetButton"
+                                @@click="if(!confirm('Are you sure you want to permanently delete this budget? This action cannot be undone.')) $event.preventDefault()"
                                 class="btn btn-outline-danger btn-sm">Delete Permanently</button>
                     </div>
                     <div class="d-flex flex-wrap gap-3">
                         <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
-                        <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm">Save Changes</button>
+                        <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm" :disabled="loading">
+                            <span x-show="!loading">Save Changes</span>
+                            <span x-show="loading">Saving…</span>
+                            <span x-show="loading" class="spinner-border spinner-border-sm ms-1" role="status" aria-hidden="true"></span>
+                        </button>
                     </div>
                 </div>
             </form>
@@ -118,15 +124,4 @@
 @if (Model.Budget != null)
 {
     <partial name="Shared/Components/_BudgetStatusModal" />
-}
-
-@section Scripts {
-    <script>
-        const deleteBtn = document.getElementById('deleteBudgetButton');
-        deleteBtn?.addEventListener('click', function (e) {
-            if (!confirm('Are you sure you want to permanently delete this budget? This action cannot be undone.')) {
-                e.preventDefault();
-            }
-        });
-    </script>
 }

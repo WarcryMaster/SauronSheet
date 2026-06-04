@@ -94,17 +94,46 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 
 ## Frontend Rules
 
-- Razor Pages should use PageModel patterns and antiforgery protection.
+### Technology Stack (Mandatory)
+- Razor Pages with PageModel patterns and antiforgery protection.
 - Interactive layer: Alpine.js v3 + HTMX v2 + Chart.js (latest), all via CDN.
   - Alpine.js for declarative reactivity: `x-data`, `x-show`, `x-transition`, `x-model`, `x-on`, `x-init`.
   - HTMX for Ajax from HTML: `hx-get`, `hx-target`, `hx-swap`, `hx-select`, `hx-indicator`.
   - Chart.js for interactive analytics; colors resolved from CSS custom properties via `getComputedStyle`.
-- Do NOT use inline `onclick`, `onchange`, `onsubmit` attributes — use Alpine.js `x-on:` / `@@event` directives.
-- Do NOT use `DOMContentLoaded` for initialization — use Alpine.js `x-init` or HTMX lifecycle events (`htmx:afterSwap`).
-- Chart instances must be destroyed via `Chart.getChart(canvas)?.destroy()` before any HTMX swap that replaces canvas elements.
-- All CDN scripts load in this order: MDB CSS → Alpine.js (defer) → HTMX → Chart.js → charts.js.
 - Use MDBootstrap via CDN (mdb-ui-kit v9.2.0) for CSS layout, components, and grid. Not Bootstrap or local alternatives.
 - All local static assets referenced from Razor (`wwwroot/css`, `wwwroot/js`, `wwwroot/img`) MUST use `~/...` paths plus `asp-append-version="true"`. Never hardcode `/css/...`, `/js/...`, or `/img/...` for local assets.
+- All CDN scripts load in this order: MDB CSS → Alpine.js (defer) → HTMX → Chart.js → charts.js.
+
+### Alpine.js Mandatory Patterns
+
+**FORBIDDEN — NEVER USE:**
+- ❌ `onclick`, `onchange`, `onsubmit` inline attributes → use Alpine.js `x-on:` / `@@event` directives
+- ❌ `DOMContentLoaded` for initialization → use Alpine.js `x-init` or HTMX lifecycle events (`htmx:afterSwap`)
+- ❌ `<script>` blocks with vanilla JS for page interactivity → use Alpine.js `x-data` components
+- ❌ `document.getElementById()` for state reading → use Alpine.js `x-data` properties and `$refs`
+- ❌ `addEventListener()` for UI events → use `@@click`, `@@change`, `@@submit`, `@@input`, `@@keydown`
+- ❌ `classList.add/remove('d-none')` for visibility → use `x-show` + `x-transition`
+- ❌ `.textContent = '...'` for dynamic text → use `x-text` or `x-html`
+- ❌ `.disabled = true/false` for buttons → use `:disabled` + reactive state
+- ❌ `.style.backgroundColor = '...'` → use `:style` binding
+- ❌ Separate `.js` files for page-specific logic → embed in Alpine.js `x-data`
+- ❌ `d-flex`, `d-block`, `d-grid` (MDB classes with `!important`) on elements with `x-show` → wrap in inner div
+- ❌ `@Json.Serialize()` inside double-quoted HTML attributes → use single-quoted attributes (`x-data='...'`) and double-quoted JS strings
+- ❌ `@(decimal)` without invariant culture inside JavaScript → use `.ToString(System.Globalization.CultureInfo.InvariantCulture)`
+
+**REQUIRED — ALWAYS USE:**
+- ✅ `x-data` on every interactive component (forms, filters, modals, toolbars)
+- ✅ `x-show` + `x-transition` for any conditional visibility
+- ✅ `x-model` for all form inputs (text, select, checkbox, radio, color)
+- ✅ `:disabled` + spinner on ALL submit buttons with `x-data="{ loading: false }"`
+- ✅ `@@submit="loading = true"` on all forms
+- ✅ `x-text` for dynamic text content
+- ✅ `:class` for conditional CSS classes
+- ✅ `$refs` for DOM element references when unavoidable
+- ✅ MDB modals via `new mdb.Modal(el).show()` from Alpine.js methods (DO NOT use `data-mdb-toggle` on buttons, call `show()` explicitly)
+- ✅ `htmx:beforeSwap` → `destroyAllCharts()` for any page with Chart.js + HTMX
+
+### Cross-Attribute Compatibility
 - **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**
   - `data-mdb-toggle="dropdown"` (not `data-bs-toggle`)
   - `data-mdb-target="#modal"` (not `data-bs-target`)
