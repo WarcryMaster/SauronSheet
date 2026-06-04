@@ -19,6 +19,9 @@ public class CreateModel : PageModel
     public List<CategoryDto> Categories { get; set; } = new();
 
     [BindProperty]
+    public string BudgetType { get; set; } = string.Empty;
+
+    [BindProperty]
     public Guid CategoryId { get; set; }
 
     [BindProperty]
@@ -34,6 +37,11 @@ public class CreateModel : PageModel
     public string PeriodGranularity { get; set; } = nameof(BudgetPeriod.Monthly);
 
     public string? ErrorMessage { get; set; }
+
+    private bool IsExpenseBudget => string.Equals(BudgetType, "Expense", StringComparison.OrdinalIgnoreCase);
+    private bool IsIncomeBudget => string.Equals(BudgetType, "Income", StringComparison.OrdinalIgnoreCase);
+
+    private string LimitLabel => IsIncomeBudget ? "Income target" : "Spending limit";
 
     public CreateModel(IMediator mediator)
     {
@@ -59,6 +67,19 @@ public class CreateModel : PageModel
         {
             Categories = await _mediator.Send(new GetCategoriesQuery());
 
+            // Validate BudgetType
+            if (string.IsNullOrWhiteSpace(BudgetType))
+            {
+                ErrorMessage = "Please select whether this budget is for income or expenses.";
+                return Page();
+            }
+
+            if (!IsIncomeBudget && !IsExpenseBudget)
+            {
+                ErrorMessage = "Invalid budget type. Select either Income or Expense.";
+                return Page();
+            }
+
             // Validate Granularity
             if (!Enum.TryParse<BudgetPeriod>(PeriodGranularity, ignoreCase: true, out BudgetPeriod granularity))
             {
@@ -69,7 +90,7 @@ public class CreateModel : PageModel
             // Validate limit is positive
             if (LimitAmount <= 0)
             {
-                ErrorMessage = "Spending limit must be greater than zero.";
+                ErrorMessage = $"{LimitLabel} must be greater than zero.";
                 return Page();
             }
 
@@ -77,6 +98,20 @@ public class CreateModel : PageModel
             if (EffectiveUntil.HasValue && EffectiveUntil.Value < EffectiveFrom)
             {
                 ErrorMessage = "Effective Until must be on or after Effective From.";
+                return Page();
+            }
+
+            // Validate category exists and matches the selected budget type
+            CategoryDto? selectedCategory = Categories.FirstOrDefault(c => c.Id == CategoryId);
+            if (selectedCategory is null)
+            {
+                ErrorMessage = "Please select a valid category.";
+                return Page();
+            }
+
+            if (!string.Equals(selectedCategory.Type, BudgetType, StringComparison.OrdinalIgnoreCase))
+            {
+                ErrorMessage = $"The selected category '{selectedCategory.Name}' is not of type {BudgetType}.";
                 return Page();
             }
 

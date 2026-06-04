@@ -4,83 +4,266 @@
     ViewData["Title"] = "Create Budget";
 }
 
-<div class="mx-auto d-flex flex-column gap-4" style="max-width:560px">
+<div class="mx-auto d-flex flex-column gap-4" style="max-width:640px">
     <div class="d-flex align-items-center gap-3">
-        <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
-        <h2 class="h4 fw-bold mb-0">Create Budget</h2>
+        <a href="/budgets" class="btn btn-link btn-sm text-muted text-decoration-none">&larr; Back to Budgets</a>
+        <h2 class="h3 fw-bold mb-0">Create Budget</h2>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+        <div class="alert alert-danger rounded-3" role="alert">@Model.ErrorMessage</div>
     }
 
-    <form method="post" class="card border-0 shadow-sm p-4 d-flex flex-column gap-4">
-        @* Category dropdown *@
-        <div>
-            <label asp-for="CategoryId" class="form-label small fw-semibold text-muted text-uppercase">Category</label>
-            <select asp-for="CategoryId" class="form-select form-select-sm" required>
-                <option value="">-- Select Category --</option>
-                @foreach (var cat in Model.Categories)
-                {
-                    <option value="@cat.Id">@cat.Name</option>
-                }
-            </select>
-            <span asp-validation-for="CategoryId" class="text-danger small"></span>
-        </div>
+    <div class="card shadow-sm p-4">
+        <form method="post" class="d-flex flex-column gap-4">
 
-        @* Spending limit *@
-        <div>
-            <label asp-for="LimitAmount" class="form-label small fw-semibold text-muted text-uppercase">Spending Limit</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text">&euro;</span>
-                <input type="number" asp-for="LimitAmount" step="0.01" min="0.01"
-                       class="form-control" placeholder="500.00" required />
-                <span class="input-group-text">EUR</span>
+            @* ── Budget Type ── *@
+            <fieldset class="border-0 p-0 m-0">
+                <legend class="form-label fw-semibold mb-3">What is this budget for?</legend>
+                <div class="d-flex gap-3" role="radiogroup" aria-label="Budget type">
+                    <label class="budget-type-card flex-fill" id="label-income">
+                        <input type="radio" name="BudgetType" value="Income"
+                               class="budget-type-radio" required
+                               @(Model.BudgetType == "Income" ? "checked" : "") />
+                        <span class="budget-type-content text-center p-3 rounded-3 border d-flex flex-column align-items-center gap-2">
+                            <span class="budget-type-icon">&#x1F4C8;</span>
+                            <span>
+                                <span class="d-block fw-semibold">Income</span>
+                                <span class="d-block small text-muted">Earnings target</span>
+                            </span>
+                        </span>
+                    </label>
+                    <label class="budget-type-card flex-fill" id="label-expense">
+                        <input type="radio" name="BudgetType" value="Expense"
+                               class="budget-type-radio" required
+                               @(Model.BudgetType == "Expense" ? "checked" : "") />
+                        <span class="budget-type-content text-center p-3 rounded-3 border d-flex flex-column align-items-center gap-2">
+                            <span class="budget-type-icon">&#x1F4C9;</span>
+                            <span>
+                                <span class="d-block fw-semibold">Expense</span>
+                                <span class="d-block small text-muted">Spending limit</span>
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <span asp-validation-for="BudgetType" class="text-danger small"></span>
+            </fieldset>
+
+            @* ── Visual separator ── *@
+            <hr class="my-0" />
+
+            @* ── Category ── *@
+            <div id="category-section" style="display: @(string.IsNullOrEmpty(Model.BudgetType) ? "none" : "block")">
+                <label asp-for="CategoryId" class="form-label fw-semibold">
+                    <span id="category-label-text">Category</span>
+                </label>
+                <select asp-for="CategoryId" id="CategoryId" class="form-select" required>
+                    <option value="">-- Select a category --</option>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        <option value="@cat.Id" data-type="@cat.Type"
+                            selected="@(Model.CategoryId == cat.Id ? "selected" : null)">
+                            @cat.Name
+                        </option>
+                    }
+                </select>
+                <div class="form-text" id="category-hint">Choose the category this budget applies to.</div>
+                <span asp-validation-for="CategoryId" class="text-danger small"></span>
             </div>
-            <span asp-validation-for="LimitAmount" class="text-danger small"></span>
-        </div>
 
-        @* Effective from date *@
-        <div>
-            <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase">Effective From</label>
-            <input type="date" asp-for="EffectiveFrom"
-                   class="form-control form-control-sm" required />
-            <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
-        </div>
+            @* ── Limit ── *@
+            <div id="limit-section" style="display: @(string.IsNullOrEmpty(Model.BudgetType) ? "none" : "block")">
+                <label asp-for="LimitAmount" class="form-label fw-semibold">
+                    <span id="limit-label-text">Limit</span>
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">&euro;</span>
+                    <input type="number" asp-for="LimitAmount" step="0.01" min="0.01"
+                           class="form-control" placeholder="500.00" required />
+                    <span class="input-group-text">EUR</span>
+                </div>
+                <div class="form-text" id="limit-hint">Maximum spending allowed per period.</div>
+                <span asp-validation-for="LimitAmount" class="text-danger small"></span>
+            </div>
 
-        @* Effective until date (optional) *@
-        <div>
-            <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase">Effective Until (optional)</label>
-            <input type="date" asp-for="EffectiveUntil"
-                   class="form-control form-control-sm" />
-            <span asp-validation-for="EffectiveUntil" class="text-danger small"></span>
-            <small class="text-muted">Leave empty for a permanent budget.</small>
-        </div>
+            @* ── Dates ── *@
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="EffectiveFrom" class="form-label fw-semibold">Effective From</label>
+                    <input type="date" asp-for="EffectiveFrom"
+                           class="form-control" required />
+                    <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="EffectiveUntil" class="form-label fw-semibold">Effective Until</label>
+                    <input type="date" asp-for="EffectiveUntil"
+                           class="form-control" />
+                    <div class="form-text">Leave empty for a permanent budget.</div>
+                    <span asp-validation-for="EffectiveUntil" class="text-danger small"></span>
+                </div>
+            </div>
 
-        @* Period granularity dropdown *@
-        <div>
-            <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase">Period Granularity</label>
-            <select asp-for="PeriodGranularity" class="form-select form-select-sm" required>
-                <option value="">-- Select Granularity --</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Quarterly">Quarterly</option>
-                <option value="Semester">Semester</option>
-                <option value="Annual">Annual</option>
-            </select>
-            <span asp-validation-for="PeriodGranularity" class="text-danger small"></span>
-        </div>
+            @* ── Period Granularity ── *@
+            <div>
+                <label asp-for="PeriodGranularity" class="form-label fw-semibold">Period Granularity</label>
+                <select asp-for="PeriodGranularity" class="form-select" required>
+                    <option value="">-- Select Granularity --</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Semester">Semester</option>
+                    <option value="Annual">Annual</option>
+                </select>
+                <div class="form-text">How often the limit resets.</div>
+                <span asp-validation-for="PeriodGranularity" class="text-danger small"></span>
+            </div>
 
-        @* Buttons *@
-        <div class="d-flex justify-content-end gap-3">
-            <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
-            <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm">Create Budget</button>
-        </div>
-    </form>
+            @* ── Actions ── *@
+            <div class="d-flex justify-content-end gap-2 pt-2">
+                <a href="/budgets" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" id="submit-btn" data-mdb-ripple-init
+                        class="btn btn-brand" disabled>Create Budget</button>
+            </div>
+        </form>
+    </div>
 </div>
+
+@* ── Styles ── *@
+<style>
+    /* Budget type cards — segmented toggle */
+    .budget-type-radio {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .budget-type-content {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-color: var(--bs-border-color, #dee2e6);
+        background: #fff;
+    }
+
+    .budget-type-radio:checked + .budget-type-content {
+        border-color: #556B2F;
+        background: #f4f7ee;
+        box-shadow: 0 0 0 2px rgba(85, 107, 47, 0.25);
+    }
+
+    .budget-type-content:hover {
+        border-color: #556B2F;
+        background: #fafbf6;
+    }
+
+    .budget-type-radio:focus-visible + .budget-type-content {
+        box-shadow: 0 0 0 3px rgba(85, 107, 47, 0.35);
+    }
+
+    .budget-type-icon {
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    /* Expense type card red accent */
+    #label-expense .budget-type-radio:checked + .budget-type-content {
+        border-color: #dc4c64;
+        background: #fef5f6;
+        box-shadow: 0 0 0 2px rgba(220, 76, 100, 0.25);
+    }
+
+    #label-expense .budget-type-content:hover {
+        border-color: #dc4c64;
+        background: #fef8f9;
+    }
+
+    #label-expense .budget-type-radio:focus-visible + .budget-type-content {
+        box-shadow: 0 0 0 3px rgba(220, 76, 100, 0.35);
+    }
+</style>
 
 @section Scripts {
     <script>
+        // ── Elements ──
+        const incomeRadio  = document.querySelector('input[value="Income"]');
+        const expenseRadio = document.querySelector('input[value="Expense"]');
+        const categorySelect = document.getElementById('CategoryId');
+        const categorySection = document.getElementById('category-section');
+        const limitSection    = document.getElementById('limit-section');
+        const limitLabel      = document.getElementById('limit-label-text');
+        const limitHint       = document.getElementById('limit-hint');
+        const submitBtn       = document.getElementById('submit-btn');
+
+        // ── Labels per type ──
+        const labels = {
+            Income:  { limit: 'Income Target', hint: 'Minimum earnings expected per period.' },
+            Expense: { limit: 'Spending Limit', hint: 'Maximum spending allowed per period.' }
+        };
+
+        /** Filter category <option> elements by data-type */
+        function filterCategories(type) {
+            const options = categorySelect.querySelectorAll('option');
+            let firstVisible = null;
+            let currentSelectedVisible = false;
+
+            options.forEach(function(opt) {
+                if (opt.value === '') return; // skip placeholder
+                const optType = opt.getAttribute('data-type');
+                if (optType === type) {
+                    opt.style.display = '';
+                    if (!firstVisible) firstVisible = opt;
+                    if (opt.selected) currentSelectedVisible = true;
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+
+            // If the previously selected category is not of this type, reset
+            if (!currentSelectedVisible) {
+                categorySelect.value = '';
+            }
+
+            return firstVisible;
+        }
+
+        /** Update UI when budget type changes */
+        function onTypeChange(type) {
+            categorySection.style.display = 'block';
+            limitSection.style.display    = 'block';
+            submitBtn.disabled            = false;
+
+            filterCategories(type);
+
+            // Update labels
+            const l = labels[type] || labels['Expense'];
+            limitLabel.textContent = l.limit;
+            limitHint.textContent  = l.hint;
+        }
+
+        /** Check initial state on page load */
+        function init() {
+            if (incomeRadio && incomeRadio.checked) {
+                onTypeChange('Income');
+            } else if (expenseRadio && expenseRadio.checked) {
+                onTypeChange('Expense');
+            } else {
+                // No type selected — hide dependent fields
+                categorySection.style.display = 'none';
+                limitSection.style.display    = 'none';
+                submitBtn.disabled            = true;
+            }
+        }
+
+        // ── Event listeners ──
+        incomeRadio?.addEventListener('change', function() {
+            if (this.checked) onTypeChange('Income');
+        });
+
+        expenseRadio?.addEventListener('change', function() {
+            if (this.checked) onTypeChange('Expense');
+        });
+
+        // ── Client-side validation ──
         const form = document.querySelector('form');
         form?.addEventListener('submit', function(e) {
             const limitInput = document.getElementById('LimitAmount');
@@ -109,5 +292,7 @@
                 }
             }
         });
+
+        init();
     </script>
 }
