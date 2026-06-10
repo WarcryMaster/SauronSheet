@@ -40,7 +40,7 @@
 
                 <!-- Form -->
                 <form method="post" autocomplete="off" id="loginForm"
-                      x-data="{ loading: false, showPassword: false, init() { this.$nextTick(() => { [document.getElementById('loginEmail'), document.getElementById('loginPassword')].forEach(el => { if (el && typeof mdb !== 'undefined') new mdb.Input(el); }); }); } }"
+                      x-data="{ loading: false, showPassword: false }"
                       @@submit="loading = true; setTimeout(() => { if (loading) loading = false; }, 10000)">
                     @Html.AntiForgeryToken()
 

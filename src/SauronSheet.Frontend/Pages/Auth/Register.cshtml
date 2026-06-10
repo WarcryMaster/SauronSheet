@@ -23,7 +23,7 @@
             }
 
             <form method="post" id="registerForm"
-                  x-data="{ loading: false, init() { this.$nextTick(() => { ['email','password','confirmPassword'].forEach(id => { const el = document.getElementById(id); if (el && typeof mdb !== 'undefined') new mdb.Input(el); }); }); } }"
+                  x-data="{ loading: false }"
                   @@submit="loading = true">
                 <div class="mb-3">
                     <label for="email" class="form-label fw-semibold">Email address</label>
