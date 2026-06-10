@@ -121,6 +121,7 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 - ❌ `@Json.Serialize()` inside double-quoted HTML attributes → use single-quoted attributes (`x-data='...'`) and double-quoted JS strings
 - ❌ `@(decimal)` without invariant culture inside JavaScript → use `.ToString(System.Globalization.CultureInfo.InvariantCulture)`
 - ❌ `<input type="date">` — use Flatpickr via Alpine.js `x-init` instead
+- ❌ `<template x-for>` inside `<select>` — browsers move `<template>` out of `<select>` in the DOM, breaking Alpine.js. Use `rebuildOptions()` + `x-effect` to rebuild `<option>` elements via DOM manipulation instead (see Budgets/Create.cshtml for the pattern)
 
 **REQUIRED — ALWAYS USE:**
 - ✅ `x-data` on every interactive component (forms, filters, modals, toolbars)
@@ -134,6 +135,7 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 - ✅ MDB modals via `new mdb.Modal(el).show()` from Alpine.js methods (DO NOT use `data-mdb-toggle` on buttons, call `show()` explicitly)
 - ✅ `htmx:beforeSwap` → `destroyAllCharts()` for any page with Chart.js + HTMX
 - ✅ Flatpickr via `x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"` for ALL date inputs. Never use `type="date"`.
+- ✅ `<template x-for>` inside `<select>` — browsers move `<template>` out of `<select>` in the DOM, breaking Alpine.js. Use `rebuildOptions()` + `x-effect` to rebuild `<option>` elements via DOM manipulation instead (see Budgets/Create.cshtml for the pattern)
 
 ### Cross-Attribute Compatibility
 - **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**
@@ -243,6 +245,8 @@ These files are referenced by the editor/IDE through `applyTo`-style scoping and
 - ❌ Public setters on domain entities (use parameterized constructors).
 - ❌ Never put `_ViewImports.cshtml` in `Shared/` — only in `Pages/` (breaks Tag Helpers).
 - ❌ Never use `data-mdb-button-init` on `<button type="submit">` — breaks form submission in MDBootstrap v9+.
+- ❌ Never call `new mdb.Input(el)` on a raw `<input>` without `.form-outline` wrapper — causes `Cannot read properties of null (reading 'classList')`. Only use `mdb.Input()` inside `.form-outline` divs with sibling `<label>`.
+- ❌ Never use `<input type="date">` — use Flatpickr (`type="text"` + `x-init`). Flatpickr hides the original input and uses a hidden `<input type="hidden">` for the value. E2E tests MUST use `page.evaluate()` + Flatpickr API to set date values, not `page.fill()`.
 - ❌ Never reference local CSS, JS, or image assets with hardcoded `/css/...`, `/js/...`, or `/img/...` paths in Razor. Use `~/...` + `asp-append-version="true"` to prevent stale-cache drift between local and production.
 - ❌ Never embed Razor data in JS via `@Html.Raw(Json.Serialize(model))` (in `on*` attributes or inside `<script>` blocks) or via `@Html.Encode(value)` inside an HTML attribute. Both produce double-encoding / XSS / attribute-breakage bugs. Use `data-*` + a delegated listener for per-item data, or `<script type="application/json">` + `JSON.parse` for larger payloads. Full rationale and patterns in [`docs/adr/0002-safe-json-data-passing.md`](docs/adr/0002-safe-json-data-passing.md).
 

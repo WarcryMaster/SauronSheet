@@ -59,15 +59,32 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await expect(page).toHaveURL(/\/budgets\/create/i);
 
             // ── Fill the form as a real user ──────────────────────────────────
+            // Select BudgetType "Expense" — category section is hidden until a type is selected
+            await page.locator('label#label-expense').click();
+            await page.waitForTimeout(500);
+
             const categorySelect = page.locator('#CategoryId');
             await expect(categorySelect).toBeVisible();
+            // Wait for Alpine.js x-for template to render options into the select
+            await page.waitForFunction(() => {
+                const sel = document.querySelector('select#CategoryId');
+                return sel && sel.querySelectorAll('option').length > 1;
+            }, { timeout: 10000 });
             const catAOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-A$/ });
             await expect(catAOption).toHaveCount(1);
             const catAValue = await catAOption.getAttribute('value');
             await categorySelect.selectOption(catAValue!);
 
             await page.fill('#LimitAmount', '200.00');
-            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+
+            // EffectiveFrom is a Flatpickr input — use Flatpickr API
+            const effectiveFrom = `${year}-${month}-01`;
+            await page.evaluate((dateStr) => {
+                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+                const fp = (el as any)._flatpickr;
+                fp.setDate(dateStr, true);
+            }, effectiveFrom);
+
             await page.selectOption('#PeriodGranularity', 'Monthly');
 
             // ── Submit ────────────────────────────────────────────────────────
@@ -106,9 +123,18 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await page.goto('/budgets/create');
         await expect(page).toHaveURL(/\/budgets\/create/i);
 
+        // Select BudgetType "Expense" — category section is hidden until a type is selected
+        await page.locator('label#label-expense').click();
+        await page.waitForTimeout(500);
+
         // Select category
         const categorySelect = page.locator('#CategoryId');
         await expect(categorySelect).toBeVisible();
+        // Wait for Alpine.js x-for template to render options into the select
+        await page.waitForFunction(() => {
+            const sel = document.querySelector('select#CategoryId');
+            return sel && sel.querySelectorAll('option').length > 1;
+        }, { timeout: 10000 });
         const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
         await expect(catBOption).toHaveCount(1);
         const catBValue = await catBOption.getAttribute('value');
@@ -118,7 +144,14 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await page.fill('#LimitAmount', '-50.00');
 
         const currentMonth = getCurrentBudgetMonth();
-        await page.fill('#EffectiveFrom', currentMonth.firstDay);
+
+        // EffectiveFrom is a Flatpickr input — use Flatpickr API
+        await page.evaluate((dateStr) => {
+            const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+            const fp = (el as any)._flatpickr;
+            fp.setDate(dateStr, true);
+        }, currentMonth.firstDay);
+
         await page.selectOption('#PeriodGranularity', 'Monthly');
 
         await page.getByRole('button', { name: 'Create Budget' }).click();
@@ -149,7 +182,17 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         if ((await existingRow.count()) === 0) {
             // Create one first
             await page.goto('/budgets/create');
+
+            // Select BudgetType "Expense" — category section is hidden until a type is selected
+            await page.locator('label#label-expense').click();
+            await page.waitForTimeout(500);
+
             const categorySelect = page.locator('#CategoryId');
+            // Wait for Alpine.js x-for template to render options into the select
+            await page.waitForFunction(() => {
+                const sel = document.querySelector('select#CategoryId');
+                return sel && sel.querySelectorAll('option').length > 1;
+            }, { timeout: 10000 });
             const catAOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-A$/ });
             await expect(catAOption).toHaveCount(1);
             const catAValue = await catAOption.getAttribute('value');
@@ -159,7 +202,12 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             await page.fill('#LimitAmount', '100.00');
-            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            // EffectiveFrom is a Flatpickr input — use Flatpickr API
+            await page.evaluate((dateStr) => {
+                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+                const fp = (el as any)._flatpickr;
+                fp.setDate(dateStr, true);
+            }, `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
@@ -226,7 +274,17 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         if ((await existingRow.count()) === 0) {
             await page.goto('/budgets/create');
+
+            // Select BudgetType "Expense" — category section is hidden until a type is selected
+            await page.locator('label#label-expense').click();
+            await page.waitForTimeout(500);
+
             const categorySelect = page.locator('#CategoryId');
+            // Wait for Alpine.js x-for template to render options into the select
+            await page.waitForFunction(() => {
+                const sel = document.querySelector('select#CategoryId');
+                return sel && sel.querySelectorAll('option').length > 1;
+            }, { timeout: 10000 });
             const catAOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-A$/ });
             await expect(catAOption).toHaveCount(1);
             const catAValue = await catAOption.getAttribute('value');
@@ -236,7 +294,12 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             await page.fill('#LimitAmount', '100.00');
-            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            // EffectiveFrom is a Flatpickr input — use Flatpickr API
+            await page.evaluate((dateStr) => {
+                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+                const fp = (el as any)._flatpickr;
+                fp.setDate(dateStr, true);
+            }, `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
@@ -303,7 +366,17 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         if ((await existingRow.count()) === 0) {
             // Create one first
             await page.goto('/budgets/create');
+
+            // Select BudgetType "Expense" — category section is hidden until a type is selected
+            await page.locator('label#label-expense').click();
+            await page.waitForTimeout(500);
+
             const categorySelect = page.locator('#CategoryId');
+            // Wait for Alpine.js x-for template to render options into the select
+            await page.waitForFunction(() => {
+                const sel = document.querySelector('select#CategoryId');
+                return sel && sel.querySelectorAll('option').length > 1;
+            }, { timeout: 10000 });
             const catAOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-A$/ });
             await expect(catAOption).toHaveCount(1);
             const catAValue = await catAOption.getAttribute('value');
@@ -313,7 +386,12 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             await page.fill('#LimitAmount', '100.00');
-            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            // EffectiveFrom is a Flatpickr input — use Flatpickr API
+            await page.evaluate((dateStr) => {
+                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+                const fp = (el as any)._flatpickr;
+                fp.setDate(dateStr, true);
+            }, `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 

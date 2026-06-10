@@ -172,7 +172,11 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     await page.goto('/transactions/add');
     await page.waitForLoadState('domcontentloaded');
 
-    await page.fill('#Date',         firstDay);
+    await page.evaluate((dateStr) => {
+        const el = document.getElementById('Date') as HTMLInputElement;
+        const fp = (el as any)._flatpickr;
+        fp.setDate(dateStr, true);
+    }, firstDay);
     await page.fill('#Description',  FIXTURE_TX_DESCRIPTION);
     await page.fill('#Amount',       '-25');
     await page.selectOption('#Currency', 'EUR');

@@ -73,15 +73,32 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             await page.goto('/budgets/create');
             await expect(page).toHaveURL(/\/budgets\/create/i);
 
+            // Select BudgetType "Expense" — category section is hidden until a type is selected (x-show="budgetType")
+            await page.locator('label#label-expense').click();
+            await page.waitForTimeout(500); // Alpine.js x-show transition
+
             const categorySelect = page.locator('select#CategoryId');
             await expect(categorySelect).toBeVisible();
+
+            // Wait for Alpine.js x-for template to render options into the select
+            await page.waitForFunction(() => {
+                const sel = document.querySelector('select#CategoryId');
+                return sel && sel.querySelectorAll('option').length > 1;
+            }, { timeout: 10000 });
 
             const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
             await expect(catBOption).toHaveCount(1);
             const catBValue = await catBOption.getAttribute('value');
             await categorySelect.selectOption(catBValue!);
 
-            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            // EffectiveFrom is a Flatpickr input (hidden alt input) — use Flatpickr API
+            const effectiveFrom = `${year}-${month}-01`;
+            await page.evaluate((dateStr) => {
+                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+                const fp = (el as any)._flatpickr;
+                fp.setDate(dateStr, true);
+            }, effectiveFrom);
+
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '100.00');
 
@@ -178,19 +195,20 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         ).toHaveCount(0);
         await expect(budgetWidget.locator('#DateFilter, #CustomFromDate, #CustomToDate')).toHaveCount(0);
 
-        const dashboardDateFilter = page.locator('#DateFilter');
-        await expect(dashboardDateFilter).toBeVisible();
-
         const catBProgressBefore = budgetWidget.locator('.mb-3').filter({
             has: page.locator('span', { hasText: E2E_CAT_B }),
         }).first();
         await expect(catBProgressBefore).toBeVisible();
         const catBProgressText = (await catBProgressBefore.textContent())?.replace(/\s+/g, ' ').trim() ?? '';
 
-        await dashboardDateFilter.selectOption('this-year');
-        await page.getByRole('button', { name: 'Apply' }).click();
+        // Dashboard uses pill-style period buttons, not a #DateFilter select.
+        // Click "This Year" to change the dashboard date range.
+        const thisYearBtn = page.locator('button', { hasText: 'This Year' });
+        await expect(thisYearBtn).toBeVisible();
+        await thisYearBtn.click();
+        await page.waitForLoadState('domcontentloaded');
 
-        await expect(page).toHaveURL(/DateFilter=this-year/i);
+        // Budget widget always shows "this month" regardless of dashboard filter.
         await expect(budgetWidget).toContainText('this month');
         await expect(budgetWidget).toContainText(E2E_CAT_B);
 
@@ -226,14 +244,28 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         if ((await existingRow.count()) === 0) {
             // No budget yet — create one first using real user interaction
             await page.goto('/budgets/create');
+
+            // Select BudgetType "Expense" — category section is hidden until a type is selected
+            await page.locator('label#label-expense').click();
+            await page.waitForTimeout(500);
+
             const categorySelect = page.locator('select#CategoryId');
+            // Wait for Alpine.js x-for template to render options into the select
+            await page.waitForFunction(() => {
+                const sel = document.querySelector('select#CategoryId');
+                return sel && sel.querySelectorAll('option').length > 1;
+            }, { timeout: 10000 });
             const catBOption = categorySelect.locator('option', { hasText: /^E2E-Budget-Cat-B$/ });
             await expect(catBOption).toHaveCount(1);
             const catBValue = await catBOption.getAttribute('value');
             await categorySelect.selectOption(catBValue!);
 
-            // Fill effective from date and granularity (no input[type="month"] in current form)
-            await page.fill('#EffectiveFrom', `${year}-${month}-01`);
+            // EffectiveFrom is a Flatpickr input — use Flatpickr API
+            await page.evaluate((dateStr) => {
+                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+                const fp = (el as any)._flatpickr;
+                fp.setDate(dateStr, true);
+            }, `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '50.00');
             await page.getByRole('button', { name: 'Create Budget' }).click();

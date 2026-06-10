@@ -121,7 +121,7 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
         await page.goto('/budgets/comparison');
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.locator('h2', { hasText: 'Budget vs Actual' })).toBeVisible();
+        await expect(page.locator('h3.h3', { hasText: 'Budget vs Actual' })).toBeVisible();
 
         const monthPicker = page.locator('#monthPicker');
         await expect(monthPicker).toBeVisible();

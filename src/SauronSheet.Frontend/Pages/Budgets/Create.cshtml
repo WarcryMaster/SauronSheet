@@ -24,13 +24,31 @@
                   limitLabel: "@(Model.BudgetType == "Income" ? "Income Target" : "Spending Limit")",
                   limitHint: "@(Model.BudgetType == "Income" ? "Minimum earnings expected per period." : "Maximum spending allowed per period.")",
                   init() {
+                      this.rebuildOptions();
                       if (this.budgetType) {
                           this.updateLabels();
                       }
                   },
                   get filteredCategories() {
                       if (!this.budgetType) return this.categories;
-                      return this.categories.filter(c => c.Type === this.budgetType);
+                      return this.categories.filter(c => c.type === this.budgetType);
+                  },
+                  rebuildOptions() {
+                      const sel = document.getElementById("CategoryId");
+                      if (!sel) return;
+                      const current = sel.value;
+                      while (sel.options.length > 1) sel.remove(1);
+                      this.filteredCategories.forEach(cat => {
+                          const opt = document.createElement("option");
+                          opt.value = cat.id;
+                          opt.textContent = cat.name;
+                          sel.appendChild(opt);
+                      });
+                      if (current && [...sel.options].some(o => o.value === current)) {
+                          sel.value = current;
+                      } else {
+                          sel.value = "";
+                      }
                   },
                   updateLabels() {
                       if (this.budgetType === "Income") {
@@ -58,6 +76,7 @@
                       }
                   }
               }'
+              x-effect="rebuildOptions()"
               @@submit="validateForm">
 
             @* ── Budget Type ── *@
@@ -105,9 +124,6 @@
                 <select asp-for="CategoryId" id="CategoryId" class="form-select" required
                         x-model="categoryId" x-init="categoryId = '@Model.CategoryId.ToString()'">
                     <option value="">-- Select a category --</option>
-                    <template x-for="cat in filteredCategories" :key="cat.Id">
-                        <option :value="cat.Id" x-text="cat.Name"></option>
-                    </template>
                 </select>
                 <div class="form-text" id="category-hint">Choose the category this budget applies to.</div>
                 <span asp-validation-for="CategoryId" class="text-danger small"></span>

@@ -48,12 +48,30 @@ export async function ensureBudgetExists(page: Page, categoryName: string, limit
     await page.goto('/budgets/create');
     await expect(page).toHaveURL(/\/budgets\/create/i);
 
+    // Select BudgetType "Expense" — category section is hidden until a type is selected
+    await page.locator('label#label-expense').click();
+    await page.waitForTimeout(500);
+
     const categorySelect = page.locator('#CategoryId');
     await expect(categorySelect).toBeVisible();
+
+    // Wait for Alpine.js x-for template to render options into the select
+    await page.waitForFunction(() => {
+        const sel = document.querySelector('select#CategoryId');
+        return sel && sel.querySelectorAll('option').length > 1;
+    }, { timeout: 10000 });
+
     await categorySelect.selectOption({ label: categoryName });
 
     await page.fill('#LimitAmount', limitAmount);
-    await page.fill('#EffectiveFrom', currentMonth.firstDay);
+
+    // EffectiveFrom is a Flatpickr input — use Flatpickr API
+    await page.evaluate((dateStr) => {
+        const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
+        const fp = (el as any)._flatpickr;
+        fp.setDate(dateStr, true);
+    }, currentMonth.firstDay);
+
     await page.selectOption('#PeriodGranularity', 'Monthly');
 
     await page.getByRole('button', { name: 'Create Budget' }).click();

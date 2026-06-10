@@ -94,8 +94,8 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         const title = await page.title();
         expect(title).not.toMatch(/PDF/i);
 
-        // The h1 heading should not mention PDF
-        const heading = page.locator('h1');
+        // The heading should not mention PDF
+        const heading = page.locator('h3');
         await expect(heading).not.toContainText('PDF', { ignoreCase: true });
     });
 });
