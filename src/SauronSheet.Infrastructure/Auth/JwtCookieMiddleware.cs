@@ -15,7 +15,7 @@ using SauronSheet.Domain.Services;
 /// Reads JWT from HTTP-only cookie, validates signature using Supabase JWKS public keys,
 /// and sets ClaimsPrincipal on HttpContext.
 /// Supabase uses ES256 (ECDSA P-256) for JWT signing with asymmetric key pairs.
-/// Public keys are fetched from the JWKS endpoint at startup.
+/// Public keys are fetched lazily from the JWKS endpoint on the first request.
 /// </summary>
 public class JwtCookieMiddleware
 {
@@ -23,19 +23,23 @@ public class JwtCookieMiddleware
     private readonly AuthConfiguration _config;
     private readonly ILogger<JwtCookieMiddleware> _logger;
     private readonly IHostEnvironment _environment;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly JwtSecurityTokenHandler _handler;
     private readonly TokenValidationParameters _validationParameters;
+    private readonly SemaphoreSlim _jwksLock = new(1, 1);
 
     public JwtCookieMiddleware(
         RequestDelegate next,
         IOptions<AuthConfiguration> options,
         ILogger<JwtCookieMiddleware> logger,
-        IHostEnvironment environment)
+        IHostEnvironment environment,
+        IHttpClientFactory httpClientFactory)
     {
         _next = next;
         _config = options.Value;
         _logger = logger;
         _environment = environment;
+        _httpClientFactory = httpClientFactory;
         _handler = new JwtSecurityTokenHandler
         {
             // Disable default claim type mapping so JWT claims like "sub", "email"
@@ -43,18 +47,15 @@ public class JwtCookieMiddleware
             MapInboundClaims = false
         };
 
-        if (environment.IsDevelopment())
+        if (_environment.IsDevelopment())
         {
             IdentityModelEventSource.ShowPII = true;
         }
 
-        // Supabase uses ES256 (asymmetric) JWT signing.
-        // Fetch public keys from the JWKS endpoint for signature verification.
-        IList<SecurityKey> signingKeys = FetchJwksSigningKeys();
-
+        // Keys are NOT loaded in the constructor — loaded lazily on first request.
+        // IssuerSigningKeys starts as null; EnsureKeysLoadedAsync sets it once.
         _validationParameters = new TokenValidationParameters
         {
-            IssuerSigningKeys = signingKeys,
             ValidIssuer = _config.SupabaseIssuer,
             ValidateAudience = false,
             ValidateLifetime = true,
@@ -65,6 +66,8 @@ public class JwtCookieMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        await EnsureKeysLoadedAsync();
+
         var token = context.Request.Cookies[_config.AccessTokenCookieName];
 
         if (!string.IsNullOrEmpty(token))
@@ -179,27 +182,48 @@ public class JwtCookieMiddleware
         context.Response.Cookies.Delete(_config.RefreshTokenCookieName, new CookieOptions { Path = "/" });
     }
 
-    private IList<SecurityKey> FetchJwksSigningKeys()
+    /// <summary>
+    /// Loads JWKS signing keys from Supabase on the first request.
+    /// Thread-safe via SemaphoreSlim — concurrent callers wait for the first to complete.
+    /// On failure, keys stay null so validation rejects tokens; next request retries.
+    /// </summary>
+    private async Task EnsureKeysLoadedAsync()
     {
-        var jwksUrl = _config.SupabaseIssuer.TrimEnd('/') + "/.well-known/jwks.json";
+        if (_validationParameters.IssuerSigningKeys is not null)
+        {
+            return;
+        }
 
+        await _jwksLock.WaitAsync();
         try
         {
-            using var httpClient = new HttpClient();
-            var jwksJson = Task.Run(() => httpClient.GetStringAsync(jwksUrl))
-                .GetAwaiter().GetResult();
+            if (_validationParameters.IssuerSigningKeys is not null)
+            {
+                return;
+            }
+
+            string jwksUrl = _config.SupabaseIssuer.TrimEnd('/') + "/.well-known/jwks.json";
+
+            HttpClient httpClient = _httpClientFactory.CreateClient();
+            string jwksJson = await httpClient.GetStringAsync(jwksUrl);
             var jwks = new JsonWebKeySet(jwksJson);
-            IList<SecurityKey> keys = jwks.GetSigningKeys();
+            IList<SecurityKey> signingKeys = jwks.GetSigningKeys();
+
+            _validationParameters.IssuerSigningKeys = signingKeys;
 
             _logger.LogInformation(
-                "Loaded {KeyCount} signing key(s) from Supabase JWKS endpoint", keys.Count);
-
-            return keys;
+                "Loaded {KeyCount} signing keys from Supabase JWKS endpoint", signingKeys.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch JWKS from {Url}. JWT validation will fail", jwksUrl);
-            return [];
+            _logger.LogError(
+                ex,
+                "Failed to fetch JWKS from {Url}. JWT validation will reject tokens until retry.",
+                _config.SupabaseIssuer.TrimEnd('/') + "/.well-known/jwks.json");
+        }
+        finally
+        {
+            _jwksLock.Release();
         }
     }
 }

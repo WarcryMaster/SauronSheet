@@ -66,17 +66,10 @@ Crear una nueva página (no en Dashboard) para visualizar el desglose de ingreso
 
 ~~Es el último componente de toda la app que usa JavaScript vanilla. Viola múltiples reglas de AGENTS.md:~~
 
-### 5. Bug: `JwtCookieMiddleware` — riesgo de deadlock y HttpClient sin gestión
-**Fichero:** `src/SauronSheet.Infrastructure/Auth/JwtCookieMiddleware.cs` (líneas 188-191)
+~~### 5. Bug: `JwtCookieMiddleware` — riesgo de deadlock y HttpClient sin gestión~~ ✅ Completado
+~~**Fichero:** `src/SauronSheet.Infrastructure/Auth/JwtCookieMiddleware.cs` (líneas 188-191)~~
 
-Dos problemas graves:
-- `Task.Run(() => httpClient.GetStringAsync(jwksUrl)).GetAwaiter().GetResult()` — sincronización sobre async que puede causar deadlock en ASP.NET
-- `new HttpClient()` en cada instancia del middleware (Singleton) — debería usar `IHttpClientFactory`
-
-**Tareas:**
-- Reemplazar llamada sincrónica con inicialización asincrónica o lazy async
-- Inyectar `IHttpClientFactory` en lugar de crear `HttpClient` directo
-- Añadir tests de integración para el middleware
+~~Dos problemas graves:~~
 
 ### 6. Bug: `DeleteTransactionsByIdsAsync` borra uno por uno sin transacción real
 **Fichero:** `src/SauronSheet.Infrastructure/Persistence/SupabaseTransactionRepository.cs` (líneas 433-439)

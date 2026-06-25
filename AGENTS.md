@@ -83,7 +83,7 @@ Always when user interact with the IA and sdd artifacts must be in neutral Spani
 
 ## Quality Rules
 
-- Prefer explicit types over `var`.
+- **Never use `var`** — always use explicit type declarations. `var` oculta la intención del código y obliga al lector a inferir el tipo, lo que reduce la legibilidad. Como dice Uncle Bob: la claridad es lo primero. En tests también: cada declaración debe ser autoevidente sin necesidad de hover en el IDE.
 - Keep `CancellationToken` last and forward it downstream.
 - Dispose resources deterministically.
 - Use modern throw helpers and preserve stack traces with `throw;`.
