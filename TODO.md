@@ -13,9 +13,24 @@ Revisar y asegurar que todas las funcionalidades actuales funcionan correctament
 - Tests unitarios, de integración y E2E
 
 ~~### 2. Bug: desfase horario en transacciones (producción vs local)~~ ✅ Completado
-~~**Problema:** En producción algunos gastos aparecen en diciembre cuando realmente son de enero. En local se muestran correctamente en enero.~~
 
-~~**Causa probable:** Diferencia de zona horaria (UTC vs local) al almacenar o recuperar la fecha del movimiento. El servidor en producción probablemente opera en UTC y al convertir a la zona horaria local (Europe/Madrid, UTC+1) se desplaza un día.~~
+### 2. Editar transacciones existentes
+Añadir funcionalidad de edición inline en la lista de transacciones (`Transactions/Index`).
+
+**Funcionalidad:**
+- Botón con icono de lápiz en cada fila de la tabla de transacciones
+- Al hacer clic, la fila se vuelve editable: fecha, descripción, importe, categoría y subcategoría
+- Botón "Guardar" para persistir los cambios con validaciones en cliente y servidor
+- Botón "Cancelar" para descartar cambios y volver al modo vista
+
+**Tareas previstas:**
+- Implementar `UpdateTransactionCommandHandler` con validaciones
+- Endpoint HTMX o handler Razor para guardar la edición
+- Componente Alpine.js `x-data` para la edición inline (alternar modo vista/edición)
+- Selectores de categoría/subcategoría dependientes en el modo edición
+- Flatpickr para el campo fecha en el formulario de edición
+- Validación: importe > 0, fecha requerida, descripción requerida
+- Tests unitarios del handler + tests E2E del flujo de edición
 
 ### 3. Nueva página: "Análisis Anual" — Gastos fijos vs variables por mes
 Crear una nueva página (no en Dashboard) para visualizar el desglose de ingresos y gastos fijos/variables por mes del año seleccionado.
@@ -46,20 +61,10 @@ Crear una nueva página (no en Dashboard) para visualizar el desglose de ingreso
 - Frontend con Alpine.js + MDBootstrap + Chart.js (opcional para gráficos)
 - Tests unitarios + E2E
 
-### 4. Migrar `_BudgetStatusModal.cshtml` a Alpine.js
-**Fichero:** `src/SauronSheet.Frontend/Pages/Shared/Components/_BudgetStatusModal.cshtml`
+~~### 4. Migrar `_BudgetStatusModal.cshtml` a Alpine.js~~ ✅ Completado
+~~**Fichero:** `src/SauronSheet.Frontend/Pages/Shared/Components/_BudgetStatusModal.cshtml`~~
 
-Es el último componente de toda la app que usa JavaScript vanilla. Viola múltiples reglas de AGENTS.md:
-- `DOMContentLoaded` → debe ser `x-init`
-- `document.getElementById()` → debe ser `$refs`
-- `addEventListener` → debe ser `@click`
-- `textContent = '...'` → debe ser `x-text`
-- `classList.toggle()` → debe ser `:class`
-
-**Tareas:**
-- Refactorizar todo el script block a un componente Alpine.js `x-data`
-- Verificar que el modal sigue funcionando con MDB (`new mdb.Modal(el).show()`)
-- Eliminar el script block vanilla por completo
+~~Es el último componente de toda la app que usa JavaScript vanilla. Viola múltiples reglas de AGENTS.md:~~
 
 ### 5. Bug: `JwtCookieMiddleware` — riesgo de deadlock y HttpClient sin gestión
 **Fichero:** `src/SauronSheet.Infrastructure/Auth/JwtCookieMiddleware.cs` (líneas 188-191)
