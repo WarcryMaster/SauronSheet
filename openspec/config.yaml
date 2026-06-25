@@ -15,7 +15,7 @@ context: |
   Solución: SauronSheet.slnx con 4 proyectos src y 5 proyectos de test.
   Testing: xUnit + Moq para unit/integration/frontend, Playwright E2E y red-green-refactor obligatorio.
 testing:
-  detected_on: 2026-05-25
+  detected_on: 2026-06-25
   runner: dotnet test
   framework: xUnit
   projects:

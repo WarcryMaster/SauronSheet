@@ -80,11 +80,15 @@ internal class TransactionRow : BaseModel
 
         var categorySource = ParseCategorySource(CategorySourceColumn);
 
+        // TZ-FIX: TIMESTAMPTZ from Postgrest returns Unspecified Kind.
+        // Normalize to UTC so downstream conversions work correctly.
+        var utcDate = DateTime.SpecifyKind(Date, DateTimeKind.Utc);
+
         return new Transaction(
             new TransactionId(Guid.Parse(Id)),
             new UserId(UserId),
             new Money(Amount, Currency),
-            Date,
+            utcDate,
             Description,
             string.IsNullOrEmpty(CategoryId) ? null : new CategoryId(Guid.Parse(CategoryId)),
             ImportedFrom,
@@ -121,13 +125,16 @@ internal class TransactionRow : BaseModel
 
     public static TransactionRow FromDomain(Transaction t)
     {
+        // TZ-FIX: Ensure UTC Kind is preserved when serializing to TIMESTAMPTZ.
+        var utcDate = DateTime.SpecifyKind(t.Date, DateTimeKind.Utc);
+
         return new TransactionRow
         {
             Id = t.Id.Value.ToString(),
             UserId = t.UserId.Value,
             Amount = t.Amount.Amount,
             Currency = t.Amount.Currency,
-            Date = t.Date,
+            Date = utcDate,
             Description = t.Description,
             CategoryId = t.CategoryId?.Value.ToString(),
             ImportedFrom = t.ImportedFrom,
@@ -148,13 +155,16 @@ internal class TransactionRow : BaseModel
     /// </summary>
     public static TransactionRow FromDomainForInsert(Transaction t)
     {
+        // TZ-FIX: Ensure UTC Kind is preserved when serializing to TIMESTAMPTZ.
+        var utcDate = DateTime.SpecifyKind(t.Date, DateTimeKind.Utc);
+
         var row = new TransactionRow
         {
             Id = t.Id.Value.ToString(),
             UserId = t.UserId.Value,
             Amount = t.Amount.Amount,
             Currency = t.Amount.Currency,
-            Date = t.Date,
+            Date = utcDate,
             Description = t.Description,
             CategoryId = t.CategoryId?.Value.ToString(),
             ImportedFrom = t.ImportedFrom,

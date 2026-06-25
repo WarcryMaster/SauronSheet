@@ -35,6 +35,11 @@ public class CreateTransactionCommandHandler
         var transactionId = new TransactionId(Guid.NewGuid());
         var money = new Money(request.Amount, request.Currency);
 
+        // TZ-FIX: Normalize to UTC so TIMESTAMPTZ stores it correctly.
+        // Form inputs produce Unspecified Kind, which would be interpreted
+        // as local time by PostgreSQL.
+        var normalizedDate = DateTime.SpecifyKind(request.Date, DateTimeKind.Utc);
+
         CategoryId? categoryId = null;
         if (request.CategoryId.HasValue)
         {
@@ -54,7 +59,7 @@ public class CreateTransactionCommandHandler
             transactionId,
             userId,
             money,
-            request.Date,
+            normalizedDate,
             request.Description,
             categoryId);
 

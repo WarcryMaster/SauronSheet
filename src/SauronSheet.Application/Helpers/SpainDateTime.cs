@@ -24,13 +24,18 @@ public static class SpainDateTime
     /// </summary>
     public static DateTime ToSpainLocal(this DateTime dateTime)
     {
-        return dateTime.Kind switch
+        // TimeZoneInfo.ConvertTime(DateTime, TimeZoneInfo) for Unspecified
+        // treats it as local time. We want Unspecified treated as UTC (date-only
+        // values from Excel or user input), so promote to Utc first.
+        if (dateTime.Kind == DateTimeKind.Unspecified)
         {
-            DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(dateTime, SpainZone),
-            DateTimeKind.Local => dateTime,
-            DateTimeKind.Unspecified => dateTime, // Assume already local for date-only values
-            _ => dateTime
-        };
+            dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+        }
+
+        // ConvertTime handles:
+        //   Utc   → converts from UTC to Spain
+        //   Local → converts from local timezone to Spain
+        return TimeZoneInfo.ConvertTime(dateTime, SpainZone);
     }
 
     /// <summary>

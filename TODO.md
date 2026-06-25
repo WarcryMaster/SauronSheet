@@ -12,16 +12,10 @@ Revisar y asegurar que todas las funcionalidades actuales funcionan correctament
 - Autenticación y sesión
 - Tests unitarios, de integración y E2E
 
-### 2. Bug: desfase horario en transacciones (producción vs local)
-**Problema:** En producción algunos gastos aparecen en diciembre cuando realmente son de enero. En local se muestran correctamente en enero.
+~~### 2. Bug: desfase horario en transacciones (producción vs local)~~ ✅ Completado
+~~**Problema:** En producción algunos gastos aparecen en diciembre cuando realmente son de enero. En local se muestran correctamente en enero.~~
 
-**Causa probable:** Diferencia de zona horaria (UTC vs local) al almacenar o recuperar la fecha del movimiento. El servidor en producción probablemente opera en UTC y al convertir a la zona horaria local (Europe/Madrid, UTC+1) se desplaza un día.
-
-**Tareas:**
-- Identificar dónde se hace el parsing/almacenamiento de la fecha de transacción (Infrastructure capa, importadores)
-- Verificar que las fechas se almacenan en UTC pero se presentan en la zona horaria del usuario
-- Aplicar corrección consistente en toda la aplicación
-- Añadir test que cubra el escenario de cambio de mes por huso horario
+~~**Causa probable:** Diferencia de zona horaria (UTC vs local) al almacenar o recuperar la fecha del movimiento. El servidor en producción probablemente opera en UTC y al convertir a la zona horaria local (Europe/Madrid, UTC+1) se desplaza un día.~~
 
 ### 3. Nueva página: "Análisis Anual" — Gastos fijos vs variables por mes
 Crear una nueva página (no en Dashboard) para visualizar el desglose de ingresos y gastos fijos/variables por mes del año seleccionado.

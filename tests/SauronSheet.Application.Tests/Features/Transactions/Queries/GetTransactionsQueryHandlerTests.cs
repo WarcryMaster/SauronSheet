@@ -4,6 +4,7 @@ using Xunit;
 
 using SauronSheet.Application.Features.Transactions.DTOs;
 using SauronSheet.Application.Features.Transactions.Queries;
+using SauronSheet.Application.Helpers;
 using SauronSheet.Domain.Entities;
 using SauronSheet.Domain.Repositories;
 using SauronSheet.Domain.Specifications;
@@ -203,5 +204,40 @@ public class GetTransactionsQueryHandlerTests
         // Assert — DT-1d: CategoryName MUST be resolved from batch lookup
         Assert.Single(result.Items);
         Assert.Equal("Alimentación", result.Items[0].CategoryName);
+    }
+
+    // -------------------------------------------------------------------------
+    // TZ-6: DTO Date must be converted to Spain local time
+    // -------------------------------------------------------------------------
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task GetTransactions_DtoDate_ConvertsToSpainLocal()
+    {
+        // Arrange — create a transaction with a known UTC date in summer (CEST = UTC+2)
+        var utcDate = new DateTime(2024, 6, 15, 0, 0, 0, DateTimeKind.Utc);
+        // In CEST (June), 00:00 UTC → 02:00 Spain
+        var expectedSpainHour = 2;
+
+        var transaction = new Transaction(
+            new TransactionId(Guid.NewGuid()),
+            new UserId("user-1"),
+            new Money(-50m, "EUR"),
+            utcDate,
+            "Test transaction");
+
+        _transactionRepoMock
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
+            .ReturnsAsync(new List<Transaction> { transaction });
+
+        // Act
+        var result = await _handler.Handle(new GetTransactionsQuery(), CancellationToken.None);
+
+        // Assert — Date must be converted to Spain local
+        Assert.Single(result.Items);
+        var dto = result.Items[0];
+        Assert.Equal(expectedSpainHour, dto.Date.Hour);
+        Assert.Equal(15, dto.Date.Day);
+        Assert.Equal(6, dto.Date.Month);
+        Assert.Equal(2024, dto.Date.Year);
     }
 }

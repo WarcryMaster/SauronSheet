@@ -11,6 +11,7 @@ using Domain.Specifications;
 using Domain.ValueObjects;
 using DTOs;
 using MediatR;
+using SauronSheet.Application.Helpers;
 
 /// <summary>
 /// Handler for GetRecentTransactionsQuery.
@@ -63,7 +64,7 @@ public class GetRecentTransactionsQueryHandler
                 t.Id.Value,
                 t.Amount.Amount,
                 t.Amount.Currency,
-                t.Date,
+                t.Date.ToSpainLocal(),
                 t.Description,
                 t.CategoryId?.Value,
                 t.CategoryId is CategoryId catId && categoryLookup.TryGetValue(catId, out var catName)

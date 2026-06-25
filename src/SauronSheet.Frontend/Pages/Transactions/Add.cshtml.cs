@@ -109,7 +109,7 @@ public class AddModel : PageModel
 public class AddTransactionInputModel
 {
     [Required]
-    public DateTime Date { get; set; } = DateTime.Today;
+    public DateTime Date { get; set; } = DateTime.UtcNow.Date;
 
     [Required]
     [StringLength(500, MinimumLength = 1)]

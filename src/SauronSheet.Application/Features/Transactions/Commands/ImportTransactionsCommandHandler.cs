@@ -166,6 +166,11 @@ public class ImportTransactionsCommandHandler
                         continue;
                     }
 
+                    // TZ-FIX: Normalize to UTC so TIMESTAMPTZ stores it correctly.
+                    // ParseExact with no timezone info produces Unspecified Kind,
+                    // which would be interpreted as local time by PostgreSQL.
+                    date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+
                     // Parse amount. Parser guarantees parseable values for rows in result.Rows.
                     if (!TryParseAmount(row.Amount, out var amount))
                     {

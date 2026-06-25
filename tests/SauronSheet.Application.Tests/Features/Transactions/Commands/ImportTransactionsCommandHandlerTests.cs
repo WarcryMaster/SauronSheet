@@ -436,4 +436,46 @@ public class ImportTransactionsCommandHandlerTests
         Assert.Equal(0, result.ImportedCount);
         _mockParser.Verify(x => x.ParseAsync(It.IsAny<Stream>(), "statement.xls"), Times.Once);
     }
+
+    // ── Timezone fix: UTC normalization after ParseExact ───────────────────────
+
+    /// <summary>
+    /// TZ-1: After ParseExact, the parsed date must be normalized to DateTimeKind.Utc
+    /// so it is stored as UTC midnight in the database (TIMESTAMPTZ).
+    /// Prevents the timezone bug where Unspecified dates get interpreted as local time.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ParsedDate_NormalizesToUtc()
+    {
+        // Arrange
+        var rows = new List<RawTransactionRow>
+        {
+            new(1, "15/01/2024", null, null, "Test transaction", null, "-10.00", null),
+        };
+        var parseResult = new StatementParseResult(rows, Array.Empty<StatementParseRowError>(), 0);
+
+        _mockParser
+            .Setup(x => x.ParseAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ReturnsAsync(parseResult);
+
+        Transaction? captured = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => captured = t)
+            .Returns(Task.CompletedTask);
+
+        var command = new ImportTransactionsCommand(new MemoryStream(), "statement.xlsx");
+
+        // Act
+        await CreateHandler().Handle(command, CancellationToken.None);
+
+        // Assert — date must be UTC Kind
+        Assert.NotNull(captured);
+        Assert.Equal(DateTimeKind.Utc, captured!.Date.Kind);
+        // Date portion must remain the same (15 Jan 2024)
+        Assert.Equal(15, captured.Date.Day);
+        Assert.Equal(1, captured.Date.Month);
+        Assert.Equal(2024, captured.Date.Year);
+        Assert.Equal(0, captured.Date.Hour);
+    }
 }

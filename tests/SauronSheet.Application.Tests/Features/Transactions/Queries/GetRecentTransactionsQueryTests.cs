@@ -181,4 +181,38 @@ public class GetRecentTransactionsQueryTests
         // Assert
         Assert.Empty(result);
     }
+
+    // -------------------------------------------------------------------------
+    // TZ-7: DTO Date must be converted to Spain local time
+    // -------------------------------------------------------------------------
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task GetRecentTransactions_DtoDate_ConvertsToSpainLocal()
+    {
+        // Arrange — create a transaction with a known UTC date in winter (CET = UTC+1)
+        var utcDate = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc);
+        // In CET (January), 00:00 UTC → 01:00 Spain
+        var expectedSpainHour = 1;
+
+        var transaction = CreateTransaction(utcDate);
+
+        _transactionRepoMock
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
+            .ReturnsAsync(new List<Transaction> { transaction });
+
+        _categoryRepoMock
+            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .ReturnsAsync(new List<Category>());
+
+        // Act
+        var result = await _handler.Handle(new GetRecentTransactionsQuery(10), CancellationToken.None);
+
+        // Assert — Date must be converted to Spain local
+        Assert.Single(result);
+        var dto = result[0];
+        Assert.Equal(expectedSpainHour, dto.Date.Hour);
+        Assert.Equal(15, dto.Date.Day);
+        Assert.Equal(1, dto.Date.Month);
+        Assert.Equal(2024, dto.Date.Year);
+    }
 }

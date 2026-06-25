@@ -109,4 +109,47 @@ public class CreateTransactionCommandTests
         await Assert.ThrowsAsync<EntityNotFoundException>(() => 
             handler.Handle(command, CancellationToken.None));
     }
+
+    // ── Timezone fix: UTC normalization ────────────────────────────────────────
+
+    /// <summary>
+    /// TZ-2: When the command has an Unspecified DateTime, the handler must normalize
+    /// it to DateTimeKind.Utc before creating the Transaction entity.
+    /// Prevents the timezone bug when the user submits a date from a form.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task CreateTransaction_NormalizesDateToUtc()
+    {
+        // Arrange
+        var handler = new CreateTransactionCommandHandler(
+            _mockTransactionRepo.Object,
+            _mockCategoryRepo.Object,
+            _mockUserContext.Object);
+
+        // Unspecified kind — like a date from a form input
+        var unspecifiedDate = new DateTime(2024, 6, 15, 0, 0, 0, DateTimeKind.Unspecified);
+        var command = new CreateTransactionCommand(
+            Amount: -50.00m,
+            Currency: "EUR",
+            Date: unspecifiedDate,
+            Description: "Test UTC normalization",
+            CategoryId: null);
+
+        Transaction? captured = null;
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .Callback<Transaction>(t => captured = t)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — date must be UTC Kind
+        Assert.NotNull(captured);
+        Assert.Equal(DateTimeKind.Utc, captured!.Date.Kind);
+        Assert.Equal(15, captured.Date.Day);
+        Assert.Equal(6, captured.Date.Month);
+        Assert.Equal(2024, captured.Date.Year);
+    }
 }
