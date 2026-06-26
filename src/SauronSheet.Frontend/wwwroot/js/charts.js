@@ -102,8 +102,9 @@ function destroyAllCharts() {
  * Initialize a stacked area chart for spending by category over months.
  * @param {string} canvasId - Canvas element ID
  * @param {Array} monthlyCategoryData - Array of {month, monthName, categoryName, amount}
+ * @param {number} year - Year for x-axis labels (e.g. 2025)
  */
-function initCategoryStackedChart(canvasId, monthlyCategoryData) {
+function initCategoryStackedChart(canvasId, monthlyCategoryData, year) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !monthlyCategoryData || monthlyCategoryData.length === 0) return;
 
@@ -113,9 +114,10 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
 
     const months = [...new Set(monthlyCategoryData.map(d => d.month))]
         .sort((a, b) => a - b);
+    const yearSuffix = year ? ` ${year}` : '';
     const monthLabels = months.map(m => {
         const entry = monthlyCategoryData.find(d => d.month === m);
-        return entry ? entry.monthName : `Month ${m}`;
+        return entry ? `${entry.monthName}${yearSuffix}` : `Month ${m}${yearSuffix}`;
     });
 
     const categories = [...new Set(monthlyCategoryData.map(d => d.categoryName))];
@@ -173,15 +175,17 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
  * Initialize a line chart for monthly spending trends (income vs expenses).
  * @param {string} canvasId - Canvas element ID
  * @param {Array} monthlyData - Array of {monthName, totalExpenses, totalIncome}
+ * @param {number} year - Year for x-axis labels (e.g. 2025)
  */
-function initMonthlyTrendsChart(canvasId, monthlyData) {
+function initMonthlyTrendsChart(canvasId, monthlyData, year) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !monthlyData || monthlyData.length === 0) return;
 
     const existing = Chart.getChart(canvas);
     if (existing) existing.destroy();
 
-    const labels = monthlyData.map(d => d.monthName);
+    const yearSuffix = year ? ` ${year}` : '';
+    const labels = monthlyData.map(d => `${d.monthName}${yearSuffix}`);
 
     const ctx = canvas.getContext('2d');
     new Chart(ctx, {

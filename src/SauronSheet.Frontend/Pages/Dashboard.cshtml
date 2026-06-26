@@ -30,12 +30,13 @@
 
              if (!monthlyCategoryData && !monthlyData && !yearlyData) return;
 
-             if (monthlyCategoryData && monthlyCategoryData.length > 0) {
-                 initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
-             }
-             if (monthlyData && monthlyData.length > 0) {
-                 initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);
-             }
+              const analyticsYear = @Model.AnalyticsYear;
+              if (monthlyCategoryData && monthlyCategoryData.length > 0) {
+                  initCategoryStackedChart('categoryStackedChart', monthlyCategoryData, analyticsYear);
+              }
+              if (monthlyData && monthlyData.length > 0) {
+                  initMonthlyTrendsChart('monthlyTrendsChart', monthlyData, analyticsYear);
+              }
              if (yearlyData && yearlyData.length > 0) {
                  initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(Model.AnalyticsYear - 1)', '@Model.AnalyticsYear');
              }
@@ -155,7 +156,7 @@
             <div class="row g-4">
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                        <h3 class="h6 fw-semibold mb-3">Spending by Category</h3>
+                        <h3 class="h6 fw-semibold mb-3">Spending by Category — @Model.AnalyticsYear</h3>
                         <div class="chart-wrapper flex-grow-1">
                             @if (Model.MonthlySpendingByCategory.Any())
                             {
@@ -170,7 +171,7 @@
                 </div>
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                        <h3 class="h6 fw-semibold mb-3">Monthly Trends</h3>
+                        <h3 class="h6 fw-semibold mb-3">Monthly Trends — @Model.AnalyticsYear</h3>
                         <div class="chart-wrapper flex-grow-1">
                             <canvas id="monthlyTrendsChart"></canvas>
                         </div>
@@ -179,7 +180,7 @@
             </div>
 
             <div class="card border-0 shadow-sm p-4">
-                <h3 class="h6 fw-semibold mb-3">Year over Year Comparison</h3>
+                <h3 class="h6 fw-semibold mb-3">Year over Year — @(Model.AnalyticsYear - 1) vs @Model.AnalyticsYear</h3>
                 <div class="chart-wrapper" style="height: 320px;">
                     <canvas id="yearlyComparisonChart"></canvas>
                 </div>
