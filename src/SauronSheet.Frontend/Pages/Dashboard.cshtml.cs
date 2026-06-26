@@ -65,9 +65,9 @@ public class DashboardModel : PageModel
             Summary = await _mediator.Send(new GetTransactionSummaryQuery(FromDate, ToDate));
             AnalyticsYear = await ResolveAnalyticsYearAsync(Summary);
             SpendingByCategory = await _mediator.Send(new GetSpendingByCategoryQuery(FromDate, ToDate));
-            MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(AnalyticsYear));
+            MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(FromDate, ToDate));
             YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(AnalyticsYear - 1, AnalyticsYear));
-            MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(AnalyticsYear));
+            MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(FromDate, ToDate));
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
 
             // Budget status widget — use GetBudgetMetricsQuery for current month

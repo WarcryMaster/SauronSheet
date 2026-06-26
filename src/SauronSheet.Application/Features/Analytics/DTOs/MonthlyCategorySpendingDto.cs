@@ -5,6 +5,7 @@ namespace SauronSheet.Application.Features.Analytics.DTOs;
 /// Each record represents one category's spending in one month.
 /// </summary>
 public record MonthlyCategorySpendingDto(
+    int Year,
     int Month,
     string MonthName,
     string CategoryName,

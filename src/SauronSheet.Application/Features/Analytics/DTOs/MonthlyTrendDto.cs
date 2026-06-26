@@ -5,6 +5,7 @@ namespace SauronSheet.Application.Features.Analytics.DTOs;
 /// Phase 4 (US3): Line chart data for monthly spending trends.
 /// </summary>
 public record MonthlyTrendDto(
+    int Year,
     int Month,
     string MonthName,
     decimal TotalExpenses,

@@ -12,7 +12,7 @@ namespace SauronSheet.Application.Tests.Features.Analytics.Queries;
 
 /// <summary>
 /// Tests for GetMonthlyTrendsQueryHandler.
-/// Phase 4 (US3): Monthly spending trends (line chart).
+/// Updated for date-range signature (FromDate, ToDate) and Year field.
 /// </summary>
 public class GetMonthlyTrendsQueryTests
 {
@@ -40,7 +40,7 @@ public class GetMonthlyTrendsQueryTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task GetMonthlyTrends_FullYear_Returns12Entries()
+    public async Task Handle_FullYearRange_Returns12Entries()
     {
         // Arrange
         var transactions = new List<Transaction>
@@ -56,7 +56,11 @@ public class GetMonthlyTrendsQueryTests
             .ReturnsAsync(transactions);
 
         // Act
-        var result = await _handler.Handle(new GetMonthlyTrendsQuery(2026), CancellationToken.None);
+        var result = await _handler.Handle(
+            new GetMonthlyTrendsQuery(
+                new DateTime(2026, 1, 1),
+                new DateTime(2026, 12, 31)),
+            CancellationToken.None);
 
         // Assert
         Assert.Equal(12, result.Count);
@@ -69,7 +73,32 @@ public class GetMonthlyTrendsQueryTests
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task GetMonthlyTrends_NoTransactions_Returns12ZeroEntries()
+    public async Task Handle_FullYearRange_YearFieldPopulated()
+    {
+        // Arrange
+        var transactions = new List<Transaction>
+        {
+            CreateTransaction(-100m, new DateTime(2026, 3, 10))
+        };
+
+        _transactionRepoMock
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
+            .ReturnsAsync(transactions);
+
+        // Act
+        var result = await _handler.Handle(
+            new GetMonthlyTrendsQuery(
+                new DateTime(2026, 1, 1),
+                new DateTime(2026, 12, 31)),
+            CancellationToken.None);
+
+        // Assert — Year field populated for all entries
+        Assert.All(result, entry => Assert.Equal(2026, entry.Year));
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_NoTransactions_ReturnsZeroEntriesForRange()
     {
         // Arrange
         _transactionRepoMock
@@ -77,10 +106,14 @@ public class GetMonthlyTrendsQueryTests
             .ReturnsAsync(new List<Transaction>());
 
         // Act
-        var result = await _handler.Handle(new GetMonthlyTrendsQuery(2026), CancellationToken.None);
+        var result = await _handler.Handle(
+            new GetMonthlyTrendsQuery(
+                new DateTime(2026, 4, 1),
+                new DateTime(2026, 6, 30)),
+            CancellationToken.None);
 
-        // Assert
-        Assert.Equal(12, result.Count);
+        // Assert — 3 months in range (April, May, June), all zeros
+        Assert.Equal(3, result.Count);
         Assert.All(result, entry =>
         {
             Assert.Equal(0m, entry.TotalExpenses);
@@ -88,11 +121,47 @@ public class GetMonthlyTrendsQueryTests
             Assert.Equal(0m, entry.NetAmount);
             Assert.Equal(0, entry.TransactionCount);
         });
+        Assert.Equal(2026, result[0].Year);
+        Assert.Equal(4, result[0].Month);
+        Assert.Equal(5, result[1].Month);
+        Assert.Equal(6, result[2].Month);
     }
 
     [Fact]
     [Trait("Category", "Application")]
-    public async Task GetMonthlyTrends_SeparatesIncomeAndExpenses()
+    public async Task Handle_PartialRange_PadsMissingMonthsWithZeros()
+    {
+        // Arrange — expenses only in April and June, May is missing
+        var transactions = new List<Transaction>
+        {
+            CreateTransaction(-100m, new DateTime(2026, 4, 10)),
+            CreateTransaction(-200m, new DateTime(2026, 6, 15))
+        };
+
+        _transactionRepoMock
+            .Setup(x => x.FindBySpecificationAsync(It.IsAny<ISpecification<Transaction>>()))
+            .ReturnsAsync(transactions);
+
+        // Act
+        var result = await _handler.Handle(
+            new GetMonthlyTrendsQuery(
+                new DateTime(2026, 4, 1),
+                new DateTime(2026, 6, 30)),
+            CancellationToken.None);
+
+        // Assert — 3 entries: April (100), May (0), June (200)
+        Assert.Equal(3, result.Count);
+        Assert.Equal(4, result[0].Month);
+        Assert.Equal(100m, result[0].TotalExpenses);
+        Assert.Equal(5, result[1].Month);
+        Assert.Equal(0m, result[1].TotalExpenses);  // May padded with zero
+        Assert.Equal(6, result[2].Month);
+        Assert.Equal(200m, result[2].TotalExpenses);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_SeparatesIncomeAndExpenses()
     {
         // Arrange
         var transactions = new List<Transaction>
@@ -107,12 +176,18 @@ public class GetMonthlyTrendsQueryTests
             .ReturnsAsync(transactions);
 
         // Act
-        var result = await _handler.Handle(new GetMonthlyTrendsQuery(2026), CancellationToken.None);
+        var result = await _handler.Handle(
+            new GetMonthlyTrendsQuery(
+                new DateTime(2026, 1, 1),
+                new DateTime(2026, 1, 31)),
+            CancellationToken.None);
 
-        // Assert — January
+        // Assert — single month
+        Assert.Single(result);
         Assert.Equal(500m, result[0].TotalIncome);
         Assert.Equal(400m, result[0].TotalExpenses);
         Assert.Equal(100m, result[0].NetAmount);
         Assert.Equal(3, result[0].TransactionCount);
+        Assert.Equal(2026, result[0].Year);
     }
 }

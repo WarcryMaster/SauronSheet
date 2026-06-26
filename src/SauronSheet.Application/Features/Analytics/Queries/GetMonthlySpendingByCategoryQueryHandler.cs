@@ -17,6 +17,7 @@ using SauronSheet.Application.Helpers;
 /// <summary>
 /// Handler for GetMonthlySpendingByCategoryQuery.
 /// Returns monthly spending broken down by category for stacked area charts.
+/// Categories are sorted by total amount descending (deterministic legend order).
 /// </summary>
 public class GetMonthlySpendingByCategoryQueryHandler
     : IRequestHandler<GetMonthlySpendingByCategoryQuery, List<MonthlyCategorySpendingDto>>
@@ -42,9 +43,7 @@ public class GetMonthlySpendingByCategoryQueryHandler
         var userId = new UserId(_userContext.UserId);
 
         var userSpec = new TransactionByUserSpecification(userId);
-        var dateSpec = new TransactionByDateRangeSpecification(
-            new DateTime(request.Year, 1, 1),
-            new DateTime(request.Year, 12, 31, 23, 59, 59));
+        var dateSpec = new TransactionByDateRangeSpecification(request.FromDate, request.ToDate);
         var composedSpec = CompositeSpecification<Domain.Entities.Transaction>.And(userSpec, dateSpec);
 
         var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
@@ -58,9 +57,14 @@ public class GetMonthlySpendingByCategoryQueryHandler
         var categories = await _categoryRepo.GetByUserIdAsync(userId);
         var categoryLookup = categories.ToDictionary(c => c.Id, c => c);
 
-        // Group by month and category
+        // Group by year+month (Spain-local) and category
         var grouped = expenses
-            .GroupBy(t => new { Month = t.Date.GetSpainMonth(), CategoryId = t.CategoryId })
+            .GroupBy(t => new
+            {
+                Year = t.Date.ToSpainLocal().Year,
+                Month = t.Date.ToSpainLocal().Month,
+                CategoryId = t.CategoryId
+            })
             .Select(g =>
             {
                 var amount = g.Sum(t => Math.Abs(t.Amount.Amount));
@@ -73,6 +77,7 @@ public class GetMonthlySpendingByCategoryQueryHandler
                 }
 
                 return new MonthlyCategorySpendingDto(
+                    g.Key.Year,
                     g.Key.Month,
                     CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(g.Key.Month),
                     catName,
@@ -80,6 +85,22 @@ public class GetMonthlySpendingByCategoryQueryHandler
             })
             .ToList();
 
-        return grouped;
+        // Compute category totals for sorting
+        var categoryTotals = grouped
+            .GroupBy(g => g.CategoryName)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(x => x.Amount));
+
+        // Sort: by category total descending, then by year+month ascending within each category
+        // Tie-break on category name ascending for stable ordering
+        var sorted = grouped
+            .OrderByDescending(g => categoryTotals[g.CategoryName])
+            .ThenBy(g => g.CategoryName)
+            .ThenBy(g => g.Year)
+            .ThenBy(g => g.Month)
+            .ToList();
+
+        return sorted;
     }
 }
