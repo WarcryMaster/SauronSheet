@@ -45,10 +45,34 @@ public class GetAnnualAnalysisQueryHandler
     {
         UserId userId = new(_userContext.UserId);
 
+        (List<AnnualAnalysisRowDto> rows, AnnualAnalysisSummaryDto summary, int monthsWithData, bool hasData) =
+            await ClassifyYearAsync(request.Year, userId, cancellationToken);
+
+        AnnualAnalysisSummaryDto finalSummary = summary with
+        {
+            MonthsWithData = monthsWithData,
+        };
+
+        return new AnnualAnalysisResultDto(
+            request.Year,
+            rows,
+            finalSummary,
+            hasData,
+            hasData ? rows.FirstOrDefault()?.Currency ?? "EUR" : "EUR");
+    }
+
+    /// <summary>
+    /// Loads transactions for the given year, classifies them into fixed/variable
+    /// income/expense rows, and returns the classified rows, aggregate summary,
+    /// distinct months count, and whether any data exists.
+    /// </summary>
+    private async Task<(List<AnnualAnalysisRowDto> Rows, AnnualAnalysisSummaryDto Summary, int MonthsWithData, bool HasData)> ClassifyYearAsync(
+        int year, UserId userId, CancellationToken cancellationToken)
+    {
         TransactionByUserSpecification userSpec = new(userId);
         TransactionByDateRangeSpecification dateSpec = new(
-            new DateTime(request.Year, 1, 1),
-            new DateTime(request.Year, 12, 31, 23, 59, 59));
+            new DateTime(year, 1, 1),
+            new DateTime(year, 12, 31, 23, 59, 59));
 
         CompositeSpecification<Transaction> composedSpec =
             CompositeSpecification<Transaction>.And(userSpec, dateSpec);
@@ -68,18 +92,18 @@ public class GetAnnualAnalysisQueryHandler
             AnnualAnalysisSummaryDto emptySummary = new(
                 0m, 0m, 0m, 0m, 0m, 0m, 0m, "EUR");
 
-            return new AnnualAnalysisResultDto(
-                request.Year,
-                Array.Empty<AnnualAnalysisRowDto>(),
-                emptySummary,
-                false,
-                "EUR");
+            return (new List<AnnualAnalysisRowDto>(), emptySummary, 0, false);
         }
+
+        int monthsWithData = filteredTransactions
+            .Select(t => t.Date.Month)
+            .Distinct()
+            .Count();
 
         IReadOnlyList<AnnualAnalysisRowDto> rows = _classificationEngine.Classify(
             filteredTransactions,
             subcategoryNames,
-            request.Year);
+            year);
 
         decimal incomeFixed = rows
             .Where(r => r.LineType == AnalysisLineType.IncomeFixed)
@@ -113,11 +137,6 @@ public class GetAnnualAnalysisQueryHandler
             net,
             currency);
 
-        return new AnnualAnalysisResultDto(
-            request.Year,
-            rows,
-            summary,
-            true,
-            currency);
+        return (rows.ToList(), summary, monthsWithData, true);
     }
 }

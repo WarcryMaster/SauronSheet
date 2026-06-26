@@ -150,6 +150,100 @@ public class GetAnnualAnalysisQueryHandlerTests
         Assert.Equal(120m, result.Summary.ExpenseTotal);
         Assert.Equal(1380m, result.Summary.Net);
         Assert.Equal("EUR", result.Currency);
+        Assert.Equal(2, result.Summary.MonthsWithData);
+    }
+
+    // ---- MonthsWithData scenarios (PR 1 - Phase 2) ----
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handler_HasNoMonthsWithData_WhenNoTransactions()
+    {
+        // Arrange
+        List<Transaction> source = new();
+        SetupTransactions(source);
+        _subcategoryRepoMock
+            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .ReturnsAsync(new List<Subcategory>());
+
+        // Act
+        AnnualAnalysisResultDto result = await _handler.Handle(
+            new GetAnnualAnalysisQuery(2026),
+            CancellationToken.None);
+
+        // Assert
+        Assert.False(result.HasData);
+        Assert.Equal(0, result.Summary.MonthsWithData);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handler_MonthsWithData_5Months()
+    {
+        // Arrange — 5 distinct months (Jan through May)
+        SubcategoryId foodId = SubcategoryId.New();
+        List<Subcategory> subcategories = new()
+        {
+            CreateSubcategory(foodId, "Alimentación")
+        };
+
+        List<Transaction> source = new();
+        for (int month = 1; month <= 5; month++)
+        {
+            source.Add(CreateTransaction(
+                "user-1", -100m,
+                new DateTime(2026, month, 15),
+                foodId, $"Compra mes {month}"));
+        }
+
+        SetupTransactions(source);
+        _subcategoryRepoMock
+            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .ReturnsAsync(subcategories);
+
+        // Act
+        AnnualAnalysisResultDto result = await _handler.Handle(
+            new GetAnnualAnalysisQuery(2026),
+            CancellationToken.None);
+
+        // Assert
+        Assert.True(result.HasData);
+        Assert.Equal(5, result.Summary.MonthsWithData);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handler_MonthsWithData_12Months()
+    {
+        // Arrange — all 12 months
+        SubcategoryId foodId = SubcategoryId.New();
+        List<Subcategory> subcategories = new()
+        {
+            CreateSubcategory(foodId, "Alimentación")
+        };
+
+        List<Transaction> source = new();
+        for (int month = 1; month <= 12; month++)
+        {
+            source.Add(CreateTransaction(
+                "user-1", -100m,
+                new DateTime(2026, month, 15),
+                foodId, $"Compra mes {month}"));
+        }
+
+        SetupTransactions(source);
+        _subcategoryRepoMock
+            .Setup(x => x.GetByUserIdAsync(It.IsAny<UserId>()))
+            .ReturnsAsync(subcategories);
+
+        // Act
+        AnnualAnalysisResultDto result = await _handler.Handle(
+            new GetAnnualAnalysisQuery(2026),
+            CancellationToken.None);
+
+        // Assert
+        Assert.True(result.HasData);
+        Assert.Equal(12, result.Summary.MonthsWithData);
     }
 
     [Fact]
@@ -189,5 +283,6 @@ public class GetAnnualAnalysisQueryHandlerTests
         Assert.Equal(50m, result.Summary.ExpenseTotal);
         Assert.Equal(0m, result.Summary.IncomeTotal);
         Assert.Equal(-50m, result.Summary.Net);
+        Assert.Equal(1, result.Summary.MonthsWithData);
     }
 }
