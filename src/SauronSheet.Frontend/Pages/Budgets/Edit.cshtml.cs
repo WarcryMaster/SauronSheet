@@ -44,8 +44,7 @@ public class EditModel : PageModel
     {
         try
         {
-            IReadOnlyList<BudgetDto> budgets = await _mediator.Send(new GetBudgetsQuery());
-            Budget = budgets.FirstOrDefault(b => b.Id == id);
+            Budget = await _mediator.Send(new GetBudgetByIdQuery(id));
 
             if (Budget == null)
             {
@@ -151,8 +150,7 @@ public class EditModel : PageModel
     {
         try
         {
-            IReadOnlyList<BudgetDto> budgets = await _mediator.Send(new GetBudgetsQuery());
-            BudgetDto? budget = budgets.FirstOrDefault(b => b.Id == BudgetId);
+            var budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId));
 
             if (budget is null)
             {
@@ -263,8 +261,7 @@ public class EditModel : PageModel
     {
         try
         {
-            IReadOnlyList<BudgetDto> budgets = await _mediator.Send(new GetBudgetsQuery());
-            Budget = budgets.FirstOrDefault(b => b.Id == BudgetId);
+            Budget = await _mediator.Send(new GetBudgetByIdQuery(BudgetId));
             if (Budget != null)
             {
                 NewLimitAmount = Budget.Limit;

@@ -152,12 +152,12 @@ Tests actualizados para verificar la población de FailedTransactionIds.~~
 
 Los métodos `HasTransactionsAsync` y `GetTransactionCountAsync` hacían queries contra la tabla de transacciones. Movidos a `ITransactionRepository` + `SupabaseTransactionRepository`. Lo mismo para `SupabaseSubcategoryRepository`. Handlers actualizados para usar `ITransactionRepository`. Tests actualizados.~~
 
-### 16. Try-catch-Sentry repetido en repositorios
-**Ficheros:** Todos en `src/SauronSheet.Infrastructure/Persistence/*.cs`
+~~### 16. Try-catch-Sentry repetido en repositorios~~ ✅ Completado
+~~**Ficheros:** Todos en `src/SauronSheet.Infrastructure/Persistence/*.cs`
 
-35+ métodos con el mismo patrón try-catch-Sentry. El `SentryTracingBehavior` de MediatR ya captura errores. Evaluar si el patrón en repositorios es redundante y extraer a helper.
+35+ métodos con el mismo patrón try-catch-Sentry. El `SentryTracingBehavior` de MediatR ya captura errores. Evaluar si el patrón en repositorios es redundante y extraer a helper.~~
 
-### 17. `Edit.cshtml.cs` carga todos los budgets para encontrar uno
-**Fichero:** `src/SauronSheet.Frontend/Pages/Budgets/Edit.cshtml.cs` (líneas 154-155)
+~~### 17. `Edit.cshtml.cs` carga todos los budgets para encontrar uno~~ ✅ Completado
+~~**Fichero:** `src/SauronSheet.Frontend/Pages/Budgets/Edit.cshtml.cs` (líneas 154-155)
 
-`GetBudgetsQuery()` devuelve todos los budgets del usuario y luego se filtra con LINQ en memoria. Crear `GetBudgetByIdQuery` dedicado.
+`GetBudgetsQuery()` devuelve todos los budgets del usuario y luego se filtra con LINQ en memoria. Crear `GetBudgetByIdQuery` dedicado.~~
