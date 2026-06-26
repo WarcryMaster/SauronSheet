@@ -135,17 +135,17 @@ Los tests `TC-U01`, `TC-U02`, `TC-U03` estaban comentados como "RED: fail" pero 
 
 ## Prioridad Baja
 
-### 13. Domain Events colección comentada en `AggregateRoot.cs`
-**Fichero:** `src/SauronSheet.Domain/Common/AggregateRoot.cs`
+~~### 13. Domain Events colección comentada en `AggregateRoot.cs`~~ ✅ Completado
+~~**Fichero:** `src/SauronSheet.Domain/Common/AggregateRoot.cs`
 
 Código muerto comentado (`// protected List<IDomainEvent> _domainEvents = new();`).
-Decidir si implementar Domain Events o limpiar.
+Eliminado — sin consumidores reales hoy.~~
 
-### 14. `FailedTransactionIds` siempre `null` en `BulkDeleteTransactionsCommandHandler`
-**Fichero:** `src/.../Commands/BulkDeleteTransactionsCommandHandler.cs` (líneas 61-64, 111-114)
+~~### 14. `FailedTransactionIds` siempre `null` en `BulkDeleteTransactionsCommandHandler`~~ ✅ Completado
+~~**Fichero:** `src/.../Commands/BulkDeleteTransactionsCommandHandler.cs` (líneas 61-64, 111-114)
 
-En todos los casos de error se devuelve `null` en vez de los IDs que fallaron.
-Completar funcionalidad para que la UI pueda mostrar qué transacciones fallaron.
+Ahora devuelve los IDs solicitados como fallidos en cualquier ruta de error.
+Tests actualizados para verificar la población de FailedTransactionIds.~~
 
 ### 15. `SupabaseCategoryRepository` referencia directa a `TransactionRow` (violación SRP)
 **Fichero:** `src/.../Persistence/SupabaseCategoryRepository.cs` (líneas 360, 371)

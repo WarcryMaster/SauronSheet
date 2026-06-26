@@ -115,6 +115,7 @@ public class BulkDeleteTransactionsCommandHandlerTests
         Assert.Equal(0, result.Count);
         Assert.NotNull(result.ErrorMessage);
         Assert.Contains("1000", result.ErrorMessage);
+        Assert.Equal(1001, result.FailedTransactionIds?.Count());
 
         _transactionRepoMock.Verify(
             x => x.DeleteTransactionsByIdsAsync(It.IsAny<UserId>(), It.IsAny<IEnumerable<TransactionId>>()),
@@ -181,6 +182,7 @@ public class BulkDeleteTransactionsCommandHandlerTests
         Assert.Equal(0, result.Count);
         Assert.NotNull(result.ErrorMessage);
         Assert.Contains("network", result.ErrorMessage.ToLower());
+        Assert.Single(result.FailedTransactionIds!);
 
         // Verify 3 attempts were made
         _transactionRepoMock.Verify(
@@ -214,6 +216,7 @@ public class BulkDeleteTransactionsCommandHandlerTests
         Assert.Equal(0, result.Count); // All rolled back (0 deleted)
         Assert.NotNull(result.ErrorMessage);
         Assert.Contains("constraint", result.ErrorMessage.ToLower());
+        Assert.Equal(10, result.FailedTransactionIds?.Count());
     }
 
     /// <summary>

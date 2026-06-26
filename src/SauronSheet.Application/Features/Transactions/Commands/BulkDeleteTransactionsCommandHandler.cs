@@ -61,7 +61,7 @@ public class BulkDeleteTransactionsCommandHandler : IRequestHandler<BulkDeleteTr
             return new BulkDeleteResultDto(
                 Count: 0,
                 ErrorMessage: ex.Message,
-                FailedTransactionIds: null);
+                FailedTransactionIds: request.TransactionIds.Select(t => t.Value));
         }
 
         // Step 3: Attempt deletion with retry logic
@@ -107,11 +107,17 @@ public class BulkDeleteTransactionsCommandHandler : IRequestHandler<BulkDeleteTr
             }
         }
 
-        // Step 4: Return result
+        // Step 4: Return result.
+        // DeleteTransactionsByIdsAsync is atomic — either all succeed or none do.
+        // Failed IDs are only returned when the operation did not complete.
+        IEnumerable<Guid>? failedIds = errorMessage != null
+            ? request.TransactionIds.Select(t => t.Value)
+            : null;
+
         return new BulkDeleteResultDto(
             Count: deletedCount,
             ErrorMessage: errorMessage,
-            FailedTransactionIds: null);
+            FailedTransactionIds: failedIds);
     }
 
     /// <summary>
