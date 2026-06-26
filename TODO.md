@@ -1,4 +1,4 @@
-# TODO — SauronSheet
+    # TODO — SauronSheet
 
 ## Prioridad Alta
 
@@ -71,16 +71,16 @@ Crear una nueva página (no en Dashboard) para visualizar el desglose de ingreso
 
 ~~Dos problemas graves:~~
 
-### 6. Bug: `DeleteTransactionsByIdsAsync` borra uno por uno sin transacción real
-**Fichero:** `src/SauronSheet.Infrastructure/Persistence/SupabaseTransactionRepository.cs` (líneas 433-439)
+~~### 6. Bug: `DeleteTransactionsByIdsAsync` borra uno por uno sin transacción real~~ ✅ Completado
+~~**Fichero:** `src/SauronSheet.Infrastructure/Persistence/SupabaseTransactionRepository.cs` (líneas 433-439)~~
 
-Aunque el método sugiere atomicidad, hace N queries individuales sin transacción.
-Si el ítem 3 falla, los ítems 1 y 2 ya se borraron.
+~~Aunque el método sugiere atomicidad, hace N queries individuales sin transacción.
+Si el ítem 3 falla, los ítems 1 y 2 ya se borraron.~~
 
-**Tareas:**
+~~**Tareas:**
 - Implementar un único DELETE con `IN (...)` o usar el cliente Postgrest con filtro múltiple
 - Verificar atomicidad PostgreSQL
-- Añadir tests de integración
+- Añadir tests de integración~~
 
 ## Prioridad Media
 
