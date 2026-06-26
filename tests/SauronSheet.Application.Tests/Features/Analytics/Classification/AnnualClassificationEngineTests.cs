@@ -106,6 +106,60 @@ public class AnnualClassificationEngineTests
 
     [Fact]
     [Trait("Category", "Application")]
+    public void Classify_StaticMapping_TelefonoTvInternet_ExpenseFixed()
+    {
+        // Arrange
+        SubcategoryId subcategoryId = SubcategoryId.New();
+        Dictionary<SubcategoryId, string> names = new()
+        {
+            [subcategoryId] = "Teléfono, TV e internet"
+        };
+
+        List<Transaction> transactions = new()
+        {
+            CreateTransaction(-55m, new DateTime(2026, 1, 15), subcategoryId, "Movistar")
+        };
+
+        // Act
+        IReadOnlyList<AnnualAnalysisRowDto> rows = _engine.Classify(transactions, names, 2026);
+
+        // Assert
+        Assert.Single(rows);
+        Assert.Equal("Teléfono, TV e internet", rows[0].Movement);
+        Assert.Equal(AnalysisLineType.ExpenseFixed, rows[0].LineType);
+        Assert.Equal("Gasto Fijo", rows[0].TypeLabel);
+        Assert.Equal(55m / 12, rows[0].Average);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public void Classify_StaticMapping_OcioViajesOtros_ExpenseVariable()
+    {
+        // Arrange
+        SubcategoryId subcategoryId = SubcategoryId.New();
+        Dictionary<SubcategoryId, string> names = new()
+        {
+            [subcategoryId] = "Ocio y viajes (otros)"
+        };
+
+        List<Transaction> transactions = new()
+        {
+            CreateTransaction(-120m, new DateTime(2026, 2, 20), subcategoryId, "Escapada")
+        };
+
+        // Act
+        IReadOnlyList<AnnualAnalysisRowDto> rows = _engine.Classify(transactions, names, 2026);
+
+        // Assert
+        Assert.Single(rows);
+        Assert.Equal("Ocio y viajes (otros)", rows[0].Movement);
+        Assert.Equal(AnalysisLineType.ExpenseVariable, rows[0].LineType);
+        Assert.Equal("Gasto Variable", rows[0].TypeLabel);
+        Assert.Equal(120m / 12, rows[0].Average);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
     public void Classify_NullSubcategory_ReturnsSinClasificar()
     {
         // Arrange

@@ -29,7 +29,7 @@ public class AnnualClassificationEngine : IAnnualClassificationEngine
         "agua",
         "suscripciones",
         "ong",
-        "telefono tv e internet"
+        "telefono, tv e internet"
     };
 
     private static readonly HashSet<string> VariableExpenseMappings = new(StringComparer.InvariantCulture)
@@ -38,7 +38,7 @@ public class AnnualClassificationEngine : IAnnualClassificationEngine
         "cafeterias y restaurantes",
         "gasolina y combustible",
         "ropa y complementos",
-        "ocio y viajes otros"
+        "ocio y viajes (otros)"
     };
 
     private const string IncomeVariableMapping = "ingresos de otras entidades";
@@ -142,7 +142,7 @@ public class AnnualClassificationEngine : IAnnualClassificationEngine
                 lineType,
                 typeLabel,
                 average,
-                monthlyAmounts,
+                Array.AsReadOnly(monthlyAmounts),
                 currency));
         }
 
