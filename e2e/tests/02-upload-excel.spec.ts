@@ -3,7 +3,6 @@ import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
  * E2E Tests for Excel Upload page — ESP-4
- * GREEN: Pass after Upload.cshtml is updated to accept=".xls,.xlsx" with format guide.
  *
  * Auth strategy:
  *   Priority 1 — Env-var credentials: TEST_USER_EMAIL / TEST_USER_PASSWORD (CI / custom override).
@@ -56,7 +55,6 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
 
     /**
      * ESP-4a: File input must have accept=".xls,.xlsx" — not ".pdf".
-     * RED: currently the input has accept=".pdf" → this test fails.
      */
     test('TC-U01: file input accepts only .xls and .xlsx', async ({ page }) => {
         const fileInput = page.locator('input[type="file"]');
@@ -70,7 +68,6 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
     /**
      * ESP-4b: Format guide must be visible above the fold without additional scrolling.
      * The guide must mention: sheet "Movimientos", 7 columns, data starts at row 5.
-     * RED: no format guide block exists in the current HTML → locator finds nothing.
      */
     test('TC-U02: format guide is visible with Movimientos sheet and 7-column header', async ({ page }) => {
         // The guide section should be visible without scrolling at 1280x720 viewport
@@ -87,8 +84,7 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
     });
 
     /**
-     * ESP-4b (triangulation): Page title and heading must say "Excel", not "PDF".
-     * RED: current heading says "Upload Bank Statement" and title says "Upload PDF".
+     * ESP-4b (triangulation): Page title and heading must not reference PDF.
      */
     test('TC-U03: page title does not contain PDF wording', async ({ page }) => {
         const title = await page.title();

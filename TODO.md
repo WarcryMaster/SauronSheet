@@ -125,12 +125,10 @@ Son idénticos: validación no vacío + `.Trim()`. Podrían compartir base o uni
 | `SupabaseImportBatchRepository` | `src/.../Persistence/SupabaseImportBatchRepository.cs` | Sin tests |
 | `PeriodsElapsed` switch default (BudgetCalculationService) | `src/.../Services/BudgetCalculationService.cs:131-141` | `ArgumentOutOfRangeException` no testeado |~~
 
-### 11. Revisar tests E2E de upload (siempre en skip)
-**Fichero:** `e2e/tests/02-upload-excel.spec.ts`
+~~### 11. Revisar tests E2E de upload (siempre en skip)~~ ✅ Completado
+~~**Fichero:** `e2e/tests/02-upload-excel.spec.ts`
 
-Los tests `TC-U01`, `TC-U02`, `TC-U03` están marcados como `test.skip(true, ...)` y nunca se ejecutan. Diseñados originalmente para fallar (documentaban WIP). Decidir si:
-- Completarlos y activarlos, o
-- Eliminarlos si ya no representan funcionalidad requerida
+Los tests `TC-U01`, `TC-U02`, `TC-U03` estaban comentados como "RED: fail" pero la página Upload.cshtml ya tenía todo implementado. Limpiados comentarios desactualizados y verificados: 3/3 pasan.~~
 
 ### 12. `var` en Domain Layer (contra reglas de AGENTS.md)
 Decenas de usos de `var` en Domain donde AGENTS.md exige tipos explícitos.
