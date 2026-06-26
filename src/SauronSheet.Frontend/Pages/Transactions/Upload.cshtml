@@ -10,31 +10,45 @@
         <h3 class="h3 fw-bold mb-0">Upload Bank Statement</h3>
     </div>
 
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    @if (Model.FileErrors.Any())
     {
-        <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3" role="alert" x-transition.opacity>
-            <span class="fw-bold">!</span>
-            <p class="mb-0 small">@Model.ErrorMessage</p>
+        <div class="alert alert-danger d-flex flex-column gap-2 rounded-3" role="alert" x-transition.opacity>
+            <p class="fw-semibold mb-0">⚠️ Some files could not be processed:</p>
+            <ul class="mb-0 small">
+                @foreach (var error in Model.FileErrors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
         </div>
     }
 
-    @if (Model.ImportResult != null)
+    @if (Model.ImportResults.Any())
     {
+        var totalImported = Model.ImportResults.Sum(r => r.ImportedCount);
+        var totalSkipped = Model.ImportResults.Sum(r => r.SkippedCount);
         <div class="alert alert-success rounded-3" x-transition.opacity>
             <p class="fw-semibold mb-1">
-                ✅ Import Complete: @Model.ImportResult.ImportedCount imported, @Model.ImportResult.SkippedCount skipped
+                ✅ Import Complete: @totalImported imported, @totalSkipped skipped
+                across @Model.ImportResults.Count file(s)
             </p>
-            @if (Model.ImportResult.Errors.Any())
+            @foreach (var result in Model.ImportResults)
             {
-                <details class="mt-2">
-                    <summary class="small">Show errors (@Model.ImportResult.Errors.Count)</summary>
-                    <ul class="mt-2 mb-0">
-                        @foreach (var error in Model.ImportResult.Errors)
-                        {
-                            <li class="small text-danger">Row @error.RowNumber: @error.ErrorMessage</li>
-                        }
-                    </ul>
-                </details>
+                <div class="mt-2 ps-2 border-start border-2 border-success-subtle">
+                    <p class="small mb-1 fw-medium">@result.Filename — @result.ImportedCount imported, @result.SkippedCount skipped</p>
+                    @if (result.Errors.Any())
+                    {
+                        <details>
+                            <summary class="small">Errors (@result.Errors.Count)</summary>
+                            <ul class="mt-1 mb-0">
+                                @foreach (var error in result.Errors)
+                                {
+                                    <li class="small text-danger">Row @error.RowNumber: @error.ErrorMessage</li>
+                                }
+                            </ul>
+                        </details>
+                    }
+                </div>
             }
             <a href="/transactions" class="d-block mt-2 small fw-semibold">View imported transactions →</a>
         </div>
@@ -55,26 +69,81 @@
 
     <div class="card border-0 shadow-sm p-4">
         <form method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4"
-              x-data="{ fileName: '', uploading: false }" @@submit="uploading = true">
+              x-data="{
+                  files: [],
+                  dragging: false,
+                  uploading: false,
+                  handleFileSelect(event) {
+                      const selectedFiles = Array.from(event.target.files);
+                      event.target.value = '';
+                      this.addFiles(selectedFiles);
+                  },
+                  addFiles(newFiles) {
+                      for (const f of newFiles) {
+                          if (this.files.some(e => e.name === f.name && e.size === f.size)) continue;
+                          this.files.push(f);
+                      }
+                      this.syncInput();
+                  },
+                  removeFile(idx) {
+                      this.files.splice(idx, 1);
+                      this.syncInput();
+                  },
+                  syncInput() {
+                      const dt = new DataTransfer();
+                      this.files.forEach(f => dt.items.add(f));
+                      $refs.fileInput.files = dt.files;
+                  },
+                  formatSize(bytes) {
+                      if (bytes < 1024) return bytes + ' B';
+                      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                  }
+              }"
+              @@submit="if (files.length === 0) { $event.preventDefault(); return; } uploading = true">
+
             <div>
-                <label for="excelFile" class="form-label fw-semibold">Select Excel Bank Statement</label>
-                <div class="border border-2 border-dashed rounded-3 p-5 text-center"
-                     style="cursor: pointer; border-color: #ced4da !important;"
-                     @@click="$refs.fileInput.click()">
+                <label class="form-label fw-semibold">Select Excel Bank Statement(s)</label>
+                <div class="border border-2 rounded-3 p-5 text-center"
+                     :class="dragging ? 'border-brand bg-brand-subtle' : ''"
+                     :style="'cursor: pointer; border-style: dashed; border-color: ' + (dragging ? 'var(--mdb-brand)' : '#ced4da') + ' !important;'"
+                     @@click="$refs.fileInput.click()"
+                     @@dragenter.prevent="dragging = true"
+                     @@dragover.prevent="dragging = true"
+                     @@dragleave.prevent="dragging = false"
+                     @@drop.prevent="dragging = false; addFiles($event.dataTransfer.files)">
                     <div class="fs-1 mb-2">📊</div>
                     <p class="mb-1 small">
-                        <label for="excelFile" class="fw-semibold text-brand" style="cursor: pointer;">
-                            Choose Excel file
-                        </label>
+                        <span class="fw-semibold text-brand" style="cursor: pointer;">
+                            Choose Excel files
+                        </span>
                         <span class="text-muted"> or drag and drop</span>
                     </p>
-                    <p class="text-muted small mb-2">Excel (.xls / .xlsx) up to 10MB</p>
-                    <input x-ref="fileInput" id="excelFile" name="ExcelFile" type="file" accept=".xls,.xlsx" class="visually-hidden"
-                           @@change="fileName = $event.target.files[0]?.name ?? ''" />
-                    <p class="text-muted small mb-0" x-text="fileName || 'No file selected'" x-show="true"></p>
+                    <p class="text-muted small mb-2">Excel (.xls / .xlsx) up to 10MB each — multiple files allowed</p>
+                    <input x-ref="fileInput" name="ExcelFiles" type="file" accept=".xls,.xlsx" multiple class="visually-hidden"
+                           @@change="handleFileSelect($event)" />
                 </div>
             </div>
-            <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold" :disabled="uploading">
+
+            <!-- File list -->
+            <div x-show="files.length > 0" x-transition class="d-flex flex-column gap-2">
+                <p class="small fw-semibold mb-0 text-muted">
+                    <span x-text="files.length"></span> file(s) selected:
+                </p>
+                <template x-for="(file, idx) in files" :key="idx">
+                    <div class="d-flex align-items-center gap-2 bg-light rounded-2 px-3 py-2">
+                        <span class="small text-truncate flex-grow-1" x-text="file.name"></span>
+                        <span class="small text-muted flex-shrink-0" x-text="formatSize(file.size)"></span>
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0"
+                                @@click="removeFile(idx)" title="Remove file">
+                            ✕
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold"
+                    :disabled="uploading || files.length === 0">
                 <span x-show="!uploading">Upload and Import</span>
                 <span x-show="uploading" class="spinner-border spinner-border-sm" role="status">
                     <span class="visually-hidden">Uploading...</span>

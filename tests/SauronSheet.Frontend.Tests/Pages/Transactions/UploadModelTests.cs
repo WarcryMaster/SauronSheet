@@ -10,10 +10,9 @@ using Xunit;
 namespace SauronSheet.Frontend.Tests.Pages.Transactions;
 
 /// <summary>
-/// Unit tests for UploadModel — ESP-4 + task 3.3 behavioral contract.
-/// RED: reference <see cref="UploadModel.ExcelFile"/> which does not yet exist on the model.
-/// GREEN: all pass after UploadModel switches from PdfFile/ImportTransactionsFromPdfCommand
-///         to ExcelFile/ImportTransactionsCommand.
+/// Unit tests for UploadModel — multi-file upload support.
+/// Tests cover: empty array, single file, multiple files, validation per file,
+/// error handling per file, and aggregated results.
 /// </summary>
 public class UploadModelTests
 {
@@ -36,75 +35,91 @@ public class UploadModelTests
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Task 3.3 RED: OnPost with null file → generic error (unchanged behavior)
-    // This test also exercises the renamed property (ExcelFile).
+    // Empty / null file array
     // ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_NullFile_SetsGenericErrorMessage()
+    public async Task OnPost_EmptyFileArray_SetsErrorAndDoesNotDispatch()
     {
         // Arrange
         var model = CreateModel();
-        model.ExcelFile = null; // ← references ExcelFile (doesn't exist yet → RED compile)
+        model.ExcelFiles = Array.Empty<IFormFile>();
 
         // Act
         await model.OnPostAsync();
 
         // Assert
-        Assert.NotNull(model.ErrorMessage);
-        Assert.Null(model.ImportResult);
+        Assert.Single(model.FileErrors);
+        Assert.Contains("at least one", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(model.ImportResults);
         _mockMediator.Verify(m => m.Send(It.IsAny<IRequest<ImportResultDto>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Single file — validation
+    // ─────────────────────────────────────────────────────────────────────────────
+
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_EmptyFile_SetsGenericErrorMessage()
+    public async Task OnPost_SingleEmptyFile_SetsFileError()
     {
         // Arrange
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("statement.xlsx", sizeBytes: 0).Object;
+        model.ExcelFiles = new[] { CreateFormFile("statement.xlsx", sizeBytes: 0).Object };
 
         // Act
         await model.OnPostAsync();
 
         // Assert
-        Assert.NotNull(model.ErrorMessage);
-        Assert.Null(model.ImportResult);
+        Assert.Single(model.FileErrors);
+        Assert.Contains("empty", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(model.ImportResults);
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Task 3.3 RED: PDF extension must now be REJECTED (currently accepted)
-    // ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_PdfExtension_SetsExcelOnlyErrorMessage()
+    public async Task OnPost_PdfExtension_SetsFileError()
     {
         // Arrange
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("statement.pdf").Object;
+        model.ExcelFiles = new[] { CreateFormFile("statement.pdf").Object };
 
         // Act
         await model.OnPostAsync();
 
-        // Assert — must mention Excel in the error (not accept PDF)
-        Assert.NotNull(model.ErrorMessage);
-        Assert.Contains("Excel", model.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(model.ImportResult);
+        // Assert
+        Assert.Single(model.FileErrors);
+        Assert.Contains("Excel", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(model.ImportResults);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPost_OversizedFile_SetsFileErrorWithoutDispatching()
+    {
+        // Arrange — 11 MB > 10 MB limit
+        var model = CreateModel();
+        model.ExcelFiles = new[] { CreateFormFile("statement.xlsx", sizeBytes: 11 * 1024 * 1024).Object };
+
+        // Act
+        await model.OnPostAsync();
+
+        // Assert
+        Assert.Single(model.FileErrors);
+        Assert.Contains("10MB", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
         _mockMediator.Verify(m => m.Send(It.IsAny<IRequest<ImportResultDto>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Task 3.3 RED: .xlsx must now be ACCEPTED and dispatch ImportTransactionsCommand
-    // (currently rejected because model only accepts .pdf)
+    // Single file — success
     // ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_XlsxFile_DispatchesImportTransactionsCommandAndSetsResult()
+    public async Task OnPost_SingleXlsxFile_DispatchesCommandAndAddsResult()
     {
         // Arrange
         var expectedResult = new ImportResultDto(3, 1, 4, "statement.xlsx", DateTime.UtcNow, []);
@@ -115,15 +130,15 @@ public class UploadModelTests
             .ReturnsAsync(expectedResult);
 
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("statement.xlsx").Object;
+        model.ExcelFiles = new[] { CreateFormFile("statement.xlsx").Object };
 
         // Act
         await model.OnPostAsync();
 
         // Assert
-        Assert.Null(model.ErrorMessage);
-        Assert.NotNull(model.ImportResult);
-        Assert.Equal(3, model.ImportResult!.ImportedCount);
+        Assert.Empty(model.FileErrors);
+        Assert.Single(model.ImportResults);
+        Assert.Equal(3, model.ImportResults[0].ImportedCount);
         _mockMediator.Verify(
             m => m.Send(It.Is<ImportTransactionsCommand>(c => c.Filename == "statement.xlsx"),
                 It.IsAny<CancellationToken>()),
@@ -132,9 +147,9 @@ public class UploadModelTests
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_XlsFile_DispatchesImportTransactionsCommandAndSetsResult()
+    public async Task OnPost_XlsFile_DispatchesCommandAndAddsResult()
     {
-        // Arrange — triangulation: .xls (not .xlsx) must also be accepted
+        // Arrange
         var expectedResult = new ImportResultDto(5, 0, 5, "statement.xls", DateTime.UtcNow, []);
         _mockMediator
             .Setup(m => m.Send(
@@ -143,42 +158,96 @@ public class UploadModelTests
             .ReturnsAsync(expectedResult);
 
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("statement.xls").Object;
+        model.ExcelFiles = new[] { CreateFormFile("statement.xls").Object };
 
         // Act
         await model.OnPostAsync();
 
         // Assert
-        Assert.Null(model.ErrorMessage);
-        Assert.NotNull(model.ImportResult);
-        Assert.Equal(5, model.ImportResult!.ImportedCount);
-        _mockMediator.Verify(
-            m => m.Send(It.Is<ImportTransactionsCommand>(c => c.Filename == "statement.xls"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        Assert.Empty(model.FileErrors);
+        Assert.Single(model.ImportResults);
+        Assert.Equal(5, model.ImportResults[0].ImportedCount);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Multiple files — success
+    // ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_OversizedFile_SetsErrorMessageWithoutDispatching()
+    public async Task OnPost_MultipleFiles_ProcessesAllAndAggregatesResults()
     {
-        // Arrange — 11 MB > 10 MB limit
+        // Arrange
+        _mockMediator
+            .Setup(m => m.Send(
+                It.Is<ImportTransactionsCommand>(c => c.Filename == "jan.xlsx"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ImportResultDto(10, 2, 12, "jan.xlsx", DateTime.UtcNow, []));
+        _mockMediator
+            .Setup(m => m.Send(
+                It.Is<ImportTransactionsCommand>(c => c.Filename == "feb.xlsx"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ImportResultDto(8, 1, 9, "feb.xlsx", DateTime.UtcNow, []));
+
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("statement.xlsx", sizeBytes: 11 * 1024 * 1024).Object;
+        model.ExcelFiles = new[]
+        {
+            CreateFormFile("jan.xlsx").Object,
+            CreateFormFile("feb.xlsx").Object
+        };
 
         // Act
         await model.OnPostAsync();
 
         // Assert
-        Assert.NotNull(model.ErrorMessage);
-        Assert.Contains("10MB", model.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        _mockMediator.Verify(m => m.Send(It.IsAny<IRequest<ImportResultDto>>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        Assert.Empty(model.FileErrors);
+        Assert.Equal(2, model.ImportResults.Count);
+        Assert.Equal(10, model.ImportResults[0].ImportedCount);
+        Assert.Equal(8, model.ImportResults[1].ImportedCount);
+        _mockMediator.Verify(m => m.Send(It.IsAny<ImportTransactionsCommand>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Multiple files — mixed success and errors
+    // ─────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_DomainExceptionThrown_SetsUserFacingErrorMessage()
+    public async Task OnPost_MixedValidAndInvalidFiles_ProcessesValidAndCollectsErrors()
+    {
+        // Arrange — one valid, one bad extension, one oversized
+        _mockMediator
+            .Setup(m => m.Send(
+                It.Is<ImportTransactionsCommand>(c => c.Filename == "good.xlsx"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ImportResultDto(5, 0, 5, "good.xlsx", DateTime.UtcNow, []));
+
+        var model = CreateModel();
+        model.ExcelFiles = new[]
+        {
+            CreateFormFile("good.xlsx").Object,
+            CreateFormFile("bad.pdf").Object,
+            CreateFormFile("huge.xlsx", sizeBytes: 11 * 1024 * 1024).Object
+        };
+
+        // Act
+        await model.OnPostAsync();
+
+        // Assert
+        Assert.Single(model.ImportResults); // only good.xlsx processed
+        Assert.Equal(2, model.FileErrors.Count); // bad.pdf + huge.xlsx
+        Assert.Contains(model.FileErrors, e => e.Contains("Excel", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(model.FileErrors, e => e.Contains("10MB", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Error handling per file
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPost_DomainExceptionThrown_AddsFileErrorWithMessage()
     {
         // Arrange
         _mockMediator
@@ -186,34 +255,34 @@ public class UploadModelTests
             .ThrowsAsync(new DomainException("Header row not found in Excel file."));
 
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("bad.xlsx").Object;
+        model.ExcelFiles = new[] { CreateFormFile("bad.xlsx").Object };
 
         // Act
         await model.OnPostAsync();
 
-        // Assert — DomainException.Message is user-safe and must appear in ErrorMessage
-        Assert.NotNull(model.ErrorMessage);
-        Assert.Contains("Header row not found", model.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        // Assert
+        Assert.Single(model.FileErrors);
+        Assert.Contains("Header row not found", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnPost_GenericExceptionThrown_SetsGenericErrorMessageNotDetails()
+    public async Task OnPost_GenericExceptionThrown_AddsGenericFileErrorNotDetails()
     {
-        // Arrange — generic exception must NOT leak internal details
+        // Arrange
         _mockMediator
             .Setup(m => m.Send(It.IsAny<ImportTransactionsCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Internal DB connection failed: 10.0.0.1:5432"));
 
         var model = CreateModel();
-        model.ExcelFile = CreateFormFile("statement.xlsx").Object;
+        model.ExcelFiles = new[] { CreateFormFile("statement.xlsx").Object };
 
         // Act
         await model.OnPostAsync();
 
         // Assert — generic message; internal details must NOT appear
-        Assert.NotNull(model.ErrorMessage);
-        Assert.DoesNotContain("10.0.0.1", model.ErrorMessage, StringComparison.Ordinal);
-        Assert.DoesNotContain("connection", model.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(model.FileErrors);
+        Assert.DoesNotContain("10.0.0.1", model.FileErrors[0], StringComparison.Ordinal);
+        Assert.DoesNotContain("connection", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
     }
 }
