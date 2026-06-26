@@ -130,9 +130,8 @@ Son idénticos: validación no vacío + `.Trim()`. Podrían compartir base o uni
 
 Los tests `TC-U01`, `TC-U02`, `TC-U03` estaban comentados como "RED: fail" pero la página Upload.cshtml ya tenía todo implementado. Limpiados comentarios desactualizados y verificados: 3/3 pasan.~~
 
-### 12. `var` en Domain Layer (contra reglas de AGENTS.md)
-Decenas de usos de `var` en Domain donde AGENTS.md exige tipos explícitos.
-Aplicar refactor global.
+~~### 12. `var` en Domain Layer (contra reglas de AGENTS.md)~~ ✅ Completado
+~~9 usos de `var` reemplazados por tipos explícitos en 4 ficheros: TransactionByIdSpecification (3), CategoryService (2), CompositeSpecification (3), ColorHex (1).~~
 
 ## Prioridad Baja
 

@@ -32,7 +32,7 @@ public class TransactionByIdSpecification : BaseSpecification<Transaction>
         if (userId == null)
             throw new DomainException("UserId cannot be null for bulk delete specification.");
 
-        var idList = transactionIds?.ToList() ?? new List<TransactionId>();
+        List<TransactionId> idList = transactionIds?.ToList() ?? new List<TransactionId>();
 
         if (idList.Count > MaxResults)
             throw new DomainException($"Cannot delete more than {MaxResults} transactions in a single operation. Requested: {idList.Count}");
@@ -49,7 +49,7 @@ public class TransactionByIdSpecification : BaseSpecification<Transaction>
         if (userId == null)
             throw new DomainException("UserId cannot be null.");
 
-        var idList = transactionIds?.ToList() ?? new List<TransactionId>();
+        List<TransactionId> idList = transactionIds?.ToList() ?? new List<TransactionId>();
 
         if (idList.Count == 0)
             throw new DomainException("At least one transaction ID must be provided.");
@@ -58,7 +58,7 @@ public class TransactionByIdSpecification : BaseSpecification<Transaction>
             throw new DomainException("Cannot filter more than 1000 transactions.");
 
         // Capture idList in closure for use in expression
-        var ids = idList;
+        List<TransactionId> ids = idList;
         
         // Return compiled criteria: transaction belongs to user AND ID is in the requested list
         return transaction => transaction.UserId == userId && ids.Contains(transaction.Id);

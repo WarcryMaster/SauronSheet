@@ -33,10 +33,10 @@ public class CategoryService
             throw new DomainException("Category name is required.");
         }
 
-        var trimmedName = name.Trim();
+        string trimmedName = name.Trim();
 
         // Check for duplicates within user's categories
-        var existing = await _categoryRepository.FindByNameAndUserAsync(userId, trimmedName);
+        Category? existing = await _categoryRepository.FindByNameAndUserAsync(userId, trimmedName);
         if (existing != null)
         {
             throw new DomainException($"A category with name '{trimmedName}' already exists for this user.");

@@ -20,11 +20,11 @@ public class CompositeSpecification<T> : BaseSpecification<T> where T : class
     /// </summary>
     public static CompositeSpecification<T> And(ISpecification<T> left, ISpecification<T> right)
     {
-        var parameter = Expression.Parameter(typeof(T), "x");
-        var combined = Expression.AndAlso(
+        ParameterExpression parameter = Expression.Parameter(typeof(T), "x");
+        BinaryExpression combined = Expression.AndAlso(
             Expression.Invoke(left.Criteria, parameter),
             Expression.Invoke(right.Criteria, parameter));
-        var lambda = Expression.Lambda<Func<T, bool>>(combined, parameter);
+        Expression<Func<T, bool>> lambda = Expression.Lambda<Func<T, bool>>(combined, parameter);
 
         return new CompositeSpecification<T>(lambda);
     }

@@ -24,7 +24,7 @@ public record ColorHex(string Value)
             throw new DomainException("Color hex code is required.");
         }
 
-        var normalized = hex.ToUpperInvariant().Trim();
+        string normalized = hex.ToUpperInvariant().Trim();
 
         if (!HexColorRegex.IsMatch(normalized))
         {
