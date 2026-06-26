@@ -114,16 +114,16 @@ Ambos tienen lógica de thresholds con los mismos valores pero no comparten cód
 
 Son idénticos: validación no vacío + `.Trim()`. Podrían compartir base o unificarse en un `Name`.~~
 
-### 10. Tests faltantes para handlers existentes
+~~### 10. Tests faltantes para handlers existentes~~ ✅ Completado
 
-| Handler | Archivo | Estado |
+~~| Handler | Archivo | Estado |
 |---|---|---|
 | `DeleteTransactionCommandHandler` | `src/.../Commands/DeleteTransactionCommandHandler.cs` | Sin tests |
 | `UpdateTransactionCategoryCommandHandler` | `src/.../Commands/UpdateTransactionCategoryCommandHandler.cs` | Sin tests |
 | `DeleteBudgetCommandHandler` | `src/.../Budgets/Commands/DeleteBudgetCommandHandler.cs` | Sin tests |
 | `SupabaseUserRepository` | `src/.../Persistence/SupabaseUserRepository.cs` | Sin tests |
 | `SupabaseImportBatchRepository` | `src/.../Persistence/SupabaseImportBatchRepository.cs` | Sin tests |
-| `PeriodsElapsed` switch default (BudgetCalculationService) | `src/.../Services/BudgetCalculationService.cs:131-141` | `ArgumentOutOfRangeException` no testeado |
+| `PeriodsElapsed` switch default (BudgetCalculationService) | `src/.../Services/BudgetCalculationService.cs:131-141` | `ArgumentOutOfRangeException` no testeado |~~
 
 ### 11. Revisar tests E2E de upload (siempre en skip)
 **Fichero:** `e2e/tests/02-upload-excel.spec.ts`

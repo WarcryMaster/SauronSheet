@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.Entities;
@@ -517,5 +518,19 @@ public class BudgetCalculationServiceTests
         Assert.Equal(12000m, result.AccumulatedLimit.Amount);
         Assert.Equal(8000m, result.Spent.Amount);
         Assert.Equal(4000m, result.Remaining.Amount);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Switch default — ArgumentOutOfRangeException
+    // ═══════════════════════════════════════════════════════════════
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void PeriodsElapsed_InvalidPeriod_ThrowsArgumentOutOfRangeException()
+    {
+        var invalidPeriod = (BudgetPeriod)int.MaxValue;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            _service.PeriodsElapsed(invalidPeriod, new DateOnly(2026, 1, 1), new DateOnly(2026, 1, 31)));
     }
 }
