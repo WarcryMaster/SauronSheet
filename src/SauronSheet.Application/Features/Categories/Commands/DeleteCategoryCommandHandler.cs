@@ -45,8 +45,8 @@ public class DeleteCategoryCommandHandler
         if (category.UserId != userId)
             throw new EntityNotFoundException("Category", request.CategoryId);
 
-        // Check if has transactions
-        var hasTransactions = await _categoryRepo.HasTransactionsAsync(categoryId);
+        // Check if has transactions via transaction repository (SRP: category repo must not query transactions)
+        bool hasTransactions = await _transactionRepo.HasTransactionsForCategoryAsync(categoryId);
 
         // Validate can delete via domain service
         if (!_categoryService.CanDeleteCategory(category, hasTransactions))

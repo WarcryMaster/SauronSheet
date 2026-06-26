@@ -16,6 +16,7 @@ public class DeleteSubcategoryCommandHandlerTests
 {
     private readonly Mock<ISubcategoryRepository> _mockSubcategoryRepo;
     private readonly Mock<ICategoryRepository> _mockCategoryRepo;
+    private readonly Mock<ITransactionRepository> _mockTransactionRepo;
     private readonly Mock<IUserContext> _mockUserContext;
     private readonly UserId _userId;
     private readonly CategoryId _categoryId;
@@ -24,6 +25,7 @@ public class DeleteSubcategoryCommandHandlerTests
     {
         _mockSubcategoryRepo = new Mock<ISubcategoryRepository>();
         _mockCategoryRepo = new Mock<ICategoryRepository>();
+        _mockTransactionRepo = new Mock<ITransactionRepository>();
         _mockUserContext = new Mock<IUserContext>();
 
         _userId = new UserId("test-user-id");
@@ -40,6 +42,7 @@ public class DeleteSubcategoryCommandHandlerTests
         var handler = new DeleteSubcategoryCommandHandler(
             _mockSubcategoryRepo.Object,
             _mockCategoryRepo.Object,
+            _mockTransactionRepo.Object,
             _mockUserContext.Object);
 
         var subcategoryId = SubcategoryId.New();
@@ -60,7 +63,7 @@ public class DeleteSubcategoryCommandHandlerTests
         _mockCategoryRepo.Setup(x => x.GetByIdAsync(_categoryId))
             .ReturnsAsync(category);
 
-        _mockSubcategoryRepo.Setup(x => x.HasTransactionsAsync(subcategoryId))
+        _mockTransactionRepo.Setup(x => x.HasTransactionsForSubcategoryAsync(subcategoryId))
             .ReturnsAsync(false);
 
         var command = new DeleteSubcategoryCommand(
@@ -82,6 +85,7 @@ public class DeleteSubcategoryCommandHandlerTests
         var handler = new DeleteSubcategoryCommandHandler(
             _mockSubcategoryRepo.Object,
             _mockCategoryRepo.Object,
+            _mockTransactionRepo.Object,
             _mockUserContext.Object);
 
         var subcategoryId = SubcategoryId.New();
@@ -102,7 +106,7 @@ public class DeleteSubcategoryCommandHandlerTests
         _mockCategoryRepo.Setup(x => x.GetByIdAsync(_categoryId))
             .ReturnsAsync(category);
 
-        _mockSubcategoryRepo.Setup(x => x.HasTransactionsAsync(subcategoryId))
+        _mockTransactionRepo.Setup(x => x.HasTransactionsForSubcategoryAsync(subcategoryId))
             .ReturnsAsync(true);
 
         var command = new DeleteSubcategoryCommand(
@@ -123,6 +127,7 @@ public class DeleteSubcategoryCommandHandlerTests
         var handler = new DeleteSubcategoryCommandHandler(
             _mockSubcategoryRepo.Object,
             _mockCategoryRepo.Object,
+            _mockTransactionRepo.Object,
             _mockUserContext.Object);
 
         var subcategoryId = Guid.NewGuid();
@@ -146,6 +151,7 @@ public class DeleteSubcategoryCommandHandlerTests
         var handler = new DeleteSubcategoryCommandHandler(
             _mockSubcategoryRepo.Object,
             _mockCategoryRepo.Object,
+            _mockTransactionRepo.Object,
             _mockUserContext.Object);
 
         var subcategoryId = SubcategoryId.New();

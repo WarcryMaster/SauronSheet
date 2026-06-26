@@ -147,10 +147,10 @@ Eliminado — sin consumidores reales hoy.~~
 Ahora devuelve los IDs solicitados como fallidos en cualquier ruta de error.
 Tests actualizados para verificar la población de FailedTransactionIds.~~
 
-### 15. `SupabaseCategoryRepository` referencia directa a `TransactionRow` (violación SRP)
-**Fichero:** `src/.../Persistence/SupabaseCategoryRepository.cs` (líneas 360, 371)
+~~### 15. `SupabaseCategoryRepository` referencia directa a `TransactionRow` (violación SRP)~~ ✅ Completado
+~~**Fichero:** `src/.../Persistence/SupabaseCategoryRepository.cs` (líneas 360, 371)
 
-Los métodos `HasTransactionsAsync` y `GetTransactionCountAsync` hacen queries contra la tabla de transacciones desde el repositorio de categorías. Delegar al repositorio de transacciones.
+Los métodos `HasTransactionsAsync` y `GetTransactionCountAsync` hacían queries contra la tabla de transacciones. Movidos a `ITransactionRepository` + `SupabaseTransactionRepository`. Lo mismo para `SupabaseSubcategoryRepository`. Handlers actualizados para usar `ITransactionRepository`. Tests actualizados.~~
 
 ### 16. Try-catch-Sentry repetido en repositorios
 **Ficheros:** Todos en `src/SauronSheet.Infrastructure/Persistence/*.cs`

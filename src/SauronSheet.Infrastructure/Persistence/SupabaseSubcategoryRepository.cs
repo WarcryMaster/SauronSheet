@@ -26,134 +26,65 @@ public class SupabaseSubcategoryRepository : ISubcategoryRepository
 
     public async Task<Subcategory?> GetByIdAsync(SubcategoryId id)
     {
-        try
-        {
-            var idString = id.Value.ToString();
-            var response = await _client.From<SubcategoryRow>()
-                .Where(x => x.Id == idString)
-                .Get();
+        var idString = id.Value.ToString();
+        var response = await _client.From<SubcategoryRow>()
+            .Where(x => x.Id == idString)
+            .Get();
 
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.GetByIdAsync");
-                scope.SetTag("subcategoryId", id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task<IReadOnlyList<Subcategory>> GetByUserIdAsync(UserId userId)
     {
-        try
-        {
-            var userIdString = userId.Value;
-            var response = await _client.From<SubcategoryRow>()
-                .Where(x => x.UserId == userIdString)
-                .Get();
+        var userIdString = userId.Value;
+        var response = await _client.From<SubcategoryRow>()
+            .Where(x => x.UserId == userIdString)
+            .Get();
 
-            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.GetByUserIdAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 
     public async Task<IReadOnlyList<Subcategory>> GetByCategoryIdAsync(CategoryId categoryId)
     {
-        try
-        {
-            var categoryIdString = categoryId.Value.ToString();
-            var response = await _client.From<SubcategoryRow>()
-                .Where(x => x.CategoryId == categoryIdString)
-                .Get();
+        var categoryIdString = categoryId.Value.ToString();
+        var response = await _client.From<SubcategoryRow>()
+            .Where(x => x.CategoryId == categoryIdString)
+            .Get();
 
-            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.GetByCategoryIdAsync");
-                scope.SetTag("categoryId", categoryId.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 
     public async Task<Subcategory?> FindByNameAsync(UserId userId, CategoryId categoryId, string name)
     {
-        try
-        {
-            var userIdString = userId.Value;
-            var categoryIdString = categoryId.Value.ToString();
-            var response = await _client.From<SubcategoryRow>()
-                .Where(x => x.UserId == userIdString)
-                .Where(x => x.CategoryId == categoryIdString)
-                .Get();
+        var userIdString = userId.Value;
+        var categoryIdString = categoryId.Value.ToString();
+        var response = await _client.From<SubcategoryRow>()
+            .Where(x => x.UserId == userIdString)
+            .Where(x => x.CategoryId == categoryIdString)
+            .Get();
 
-            // Case-insensitive comparison in memory
-            // Postgrest does not support OR conditions, and case-insensitive LIKE
-            // depends on column collation. In-memory filtering is safer.
-            return response.Models
-                .Select(r => r.ToDomain())
-                .FirstOrDefault(s => s.Name.Value.Equals(name, StringComparison.OrdinalIgnoreCase));
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.FindByNameAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("categoryId", categoryId.Value.ToString());
-                scope.SetTag("name", name);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        // Case-insensitive comparison in memory
+        // Postgrest does not support OR conditions, and case-insensitive LIKE
+        // depends on column collation. In-memory filtering is safer.
+        return response.Models
+            .Select(r => r.ToDomain())
+            .FirstOrDefault(s => s.Name.Value.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<Subcategory?> FindByNormalizedNameAsync(UserId userId, CategoryId categoryId, string normalizedName)
     {
-        try
-        {
-            var userIdString = userId.Value;
-            var categoryIdString = categoryId.Value.ToString();
-            var response = await _client.From<SubcategoryRow>()
-                .Where(x => x.UserId == userIdString)
-                .Where(x => x.CategoryId == categoryIdString)
-                .Where(x => x.NormalizedName == normalizedName)
-                .Limit(1)
-                .Get();
+        var userIdString = userId.Value;
+        var categoryIdString = categoryId.Value.ToString();
+        var response = await _client.From<SubcategoryRow>()
+            .Where(x => x.UserId == userIdString)
+            .Where(x => x.CategoryId == categoryIdString)
+            .Where(x => x.NormalizedName == normalizedName)
+            .Limit(1)
+            .Get();
 
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.FindByNormalizedNameAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("categoryId", categoryId.Value.ToString());
-                scope.SetTag("normalizedName", normalizedName);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task AddAsync(Subcategory subcategory, string normalizedName)
@@ -178,82 +109,23 @@ public class SupabaseSubcategoryRepository : ISubcategoryRepository
                 });
             throw new DuplicateEntityException("subcategory", normalizedName);
         }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.AddAsync");
-                scope.SetTag("subcategoryId", subcategory.Id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
     }
 
     public async Task UpdateAsync(Subcategory subcategory, string normalizedName)
     {
-        try
-        {
-            var idString = subcategory.Id.Value.ToString();
-            var row = MappingExtensions.FromDomain(subcategory, normalizedName);
-            await _client.From<SubcategoryRow>()
-                .Where(x => x.Id == idString)
-                .Update(row);
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.UpdateAsync");
-                scope.SetTag("subcategoryId", subcategory.Id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var idString = subcategory.Id.Value.ToString();
+        var row = MappingExtensions.FromDomain(subcategory, normalizedName);
+        await _client.From<SubcategoryRow>()
+            .Where(x => x.Id == idString)
+            .Update(row);
     }
 
     public async Task DeleteAsync(SubcategoryId id)
     {
-        try
-        {
-            var idString = id.Value.ToString();
-            await _client.From<SubcategoryRow>()
-                .Where(x => x.Id == idString)
-                .Delete();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.DeleteAsync");
-                scope.SetTag("subcategoryId", id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var idString = id.Value.ToString();
+        await _client.From<SubcategoryRow>()
+            .Where(x => x.Id == idString)
+            .Delete();
     }
 
-    public async Task<bool> HasTransactionsAsync(SubcategoryId subcategoryId)
-    {
-        try
-        {
-            var subcatIdString = subcategoryId.Value.ToString();
-            var response = await _client.From<TransactionRow>()
-                .Where(x => x.SubcategoryId == subcatIdString)
-                .Limit(1)
-                .Get();
-
-            return response.Models.Any();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseSubcategoryRepository.HasTransactionsAsync");
-                scope.SetTag("subcategoryId", subcategoryId.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
-    }
 }

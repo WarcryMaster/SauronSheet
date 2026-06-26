@@ -33,5 +33,4 @@ public interface ISubcategoryRepository
 
     Task UpdateAsync(Subcategory subcategory, string normalizedName);
     Task DeleteAsync(SubcategoryId id);
-    Task<bool> HasTransactionsAsync(SubcategoryId subcategoryId);
 }

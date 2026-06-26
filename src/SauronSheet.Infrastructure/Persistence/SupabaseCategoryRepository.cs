@@ -184,54 +184,29 @@ public class SupabaseCategoryRepository : ICategoryRepository
     /// </summary>
     public async Task<IReadOnlyList<Category>> GetByUserIdAsync(UserId userId)
     {
-        try
-        {
-            var response = await _client.From<CategoryRow>()
-                .Where(x => x.UserId == userId.Value)
-                .Get();
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Get();
 
-            // Order BEFORE converting to domain — CategoryRow.Name is a string (IComparable),
-            // while Category.Name is a CategoryName value object that does not implement IComparable.
-            return response.Models
-                .OrderBy(r => r.Name)
-                .Select(r => r.ToDomain())
-                .ToList()
-                .AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseCategoryRepository.GetByUserIdAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        // Order BEFORE converting to domain — CategoryRow.Name is a string (IComparable),
+        // while Category.Name is a CategoryName value object that does not implement IComparable.
+        return response.Models
+            .OrderBy(r => r.Name)
+            .Select(r => r.ToDomain())
+            .ToList()
+            .AsReadOnly();
     }
 
     public async Task<Category?> FindByNameAndUserAsync(UserId userId, string name)
     {
-        try
-        {
-            var response = await _client.From<CategoryRow>()
-                .Where(x => x.UserId == userId.Value)
-                .Where(x => x.Name == name)
-                .Limit(1)
-                .Get();
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.Name == name)
+            .Limit(1)
+            .Get();
 
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseCategoryRepository.FindByNameAndUserAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("name", name);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     /// <summary>
@@ -240,24 +215,12 @@ public class SupabaseCategoryRepository : ICategoryRepository
     /// </summary>
     public async Task<Category?> FindByNameAsync(string name)
     {
-        try
-        {
-            var response = await _client.From<CategoryRow>()
-                .Where(x => x.Name == name)  // NO user_id filter - global search
-                .Limit(1)
-                .Get();
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.Name == name)  // NO user_id filter - global search
+            .Limit(1)
+            .Get();
 
-            return response.Models.FirstOrDefault()?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseCategoryRepository.FindByNameAsync");
-                scope.SetTag("name", name);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return response.Models.FirstOrDefault()?.ToDomain();
     }
 
     /// <summary>
@@ -266,52 +229,27 @@ public class SupabaseCategoryRepository : ICategoryRepository
     /// </summary>
     public async Task<IReadOnlyList<Category>> GetSystemDefaultsAsync()
     {
-        try
-        {
-            var response = await _client.From<CategoryRow>()
-                .Where(x => x.UserId == null)
-                .Where(x => x.IsSystemDefault == true)
-                .Get();
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == null)
+            .Where(x => x.IsSystemDefault == true)
+            .Get();
 
-            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseCategoryRepository.GetSystemDefaultsAsync");
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 
     public async Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName, CategoryType type)
     {
-        try
-        {
-            var userIdString = userId.Value;
-            var typeString = type.ToString();
-            var response = await _client.From<CategoryRow>()
-                .Where(x => x.UserId == userIdString)
-                .Where(x => x.NormalizedName == normalizedName)
-                .Where(x => x.Type == typeString)
-                .Limit(1)
-                .Get();
+        var userIdString = userId.Value;
+        var typeString = type.ToString();
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userIdString)
+            .Where(x => x.NormalizedName == normalizedName)
+            .Where(x => x.Type == typeString)
+            .Limit(1)
+            .Get();
 
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseCategoryRepository.FindByNormalizedNameAndUserAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("normalizedName", normalizedName);
-                scope.SetTag("type", type.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task AddAsync(Category category, string normalizedName)
@@ -354,24 +292,4 @@ public class SupabaseCategoryRepository : ICategoryRepository
             .Delete();
     }
 
-    public async Task<bool> HasTransactionsAsync(CategoryId categoryId)
-    {
-        var catIdStr = categoryId.Value.ToString();
-        var response = await _client.From<TransactionRow>()
-            .Where(x => x.CategoryId == catIdStr)
-            .Limit(1)
-            .Get();
-
-        return response.Models.Any();
-    }
-
-    public async Task<int> GetTransactionCountAsync(CategoryId categoryId)
-    {
-        var catIdStr = categoryId.Value.ToString();
-        var response = await _client.From<TransactionRow>()
-            .Where(x => x.CategoryId == catIdStr)
-            .Get();
-
-        return response.Models.Count;
-    }
 }

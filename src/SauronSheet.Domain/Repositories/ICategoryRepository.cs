@@ -40,5 +40,4 @@ public interface ICategoryRepository
     /// </summary>
     Task UpdateAsync(Category category, string normalizedName);
     Task DeleteAsync(CategoryId id);
-    Task<bool> HasTransactionsAsync(CategoryId categoryId);
 }

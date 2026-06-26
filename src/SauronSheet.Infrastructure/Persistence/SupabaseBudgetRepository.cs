@@ -156,71 +156,31 @@ public class SupabaseBudgetRepository : IBudgetRepository
 
     public async Task<Budget?> GetByIdAsync(BudgetId id)
     {
-        try
-        {
-            var idString = id.Value.ToString();
-            var response = await _client.From<BudgetRow>()
-                .Where(r => r.Id == idString)
-                .Get();
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.GetByIdAsync");
-                scope.SetTag("budgetId", id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var idString = id.Value.ToString();
+        var response = await _client.From<BudgetRow>()
+            .Where(r => r.Id == idString)
+            .Get();
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task<IReadOnlyList<Budget>> GetByUserIdAsync(UserId userId)
     {
-        try
-        {
-            var response = await _client.From<BudgetRow>()
-                .Where(r => r.UserId == userId.Value)
-                .Get();
-            return response.Models.Select(r => r.ToDomain()).ToList();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserIdAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var response = await _client.From<BudgetRow>()
+            .Where(r => r.UserId == userId.Value)
+            .Get();
+        return response.Models.Select(r => r.ToDomain()).ToList();
     }
 
     public async Task<IReadOnlyList<Budget>> GetByUserAndCategoryAsync(
         UserId userId, CategoryId categoryId)
     {
-        try
-        {
-            var categoryIdString = categoryId.Value.ToString();
-            var response = await _client.From<BudgetRow>()
-                .Where(r => r.UserId == userId.Value)
-                .Where(r => r.CategoryId == categoryIdString)
-                .Get();
-            return response.Models.Select(r => r.ToDomain()).ToList();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserAndCategoryAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("categoryId", categoryId.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var categoryIdString = categoryId.Value.ToString();
+        var response = await _client.From<BudgetRow>()
+            .Where(r => r.UserId == userId.Value)
+            .Where(r => r.CategoryId == categoryIdString)
+            .Get();
+        return response.Models.Select(r => r.ToDomain()).ToList();
     }
 
     /// <summary>
@@ -236,47 +196,32 @@ public class SupabaseBudgetRepository : IBudgetRepository
     public async Task<Budget?> GetActiveByUserAndCategoryAsync(
         UserId userId, CategoryId categoryId, DateOnly asOf)
     {
-        try
+        var categoryIdString = categoryId.Value.ToString();
+
+        // Fetch all budgets for this user+category (exclusion constraint
+        // guarantees at most ~1 active at any point; typically just a handful
+        // of historical rows).
+        var response = await _client.From<BudgetRow>()
+            .Where(r => r.UserId == userId.Value)
+            .Where(r => r.CategoryId == categoryIdString)
+            .Get();
+
+        var matchingRow = response.Models.FirstOrDefault(row =>
         {
-            var categoryIdString = categoryId.Value.ToString();
+            var effectiveFrom = DateOnly.FromDateTime(row.EffectiveFrom);
+            if (asOf < effectiveFrom)
+                return false;
 
-            // Fetch all budgets for this user+category (exclusion constraint
-            // guarantees at most ~1 active at any point; typically just a handful
-            // of historical rows).
-            var response = await _client.From<BudgetRow>()
-                .Where(r => r.UserId == userId.Value)
-                .Where(r => r.CategoryId == categoryIdString)
-                .Get();
-
-            var matchingRow = response.Models.FirstOrDefault(row =>
+            if (row.EffectiveUntil.HasValue)
             {
-                var effectiveFrom = DateOnly.FromDateTime(row.EffectiveFrom);
-                if (asOf < effectiveFrom)
-                    return false;
+                var effectiveUntil = DateOnly.FromDateTime(row.EffectiveUntil.Value);
+                return asOf <= effectiveUntil;
+            }
 
-                if (row.EffectiveUntil.HasValue)
-                {
-                    var effectiveUntil = DateOnly.FromDateTime(row.EffectiveUntil.Value);
-                    return asOf <= effectiveUntil;
-                }
+            return true; // permanent budget (effective_until IS NULL)
+        });
 
-                return true; // permanent budget (effective_until IS NULL)
-            });
-
-            return matchingRow?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.GetActiveByUserAndCategoryAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("categoryId", categoryId.Value.ToString());
-                scope.SetTag("asOf", asOf.ToString("yyyy-MM-dd"));
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return matchingRow?.ToDomain();
     }
 
     /// <summary>
@@ -291,103 +236,49 @@ public class SupabaseBudgetRepository : IBudgetRepository
     public async Task<IReadOnlyList<Budget>> GetByUserAndDateRangeAsync(
         UserId userId, DateOnly from, DateOnly? to)
     {
-        try
+        // Fetch all budgets for this user — budgets are per-user and typically
+        // few in number (dozens, not thousands). Filter overlap in memory.
+        var response = await _client.From<BudgetRow>()
+            .Where(r => r.UserId == userId.Value)
+            .Get();
+
+        var queryEnd = to ?? DateOnly.MaxValue;
+
+        var matchingRows = response.Models.Where(row =>
         {
-            // Fetch all budgets for this user — budgets are per-user and typically
-            // few in number (dozens, not thousands). Filter overlap in memory.
-            var response = await _client.From<BudgetRow>()
-                .Where(r => r.UserId == userId.Value)
-                .Get();
+            var rowStart = DateOnly.FromDateTime(row.EffectiveFrom);
+            var rowEnd = row.EffectiveUntil.HasValue
+                ? DateOnly.FromDateTime(row.EffectiveUntil.Value)
+                : DateOnly.MaxValue;
 
-            var queryEnd = to ?? DateOnly.MaxValue;
+            // Two ranges [rowStart, rowEnd] and [from, queryEnd] overlap
+            // when rowStart <= queryEnd AND rowEnd >= from
+            return rowStart <= queryEnd && rowEnd >= from;
+        });
 
-            var matchingRows = response.Models.Where(row =>
-            {
-                var rowStart = DateOnly.FromDateTime(row.EffectiveFrom);
-                var rowEnd = row.EffectiveUntil.HasValue
-                    ? DateOnly.FromDateTime(row.EffectiveUntil.Value)
-                    : DateOnly.MaxValue;
-
-                // Two ranges [rowStart, rowEnd] and [from, queryEnd] overlap
-                // when rowStart <= queryEnd AND rowEnd >= from
-                return rowStart <= queryEnd && rowEnd >= from;
-            });
-
-            return matchingRows.Select(r => r.ToDomain()).ToList();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.GetByUserAndDateRangeAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.SetTag("from", from.ToString("yyyy-MM-dd"));
-                scope.SetTag("to", to?.ToString("yyyy-MM-dd") ?? "null");
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return matchingRows.Select(r => r.ToDomain()).ToList();
     }
 
     public async Task AddAsync(Budget budget)
     {
-        try
-        {
-            var row = BudgetRow.FromDomainForInsert(budget);
-            await _client.From<BudgetRow>().Insert(row);
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.AddAsync");
-                scope.SetTag("userId", budget.UserId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = BudgetRow.FromDomainForInsert(budget);
+        await _client.From<BudgetRow>().Insert(row);
     }
 
     public async Task UpdateAsync(Budget budget)
     {
-        try
-        {
-            var idString = budget.Id.Value.ToString();
-            var row = BudgetRow.FromDomain(budget);
-            await _client.From<BudgetRow>()
-                .Where(r => r.Id == idString)
-                .Update(row);
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.UpdateAsync");
-                scope.SetTag("budgetId", budget.Id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var idString = budget.Id.Value.ToString();
+        var row = BudgetRow.FromDomain(budget);
+        await _client.From<BudgetRow>()
+            .Where(r => r.Id == idString)
+            .Update(row);
     }
 
     public async Task DeleteAsync(BudgetId id)
     {
-        try
-        {
-            var idString = id.Value.ToString();
-            await _client.From<BudgetRow>()
-                .Where(r => r.Id == idString)
-                .Delete();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBudgetRepository.DeleteAsync");
-                scope.SetTag("budgetId", id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var idString = id.Value.ToString();
+        await _client.From<BudgetRow>()
+            .Where(r => r.Id == idString)
+            .Delete();
     }
 }

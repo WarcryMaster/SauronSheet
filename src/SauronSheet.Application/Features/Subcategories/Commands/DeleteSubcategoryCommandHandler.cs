@@ -14,15 +14,18 @@ public class DeleteSubcategoryCommandHandler
 {
     private readonly ISubcategoryRepository _subcategoryRepo;
     private readonly ICategoryRepository _categoryRepo;
+    private readonly ITransactionRepository _transactionRepo;
     private readonly IUserContext _userContext;
 
     public DeleteSubcategoryCommandHandler(
         ISubcategoryRepository subcategoryRepo,
         ICategoryRepository categoryRepo,
+        ITransactionRepository transactionRepo,
         IUserContext userContext)
     {
         _subcategoryRepo = subcategoryRepo;
         _categoryRepo = categoryRepo;
+        _transactionRepo = transactionRepo;
         _userContext = userContext;
     }
 
@@ -41,7 +44,7 @@ public class DeleteSubcategoryCommandHandler
         if (category == null || category.UserId != userId)
             throw new EntityNotFoundException("Subcategory", request.SubcategoryId);
 
-        var hasTransactions = await _subcategoryRepo.HasTransactionsAsync(subcategoryId);
+        bool hasTransactions = await _transactionRepo.HasTransactionsForSubcategoryAsync(subcategoryId);
         if (hasTransactions)
             throw new DomainException("Cannot delete subcategory with active transactions.");
 

@@ -39,30 +39,17 @@ public class SupabaseUserRepository : IUserProfileRepository
 
     public async Task EnsureExistsAsync(UserId userId, string email)
     {
-        try
+        var row = new UserRow
         {
-            var row = new UserRow
-            {
-                Id = userId.Value,
-                Email = email
-            };
+            Id = userId.Value,
+            Email = email
+        };
 
-            // Upsert: inserts if not exists, ignores conflict on id (idempotent).
-            await _client.From<UserRow>()
-                .Upsert(row);
+        // Upsert: inserts if not exists, ignores conflict on id (idempotent).
+        await _client.From<UserRow>()
+            .Upsert(row);
 
-            Sentry.SentrySdk.Logger?.LogDebug(
-                "SupabaseUserRepository.EnsureExistsAsync: upserted user profile for {0}", userId.Value);
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseUserRepository.EnsureExistsAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        Sentry.SentrySdk.Logger?.LogDebug(
+            "SupabaseUserRepository.EnsureExistsAsync: upserted user profile for {0}", userId.Value);
     }
 }

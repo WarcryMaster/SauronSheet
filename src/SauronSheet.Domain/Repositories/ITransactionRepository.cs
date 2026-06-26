@@ -52,4 +52,16 @@ public interface ITransactionRepository
     /// <param name="categoryIds">List of category IDs to count transactions for</param>
     /// <returns>Dictionary mapping CategoryId to transaction count</returns>
     Task<Dictionary<CategoryId, int>> GetCountsByCategoriesAsync(List<CategoryId> categoryIds);
+
+    /// <summary>
+    /// Checks whether any transaction references the given category.
+    /// Used by DeleteCategoryCommandHandler to prevent deletion of categories with active transactions.
+    /// </summary>
+    Task<bool> HasTransactionsForCategoryAsync(CategoryId categoryId);
+
+    /// <summary>
+    /// Checks whether any transaction references the given subcategory.
+    /// Used by DeleteSubcategoryCommandHandler to prevent deletion of subcategories with active transactions.
+    /// </summary>
+    Task<bool> HasTransactionsForSubcategoryAsync(SubcategoryId subcategoryId);
 }

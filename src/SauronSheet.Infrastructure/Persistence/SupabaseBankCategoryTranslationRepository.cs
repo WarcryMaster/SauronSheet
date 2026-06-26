@@ -33,44 +33,31 @@ public class SupabaseBankCategoryTranslationRepository : IBankCategoryTranslatio
 
     public async Task<BankCategoryTranslation?> FindByBankCategoryAsync(string bankCategory, string? bankSubcategory)
     {
-        try
+        var bankCat = bankCategory ?? string.Empty;
+
+        // Postgrest C# client does not support OR conditions.
+        // We need to handle two cases:
+        // 1. Exact match on both bank_category AND bank_subcategory
+        // 2. Match on bank_category with bank_subcategory IS NULL
+        // Since OR is unsupported, use separate queries and combine.
+        //
+        // CR-2e: exact match (bank_category + bank_subcategory) MUST be evaluated FIRST.
+        // Generic (bank_subcategory IS NULL) is used ONLY as a fallback when no exact match exists.
+
+        // Query 1: Exact match — if bankSubcategory provided, try bank_category + bank_subcategory first
+        if (!string.IsNullOrEmpty(bankSubcategory))
         {
-            var bankCat = bankCategory ?? string.Empty;
-
-            // Postgrest C# client does not support OR conditions.
-            // We need to handle two cases:
-            // 1. Exact match on both bank_category AND bank_subcategory
-            // 2. Match on bank_category with bank_subcategory IS NULL
-            // Since OR is unsupported, use separate queries and combine.
-            //
-            // CR-2e: exact match (bank_category + bank_subcategory) MUST be evaluated FIRST.
-            // Generic (bank_subcategory IS NULL) is used ONLY as a fallback when no exact match exists.
-
-            // Query 1: Exact match — if bankSubcategory provided, try bank_category + bank_subcategory first
-            if (!string.IsNullOrEmpty(bankSubcategory))
-            {
-                var exactRow = await ExecuteExactMatchQueryAsync(bankCat, bankSubcategory);
-                if (exactRow != null)
-                    return exactRow.ToDomain();
-            }
-
-            // Query 2: Generic fallback — bank_category only, bank_subcategory IS NULL
-            var genericRow = await ExecuteGenericMatchQueryAsync(bankCat);
-            if (genericRow != null)
-                return genericRow.ToDomain();
-
-            return null;
+            var exactRow = await ExecuteExactMatchQueryAsync(bankCat, bankSubcategory);
+            if (exactRow != null)
+                return exactRow.ToDomain();
         }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseBankCategoryTranslationRepository.FindByBankCategoryAsync");
-                scope.SetTag("bankCategory", bankCategory ?? "(null)");
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+
+        // Query 2: Generic fallback — bank_category only, bank_subcategory IS NULL
+        var genericRow = await ExecuteGenericMatchQueryAsync(bankCat);
+        if (genericRow != null)
+            return genericRow.ToDomain();
+
+        return null;
     }
 
     /// <summary>

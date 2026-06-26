@@ -68,44 +68,18 @@ public class SupabaseImportBatchRepository : IImportBatchRepository
     /// <inheritdoc />
     public async Task AddAsync(ImportBatch importBatch, UserId userId)
     {
-        try
-        {
-            var row = ImportBatchRow.FromDomain(importBatch, userId.Value);
-            await _client.From<ImportBatchRow>().Insert(row);
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseImportBatchRepository.AddAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = ImportBatchRow.FromDomain(importBatch, userId.Value);
+        await _client.From<ImportBatchRow>().Insert(row);
     }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ImportBatch>> GetByUserIdAsync(UserId userId)
     {
-        try
-        {
-            var response = await _client.From<ImportBatchRow>()
-                .Where(x => x.UserId == userId.Value)
-                .Order("imported_at", Constants.Ordering.Descending)
-                .Get();
+        var response = await _client.From<ImportBatchRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Order("imported_at", Constants.Ordering.Descending)
+            .Get();
 
-            return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope =>
-            {
-                scope.SetTag("repo", "SupabaseImportBatchRepository.GetByUserIdAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
     }
 }

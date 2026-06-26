@@ -197,50 +197,26 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<Transaction?> GetByIdAsync(TransactionId id)
     {
-        try
-        {
-            var idString = id.Value.ToString();
-            var response = await _client.From<TransactionRow>()
-                .Where(x => x.Id == idString)
-                .Get();
+        var idString = id.Value.ToString();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.Id == idString)
+            .Get();
 
-            var row = response.Models.FirstOrDefault();
-            return row?.ToDomain();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.GetByIdAsync");
-                scope.SetTag("transactionId", id.Value.ToString());
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
     }
 
     public async Task<IReadOnlyList<Transaction>> GetByUserIdAsync(UserId userId)
     {
         Sentry.SentrySdk.Logger?.LogDebug("SupabaseTransactionRepository.GetByUserIdAsync: querying transactions");
-        try
-        {
-            var response = await _client.From<TransactionRow>()
-                .Where(x => x.UserId == userId.Value)
-                .Order("date", Constants.Ordering.Descending)
-                .Get();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Order("date", Constants.Ordering.Descending)
+            .Get();
 
-            var result = response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
-            Sentry.SentrySdk.Logger?.LogInfo("SupabaseTransactionRepository.GetByUserIdAsync: loaded {0} transactions", result.Count);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.GetByUserIdAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var result = response.Models.Select(r => r.ToDomain()).ToList().AsReadOnly();
+        Sentry.SentrySdk.Logger?.LogInfo("SupabaseTransactionRepository.GetByUserIdAsync: loaded {0} transactions", result.Count);
+        return result;
     }
 
     public async Task<IReadOnlyList<Transaction>> FindBySpecificationAsync(
@@ -251,30 +227,19 @@ public class SupabaseTransactionRepository : ITransactionRepository
         // complementing Supabase RLS (defense in depth).
         // The specification's Criteria expression is compiled and used as a secondary filter.
         // This approach works for MVP scale. For large datasets, translate specs to Postgrest filters.
-        try
-        {
-            var userId = _userContext.UserId;
+        var userId = _userContext.UserId;
 
-            if (string.IsNullOrEmpty(userId))
-                throw new UnauthorizedAccessException("User is not authenticated.");
+        if (string.IsNullOrEmpty(userId))
+            throw new UnauthorizedAccessException("User is not authenticated.");
 
-            var response = await _client.From<TransactionRow>()
-                .Where(x => x.UserId == userId)
-                .Limit(specification.MaxResults)
-                .Get();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId)
+            .Limit(specification.MaxResults)
+            .Get();
 
-            var allTransactions = response.Models.Select(r => r.ToDomain()).ToList();
-            var predicate = specification.Criteria.Compile();
-            return allTransactions.Where(predicate).ToList().AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.FindBySpecificationAsync");
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        var allTransactions = response.Models.Select(r => r.ToDomain()).ToList();
+        var predicate = specification.Criteria.Compile();
+        return allTransactions.Where(predicate).ToList().AsReadOnly();
     }
 
     public async Task AddAsync(Transaction transaction)
@@ -358,31 +323,19 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
     public async Task<(DateTime MinDate, DateTime MaxDate)?> GetDateRangeAsync(UserId userId)
     {
-        try
-        {
-            var response = await _client.From<TransactionRow>()
-                .Where(x => x.UserId == userId.Value)
-                .Order("date", Constants.Ordering.Ascending)
-                .Get();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Order("date", Constants.Ordering.Ascending)
+            .Get();
 
-            if (response.Models.Count == 0)
-            {
-                return null;
-            }
-
-            var minDate = response.Models.First().Date;
-            var maxDate = response.Models.Last().Date;
-            return (minDate, maxDate);
-        }
-        catch (Exception ex)
+        if (response.Models.Count == 0)
         {
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.GetDateRangeAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
+            return null;
         }
+
+        var minDate = response.Models.First().Date;
+        var maxDate = response.Models.Last().Date;
+        return (minDate, maxDate);
     }
 
     public async Task<Dictionary<CategoryId, int>> GetCountsByCategoriesAsync(List<CategoryId> categoryIds)
@@ -422,66 +375,57 @@ public class SupabaseTransactionRepository : ITransactionRepository
     /// </summary>
     public async Task<int> DeleteTransactionsByIdsAsync(UserId userId, IEnumerable<TransactionId> transactionIds)
     {
-        try
-        {
-            var idList = transactionIds?.ToList() ?? new List<TransactionId>();
+        var idList = transactionIds?.ToList() ?? new List<TransactionId>();
 
-            if (idList.Count == 0)
-                throw new InvalidOperationException("At least one transaction ID must be provided for deletion.");
+        if (idList.Count == 0)
+            throw new InvalidOperationException("At least one transaction ID must be provided for deletion.");
 
-            if (idList.Count > 1000)
-                throw new InvalidOperationException("Cannot delete more than 1000 transactions in a single operation.");
+        if (idList.Count > 1000)
+            throw new InvalidOperationException("Cannot delete more than 1000 transactions in a single operation.");
 
-            // Convert IDs to string format for Postgrest query
-            var idStrings = idList.Select(id => id.Value.ToString()).ToList();
+        // Convert IDs to string format for Postgrest query
+        var idStrings = idList.Select(id => id.Value.ToString()).ToList();
 
-            Sentry.SentrySdk.Logger?.LogDebug("SupabaseTransactionRepository.DeleteTransactionsByIdsAsync: attempting to delete {0} transactions for user {1}", idList.Count, userId.Value);
+        Sentry.SentrySdk.Logger?.LogDebug("SupabaseTransactionRepository.DeleteTransactionsByIdsAsync: attempting to delete {0} transactions for user {1}", idList.Count, userId.Value);
 
-            // Single Postgrest DELETE with IN filter — atomic at PostgreSQL level.
-            // Multi-tenant isolation via user_id WHERE clause.
-            // Avoids N individual DELETE queries that could partially fail.
-            var idValues = idStrings.Select(id => (object)id).ToList();
+        // Single Postgrest DELETE with IN filter — atomic at PostgreSQL level.
+        // Multi-tenant isolation via user_id WHERE clause.
+        // Avoids N individual DELETE queries that could partially fail.
+        var idValues = idStrings.Select(id => (object)id).ToList();
 
-            await _client.From<TransactionRow>()
-                .Where(x => x.UserId == userId.Value)
-                .Filter("id", Constants.Operator.In, idValues)
-                .Delete();
+        await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Filter("id", Constants.Operator.In, idValues)
+            .Delete();
 
-            var deletedCount = idStrings.Count;
+        var deletedCount = idStrings.Count;
 
-            Sentry.SentrySdk.Logger?.LogInfo("SupabaseTransactionRepository.DeleteTransactionsByIdsAsync: successfully deleted {0} transactions", deletedCount);
+        Sentry.SentrySdk.Logger?.LogInfo("SupabaseTransactionRepository.DeleteTransactionsByIdsAsync: successfully deleted {0} transactions", deletedCount);
 
-            return deletedCount;
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Business logic errors (constraint violation, etc.) - don't retry
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.DeleteTransactionsByIdsAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Warning;
-            });
-            throw;
-        }
-        catch (HttpRequestException ex)
-        {
-            // Transient network errors - let caller retry
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.DeleteTransactionsByIdsAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // Unexpected errors
-            Sentry.SentrySdk.CaptureException(ex, scope => {
-                scope.SetTag("repo", "SupabaseTransactionRepository.DeleteTransactionsByIdsAsync");
-                scope.SetTag("userId", userId.Value);
-                scope.Level = Sentry.SentryLevel.Error;
-            });
-            throw;
-        }
+        return deletedCount;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> HasTransactionsForCategoryAsync(CategoryId categoryId)
+    {
+        var catIdStr = categoryId.Value.ToString();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.CategoryId == catIdStr)
+            .Limit(1)
+            .Get();
+
+        return response.Models.Any();
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> HasTransactionsForSubcategoryAsync(SubcategoryId subcategoryId)
+    {
+        var subcatIdStr = subcategoryId.Value.ToString();
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.SubcategoryId == subcatIdStr)
+            .Limit(1)
+            .Get();
+
+        return response.Models.Any();
     }
 }
