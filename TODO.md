@@ -14,23 +14,26 @@ Revisar y asegurar que todas las funcionalidades actuales funcionan correctament
 
 ~~### 2. Bug: desfase horario en transacciones (producción vs local)~~ ✅ Completado
 
-### 2. Editar transacciones existentes
-Añadir funcionalidad de edición inline en la lista de transacciones (`Transactions/Index`).
+~~### 2. Editar transacciones existentes~~ ✅ Completado
+~~Añadir funcionalidad de edición en página dedicada (`/transactions/edit/{id}`).~~
 
-**Funcionalidad:**
-- Botón con icono de lápiz en cada fila de la tabla de transacciones
-- Al hacer clic, la fila se vuelve editable: fecha, descripción, importe, categoría y subcategoría
-- Botón "Guardar" para persistir los cambios con validaciones en cliente y servidor
-- Botón "Cancelar" para descartar cambios y volver al modo vista
+~~**Funcionalidad implementada:**~~
+- ~~Botón con icono de lápiz en cada fila de la tabla de transacciones~~
+- ~~Página dedicada `/transactions/edit/{id}` con formulario completo~~
+- ~~Campos editables: fecha (Flatpickr), descripción, importe, moneda, categoría, subcategoría~~
+- ~~Validación: duplicados, pertenencia de categoría/subcategoría, tenant isolation~~
+- ~~Preserva metadata de importación (ImportedFrom, BankCategory, BankSubcategory, Balance)~~
 
-**Tareas previstas:**
-- Implementar `UpdateTransactionCommandHandler` con validaciones
-- Endpoint HTMX o handler Razor para guardar la edición
-- Componente Alpine.js `x-data` para la edición inline (alternar modo vista/edición)
-- Selectores de categoría/subcategoría dependientes en el modo edición
-- Flatpickr para el campo fecha en el formulario de edición
-- Validación: importe > 0, fecha requerida, descripción requerida
-- Tests unitarios del handler + tests E2E del flujo de edición
+~~**Archivos creados/modificados:**~~
+- ~~`src/SauronSheet.Domain/Entities/Transaction.cs` — método `Update()`~~
+- ~~`src/SauronSheet.Application/Features/Transactions/Queries/GetTransactionByIdQuery.cs` + Handler~~
+- ~~`src/SauronSheet.Application/Features/Transactions/Commands/UpdateTransactionCommand.cs` + Handler~~
+- ~~`src/SauronSheet.Frontend/Pages/Transactions/Edit.cshtml` + `Edit.cshtml.cs`~~
+- ~~`src/SauronSheet.Frontend/Pages/Transactions/Index.cshtml` — botón editar~~
+- ~~`e2e/tests/03-edit-transaction.spec.ts` — 5 tests E2E~~
+
+~~**Tests:** 6 Domain + 3 Query + 5 Command + 5 E2E = 19 tests~~
+~~**Nota E2E:** Requiere `--config=e2e/playwright.config.ts` para cargar baseURL y webServer correctamente~~
 
 ### 3. Nueva página: "Análisis Anual" — Gastos fijos vs variables por mes
 Crear una nueva página (no en Dashboard) para visualizar el desglose de ingresos y gastos fijos/variables por mes del año seleccionado.

@@ -110,4 +110,34 @@ public class Transaction : AggregateRoot<TransactionId>
         Description = newDescription;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Update all mutable fields of the transaction.
+    /// Preserves immutable fields (Id, UserId) and import metadata (ImportedFrom, BankCategory, BankSubcategory, Balance).
+    /// </summary>
+    public void Update(
+        Money amount,
+        DateTime date,
+        string description,
+        CategoryId? categoryId,
+        SubcategoryId? subcategoryId,
+        CategorySource categorySource)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            throw new Exceptions.DomainException("Description is required.");
+        if (description.Length > 500)
+            throw new Exceptions.DomainException("Description must be 500 characters or less.");
+        if (date <= DateTime.MinValue || date >= DateTime.MaxValue)
+            throw new Exceptions.DomainException("Date is required.");
+        if (amount == null)
+            throw new Exceptions.DomainException("Amount is required.");
+
+        Amount = amount;
+        Date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+        Description = description.Trim();
+        CategoryId = categoryId;
+        SubcategoryId = subcategoryId;
+        CategorySource = categorySource;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

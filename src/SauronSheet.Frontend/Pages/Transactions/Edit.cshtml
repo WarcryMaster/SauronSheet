@@ -1,0 +1,196 @@
+@page "/transactions/edit/{id:guid}"
+@model SauronSheet.Frontend.Pages.Transactions.EditModel
+@{
+    ViewData["Title"] = "Edit Transaction";
+}
+
+<div class="mx-auto d-flex flex-column gap-4" style="max-width: 640px;">
+    <!-- Back button + Title -->
+    <div class="d-flex align-items-center gap-3">
+        <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">&larr; Back</a>
+        <h3 class="h3 fw-bold mb-0">Edit Transaction</h3>
+    </div>
+
+    <!-- Error message -->
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-start gap-2 rounded-3" role="alert" x-transition.opacity>
+            <span class="fw-bold">!</span>
+            <p class="mb-0 small">@Model.ErrorMessage</p>
+        </div>
+    }
+
+    <!-- Read-only summary card -->
+    @if (Model.Transaction != null)
+    {
+        <div class="card border-0 bg-light p-3 rounded-3">
+            <h4 class="h6 fw-semibold mb-2">Current Values</h4>
+            <div class="row g-2 small">
+                <div class="col-6">
+                    <strong>Date:</strong> @Model.Transaction.Date.ToString("dd/MM/yyyy")
+                </div>
+                <div class="col-6">
+                    <strong>Amount:</strong> @Model.Transaction.Amount.ToString("N2") @Model.Transaction.Currency
+                </div>
+                <div class="col-12">
+                    <strong>Description:</strong> @Model.Transaction.Description
+                </div>
+                <div class="col-6">
+                    <strong>Category:</strong> @Model.Transaction.CategoryName
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Transaction.SubcategoryName))
+                {
+                    <div class="col-6">
+                        <strong>Subcategory:</strong> @Model.Transaction.SubcategoryName
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Transaction.ImportedFrom))
+                {
+                    <div class="col-12">
+                        <strong>Imported from:</strong> @Model.Transaction.ImportedFrom
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- JSON data for subcategories (Pattern B from ADR-0002) -->
+    <script type="application/json" id="subcategories-data">
+@{
+    var subcategoriesJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.AllSubcategories,
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+}
+@Html.Raw(subcategoriesJson)
+    </script>
+
+    <!-- Edit form -->
+    <div class="card border-0 shadow-sm p-4">
+        <form method="post" class="d-flex flex-column gap-3"
+              x-data="editForm()"
+              @@submit="loading = true">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+
+            <!-- Date -->
+            <div>
+                <label asp-for="Date" class="form-label fw-semibold">Date</label>
+                <input asp-for="Date" type="text" class="form-control"
+                       value="@Model.Date.ToString("yyyy-MM-dd")"
+                       x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
+                       required placeholder="DD/MM/AAAA" autocomplete="off" />
+                <span asp-validation-for="Date" class="text-danger small"></span>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label asp-for="Description" class="form-label fw-semibold">Description</label>
+                <input asp-for="Description" type="text" class="form-control" maxlength="500" required />
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+
+            <!-- Amount + Currency (side by side) -->
+            <div class="row g-2">
+                <div class="col-8">
+                    <label asp-for="Amount" class="form-label fw-semibold">Amount</label>
+                    <input asp-for="Amount" type="number" step="0.01" class="form-control" required />
+                    <span asp-validation-for="Amount" class="text-danger small"></span>
+                </div>
+                <div class="col-4">
+                    <label asp-for="Currency" class="form-label fw-semibold">Currency</label>
+                    <select asp-for="Currency" class="form-select">
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label asp-for="CategoryId" class="form-label fw-semibold">Category</label>
+                <select asp-for="CategoryId" class="form-select" required
+                        x-model="selectedCategoryId"
+                        @@change="rebuildSubcategoryOptions()">
+                    <option value="">Select a category</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id" selected="@(Model.CategoryId == category.Id)">@category.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+            </div>
+
+            <!-- Subcategory (dependent on category) -->
+            <div>
+                <label asp-for="SubcategoryId" class="form-label fw-semibold">Subcategory (optional)</label>
+                <select asp-for="SubcategoryId" class="form-select">
+                    <option value="">None</option>
+                </select>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-brand flex-grow-1 rounded-3 fw-bold" :disabled="loading">
+                    <span x-show="!loading">Save Changes</span>
+                    <span x-show="loading" class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Saving...</span>
+                    </span>
+                </button>
+                <a href="/transactions" class="btn btn-outline-secondary rounded-3">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function editForm() {
+        // Pre-load subcategory data before Alpine initializes x-model (avoids race with @@change)
+        const subcategoriesDataEl = document.getElementById('subcategories-data');
+        const subcategoriesByCategory = subcategoriesDataEl
+            ? JSON.parse(subcategoriesDataEl.textContent).reduce((acc, sub) => {
+                const catId = sub.categoryId;
+                if (!acc[catId]) acc[catId] = [];
+                acc[catId].push(sub);
+                return acc;
+            }, {})
+            : {};
+
+        return {
+            loading: false,
+            selectedCategoryId: '@(Model.CategoryId?.ToString() ?? "")',
+            selectedSubcategoryId: '@(Model.SubcategoryId?.ToString() ?? "")',
+            subcategoriesByCategory: subcategoriesByCategory,
+
+            init() {
+                // Rebuild on init to select the correct subcategory
+                this.rebuildSubcategoryOptions();
+            },
+
+            get availableSubcategories() {
+                if (!this.selectedCategoryId) return [];
+                return this.subcategoriesByCategory[this.selectedCategoryId] || [];
+            },
+
+            rebuildSubcategoryOptions() {
+                const select = document.getElementById('SubcategoryId');
+                if (!select) return;
+                // Clear existing options except first
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+                // Add subcategory options
+                this.availableSubcategories.forEach(sub => {
+                    const option = document.createElement('option');
+                    option.value = sub.id;
+                    option.textContent = sub.name;
+                    select.appendChild(option);
+                });
+                // Select the transaction's subcategory if set
+                if (this.selectedSubcategoryId) {
+                    select.value = this.selectedSubcategoryId;
+                }
+            }
+        };
+    }
+</script>
