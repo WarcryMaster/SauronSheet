@@ -35,21 +35,21 @@ Revisar y asegurar que todas las funcionalidades actuales funcionan correctament
 ~~**Tests:** 6 Domain + 3 Query + 5 Command + 5 E2E = 19 tests~~
 ~~**Nota E2E:** Requiere `--config=e2e/playwright.config.ts` para cargar baseURL y webServer correctamente~~
 
-### 3. Nueva página: "Análisis Anual" — Gastos fijos vs variables por mes
-Crear una nueva página (no en Dashboard) para visualizar el desglose de ingresos y gastos fijos/variables por mes del año seleccionado.
+~~### 3. Nueva página: "Análisis Anual" — Gastos fijos vs variables por mes~~ ✅ Completado
+~~Crear una nueva página (no en Dashboard) para visualizar el desglose de ingresos y gastos fijos/variables por mes del año seleccionado.~~
 
-**Funcionalidad:**
-- Selector de año (por defecto el año actual)
-- Obtener todos los movimientos del año seleccionado
-- Sumar todos los gastos/ingresos por mes
-- Catalogar cada movimiento como **fijo** o **variable** según el tipo de movimiento
-- Calcular la media mensual por cada tipo de movimiento
-- Mostrar tabla con columnas:
-  - Tipo de movimiento (con indicador fijo/variable/ingreso fijo/ingreso variable)
-  - Media mensual
-  - Enero, Febrero, ..., Diciembre (totales por mes)
+~~**Funcionalidad:**~~
+- ~~Selector de año (por defecto el año actual)~~
+- ~~Obtener todos los movimientos del año seleccionado~~
+- ~~Sumar todos los gastos/ingresos por mes~~
+- ~~Catalogar cada movimiento como **fijo** o **variable** según el tipo de movimiento~~
+- ~~Calcular la media mensual por cada tipo de movimiento~~
+- ~~Mostrar tabla con columnas:~~
+  - ~~Tipo de movimiento (con indicador fijo/variable/ingreso fijo/ingreso variable)~~
+  - ~~Media mensual~~
+  - ~~Enero, Febrero, ..., Diciembre (totales por mes)~~
 
-**Posible estructura de tabla:**
+~~**Posible estructura de tabla:**~~
 
 | Movimiento | Tipo | Media | Ene | Feb | Mar | ... | Dic |
 |---|---|---|---|---|---|---|---|
@@ -57,12 +57,20 @@ Crear una nueva página (no en Dashboard) para visualizar el desglose de ingreso
 | Supermercado | Gasto Variable | 320€ | 350€ | 280€ | 330€ | ... | 320€ |
 | Nómina | Ingreso Fijo | 2400€ | 2400€ | 2400€ | 2400€ | ... | 2400€ |
 
-**Tareas de implementación:**
-- Definir especificación (Spec) y diseño (Design) vía SDD
-- Implementar Query/Handler en Application layer para obtener el resumen anual
-- Crear PageModel + Razor Page (Page: `/AnnualAnalysis`)
-- Frontend con Alpine.js + MDBootstrap + Chart.js (opcional para gráficos)
-- Tests unitarios + E2E
+~~**Tareas de implementación:**~~
+- ~~Definir especificación (Spec) y diseño (Design) vía SDD~~
+- ~~Implementar Query/Handler en Application layer para obtener el resumen anual~~
+- ~~Crear PageModel + Razor Page (Page: `/Analysis/Annual`)~~
+- ~~Frontend con Alpine.js + MDBootstrap + Chart.js (opcional para gráficos)~~
+- ~~Tests unitarios + E2E~~
+
+**Implementado vía SDD (change: annual-analysis):**
+- Motor de clasificación `AnnualClassificationEngine` con mapping estático + heurística de recurrencia (CV ≤10%)
+- Query `GetAnnualAnalysisQuery` + handler con specs compuestas
+- Página `/Analysis/Annual` con selector de año, tabla Ene-Dic, bloque resumen
+- 16 unit tests (motor) + 3 integration tests (handler) + 3 E2E tests = 22 tests
+- 4 commits: `9cfc559`, `c2dd8bd`, `9ed584d`, `898d00b`
+- Sin migraciones DB ni cambios en Domain layer
 
 ~~### 4. Migrar `_BudgetStatusModal.cshtml` a Alpine.js~~ ✅ Completado
 ~~**Fichero:** `src/SauronSheet.Frontend/Pages/Shared/Components/_BudgetStatusModal.cshtml`~~

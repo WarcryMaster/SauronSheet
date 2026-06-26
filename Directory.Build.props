@@ -6,4 +6,10 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
+  <!-- Test settings: must be in .props (early evaluation), not .targets,
+       so the test runner picks up ResultsDirectory before initializing -->
+  <PropertyGroup>
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)test.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
 </Project>
