@@ -110,18 +110,27 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
     /// Find an existing user-owned category by normalized key and type, or create a new one.
     /// PCE-3c: system defaults are bypassed — a user-owned category is always returned.
     /// PCE-3e: concurrent 23505 → <see cref="DuplicateEntityException"/> → retry-get.
+    /// PCE-6: fallback search without type prevents duplicates when bank reports
+    ///        the same category with opposite sign (e.g. refunds as positive).
     /// </summary>
     private async Task<Category> FindOrCreateCategoryAsync(
         UserId userId, string rawName, string normalizedName, CategoryType type)
     {
         var existing = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName, type);
 
-        // PCE-3a: found and user-owned → reuse
-        // PCE-3c: found but system default → bypass (system defaults must never enter import path)
+        // PCE-3a: found with matching type and user-owned → reuse
         if (existing != null && !existing.IsSystemDefault)
             return existing;
 
-        // PCE-3b / PCE-3c: not found (or system default bypassed) → create user category
+        // PCE-3c: found but system default → bypass (system defaults must never enter import path)
+
+        // PCE-6: type-specific search failed; retry without type filter to prevent duplicates
+        //        when the bank reports the same category with a different sign (e.g. refunds).
+        existing = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName);
+        if (existing != null && !existing.IsSystemDefault)
+            return existing;
+
+        // PCE-3b: not found at all → create user category
         var safeName    = rawName.Length > CategoryName.MaxLength ? rawName[..CategoryName.MaxLength] : rawName;
         var newCategory = new Category(
             new CategoryId(Guid.NewGuid()),
@@ -141,6 +150,11 @@ public class BankCategoryResolutionService : IBankCategoryResolutionService
         {
             // PCE-3e: concurrent insert won the race — retry-get to return the winner
             var retried = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName, type);
+            if (retried != null)
+                return retried;
+
+            // PCE-6: fallback retry without type
+            retried = await _categoryRepository.FindByNormalizedNameAndUserAsync(userId, normalizedName);
             return retried ?? throw new InvalidOperationException(
                 $"Category '{normalizedName}' not found after 23505 conflict. Data integrity error.");
         }

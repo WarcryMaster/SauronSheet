@@ -252,6 +252,19 @@ public class SupabaseCategoryRepository : ICategoryRepository
         return row?.ToDomain();
     }
 
+    public async Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName)
+    {
+        var userIdString = userId.Value;
+        var response = await _client.From<CategoryRow>()
+            .Where(x => x.UserId == userIdString)
+            .Where(x => x.NormalizedName == normalizedName)
+            .Limit(1)
+            .Get();
+
+        var row = response.Models.FirstOrDefault();
+        return row?.ToDomain();
+    }
+
     public async Task AddAsync(Category category, string normalizedName)
     {
         try

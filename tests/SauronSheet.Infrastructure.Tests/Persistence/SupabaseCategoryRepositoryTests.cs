@@ -25,16 +25,19 @@ public class SupabaseCategoryRepositoryTests
     [Fact]
     public void FindByNormalizedNameAndUserAsync_IsDefinedOnInterface()
     {
-        var method = _interfaceType.GetMethod("FindByNormalizedNameAndUserAsync");
+        var methods = _interfaceType.GetMethods()
+            .Where(m => m.Name == "FindByNormalizedNameAndUserAsync")
+            .ToList();
 
-        Assert.NotNull(method);
-        Assert.Equal(typeof(Task<Category?>), method!.ReturnType);
+        Assert.NotEmpty(methods);
+        Assert.All(methods, m => Assert.Equal(typeof(Task<Category?>), m.ReturnType));
     }
 
     [Fact]
     public void FindByNormalizedNameAndUserAsync_AcceptsCorrectParameters()
     {
-        var method = _interfaceType.GetMethod("FindByNormalizedNameAndUserAsync");
+        // Find the 3-parameter overload (with CategoryType)
+        var method = _interfaceType.GetMethod("FindByNormalizedNameAndUserAsync", new[] { typeof(UserId), typeof(string), typeof(CategoryType) });
         Assert.NotNull(method);
 
         var parameters = method!.GetParameters();
@@ -46,12 +49,29 @@ public class SupabaseCategoryRepositoryTests
     }
 
     [Fact]
+    public void FindByNormalizedNameAndUserAsync_WithoutType_AcceptsCorrectParameters()
+    {
+        // Verify the 2-parameter overload (without CategoryType) — PCE-6 fallback
+        var method = _interfaceType.GetMethod("FindByNormalizedNameAndUserAsync", new[] { typeof(UserId), typeof(string) });
+        Assert.NotNull(method);
+
+        var parameters = method!.GetParameters();
+
+        Assert.Equal(2, parameters.Length);
+        Assert.Equal(typeof(UserId), parameters[0].ParameterType);
+        Assert.Equal(typeof(string), parameters[1].ParameterType);
+    }
+
+    [Fact]
     public void FindByNormalizedNameAndUserAsync_IsImplementedInRepository()
     {
-        var method = _implType.GetMethod("FindByNormalizedNameAndUserAsync",
-            BindingFlags.Public | BindingFlags.Instance);
+        var methods = _implType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .Where(m => m.Name == "FindByNormalizedNameAndUserAsync")
+            .ToList();
 
-        Assert.NotNull(method);
+        Assert.NotEmpty(methods);
+        // Both overloads (with and without CategoryType) must be implemented
+        Assert.True(methods.Count >= 2, $"Expected at least 2 overloads, found {methods.Count}");
     }
 
     // ── AddAsync — updated signature with normalizedName (task 1.8) ──────────

@@ -27,6 +27,13 @@ public interface ICategoryRepository
     Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName, CategoryType type);
 
     /// <summary>
+    /// Find a user-scoped category by normalized deduplication key regardless of type.
+    /// Used as fallback when the type-specific search returns no results,
+    /// preventing duplicate categories with the same name but different types.
+    /// </summary>
+    Task<Category?> FindByNormalizedNameAndUserAsync(UserId userId, string normalizedName);
+
+    /// <summary>
     /// Insert a new category and its pre-computed normalized name.
     /// normalizedName is mandatory — the DB column is NOT NULL after migration 011.
     /// Caller must use CategoryNormalizer.Normalize(category.Name.Value).
