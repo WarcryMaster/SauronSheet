@@ -202,7 +202,8 @@ public class SupabaseAuthService : IAuthService
         }
         catch
         {
-            // Logout errors are non-fatal; session may already be expired
+            // Logout errors are non-fatal; session may already be expired.
+            // Not traced as exception — breadcrumb is sufficient.
         }
     }
 
@@ -245,6 +246,8 @@ public class SupabaseAuthService : IAuthService
         }
         catch
         {
+            // Network or transient errors during refresh are expected (e.g., no connectivity).
+            // Not traced as exception — breadcrumb is sufficient.
             return AuthResult.Failure("Session expired.");
         }
     }

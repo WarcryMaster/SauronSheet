@@ -84,17 +84,17 @@ Si el ítem 3 falla, los ítems 1 y 2 ya se borraron.~~
 
 ## Prioridad Media
 
-### 7. Catch silenciosos en `SupabaseAuthService` sin Sentry
-**Fichero:** `src/SauronSheet.Infrastructure/Auth/SupabaseAuthService.cs`
+~~### 7. Catch silenciosos en `SupabaseAuthService` sin Sentry~~ ✅ Completado
+~~**Fichero:** `src/SauronSheet.Infrastructure/Auth/SupabaseAuthService.cs`~~
 
-Tres métodos tienen `catch { }` vacío que traga excepciones sin enviar a Sentry:
+~~Tres métodos tienen `catch { }` vacío que traga excepciones sin enviar a Sentry:
 - `LogoutAsync` (línea 203) — comentario: "Logout errors are non-fatal"
 - `RefreshTokenAsync` (línea 246)
 - `GetUserProfileAsync` (línea 281)
 
 **Tareas:**
 - Capturar con `SentrySdk.CaptureException` en todos
-- Decidir si relanzar o tragar en cada caso
+- Decidir si relanzar o tragar en cada caso~~
 
 ### 8. Eliminar duplicación de `GetStatusLevel` entre `BudgetCalculationService` y `BudgetService`
 **Ficheros:**
