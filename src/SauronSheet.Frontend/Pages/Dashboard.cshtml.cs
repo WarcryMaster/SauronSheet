@@ -21,7 +21,6 @@ public class DashboardModel : PageModel
     private readonly IMediator _mediator;
 
     public TransactionSummaryDto? Summary { get; set; }
-    public List<CategorySpendingDto> SpendingByCategory { get; set; } = new();
     public List<MonthlyTrendDto> MonthlyTrends { get; set; } = new();
     public List<YearlyComparisonDto> YearlyComparison { get; set; } = new();
     public List<MonthlyCategorySpendingDto> MonthlySpendingByCategory { get; set; } = new();
@@ -49,7 +48,15 @@ public class DashboardModel : PageModel
 
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }
-    public int AnalyticsYear { get; set; }
+
+    /// <summary>Human-readable date range label for chart titles (e.g., "Jan 2025 – Jun 2026").</summary>
+    public string ChartDateRangeLabel { get; set; } = "";
+
+    /// <summary>Year 1 for YoY comparison (ToDate.Year - 1).</summary>
+    public int YoYYear1 => ToDate.Year - 1;
+
+    /// <summary>Year 2 for YoY comparison (ToDate.Year).</summary>
+    public int YoYYear2 => ToDate.Year;
 
     public DashboardModel(IMediator mediator)
     {
@@ -61,12 +68,11 @@ public class DashboardModel : PageModel
         try
         {
             CalculateDateRange();
+            ChartDateRangeLabel = BuildDateRangeLabel();
 
             Summary = await _mediator.Send(new GetTransactionSummaryQuery(FromDate, ToDate));
-            AnalyticsYear = await ResolveAnalyticsYearAsync(Summary);
-            SpendingByCategory = await _mediator.Send(new GetSpendingByCategoryQuery(FromDate, ToDate));
             MonthlyTrends = await _mediator.Send(new GetMonthlyTrendsQuery(FromDate, ToDate));
-            YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(AnalyticsYear - 1, AnalyticsYear));
+            YearlyComparison = await _mediator.Send(new GetYearlyComparisonQuery(YoYYear1, YoYYear2));
             MonthlySpendingByCategory = await _mediator.Send(new GetMonthlySpendingByCategoryQuery(FromDate, ToDate));
             RecentTransactions = await _mediator.Send(new GetRecentTransactionsQuery(10));
 
@@ -129,17 +135,23 @@ public class DashboardModel : PageModel
         };
     }
 
-    private async Task<int> ResolveAnalyticsYearAsync(TransactionSummaryDto? summary)
+    private string BuildDateRangeLabel()
     {
-        var currentYear = DateTime.UtcNow.Year;
-        var shouldUseActualRange = DateFilter == "all" || summary?.TransactionCount == 0;
-
-        if (!shouldUseActualRange)
+        if (FromDate == DateTime.MinValue)
         {
-            return currentYear;
+            return $"Through {ToDate:MMM yyyy}";
         }
 
-        var actualDateRange = await _mediator.Send(new GetTransactionDateRangeQuery());
-        return actualDateRange?.MaxDate.Year ?? currentYear;
+        if (FromDate.Year == ToDate.Year && FromDate.Month == ToDate.Month)
+        {
+            return $"{FromDate:MMM yyyy}";
+        }
+
+        if (FromDate.Year == ToDate.Year)
+        {
+            return $"{FromDate:MMM} – {ToDate:MMM yyyy}";
+        }
+
+        return $"{FromDate:MMM yyyy} – {ToDate:MMM yyyy}";
     }
 }

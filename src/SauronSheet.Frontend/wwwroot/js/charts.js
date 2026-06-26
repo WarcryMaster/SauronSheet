@@ -5,6 +5,13 @@
  *
  * Colors: read from CSS custom properties (DESIGN.md tokens).
  * Fallback hex values provided for when CSS vars are unavailable.
+ *
+ * ## Legend Ordering Contract
+ * The handler (backend) is the single source of truth for dataset/legend order.
+ * Backend MUST sort categories by total amount descending (ties broken by name ascending).
+ * Frontend MUST NOT reorder, sort, or deduplicate datasets — it MUST preserve the
+ * array order received from the server. Chart.js renders legend in dataset insertion
+ * order, so the visual legend will match the handler's sort automatically.
  */
 'use strict';
 
@@ -100,11 +107,17 @@ function destroyAllCharts() {
 
 /**
  * Initialize a stacked area chart for spending by category over months.
+ *
+ * PRECONDITION: monthlyCategoryData MUST be sorted by the handler so that
+ * categories appear in descending total-amount order.
+ * Chart.js renders legend in dataset insertion order — this function MUST NOT
+ * reorder or deduplicate categories. The dataset array is built by iterating
+ * categories in the exact order they first appear in the data.
+ *
  * @param {string} canvasId - Canvas element ID
- * @param {Array} monthlyCategoryData - Array of {month, monthName, categoryName, amount}
- * @param {number} year - Year for x-axis labels (e.g. 2025)
+ * @param {Array<{year: number, month: number, monthName: string, categoryName: string, amount: number}>} monthlyCategoryData
  */
-function initCategoryStackedChart(canvasId, monthlyCategoryData, year) {
+function initCategoryStackedChart(canvasId, monthlyCategoryData) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !monthlyCategoryData || monthlyCategoryData.length === 0) return;
 
@@ -112,20 +125,32 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData, year) {
     const existing = Chart.getChart(canvas);
     if (existing) existing.destroy();
 
-    const months = [...new Set(monthlyCategoryData.map(d => d.month))]
-        .sort((a, b) => a - b);
-    const yearSuffix = year ? ` ${year}` : '';
-    const monthLabels = months.map(m => {
-        const entry = monthlyCategoryData.find(d => d.month === m);
-        return entry ? `${entry.monthName}${yearSuffix}` : `Month ${m}${yearSuffix}`;
+    // Build unique (year, month) period keys, sorted chronologically
+    const periodKeys = [...new Set(monthlyCategoryData.map(d => `${d.year}-${String(d.month).padStart(2, '0')}`))]
+        .sort();
+    const monthLabels = periodKeys.map(key => {
+        const [y, m] = key.split('-');
+        const entry = monthlyCategoryData.find(d => d.year === Number(y) && d.month === Number(m));
+        return entry ? `${entry.monthName} ${y}` : `Month ${m} ${y}`;
     });
 
-    const categories = [...new Set(monthlyCategoryData.map(d => d.categoryName))];
+    // Preserve category order from data — handler controls legend order
+    const categories = [];
+    const seen = new Set();
+    for (const d of monthlyCategoryData) {
+        if (!seen.has(d.categoryName)) {
+            seen.add(d.categoryName);
+            categories.push(d.categoryName);
+        }
+    }
 
     const datasets = categories.map((cat, idx) => {
         const color = designColors[idx % designColors.length];
-        const data = months.map(m => {
-            const entry = monthlyCategoryData.find(d => d.month === m && d.categoryName === cat);
+        const data = periodKeys.map(key => {
+            const [y, m] = key.split('-');
+            const entry = monthlyCategoryData.find(
+                d => d.year === Number(y) && d.month === Number(m) && d.categoryName === cat
+            );
             return entry ? Number(entry.amount) : 0;
         });
 
@@ -173,19 +198,22 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData, year) {
 
 /**
  * Initialize a line chart for monthly spending trends (income vs expenses).
+ *
+ * PRECONDITION: monthlyData is ordered chronologically by the handler.
+ * This function MUST NOT reorder entries. Labels are built from each entry's
+ * own `year` and `monthName` fields to support multi-year ranges.
+ *
  * @param {string} canvasId - Canvas element ID
- * @param {Array} monthlyData - Array of {monthName, totalExpenses, totalIncome}
- * @param {number} year - Year for x-axis labels (e.g. 2025)
+ * @param {Array<{year: number, month: number, monthName: string, totalExpenses: number, totalIncome: number}>} monthlyData
  */
-function initMonthlyTrendsChart(canvasId, monthlyData, year) {
+function initMonthlyTrendsChart(canvasId, monthlyData) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !monthlyData || monthlyData.length === 0) return;
 
     const existing = Chart.getChart(canvas);
     if (existing) existing.destroy();
 
-    const yearSuffix = year ? ` ${year}` : '';
-    const labels = monthlyData.map(d => `${d.monthName}${yearSuffix}`);
+    const labels = monthlyData.map(d => `${d.monthName} ${d.year}`);
 
     const ctx = canvas.getContext('2d');
     new Chart(ctx, {

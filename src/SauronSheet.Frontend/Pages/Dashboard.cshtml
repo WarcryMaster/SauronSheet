@@ -18,29 +18,28 @@
              });
              this.$nextTick(() => this.initCharts());
          },
-         initCharts() {
-             const readJson = (id) => {
-                 const el = document.getElementById(id);
-                 if (!el) return null;
-                 try { return JSON.parse(el.textContent); } catch(e) { return null; }
-             };
-             const monthlyCategoryData = readJson('dashboard-monthly-category-data');
-             const monthlyData = readJson('dashboard-monthly-trends');
-             const yearlyData = readJson('dashboard-yearly-comparison');
+          initCharts() {
+              const readJson = (id) => {
+                  const el = document.getElementById(id);
+                  if (!el) return null;
+                  try { return JSON.parse(el.textContent); } catch(e) { return null; }
+              };
+              const monthlyCategoryData = readJson('dashboard-monthly-category-data');
+              const monthlyData = readJson('dashboard-monthly-trends');
+              const yearlyData = readJson('dashboard-yearly-comparison');
 
-             if (!monthlyCategoryData && !monthlyData && !yearlyData) return;
+              if (!monthlyCategoryData && !monthlyData && !yearlyData) return;
 
-              const analyticsYear = @Model.AnalyticsYear;
-              if (monthlyCategoryData && monthlyCategoryData.length > 0) {
-                  initCategoryStackedChart('categoryStackedChart', monthlyCategoryData, analyticsYear);
+               if (monthlyCategoryData && monthlyCategoryData.length > 0) {
+                   initCategoryStackedChart('categoryStackedChart', monthlyCategoryData);
+               }
+               if (monthlyData && monthlyData.length > 0) {
+                   initMonthlyTrendsChart('monthlyTrendsChart', monthlyData);
+               }
+              if (yearlyData && yearlyData.length > 0) {
+                  initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@Model.YoYYear1', '@Model.YoYYear2');
               }
-              if (monthlyData && monthlyData.length > 0) {
-                  initMonthlyTrendsChart('monthlyTrendsChart', monthlyData, analyticsYear);
-              }
-             if (yearlyData && yearlyData.length > 0) {
-                 initYearlyComparisonChart('yearlyComparisonChart', yearlyData, '@(Model.AnalyticsYear - 1)', '@Model.AnalyticsYear');
-             }
-         }
+          }
      }"
      class="d-flex flex-column gap-4">
 
@@ -156,7 +155,7 @@
             <div class="row g-4">
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                        <h3 class="h6 fw-semibold mb-3">Spending by Category — @Model.AnalyticsYear</h3>
+                        <h3 class="h6 fw-semibold mb-3">Spending by Category — @Model.ChartDateRangeLabel</h3>
                         <div class="chart-wrapper flex-grow-1">
                             @if (Model.MonthlySpendingByCategory.Any())
                             {
@@ -171,7 +170,7 @@
                 </div>
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                        <h3 class="h6 fw-semibold mb-3">Monthly Trends — @Model.AnalyticsYear</h3>
+                        <h3 class="h6 fw-semibold mb-3">Monthly Trends — @Model.ChartDateRangeLabel</h3>
                         <div class="chart-wrapper flex-grow-1">
                             <canvas id="monthlyTrendsChart"></canvas>
                         </div>
@@ -180,7 +179,7 @@
             </div>
 
             <div class="card border-0 shadow-sm p-4">
-                <h3 class="h6 fw-semibold mb-3">Year over Year — @(Model.AnalyticsYear - 1) vs @Model.AnalyticsYear</h3>
+                <h3 class="h6 fw-semibold mb-3">Year over Year — @Model.YoYYear1 vs @Model.YoYYear2</h3>
                 <div class="chart-wrapper" style="height: 320px;">
                     <canvas id="yearlyComparisonChart"></canvas>
                 </div>
@@ -311,9 +310,6 @@
         <!-- JSON data blocks for Chart.js (ADR-0002 compliant) -->
         @if (Model.Summary?.TransactionCount > 0)
         {
-            <script type="application/json" id="dashboard-category-data">
-                @Json.Serialize(Model.SpendingByCategory)
-            </script>
             <script type="application/json" id="dashboard-monthly-category-data">
                 @Json.Serialize(Model.MonthlySpendingByCategory)
             </script>
