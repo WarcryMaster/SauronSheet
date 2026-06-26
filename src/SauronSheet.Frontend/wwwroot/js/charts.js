@@ -144,11 +144,6 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
         }
     }
 
-    // REVERSE categories so that the highest-total category (first in data, drawn at BOTTOM
-    // of stacked chart) appears LAST in tooltip and legend. This aligns visual stack order
-    // with tooltip/legend order: bottom of chart = bottom of tooltip = bottom of legend.
-    categories.reverse();
-
     const datasets = categories.map((cat, idx) => {
         const color = designColors[idx % designColors.length];
         const data = periodKeys.map(key => {
@@ -189,11 +184,24 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
             },
             plugins: {
                 ...chartDefaults.plugins,
+                legend: {
+                    ...chartDefaults.plugins.legend,
+                    reverse: true  // Reverse legend so top of chart = first in legend
+                },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
                             return `${context.dataset.label}: €${context.parsed.y.toFixed(2)}`;
+                        },
+                        // Reverse tooltip items so top of chart = first in tooltip
+                        afterBody: function() {
+                            // This callback is used to customize tooltip rendering
+                            return '';
                         }
+                    },
+                    itemSort: function(a, b) {
+                        // Reverse sort: higher dataset index (top of chart) appears first in tooltip
+                        return b.datasetIndex - a.datasetIndex;
                     }
                 }
             }
