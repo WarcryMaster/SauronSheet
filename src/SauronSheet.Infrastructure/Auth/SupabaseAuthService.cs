@@ -3,6 +3,7 @@ namespace SauronSheet.Infrastructure.Auth;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Sentry;
 using Sentry.Extensibility;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
@@ -246,8 +247,10 @@ public class SupabaseAuthService : IAuthService
         }
         catch
         {
-            // Network or transient errors during refresh are expected (e.g., no connectivity).
-            // Not traced as exception — breadcrumb is sufficient.
+            SentrySdk.AddBreadcrumb(
+                "Refresh token request failed — user will need to re-authenticate",
+                category: "auth",
+                level: BreadcrumbLevel.Warning);
             return AuthResult.Failure("Session expired.");
         }
     }
@@ -283,6 +286,10 @@ public class SupabaseAuthService : IAuthService
         }
         catch
         {
+            SentrySdk.AddBreadcrumb(
+                "GetUserProfile request failed — returning null profile",
+                category: "auth",
+                level: BreadcrumbLevel.Warning);
             return null;
         }
     }

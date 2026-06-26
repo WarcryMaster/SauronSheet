@@ -51,10 +51,7 @@ public class BudgetCalculationService
 
         Money remaining = accumulatedLimit.Minus(spent);
 
-        BudgetStatusLevel statusLevel = percentageUsed < 75m ? BudgetStatusLevel.Green
-            : percentageUsed < 100m ? BudgetStatusLevel.Yellow
-            : percentageUsed == 100m ? BudgetStatusLevel.Red
-            : BudgetStatusLevel.Overage;
+        BudgetStatusLevel statusLevel = BudgetService.GetStatusLevel(percentageUsed / 100m);
 
         return new BudgetCalculationResult(
             PeriodsElapsed: periodsElapsed,
