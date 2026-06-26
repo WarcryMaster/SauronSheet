@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using SauronSheet.Application.Common;
 using SauronSheet.Application.Common.Behaviors;
+using SauronSheet.Application.Features.Analytics.Classification;
 using SauronSheet.Application.Services;
 using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Services;
@@ -36,6 +37,9 @@ public static class DependencyInjection
 
         // Domain services — stateless, registered as singleton
         services.AddSingleton<BudgetCalculationService>();
+
+        // Annual analysis classification engine (PR 2)
+        services.AddSingleton<IAnnualClassificationEngine, AnnualClassificationEngine>();
 
         return services;
     }
