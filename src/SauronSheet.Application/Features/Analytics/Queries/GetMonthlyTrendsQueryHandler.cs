@@ -45,6 +45,14 @@ public class GetMonthlyTrendsQueryHandler
 
         var transactions = await _transactionRepo.FindBySpecificationAsync(composedSpec);
 
+        // Determine effective date range:
+        // - If FromDate is very old (e.g., DateTime.MinValue for "All Time"), use actual transaction dates
+        // - Otherwise, use the requested date range (even if empty, to return zero-filled entries)
+        var isAllTimeRequest = request.FromDate.Year < 1900;
+
+        if (isAllTimeRequest && !transactions.Any())
+            return new List<MonthlyTrendDto>();
+
         // Group by year+month (Spain-local)
         var byYearMonth = transactions
             .GroupBy(t => new
@@ -54,11 +62,26 @@ public class GetMonthlyTrendsQueryHandler
             })
             .ToDictionary(g => (g.Key.Year, g.Key.Month), g => g.ToList());
 
-        // Enumerate all calendar months in the range
-        var startYear = request.FromDate.Year;
-        var startMonth = request.FromDate.Month;
-        var endYear = request.ToDate.Year;
-        var endMonth = request.ToDate.Month;
+        // For "All Time", use actual transaction date range; otherwise use requested range
+        DateTime effectiveFromDate, effectiveToDate;
+        if (isAllTimeRequest)
+        {
+            var actualMinDate = transactions.Min(t => t.Date.ToSpainLocal());
+            var actualMaxDate = transactions.Max(t => t.Date.ToSpainLocal());
+            effectiveFromDate = actualMinDate;
+            effectiveToDate = actualMaxDate;
+        }
+        else
+        {
+            effectiveFromDate = request.FromDate;
+            effectiveToDate = request.ToDate;
+        }
+
+        // Enumerate all calendar months in the effective range
+        var startYear = effectiveFromDate.Year;
+        var startMonth = effectiveFromDate.Month;
+        var endYear = effectiveToDate.Year;
+        var endMonth = effectiveToDate.Month;
 
         var result = new List<MonthlyTrendDto>();
         int year = startYear;
