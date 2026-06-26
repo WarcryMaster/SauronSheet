@@ -13,4 +13,11 @@ public record AnnualAnalysisRowDto(
     string TypeLabel,
     decimal Average,
     IReadOnlyList<decimal> MonthlyAmounts,
-    string Currency);
+    string Currency)
+{
+    /// <summary>
+    /// Returns true when the row represents income (fixed or variable).
+    /// Derived from <see cref="LineType"/>.
+    /// </summary>
+    public bool IsIncome => LineType is AnalysisLineType.IncomeFixed or AnalysisLineType.IncomeVariable;
+}

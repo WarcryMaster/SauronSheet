@@ -11,4 +11,16 @@ public record AnnualAnalysisSummaryDto(
     decimal ExpenseVariable,
     decimal ExpenseTotal,
     decimal Net,
-    string Currency);
+    string Currency)
+{
+    /// <summary>
+    /// Number of distinct months (1-12) with at least one non-zero transaction.
+    /// Defaults to 0 when no data is available.
+    /// </summary>
+    public int MonthsWithData { get; init; }
+
+    /// <summary>
+    /// Year-over-year percentage variation, or null when no previous year data exists.
+    /// </summary>
+    public YearOverYearVariationDto? Variation { get; init; }
+}
