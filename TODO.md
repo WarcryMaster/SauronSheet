@@ -96,8 +96,8 @@ Si el ítem 3 falla, los ítems 1 y 2 ya se borraron.~~
 - Capturar con `SentrySdk.CaptureException` en todos
 - Decidir si relanzar o tragar en cada caso~~
 
-### 8. Eliminar duplicación de `GetStatusLevel` entre `BudgetCalculationService` y `BudgetService`
-**Ficheros:**
+~~### 8. Eliminar duplicación de `GetStatusLevel` entre `BudgetCalculationService` y `BudgetService`~~ ✅ Completado
+~~**Ficheros:**
 - `src/SauronSheet.Domain/Services/BudgetCalculationService.cs` (líneas 54-57)
 - `src/SauronSheet.Domain/Services/BudgetService.cs` (líneas 100-108)
 
@@ -105,14 +105,14 @@ Ambos tienen lógica de thresholds con los mismos valores pero no comparten cód
 
 **Tareas:**
 - Extraer a un método compartido o mover a `BudgetService.GetStatusLevel`
-- Hacer que `BudgetCalculationService` delegue
+- Hacer que `BudgetCalculationService` delegue~~
 
-### 9. Unificar `CategoryName` y `SubcategoryName` en un Value Object común
-**Ficheros:**
+~~### 9. Unificar `CategoryName` y `SubcategoryName` en un Value Object común~~ ✅ Completado
+~~**Ficheros:**
 - `src/SauronSheet.Domain/ValueObjects/CategoryName.cs`
 - `src/SauronSheet.Domain/ValueObjects/SubcategoryName.cs`
 
-Son idénticos: validación no vacío + `.Trim()`. Podrían compartir base o unificarse en un `Name`.
+Son idénticos: validación no vacío + `.Trim()`. Podrían compartir base o unificarse en un `Name`.~~
 
 ### 10. Tests faltantes para handlers existentes
 
