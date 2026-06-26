@@ -437,18 +437,16 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
             Sentry.SentrySdk.Logger?.LogDebug("SupabaseTransactionRepository.DeleteTransactionsByIdsAsync: attempting to delete {0} transactions for user {1}", idList.Count, userId.Value);
 
-            // Postgrest DELETE operation with WHERE clause for multi-tenant isolation and filtering
-            // WHERE user_id = @userId AND id IN (@ids)
-            // Note: We delete by ID directly - Postgrest will execute the delete
-            foreach (var idStr in idStrings)
-            {
-                await _client.From<TransactionRow>()
-                    .Where(x => x.UserId == userId.Value)
-                    .Where(x => x.Id == idStr)
-                    .Delete();
-            }
+            // Single Postgrest DELETE with IN filter — atomic at PostgreSQL level.
+            // Multi-tenant isolation via user_id WHERE clause.
+            // Avoids N individual DELETE queries that could partially fail.
+            var idValues = idStrings.Select(id => (object)id).ToList();
 
-            // Return count of IDs deleted (we deleted one per ID)
+            await _client.From<TransactionRow>()
+                .Where(x => x.UserId == userId.Value)
+                .Filter("id", Constants.Operator.In, idValues)
+                .Delete();
+
             var deletedCount = idStrings.Count;
 
             Sentry.SentrySdk.Logger?.LogInfo("SupabaseTransactionRepository.DeleteTransactionsByIdsAsync: successfully deleted {0} transactions", deletedCount);
