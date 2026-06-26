@@ -151,6 +151,43 @@ var modal = new bootstrap.Modal($('#confirmModal'));
 
 ---
 
+## Charts
+
+All Chart.js instances in SauronSheet are managed by `wwwroot/js/charts.js`. When adding or modifying charts, follow these rules:
+
+### Legend Ordering Contract
+
+**Legend order MUST match dataset order.** The backend handler is the single source of truth for dataset ordering. The frontend MUST NOT reorder, sort, or deduplicate datasets — it MUST preserve the array order received from the server.
+
+- Chart.js renders the legend in dataset insertion order.
+- Handlers MUST sort categories by total amount descending (ties broken by name ascending) before returning data.
+- `initCategoryStackedChart` and `initMonthlyTrendsChart` iterate categories in the exact order they appear in the payload — no frontend sort.
+
+### Extending `charts.js`
+
+When adding a new chart type:
+
+1. Add the init function to `charts.js` (not inline in `.cshtml`).
+2. Document the data contract with JSDoc, including any PRECONDITION on sort order.
+3. Use `destroyAllCharts()` on `htmx:beforeSwap` to prevent memory leaks (already wired in `_Layout.cshtml`).
+4. Resolve colors from CSS custom properties via `cssVar()` — see `DESIGN.md` for the design token palette.
+5. Follow the existing pattern: guard against null canvas, destroy existing instance before recreating.
+
+### Color Tokens
+
+All chart colors come from CSS custom properties defined in `DESIGN.md`. The `tokens` object in `charts.js` maps semantic names (`brand`, `success`, `danger`, `warning`, `info`) to computed CSS values. Never hardcode hex colors in chart config — use `tokens.*` or `designColors[]` for category palettes.
+
+### JSDoc Contract Reference
+
+Every init function in `charts.js` MUST include:
+- A `@param` tag describing the expected data shape.
+- A `PRECONDITION` comment when the function depends on server-side sort order.
+- A note that the function MUST NOT reorder datasets.
+
+See `initCategoryStackedChart` and `initMonthlyTrendsChart` for reference implementations.
+
+---
+
 ## _ViewImports.cshtml
 
 Only one `_ViewImports.cshtml` is allowed, located in `Pages/`. It must include:
