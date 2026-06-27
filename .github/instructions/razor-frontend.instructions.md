@@ -218,6 +218,7 @@ Only one `_ViewImports.cshtml` is allowed, located in `Pages/`. It must include:
 - ❌ `d-flex`, `d-block`, `d-grid` (MDB classes with `!important`) on elements with `x-show` → wrap in inner div
 - ❌ `@Json.Serialize()` inside double-quoted HTML attributes → use single-quoted attributes (`x-data='...'`) and double-quoted JS strings
 - ❌ `@(decimal)` without invariant culture inside JavaScript → use `.ToString(System.Globalization.CultureInfo.InvariantCulture)`
+- ❌ Alpine directives `@click`, `@keydown`, `@change`, etc. WITHOUT double-`@` in Razor → Razor interpreta `@` como código C#. Siempre usa `@@click`, `@@keydown`, `@@change`, `@@submit`, etc. (Razor renderiza `@@` como un solo `@` en el HTML).
 - ❌ `<input type="date">` — use Flatpickr via Alpine.js `x-init` instead
 - ❌ `<template x-for>` inside `<select>` — browsers move `<template>` out of `<select>` in the DOM, breaking Alpine.js. Use `rebuildOptions()` + `x-effect` to rebuild `<option>` elements via DOM manipulation instead (see Budgets/Create.cshtml for the pattern)
 

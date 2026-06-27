@@ -113,22 +113,22 @@
                     <span class="fw-bold">SauronSheet</span>
                 </a>
 
-                <button class="navbar-toggler" type="button" data-mdb-collapse-init data-mdb-target="#navMain"
-                        aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" x-data
+                        @@click="
+                          const el = document.getElementById('mobileOffcanvas');
+                          const inst = mdb.Offcanvas.getInstance(el) || new mdb.Offcanvas(el);
+                          inst.toggle();
+                        "
+                        aria-controls="mobileOffcanvas" aria-expanded="false" aria-label="Toggle navigation">
                     <i class="fas fa-bars"></i>
                 </button>
 
-                <div class="collapse navbar-collapse" id="navMain">
+                <!-- Desktop nav: shown inline on lg+, hidden on mobile via navbar-expand-lg -->
+                <div class="collapse navbar-collapse" id="desktopNav">
                     <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                        @await Html.PartialAsync("~/Pages/Shared/Components/_NavItems.cshtml")
                         @if (User?.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item"><a class="nav-link" href="/dashboard">📊 Dashboard</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/transactions">💳 Transactions</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/transactions/search">🔍 Search</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/transactions/upload">📄 Upload</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/categories">🏷️ Categories</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/budgets">💰 Budgets</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Analysis/Annual">📈 Annual Analysis</a></li>
                             <li class="nav-item d-none d-lg-flex align-items-center border-start border-secondary ps-3 ms-1">
                                 <small class="text-secondary text-truncate"
                                        style="max-width:140px">@User.FindFirst("email")?.Value</small>
@@ -141,7 +141,6 @@
                         }
                         else
                         {
-                            <li class="nav-item"><a class="nav-link" href="/auth/login">Sign In</a></li>
                             <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/auth/register">Get Started</a>
                             </li>
                         }
@@ -149,6 +148,45 @@
                 </div>
             </div>
         </nav>
+
+        <!-- Mobile offcanvas: slides in from the right on mobile (< lg) -->
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileOffcanvas" aria-labelledby="offcanvasLabel">
+            <div class="offcanvas-header border-bottom">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                    <img src="~/img/sauron-sheet-logo.svg" asp-append-version="true" alt="SauronSheet logo" height="28" />
+                    <span class="fw-bold">SauronSheet</span>
+                </a>
+                <button type="button" class="btn-close" aria-label="Close"
+                        x-data
+                        @@click="
+                          const el = document.getElementById('mobileOffcanvas');
+                          const inst = mdb.Offcanvas.getInstance(el);
+                          if (inst) inst.hide();
+                        "></button>
+            </div>
+            <div class="offcanvas-body">
+                <ul class="navbar-nav">
+                    @await Html.PartialAsync("~/Pages/Shared/Components/_NavItems.cshtml")
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        <li class="nav-item border-top mt-3 pt-3">
+                            <small class="text-secondary d-block px-2 pb-2">@User.FindFirst("email")?.Value</small>
+                        </li>
+                        <li class="nav-item">
+                            <form method="post" asp-page="/auth/logout">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Logout</button>
+                            </form>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item mt-2">
+                            <a class="btn btn-sm btn-brand w-100" href="/auth/register">Get Started</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
 
         <main id="main-content" class="flex-grow-1 container-xl px-3 py-4">
             @RenderBody()
