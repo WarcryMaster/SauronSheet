@@ -22,6 +22,9 @@ export default defineConfig({
   // Opt out of parallel tests due to shared database state
   workers: 1,
   
+  // Stop immediately after the first failure to save CI time
+  maxFailures: 1,
+  
   // Reporter to use
   reporter: [
     ['html', { outputFolder: '../test-results/playwright/html' }],

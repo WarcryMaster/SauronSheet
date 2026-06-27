@@ -50,10 +50,6 @@
                       loading: false,
                       openDeleteModal() {
                           new mdb.Modal(document.getElementById('budgetDeleteConfirmModal')).show();
-                      },
-                      confirmDelete() {
-                          mdb.Modal.getInstance(document.getElementById('budgetDeleteConfirmModal'))?.hide();
-                          document.getElementById('budgetDeleteForm').submit();
                       }
                   }" @@submit="loading = true">
                 <input type="hidden" asp-for="BudgetId" />
@@ -122,13 +118,13 @@
                 </div>
             </form>
         </div>
-        <!-- Hidden form for delete submission -->
+        <!-- Hidden form for delete submission (outside x-data — modal cannot reach Alpine @@click) -->
         <form id="budgetDeleteForm" method="post" action="?handler=Delete" style="display:none">
             @Html.AntiForgeryToken()
             <input type="hidden" name="BudgetId" value="@Model.Budget.Id" />
         </form>
 
-        <!-- Delete Confirmation Modal -->
+        <!-- Delete Confirmation Modal (outside x-data — use onclick instead of @@click via Alpine) -->
         <div class="modal fade" id="budgetDeleteConfirmModal" tabindex="-1" aria-labelledby="budgetDeleteConfirmLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -146,7 +142,8 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-mdb-dismiss="modal">
                             ← Cancel
                         </button>
-                        <button type="button" class="btn btn-danger btn-sm" @@click="confirmDelete()">
+                        <button type="button" class="btn btn-danger btn-sm"
+                                onclick="document.getElementById('budgetDeleteForm').submit()">
                             🗑️ Delete
                         </button>
                     </div>

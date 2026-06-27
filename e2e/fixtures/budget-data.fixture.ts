@@ -172,10 +172,24 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     await page.goto('/transactions/add');
     await page.waitForLoadState('domcontentloaded');
 
+    // Wait for Flatpickr to be fully initialized before setting the date.
+    // setDate() crashes internally on mobile Chrome (tabIndex on undefined).
+    // Instead, set the native value and let Flatpickr re-sync.
+    await page.waitForFunction(() => {
+        const el = document.getElementById('Date') as HTMLInputElement | null;
+        return el !== null && (el as any)._flatpickr !== undefined;
+    }, { timeout: 10000 });
     await page.evaluate((dateStr) => {
         const el = document.getElementById('Date') as HTMLInputElement;
         const fp = (el as any)._flatpickr;
-        fp.setDate(dateStr, true);
+        // Bypass setDate() which crashes on mobile Chrome (internal tabIndex on undefined).
+        // Manually set the native value, selectedDates, and let Flatpickr re-sync.
+        el.value = dateStr;
+        const parsed = new Date(dateStr + 'T00:00:00');
+        fp.selectedDates = [parsed];
+        fp.currentYear = parsed.getFullYear();
+        fp.currentMonth = parsed.getMonth();
+        fp.updateValue();
     }, firstDay);
     await page.fill('#Description',  FIXTURE_TX_DESCRIPTION);
     await page.fill('#Amount',       '-25');

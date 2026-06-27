@@ -18,6 +18,7 @@
  */
 
 import { test, expect } from '../fixtures/auth.fixture';
+import { setFlatpickrDate } from '../helpers';
 
 const currentYear = new Date().getFullYear();
 const emptyYear = 1999;
@@ -31,11 +32,7 @@ test.describe('Annual Analysis', () => {
 
         // Flatpickr date input — use Flatpickr API as required by project conventions
         const firstDayOfYear = `${currentYear}-01-15`;
-        await page.evaluate((dateStr) => {
-            const el = document.getElementById('Date') as HTMLInputElement;
-            const fp = (el as any)._flatpickr;
-            fp.setDate(dateStr, true);
-        }, firstDayOfYear);
+        await setFlatpickrDate(page, 'Date', firstDayOfYear);
 
         await page.fill('#Description', 'E2E Annual Analysis layout');
         await page.fill('#Amount', '-50');

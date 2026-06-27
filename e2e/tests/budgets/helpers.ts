@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
+import { setFlatpickrDate } from '../../helpers';
 
 export function getCurrentBudgetMonth(): { year: number; monthNumber: number; month: string; firstDay: string } {
     const now = new Date();
@@ -66,11 +67,7 @@ export async function ensureBudgetExists(page: Page, categoryName: string, limit
     await page.fill('#LimitAmount', limitAmount);
 
     // EffectiveFrom is a Flatpickr input — use Flatpickr API
-    await page.evaluate((dateStr) => {
-        const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-        const fp = (el as any)._flatpickr;
-        fp.setDate(dateStr, true);
-    }, currentMonth.firstDay);
+    await setFlatpickrDate(page, 'EffectiveFrom', currentMonth.firstDay);
 
     await page.selectOption('#PeriodGranularity', 'Monthly');
 

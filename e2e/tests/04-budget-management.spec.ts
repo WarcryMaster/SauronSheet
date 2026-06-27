@@ -19,6 +19,7 @@
 
 import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_A, E2E_CAT_B } from '../fixtures/budget-data.fixture';
 import { budgetRow, ensureBudgetDeleted, ensureBudgetExists, ensureBudgetStatus, getCurrentBudgetMonth } from './budgets/helpers';
+import { setFlatpickrDate } from '../helpers';
 
 test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
@@ -79,11 +80,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
             const effectiveFrom = `${year}-${month}-01`;
-            await page.evaluate((dateStr) => {
-                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-                const fp = (el as any)._flatpickr;
-                fp.setDate(dateStr, true);
-            }, effectiveFrom);
+            await setFlatpickrDate(page, 'EffectiveFrom', effectiveFrom);
 
             await page.selectOption('#PeriodGranularity', 'Monthly');
 
@@ -146,11 +143,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         const currentMonth = getCurrentBudgetMonth();
 
         // EffectiveFrom is a Flatpickr input — use Flatpickr API
-        await page.evaluate((dateStr) => {
-            const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-            const fp = (el as any)._flatpickr;
-            fp.setDate(dateStr, true);
-        }, currentMonth.firstDay);
+        await setFlatpickrDate(page, 'EffectiveFrom', currentMonth.firstDay);
 
         await page.selectOption('#PeriodGranularity', 'Monthly');
 
@@ -203,11 +196,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             const month = String(now.getMonth() + 1).padStart(2, '0');
             await page.fill('#LimitAmount', '100.00');
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
-            await page.evaluate((dateStr) => {
-                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-                const fp = (el as any)._flatpickr;
-                fp.setDate(dateStr, true);
-            }, `${year}-${month}-01`);
+            await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
@@ -295,11 +284,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             const month = String(now.getMonth() + 1).padStart(2, '0');
             await page.fill('#LimitAmount', '100.00');
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
-            await page.evaluate((dateStr) => {
-                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-                const fp = (el as any)._flatpickr;
-                fp.setDate(dateStr, true);
-            }, `${year}-${month}-01`);
+            await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 
@@ -387,11 +372,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             const month = String(now.getMonth() + 1).padStart(2, '0');
             await page.fill('#LimitAmount', '100.00');
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
-            await page.evaluate((dateStr) => {
-                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-                const fp = (el as any)._flatpickr;
-                fp.setDate(dateStr, true);
-            }, `${year}-${month}-01`);
+            await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.getByRole('button', { name: 'Create Budget' }).click();
 

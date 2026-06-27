@@ -26,6 +26,7 @@
 
 import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_B } from '../fixtures/budget-data.fixture';
 import { ensureBudgetDeleted, ensureBudgetExists, getCurrentBudgetMonth } from './budgets/helpers';
+import { setFlatpickrDate } from '../helpers';
 
 test.describe('Budgets — monthly budget management (clarify-budgets-feature)', () => {
 
@@ -93,11 +94,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
 
             // EffectiveFrom is a Flatpickr input (hidden alt input) — use Flatpickr API
             const effectiveFrom = `${year}-${month}-01`;
-            await page.evaluate((dateStr) => {
-                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-                const fp = (el as any)._flatpickr;
-                fp.setDate(dateStr, true);
-            }, effectiveFrom);
+            await setFlatpickrDate(page, 'EffectiveFrom', effectiveFrom);
 
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '100.00');
@@ -261,11 +258,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             await categorySelect.selectOption(catBValue!);
 
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
-            await page.evaluate((dateStr) => {
-                const el = document.getElementById('EffectiveFrom') as HTMLInputElement;
-                const fp = (el as any)._flatpickr;
-                fp.setDate(dateStr, true);
-            }, `${year}-${month}-01`);
+            await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '50.00');
             await page.getByRole('button', { name: 'Create Budget' }).click();
