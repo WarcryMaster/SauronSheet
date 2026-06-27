@@ -147,7 +147,7 @@
                         <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-primary"
                              data-testid="annual-kpi-net"
                              x-data="{ display: 0, target: @((summary?.Net ?? 0m).ToString(CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Net</div>
+                            <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
                             <div class="h4 fw-bold @(summary?.Net >= 0 ? "text-success" : "text-danger") mb-0">
                                 <span x-text="'€' + display.toFixed(2)"></span>
                             </div>
