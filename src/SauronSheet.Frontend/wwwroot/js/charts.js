@@ -359,6 +359,122 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
 }
 
 /**
+ * Initialize the annual trend line chart (income vs expense over 12 months).
+ *
+ * PRECONDITION: data.income and data.expense MUST contain exactly 12 values,
+ * indexed January (0) to December (11). The handler is the source of truth
+ * for the monthly order; this function MUST NOT reorder the arrays.
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas element reference (from Alpine.js $refs)
+ * @param {{labels: string[], income: number[], expense: number[]}} data - Parsed JSON payload
+ */
+function initAnnualTrendChart(canvas, data) {
+    if (!canvas || !data || !Array.isArray(data.labels) || data.labels.length === 0) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: data.income,
+                    borderColor: tokens.success,
+                    backgroundColor: hexToRgba(tokens.success, 0.1),
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
+                },
+                {
+                    label: 'Expenses',
+                    data: data.expense,
+                    borderColor: tokens.danger,
+                    backgroundColor: hexToRgba(tokens.danger, 0.1),
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+            ...chartDefaults,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            }
+        }
+    });
+}
+
+/**
+ * Initialize the annual fixed/variable distribution donut chart.
+ *
+ * PRECONDITION: data.values MUST contain exactly 4 values in this order:
+ * Income Fixed, Income Variable, Expense Fixed, Expense Variable. The handler
+ * controls the order; this function MUST NOT reorder or deduplicate segments.
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas element reference (from Alpine.js $refs)
+ * @param {{labels: string[], values: number[]}} data - Parsed JSON payload
+ */
+function initAnnualDistributionChart(canvas, data) {
+    if (!canvas || !data || !Array.isArray(data.values) || data.values.length === 0) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const donutColors = [
+        tokens.success,
+        hexToRgba(tokens.success, 0.65),
+        tokens.danger,
+        hexToRgba(tokens.danger, 0.65)
+    ];
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: donutColors,
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return `${context.label}: €${Number(context.parsed).toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
  * Convert a hex color to rgba string with given alpha.
  * @param {string} hex — e.g. "#556B2F"
  * @param {number} alpha — 0..1
