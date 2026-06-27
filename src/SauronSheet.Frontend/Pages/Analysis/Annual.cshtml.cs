@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Linq;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -47,6 +49,64 @@ public class AnnualModel : PageModel
     public IReadOnlyList<AnnualAnalysisRowDto> ExpenseRows =>
         Result?.Rows.Where(r => !r.IsIncome).ToArray()
         ?? Array.Empty<AnnualAnalysisRowDto>();
+
+    /// <summary>
+    /// Monthly aggregates across all income rows (12 entries, index 0 = January).
+    /// </summary>
+    public decimal[] MonthlyIncomeTotals => HasData
+        ? Enumerable.Range(0, 12)
+            .Select(month => Result!.Rows
+                .Where(r => r.IsIncome)
+                .Sum(r => r.MonthlyAmounts[month]))
+            .ToArray()
+        : new decimal[12];
+
+    /// <summary>
+    /// Monthly aggregates across all expense rows (12 entries, index 0 = January).
+    /// </summary>
+    public decimal[] MonthlyExpenseTotals => HasData
+        ? Enumerable.Range(0, 12)
+            .Select(month => Result!.Rows
+                .Where(r => !r.IsIncome)
+                .Sum(r => r.MonthlyAmounts[month]))
+            .ToArray()
+        : new decimal[12];
+
+    /// <summary>
+    /// JSON for the monthly trend line chart.
+    /// </summary>
+    public string ChartDataJson => HasData
+        ? JsonSerializer.Serialize(new
+        {
+            labels = new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" },
+            income = MonthlyIncomeTotals,
+            expense = MonthlyExpenseTotals
+        })
+        : "{}";
+
+    /// <summary>
+    /// JSON for the fixed/variable distribution donut chart.
+    /// </summary>
+    public string FixedVariableChartJson => HasData
+        ? JsonSerializer.Serialize(new
+        {
+            labels = new[] { "Ingreso Fijo", "Ingreso Variable", "Gasto Fijo", "Gasto Variable" },
+            values = new[]
+            {
+                Result!.Summary.IncomeFixed,
+                Result!.Summary.IncomeVariable,
+                Result!.Summary.ExpenseFixed,
+                Result!.Summary.ExpenseVariable
+            }
+        })
+        : "{}";
+
+    /// <summary>
+    /// Fixed cost percentage with zero guard.
+    /// </summary>
+    public decimal FixedCostPercentage => HasData && Result!.Summary.ExpenseTotal > 0
+        ? Math.Round(Result.Summary.ExpenseFixed / Result.Summary.ExpenseTotal * 100m, 1)
+        : 0m;
 
     /// <summary>
     /// User-facing error message for domain rule violations.
