@@ -9,4 +9,5 @@ using MediatR;
 /// </summary>
 public record ImportTransactionsCommand(
     Stream FileStream,
-    string Filename) : IRequest<ImportResultDto>;
+    string Filename,
+    string? UploadId = null) : IRequest<ImportResultDto>;

@@ -39,6 +39,7 @@ public class ImportTransactionsCommandHandler
     private readonly IUserProfileRepository _userProfileRepo;
     private readonly IUserContext _userContext;
     private readonly IBankCategoryResolutionService _resolutionService;
+    private readonly IImportProgressTracker? _progressTracker;
 
     public ImportTransactionsCommandHandler(
         IStatementParser statementParser,
@@ -46,7 +47,8 @@ public class ImportTransactionsCommandHandler
         IImportBatchRepository importBatchRepo,
         IUserProfileRepository userProfileRepo,
         IUserContext userContext,
-        IBankCategoryResolutionService resolutionService)
+        IBankCategoryResolutionService resolutionService,
+        IImportProgressTracker? progressTracker = null)
     {
         _statementParser = statementParser;
         _transactionRepo = transactionRepo;
@@ -54,6 +56,7 @@ public class ImportTransactionsCommandHandler
         _userProfileRepo = userProfileRepo;
         _userContext = userContext;
         _resolutionService = resolutionService;
+        _progressTracker = progressTracker;
     }
 
     public async Task<ImportResultDto> Handle(
@@ -145,156 +148,227 @@ public class ImportTransactionsCommandHandler
                 skippedCount++;
             }
 
-            // Process validated rows.
-            foreach (var row in parseResult.Rows)
+            int totalRows = parseResult.Rows.Count + parseResult.RowErrors.Count + parseResult.SkippedCount;
+            int processedCount = parseResult.RowErrors.Count + parseResult.SkippedCount;
+
+            if (_progressTracker != null && request.UploadId != null)
             {
-                try
-                {
-                    // Parse date. Parser guarantees dd/MM/yyyy for rows in result.Rows.
-                    if (!DateTime.TryParseExact(
-                            row.Date,
-                            new[] { "dd/MM/yyyy", "d/M/yyyy" },
-                            CultureInfo.InvariantCulture,
-                            DateTimeStyles.None,
-                            out var date))
-                    {
-                        errors.Add(new ImportRowErrorDto(
-                            row.RowNumber,
-                            row.Date ?? string.Empty,
-                            "Invalid date format"));
-                        skippedCount++;
-                        continue;
-                    }
-
-                    // TZ-FIX: Normalize to UTC so TIMESTAMPTZ stores it correctly.
-                    // ParseExact with no timezone info produces Unspecified Kind,
-                    // which would be interpreted as local time by PostgreSQL.
-                    date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
-
-                    // Parse amount. Parser guarantees parseable values for rows in result.Rows.
-                    if (!TryParseAmount(row.Amount, out var amount))
-                    {
-                        errors.Add(new ImportRowErrorDto(
-                            row.RowNumber,
-                            row.Amount ?? string.Empty,
-                            "Invalid amount format"));
-                        skippedCount++;
-                        continue;
-                    }
-
-                    // Parse balance (nullable — not all statements provide it).
-                    decimal? balance = null;
-                    if (!string.IsNullOrWhiteSpace(row.Balance)
-                        && TryParseAmount(row.Balance, out var parsedBalance))
-                    {
-                        balance = parsedBalance;
-                    }
-
-                    // Check cross-store duplicates (date + amount + description + balance).
-                    var isDuplicate = await _transactionRepo.ExistsDuplicateAsync(
-                        userId, date, amount, row.Description ?? string.Empty, balance);
-
-                    if (isDuplicate)
-                    {
-                        errors.Add(new ImportRowErrorDto(
-                            row.RowNumber,
-                            $"{date:yyyy-MM-dd} | {row.Description} | {amount}",
-                            "Duplicate"));
-                        skippedCount++;
-                        continue;
-                    }
-
-                    // Resolve bank category via get-or-add (spec PCE-3 / PCE-4).
-                    var resolution = await _resolutionService.ResolveOrCreateAsync(
-                        userId, row.Category, row.SubCategory, amount, cancellationToken);
-
-                    // Persist transaction.
-                    // CR-1c: trim bank category/subcategory to remove any surrounding whitespace.
-                    var transaction = new Transaction(
-                        new TransactionId(Guid.NewGuid()),
-                        userId,
-                        new Money(amount, row.Currency ?? "EUR"),
-                        date,
-                        row.Description ?? string.Empty,
-                        categoryId: resolution.CategoryId,
-                        importedFrom: request.Filename,
-                        bankCategory: row.Category?.Trim(),
-                        bankSubcategory: row.SubCategory?.Trim(),
-                        subcategoryId: resolution.SubcategoryId,
-                        categorySource: resolution.CategorySource,
-                        balance: balance);
-
-                    await _transactionRepo.AddAsync(transaction);
-                    importedCount++;
-                }
-                catch (DomainException ex)
-                {
-                    errors.Add(new ImportRowErrorDto(
-                        row.RowNumber,
-                        $"{row.Date} | {row.Description} | {row.Amount}",
-                        ex.Message));
-                    skippedCount++;
-                }
+                await _progressTracker.InitializeAsync(
+                    request.UploadId,
+                    request.Filename,
+                    totalRows,
+                    _userContext.UserId,
+                    request.Filename,
+                    currentFileIndex: 1,
+                    totalFiles: 1,
+                    cancellationToken);
             }
 
-            // Persist import-batch metadata.
-            var importBatch = new ImportBatch(
-                Guid.NewGuid(),
-                request.Filename,
-                importedCount,
-                skippedCount,
-                DateTime.UtcNow);
-
-            await _importBatchRepo.AddAsync(importBatch, userId);
-
-            // ── Sentry observability: import completed ────────────────────────────
-            SentrySdk.Logger?.LogInfo(
-                "ImportTransactionsCommandHandler: import completed — {0}: {1} imported, {2} skipped, {3} errors",
-                request.Filename, importedCount, skippedCount, errors.Count);
-
-            SentrySdk.AddBreadcrumb(
-                $"Excel import completed: {importedCount} imported, {skippedCount} skipped",
-                "import",
-                level: BreadcrumbLevel.Info,
-                data: new Dictionary<string, string>
-                {
-                    { "filename", request.Filename },
-                    { "imported", importedCount.ToString() },
-                    { "skipped", skippedCount.ToString() },
-                    { "errors", errors.Count.ToString() }
-                });
-
-            SentrySdk.Experimental.Metrics.EmitCounter(
-                "app.import.completed",
-                1.0,
-                new KeyValuePair<string, object>[]
-                {
-                    new("ext", fileExt),
-                    new("result", errors.Count == 0 ? "success" : "partial_success")
-                });
-
-            if (importedCount > 0)
+            try
             {
-                SentrySdk.Experimental.Metrics.EmitCounter(
-                    "app.import.rows_imported",
+                // Process validated rows.
+                foreach (var row in parseResult.Rows)
+                {
+                    processedCount++;
+
+                    try
+                    {
+                        // Parse date. Parser guarantees dd/MM/yyyy for rows in result.Rows.
+                        if (!DateTime.TryParseExact(
+                                row.Date,
+                                new[] { "dd/MM/yyyy", "d/M/yyyy" },
+                                CultureInfo.InvariantCulture,
+                                DateTimeStyles.None,
+                                out var date))
+                        {
+                            errors.Add(new ImportRowErrorDto(
+                                row.RowNumber,
+                                row.Date ?? string.Empty,
+                                "Invalid date format"));
+                            skippedCount++;
+                            await ReportProgressIfActiveAsync(
+                                request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
+                            continue;
+                        }
+
+                        // TZ-FIX: Normalize to UTC so TIMESTAMPTZ stores it correctly.
+                        // ParseExact with no timezone info produces Unspecified Kind,
+                        // which would be interpreted as local time by PostgreSQL.
+                        date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+
+                        // Parse amount. Parser guarantees parseable values for rows in result.Rows.
+                        if (!TryParseAmount(row.Amount, out var amount))
+                        {
+                            errors.Add(new ImportRowErrorDto(
+                                row.RowNumber,
+                                row.Amount ?? string.Empty,
+                                "Invalid amount format"));
+                            skippedCount++;
+                            await ReportProgressIfActiveAsync(
+                                request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
+                            continue;
+                        }
+
+                        // Parse balance (nullable — not all statements provide it).
+                        decimal? balance = null;
+                        if (!string.IsNullOrWhiteSpace(row.Balance)
+                            && TryParseAmount(row.Balance, out var parsedBalance))
+                        {
+                            balance = parsedBalance;
+                        }
+
+                        // Check cross-store duplicates (date + amount + description + balance).
+                        var isDuplicate = await _transactionRepo.ExistsDuplicateAsync(
+                            userId, date, amount, row.Description ?? string.Empty, balance);
+
+                        if (isDuplicate)
+                        {
+                            errors.Add(new ImportRowErrorDto(
+                                row.RowNumber,
+                                $"{date:yyyy-MM-dd} | {row.Description} | {amount}",
+                                "Duplicate"));
+                            skippedCount++;
+                            await ReportProgressIfActiveAsync(
+                                request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
+                            continue;
+                        }
+
+                        // Resolve bank category via get-or-add (spec PCE-3 / PCE-4).
+                        var resolution = await _resolutionService.ResolveOrCreateAsync(
+                            userId, row.Category, row.SubCategory, amount, cancellationToken);
+
+                        // Persist transaction.
+                        // CR-1c: trim bank category/subcategory to remove any surrounding whitespace.
+                        var transaction = new Transaction(
+                            new TransactionId(Guid.NewGuid()),
+                            userId,
+                            new Money(amount, row.Currency ?? "EUR"),
+                            date,
+                            row.Description ?? string.Empty,
+                            categoryId: resolution.CategoryId,
+                            importedFrom: request.Filename,
+                            bankCategory: row.Category?.Trim(),
+                            bankSubcategory: row.SubCategory?.Trim(),
+                            subcategoryId: resolution.SubcategoryId,
+                            categorySource: resolution.CategorySource,
+                            balance: balance);
+
+                        await _transactionRepo.AddAsync(transaction);
+                        importedCount++;
+                    }
+                    catch (DomainException ex)
+                    {
+                        errors.Add(new ImportRowErrorDto(
+                            row.RowNumber,
+                            $"{row.Date} | {row.Description} | {row.Amount}",
+                            ex.Message));
+                        skippedCount++;
+                    }
+
+                    await ReportProgressIfActiveAsync(
+                        request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
+                }
+
+                // Persist import-batch metadata.
+                var importBatch = new ImportBatch(
+                    Guid.NewGuid(),
+                    request.Filename,
                     importedCount,
-                    new KeyValuePair<string, object>[] { new("ext", fileExt) });
-            }
-            // ─────────────────────────────────────────────────────────────────────
+                    skippedCount,
+                    DateTime.UtcNow);
 
-            return new ImportResultDto(
-                importedCount,
-                skippedCount,
-                importedCount + skippedCount,
-                request.Filename,
-                DateTime.UtcNow,
-                errors);
+                await _importBatchRepo.AddAsync(importBatch, userId);
+
+                // ── Sentry observability: import completed ────────────────────────────
+                SentrySdk.Logger?.LogInfo(
+                    "ImportTransactionsCommandHandler: import completed — {0}: {1} imported, {2} skipped, {3} errors",
+                    request.Filename, importedCount, skippedCount, errors.Count);
+
+                SentrySdk.AddBreadcrumb(
+                    $"Excel import completed: {importedCount} imported, {skippedCount} skipped",
+                    "import",
+                    level: BreadcrumbLevel.Info,
+                    data: new Dictionary<string, string>
+                    {
+                        { "filename", request.Filename },
+                        { "imported", importedCount.ToString() },
+                        { "skipped", skippedCount.ToString() },
+                        { "errors", errors.Count.ToString() }
+                    });
+
+                SentrySdk.Experimental.Metrics.EmitCounter(
+                    "app.import.completed",
+                    1.0,
+                    new KeyValuePair<string, object>[]
+                    {
+                        new("ext", fileExt),
+                        new("result", errors.Count == 0 ? "success" : "partial_success")
+                    });
+
+                if (importedCount > 0)
+                {
+                    SentrySdk.Experimental.Metrics.EmitCounter(
+                        "app.import.rows_imported",
+                        importedCount,
+                        new KeyValuePair<string, object>[] { new("ext", fileExt) });
+                }
+                // ─────────────────────────────────────────────────────────────────────
+
+                if (_progressTracker != null && request.UploadId != null)
+                {
+                    await _progressTracker.CompleteAsync(request.UploadId);
+                }
+
+                return new ImportResultDto(
+                    importedCount,
+                    skippedCount,
+                    importedCount + skippedCount,
+                    request.Filename,
+                    DateTime.UtcNow,
+                    errors);
+            }
+            catch (Exception ex)
+            {
+                if (_progressTracker != null && request.UploadId != null)
+                {
+                    await _progressTracker.FailAsync(request.UploadId, ex.Message);
+                }
+
+                throw;
+            }
         }
         finally
         {
             Thread.CurrentThread.CurrentCulture = previousCulture;
             Thread.CurrentThread.CurrentUICulture = previousCulture;
         }
+    }
+
+    private async Task ReportProgressIfActiveAsync(
+        string? uploadId,
+        int totalRows,
+        int processedRows,
+        int importedCount,
+        int skippedCount,
+        CancellationToken cancellationToken)
+    {
+        if (_progressTracker == null || uploadId == null)
+        {
+            return;
+        }
+
+        bool shouldReport = totalRows <= 100 || processedRows % 10 == 0;
+        if (!shouldReport)
+        {
+            return;
+        }
+
+        await _progressTracker.ReportProgressAsync(
+            uploadId,
+            processedRows,
+            importedCount,
+            skippedCount,
+            ct: cancellationToken);
     }
 
     /// <summary>

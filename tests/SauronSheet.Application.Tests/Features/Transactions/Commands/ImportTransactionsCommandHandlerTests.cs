@@ -26,6 +26,7 @@ using Xunit;
 ///   IH-2g (parser RowErrors appear in ImportResultDto.Errors)
 ///   IH-2h (in-file skipped count reflected in result.SkippedCount)
 ///   IH-2i (category resolution mapped to Transaction)
+///   T-PROG-003: progress tracker integration
 /// </summary>
 [Trait("Category", "Application")]
 public class ImportTransactionsCommandHandlerTests
@@ -36,6 +37,7 @@ public class ImportTransactionsCommandHandlerTests
     private readonly Mock<IUserProfileRepository> _mockUserProfileRepo;
     private readonly Mock<IUserContext> _mockUserContext;
     private readonly Mock<IBankCategoryResolutionService> _mockResolutionService;
+    private readonly Mock<IImportProgressTracker> _mockProgressTracker;
 
     public ImportTransactionsCommandHandlerTests()
     {
@@ -45,6 +47,7 @@ public class ImportTransactionsCommandHandlerTests
         _mockUserProfileRepo = new Mock<IUserProfileRepository>();
         _mockUserContext = new Mock<IUserContext>();
         _mockResolutionService = new Mock<IBankCategoryResolutionService>();
+        _mockProgressTracker = new Mock<IImportProgressTracker>();
 
         _mockUserContext.Setup(x => x.UserId).Returns("test-user-id");
         _mockUserContext.Setup(x => x.UserEmail).Returns("test@example.com");
@@ -68,7 +71,18 @@ public class ImportTransactionsCommandHandlerTests
             _mockImportBatchRepo.Object,
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
-            _mockResolutionService.Object);
+            _mockResolutionService.Object,
+            null);
+
+    private ImportTransactionsCommandHandler CreateHandlerWithTracker() =>
+        new(
+            _mockParser.Object,
+            _mockTransactionRepo.Object,
+            _mockImportBatchRepo.Object,
+            _mockUserProfileRepo.Object,
+            _mockUserContext.Object,
+            _mockResolutionService.Object,
+            _mockProgressTracker.Object);
 
     // ── IH-2a: Happy path ────────────────────────────────────────────────────
 
@@ -477,5 +491,147 @@ public class ImportTransactionsCommandHandlerTests
         Assert.Equal(1, captured.Date.Month);
         Assert.Equal(2024, captured.Date.Year);
         Assert.Equal(0, captured.Date.Hour);
+    }
+
+    // ── T-PROG-003: progress tracker integration ─────────────────────────────
+
+    /// <summary>
+    /// T-PROG-003: When UploadId is provided, the handler initializes progress,
+    /// reports progress during row processing, and completes when finished.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithUploadId_ReportsProgressAndCompletes()
+    {
+        // Arrange
+        var rows = new List<RawTransactionRow>
+        {
+            new(1, "01/01/2024", null, null, "Coffee shop", null, "-5.50", null),
+            new(2, "02/01/2024", null, null, "Salary deposit", null, "2000.00", null),
+            new(3, "03/01/2024", null, null, "Grocery", null, "-25.00", null),
+        };
+        var parseResult = new StatementParseResult(rows, Array.Empty<StatementParseRowError>(), 0);
+
+        _mockParser
+            .Setup(x => x.ParseAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ReturnsAsync(parseResult);
+
+        var command = new ImportTransactionsCommand(new MemoryStream(), "statement.xlsx", "upload-123");
+
+        // Act
+        var result = await CreateHandlerWithTracker().Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(3, result.ImportedCount);
+        _mockProgressTracker.Verify(
+            x => x.InitializeAsync(
+                "upload-123",
+                "statement.xlsx",
+                3,
+                "test-user-id",
+                "statement.xlsx",
+                1,
+                1,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockProgressTracker.Verify(
+            x => x.ReportProgressAsync(
+                "upload-123",
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
+        _mockProgressTracker.Verify(
+            x => x.CompleteAsync("upload-123"),
+            Times.Once);
+        _mockProgressTracker.Verify(
+            x => x.FailAsync(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// T-PROG-003: When UploadId is null, the tracker must NOT be invoked.
+    /// Backward compatibility with existing call sites and tests.
+    /// </summary>
+    [Fact]
+    public async Task Handle_UploadIdNull_DoesNotCallProgressTracker()
+    {
+        // Arrange
+        var rows = new List<RawTransactionRow>
+        {
+            new(1, "01/01/2024", null, null, "Coffee shop", null, "-5.50", null),
+        };
+        var parseResult = new StatementParseResult(rows, Array.Empty<StatementParseRowError>(), 0);
+
+        _mockParser
+            .Setup(x => x.ParseAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ReturnsAsync(parseResult);
+
+        var command = new ImportTransactionsCommand(new MemoryStream(), "statement.xlsx", null);
+
+        // Act
+        await CreateHandlerWithTracker().Handle(command, CancellationToken.None);
+
+        // Assert
+        _mockProgressTracker.Verify(
+            x => x.InitializeAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockProgressTracker.Verify(
+            x => x.ReportProgressAsync(
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockProgressTracker.Verify(
+            x => x.CompleteAsync(It.IsAny<string>()),
+            Times.Never);
+        _mockProgressTracker.Verify(
+            x => x.FailAsync(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// T-PROG-003: If an exception occurs after progress was initialized,
+    /// the tracker receives FailAsync with the error message and the original exception still propagates.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithUploadId_ExceptionAfterInit_CallsFailAsyncAndRethrows()
+    {
+        // Arrange
+        var rows = new List<RawTransactionRow>
+        {
+            new(1, "01/01/2024", null, null, "Coffee shop", null, "-5.50", null),
+        };
+        var parseResult = new StatementParseResult(rows, Array.Empty<StatementParseRowError>(), 0);
+
+        _mockParser
+            .Setup(x => x.ParseAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ReturnsAsync(parseResult);
+        _mockTransactionRepo
+            .Setup(x => x.AddAsync(It.IsAny<Transaction>()))
+            .ThrowsAsync(new InvalidOperationException("Simulated persistence failure"));
+
+        var command = new ImportTransactionsCommand(new MemoryStream(), "statement.xlsx", "upload-fail");
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateHandlerWithTracker().Handle(command, CancellationToken.None));
+
+        Assert.Equal("Simulated persistence failure", ex.Message);
+        _mockProgressTracker.Verify(
+            x => x.FailAsync("upload-fail", It.Is<string>(m => m.Contains("Simulated persistence failure"))),
+            Times.Once);
     }
 }
