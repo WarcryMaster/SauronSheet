@@ -334,6 +334,180 @@
                     </template>
                 </div>
 
+                @* ── Detail Toggle ── *@
+                <div class="d-flex justify-content-center">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-testid="annual-detail-toggle"
+                            @@click="toggleDetail()"
+                            @@keydown.enter="toggleDetail()"
+                            @@keydown.space.prevent="toggleDetail()"
+                            tabindex="0"
+                            :aria-expanded="showDetail">
+                        <span x-show="!showDetail">📂 Mostrar detalle</span>
+                        <span x-show="showDetail">📁 Ocultar detalle</span>
+                    </button>
+                </div>
+
+                @* ── Detail Tables ── *@
+                <div x-show="showDetail" x-transition.opacity>
+                    <div class="d-flex flex-column gap-4">
+
+                        @* Income Table *@
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="h6 fw-semibold mb-3 text-success">Income Detail</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0"
+                                           aria-label="Annual income detail"
+                                           data-testid="annual-income-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
+                                                <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
+                                                <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
+                                                <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
+                                                <th class="text-uppercase small fw-semibold text-muted text-end">Variación YoY</th>
+                                            </tr>
+                                        </thead>
+                                        <template x-for="row in incomeRows" :key="row.movement">
+                                            <tbody>
+                                                <tr role="button" tabindex="0"
+                                                    @@click="toggleRow(row)"
+                                                    @@keydown.enter="toggleRow(row)"
+                                                    @@keydown.space.prevent="toggleRow(row)"
+                                                    class="cursor-pointer"
+                                                    :aria-expanded="row.expanded">
+                                                    <td class="fw-medium">
+                                                        <span x-text="row.expanded ? '▼' : '▶'" class="me-2"></span>
+                                                        <span x-text="row.movement"></span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge"
+                                                              :class="row.typeLabel.includes('Fijo') ? 'bg-success' : 'bg-warning'"
+                                                              x-text="row.typeLabel"></span>
+                                                    </td>
+                                                    <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
+                                                    <td class="text-end" x-text="formatCurrency(row.average)"></td>
+                                                    <td class="text-end">
+                                                        @if (hasVariation)
+                                                        {
+                                                            <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeTotalPct, true)">
+                                                                @AnnualModel.GetVariationArrow(variation.IncomeTotalPct) @AnnualModel.FormatVariationPct(variation.IncomeTotalPct)
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary">N/A</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                <tr x-show="row.expanded" x-transition>
+                                                    <td colspan="5" class="p-3 bg-light">
+                                                        <div class="d-flex flex-column gap-1">
+                                                            <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <small class="text-muted" style="width: 24px;"
+                                                                           x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
+                                                                    <div class="flex-grow-1 bg-white rounded">
+                                                                        <div class="mini-bar"
+                                                                             :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
+                                                                             :style="'width: ' + getBarWidth(amount, getRowMax(row)) + '%'">
+                                                                        </div>
+                                                                    </div>
+                                                                    <small class="text-muted" style="width: 60px; text-align: right;"
+                                                                           x-text="formatCurrency(amount)"></small>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </template>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Expense Table *@
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="h6 fw-semibold mb-3 text-danger">Expense Detail</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0"
+                                           aria-label="Annual expense detail"
+                                           data-testid="annual-expense-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
+                                                <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
+                                                <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
+                                                <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
+                                                <th class="text-uppercase small fw-semibold text-muted text-end">Variación YoY</th>
+                                            </tr>
+                                        </thead>
+                                        <template x-for="row in expenseRows" :key="row.movement">
+                                            <tbody>
+                                                <tr role="button" tabindex="0"
+                                                    @@click="toggleRow(row)"
+                                                    @@keydown.enter="toggleRow(row)"
+                                                    @@keydown.space.prevent="toggleRow(row)"
+                                                    class="cursor-pointer"
+                                                    :aria-expanded="row.expanded">
+                                                    <td class="fw-medium">
+                                                        <span x-text="row.expanded ? '▼' : '▶'" class="me-2"></span>
+                                                        <span x-text="row.movement"></span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge"
+                                                              :class="row.typeLabel.includes('Fijo') ? 'bg-success' : 'bg-warning'"
+                                                              x-text="row.typeLabel"></span>
+                                                    </td>
+                                                    <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
+                                                    <td class="text-end" x-text="formatCurrency(row.average)"></td>
+                                                    <td class="text-end">
+                                                        @if (hasVariation)
+                                                        {
+                                                            <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseTotalPct, false)">
+                                                                @AnnualModel.GetVariationArrow(variation.ExpenseTotalPct) @AnnualModel.FormatVariationPct(variation.ExpenseTotalPct)
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary">N/A</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                <tr x-show="row.expanded" x-transition>
+                                                    <td colspan="5" class="p-3 bg-light">
+                                                        <div class="d-flex flex-column gap-1">
+                                                            <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <small class="text-muted" style="width: 24px;"
+                                                                           x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
+                                                                    <div class="flex-grow-1 bg-white rounded">
+                                                                        <div class="mini-bar"
+                                                                             :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
+                                                                             :style="'width: ' + getBarWidth(amount, getRowMax(row)) + '%'">
+                                                                        </div>
+                                                                    </div>
+                                                                    <small class="text-muted" style="width: 60px; text-align: right;"
+                                                                           x-text="formatCurrency(amount)"></small>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </template>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
     }
 

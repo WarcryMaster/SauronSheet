@@ -65,6 +65,26 @@ public class AnnualPageRenderingTests
     [Fact]
     [Trait("Category", "Frontend")]
     [Trait("Category", "Integration")]
+    public async Task AnnualPage_WithData_RendersDetailToggleAndTables()
+    {
+        // Arrange
+        AnnualWebApplicationFactory factory = new AnnualWebApplicationFactory().WithAnalysisResult(CreateSampleResult());
+        HttpClient client = CreateClient(factory);
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/Analysis/Annual");
+        string html = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-testid=\"annual-detail-toggle\"", html);
+        Assert.Contains("data-testid=\"annual-income-table\"", html);
+        Assert.Contains("data-testid=\"annual-expense-table\"", html);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    [Trait("Category", "Integration")]
     public async Task AnnualPage_WithoutData_RendersEmptyState()
     {
         // Arrange
