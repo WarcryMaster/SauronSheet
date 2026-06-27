@@ -48,9 +48,23 @@ public class GetAnnualAnalysisQueryHandler
         (List<AnnualAnalysisRowDto> rows, AnnualAnalysisSummaryDto summary, int monthsWithData, bool hasData) =
             await ClassifyYearAsync(request.Year, userId, cancellationToken);
 
+        YearOverYearVariationDto? variation = null;
+
+        if (hasData)
+        {
+            (_, AnnualAnalysisSummaryDto previousSummary, _, bool previousHasData) =
+                await ClassifyYearAsync(request.Year - 1, userId, cancellationToken);
+
+            if (previousHasData)
+            {
+                variation = ComputeVariation(summary, previousSummary);
+            }
+        }
+
         AnnualAnalysisSummaryDto finalSummary = summary with
         {
             MonthsWithData = monthsWithData,
+            Variation = variation,
         };
 
         return new AnnualAnalysisResultDto(
@@ -138,5 +152,35 @@ public class GetAnnualAnalysisQueryHandler
             currency);
 
         return (rows.ToList(), summary, monthsWithData, true);
+    }
+
+    /// <summary>
+    /// Computes year-over-year percentage variation for each summary field.
+    /// Formula: (current - previous) / |previous| * 100
+    /// Returns null for fields where previous is 0 (division by zero guard).
+    /// </summary>
+    private static YearOverYearVariationDto ComputeVariation(
+        AnnualAnalysisSummaryDto current,
+        AnnualAnalysisSummaryDto previous)
+    {
+        static decimal? NullIfZero(decimal previousValue, decimal currentValue)
+        {
+            if (previousValue == 0m)
+            {
+                return null;
+            }
+
+            return Math.Round((currentValue - previousValue) / Math.Abs(previousValue) * 100m, 2);
+        }
+
+        return new YearOverYearVariationDto(
+            IncomeFixedPct: NullIfZero(previous.IncomeFixed, current.IncomeFixed),
+            IncomeVariablePct: NullIfZero(previous.IncomeVariable, current.IncomeVariable),
+            IncomeTotalPct: NullIfZero(previous.IncomeTotal, current.IncomeTotal),
+            ExpenseFixedPct: NullIfZero(previous.ExpenseFixed, current.ExpenseFixed),
+            ExpenseVariablePct: NullIfZero(previous.ExpenseVariable, current.ExpenseVariable),
+            ExpenseTotalPct: NullIfZero(previous.ExpenseTotal, current.ExpenseTotal),
+            NetPct: NullIfZero(previous.Net, current.Net),
+            HasPreviousYearData: true);
     }
 }
