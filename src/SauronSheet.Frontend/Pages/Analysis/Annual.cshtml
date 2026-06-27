@@ -35,8 +35,8 @@
          init() {
              if (this.hasData) {
                  this.$nextTick(() => {
-                     const trendData = JSON.parse(document.getElementById("annual-trend-data")?.textContent || "{}");
-                     const distData = JSON.parse(document.getElementById("annual-distribution-data")?.textContent || "{}");
+                      const trendData = JSON.parse((document.getElementById("annual-trend-data")?.textContent || "{}").trim());
+                      const distData = JSON.parse((document.getElementById("annual-distribution-data")?.textContent || "{}").trim());
                      initAnnualTrendChart(this.$refs.trendCanvas, trendData);
                      initAnnualDistributionChart(this.$refs.distCanvas, distData);
                  });
@@ -514,12 +514,8 @@
 
     @if (Model.HasData)
     {
-        <script type="application/json" id="annual-trend-data">
-            @Model.ChartDataJson
-        </script>
-        <script type="application/json" id="annual-distribution-data">
-            @Model.FixedVariableChartJson
-        </script>
+        <script type="application/json" id="annual-trend-data">@Html.Raw(Model.ChartDataJson)</script>
+        <script type="application/json" id="annual-distribution-data">@Html.Raw(Model.FixedVariableChartJson)</script>
     }
 </div>
 
