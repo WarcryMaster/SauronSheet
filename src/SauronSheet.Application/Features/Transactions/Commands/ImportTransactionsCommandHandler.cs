@@ -65,7 +65,7 @@ public class ImportTransactionsCommandHandler
     {
         // Force InvariantCulture so decimal serialization uses dot (not comma),
         // preventing Postgrest numeric input errors with comma-separated values.
-        var previousCulture = Thread.CurrentThread.CurrentCulture;
+        CultureInfo previousCulture = Thread.CurrentThread.CurrentCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
         Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 
@@ -79,7 +79,7 @@ public class ImportTransactionsCommandHandler
                 throw new DomainException("Only Excel files (.xls, .xlsx) are accepted.");
 
             // ── Sentry observability: import started ──────────────────────────────
-            var fileExt = Path.GetExtension(request.Filename).ToLowerInvariant();
+            string fileExt = Path.GetExtension(request.Filename).ToLowerInvariant();
 
             SentrySdk.Logger?.LogDebug(
                 "ImportTransactionsCommandHandler: starting import for {0}", request.Filename);
@@ -99,7 +99,7 @@ public class ImportTransactionsCommandHandler
                 new KeyValuePair<string, object>[] { new("ext", fileExt) });
             // ─────────────────────────────────────────────────────────────────────
 
-            var userId = new UserId(_userContext.UserId);
+            UserId userId = new UserId(_userContext.UserId);
 
             // Ensure user profile exists before FK-constrained inserts.
             await _userProfileRepo.EnsureExistsAsync(userId, _userContext.UserEmail);
@@ -136,10 +136,10 @@ public class ImportTransactionsCommandHandler
                     "Could not parse the uploaded file. Please check the format and try again.");
             }
 
-            var importedCount = 0;
+            int importedCount = 0;
             // In-file hash duplicates are silent (spec ESP-3b) — counted in skipped, no error entry.
-            var skippedCount = parseResult.SkippedCount;
-            var errors = new List<ImportRowErrorDto>();
+            int skippedCount = parseResult.SkippedCount;
+            List<ImportRowErrorDto> errors = new List<ImportRowErrorDto>();
 
             // Convert parser-level row errors to ImportRowErrorDto.
             foreach (var rowError in parseResult.RowErrors)
@@ -218,7 +218,7 @@ public class ImportTransactionsCommandHandler
                         }
 
                         // Check cross-store duplicates (date + amount + description + balance).
-                        var isDuplicate = await _transactionRepo.ExistsDuplicateAsync(
+                        bool isDuplicate = await _transactionRepo.ExistsDuplicateAsync(
                             userId, date, amount, row.Description ?? string.Empty, balance);
 
                         if (isDuplicate)
@@ -234,12 +234,12 @@ public class ImportTransactionsCommandHandler
                         }
 
                         // Resolve bank category via get-or-add (spec PCE-3 / PCE-4).
-                        var resolution = await _resolutionService.ResolveOrCreateAsync(
+                        ResolutionResult resolution = await _resolutionService.ResolveOrCreateAsync(
                             userId, row.Category, row.SubCategory, amount, cancellationToken);
 
                         // Persist transaction.
                         // CR-1c: trim bank category/subcategory to remove any surrounding whitespace.
-                        var transaction = new Transaction(
+                        Transaction transaction = new Transaction(
                             new TransactionId(Guid.NewGuid()),
                             userId,
                             new Money(amount, row.Currency ?? "EUR"),
@@ -270,7 +270,7 @@ public class ImportTransactionsCommandHandler
                 }
 
                 // Persist import-batch metadata.
-                var importBatch = new ImportBatch(
+                ImportBatch importBatch = new ImportBatch(
                     Guid.NewGuid(),
                     request.Filename,
                     importedCount,
@@ -386,7 +386,7 @@ public class ImportTransactionsCommandHandler
         if (decimal.TryParse(amount, NumberStyles.Any, new CultureInfo("es-ES"), out result))
             return true;
 
-        var normalized = amount.Replace(',', '.');
+        string normalized = amount.Replace(',', '.');
         return decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out result);
     }
 }
