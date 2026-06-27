@@ -1,5 +1,6 @@
 @page "/Analysis/Annual"
 @using System.Globalization
+@using SauronSheet.Application.Features.Analytics.DTOs
 @model SauronSheet.Frontend.Pages.Analysis.AnnualModel
 @{
     ViewData["Title"] = "Annual Analysis";
@@ -7,8 +8,8 @@
     int startYear = currentYear - 5;
     int endYear = currentYear + 1;
 
-    var summary = Model.Result?.Summary;
-    var variation = summary?.Variation;
+    AnnualAnalysisSummaryDto? summary = Model.Result?.Summary;
+    YearOverYearVariationDto? variation = summary?.Variation;
     object? variationObject = variation;
     bool hasVariation = variation?.HasPreviousYearData == true;
     int monthsWithData = summary?.MonthsWithData ?? 0;
@@ -24,12 +25,12 @@
 
 <div class="d-flex flex-column gap-4"
      x-data='{
-         hasData: @Json.Serialize(Model.HasData).ToString().ToLowerInvariant(),
+         hasData: @(Model.HasData.ToString().ToLowerInvariant()),
          showDetail: false,
          incomeRows: @Json.Serialize(Model.IncomeRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })),
          expenseRows: @Json.Serialize(Model.ExpenseRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })),
          variation: @Json.Serialize(variationObject),
-         hasVariation: @Json.Serialize(hasVariation).ToString().ToLowerInvariant(),
+         hasVariation: @(hasVariation.ToString().ToLowerInvariant()),
 
          init() {
              if (this.hasData) {
@@ -104,13 +105,13 @@
         <div x-show="hasData" x-transition.opacity class="d-flex flex-column gap-4">
 
                 @* ── KPI Row ── *@
-                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
                     @* Income KPI *@
                     <div class="col">
                         <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-success"
                              data-testid="annual-kpi-income"
                              x-data="{ display: 0, target: @((summary?.IncomeTotal ?? 0m).ToString(CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Total Income</div>
+                            <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos Total</div>
                             <div class="h4 fw-bold text-success mb-0">
                                 <span x-text="'€' + display.toFixed(2)"></span>
                             </div>
@@ -128,7 +129,7 @@
                         <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-danger"
                              data-testid="annual-kpi-expense"
                              x-data="{ display: 0, target: @((summary?.ExpenseTotal ?? 0m).ToString(CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Total Expenses</div>
+                            <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos Total</div>
                             <div class="h4 fw-bold text-danger mb-0">
                                 <span x-text="'€' + display.toFixed(2)"></span>
                             </div>
@@ -164,7 +165,7 @@
                         <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-warning"
                              data-testid="annual-kpi-fixed-pct"
                              x-data="{ display: 0, target: @Model.FixedCostPercentage.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Fixed Cost %</div>
+                            <div class="small fw-semibold text-muted text-uppercase mb-1">% Coste Fijo</div>
                             <div class="h4 fw-bold text-warning mb-0">
                                 <span x-text="display.toFixed(1) + '%'"></span>
                             </div>
@@ -320,7 +321,7 @@
                             @* Net *@
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(variation?.NetPct, true).Replace("bg-", "border-")">
-                                    <div class="small fw-semibold text-muted text-uppercase mb-1">Net</div>
+<div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
                                     <div class="h5 fw-bold mb-0">€@summary.Net.ToString("N2")</div>
                                     @if (hasVariation)
                                     {
