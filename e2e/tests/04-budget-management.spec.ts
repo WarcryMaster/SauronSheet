@@ -423,13 +423,13 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         const deleteBtn = page.getByRole('button', { name: 'Delete Permanently' });
         await expect(deleteBtn).toBeVisible();
 
-        // Handle confirmation dialog
-        page.on('dialog', async dialog => {
-            expect(dialog.message()).toContain('delete');
-            await dialog.accept();
-        });
-
+        // Click opens MDB modal — confirm via the modal's Delete button
         await deleteBtn.click();
+
+        const deleteModal = page.locator('#budgetDeleteConfirmModal');
+        await expect(deleteModal).toBeVisible({ timeout: 5000 });
+        await deleteModal.getByRole('button', { name: /Delete/i }).click();
+
         await page.waitForLoadState('domcontentloaded');
 
         // ── Verify budget is gone from list ───────────────────────────────────

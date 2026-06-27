@@ -98,11 +98,12 @@ export async function ensureBudgetDeleted(page: Page, categoryName: string): Pro
 
     await openBudgetEditPage(page, categoryName);
 
-    page.once('dialog', async dialog => {
-        await dialog.accept();
-    });
-
     await page.getByRole('button', { name: 'Delete Permanently' }).click();
+
+    const deleteModal = page.locator('#budgetDeleteConfirmModal');
+    await expect(deleteModal).toBeVisible({ timeout: 5000 });
+    await deleteModal.getByRole('button', { name: /Delete/i }).click();
+
     await page.waitForURL(/\/budgets(?!\/edit\/)/i, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
 

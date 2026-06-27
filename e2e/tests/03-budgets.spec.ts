@@ -301,12 +301,12 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const deletePermBtn = page.getByRole('button', { name: 'Delete Permanently' });
         await expect(deletePermBtn).toBeVisible();
 
-        // Edit page uses native browser confirm() dialog
-        page.on('dialog', async dialog => {
-            await dialog.accept();
-        });
-
+        // Click opens MDB modal — confirm via the modal's Delete button
         await deletePermBtn.click();
+
+        const deleteModal = page.locator('#budgetDeleteConfirmModal');
+        await expect(deleteModal).toBeVisible({ timeout: 5000 });
+        await deleteModal.getByRole('button', { name: /Delete/i }).click();
 
         // Wait for redirect back to the list
         await page.waitForURL(/\/budgets(?!\/)/i, { timeout: 10000 });

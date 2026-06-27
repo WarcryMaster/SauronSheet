@@ -199,3 +199,55 @@ Only one `_ViewImports.cshtml` is allowed, located in `Pages/`. It must include:
 ```
 
 **Never** add a second `_ViewImports.cshtml` in `Pages/Shared/` — this silently breaks Tag Helpers and causes form POST submissions to fail.
+
+---
+
+## Alpine.js Mandatory Patterns
+
+### FORBIDDEN — NEVER USE:
+- ❌ `onclick`, `onchange`, `onsubmit` inline attributes → use Alpine.js `x-on:` / `@@event` directives
+- ❌ `DOMContentLoaded` for initialization → use Alpine.js `x-init` or HTMX lifecycle events (`htmx:afterSwap`)
+- ❌ `<script>` blocks with vanilla JS for page interactivity → use Alpine.js `x-data` components
+- ❌ `document.getElementById()` for state reading → use Alpine.js `x-data` properties and `$refs`
+- ❌ `addEventListener()` for UI events → use `@@click`, `@@change`, `@@submit`, `@@input`, `@@keydown`
+- ❌ `classList.add/remove('d-none')` for visibility → use `x-show` + `x-transition`
+- ❌ `.textContent = '...'` for dynamic text → use `x-text` or `x-html`
+- ❌ `.disabled = true/false` for buttons → use `:disabled` + reactive state
+- ❌ `.style.backgroundColor = '...'` → use `:style` binding
+- ❌ Separate `.js` files for page-specific logic → embed in Alpine.js `x-data`
+- ❌ `d-flex`, `d-block`, `d-grid` (MDB classes with `!important`) on elements with `x-show` → wrap in inner div
+- ❌ `@Json.Serialize()` inside double-quoted HTML attributes → use single-quoted attributes (`x-data='...'`) and double-quoted JS strings
+- ❌ `@(decimal)` without invariant culture inside JavaScript → use `.ToString(System.Globalization.CultureInfo.InvariantCulture)`
+- ❌ `<input type="date">` — use Flatpickr via Alpine.js `x-init` instead
+- ❌ `<template x-for>` inside `<select>` — browsers move `<template>` out of `<select>` in the DOM, breaking Alpine.js. Use `rebuildOptions()` + `x-effect` to rebuild `<option>` elements via DOM manipulation instead (see Budgets/Create.cshtml for the pattern)
+
+### REQUIRED — ALWAYS USE:
+- ✅ `x-data` on every interactive component (forms, filters, modals, toolbars)
+- ✅ `x-show` + `x-transition` for any conditional visibility
+- ✅ `x-model` for all form inputs (text, select, checkbox, radio, color)
+- ✅ `:disabled` + spinner on ALL submit buttons with `x-data="{ loading: false }"`
+- ✅ `@@submit="loading = true"` on all forms
+- ✅ `x-text` for dynamic text content
+- ✅ `:class` for conditional CSS classes
+- ✅ `$refs` for DOM element references when unavoidable
+- ✅ MDB modals via `new mdb.Modal(el).show()` from Alpine.js methods (DO NOT use `data-mdb-toggle` on buttons, call `show()` explicitly)
+- ✅ `htmx:beforeSwap` → `destroyAllCharts()` for any page with Chart.js + HTMX
+- ✅ Flatpickr via `x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"` for ALL date inputs. Never use `type="date"`.
+- ✅ `<template x-for>` inside `<select>` — browsers move `<template>` out of `<select>` in the DOM, breaking Alpine.js. Use `rebuildOptions()` + `x-effect` to rebuild `<option>` elements via DOM manipulation instead (see Budgets/Create.cshtml for the pattern)
+
+---
+
+## Cross-Attribute Compatibility
+
+- **CRITICAL: MDB uses `data-mdb-*` attributes, NOT `data-bs-*` (Bootstrap).**
+  - `data-mdb-toggle="dropdown"` (not `data-bs-toggle`)
+  - `data-mdb-target="#modal"` (not `data-bs-target`)
+  - `data-mdb-dismiss="modal"` (not `data-bs-dismiss`)
+  - `data-mdb-auto-close="outside"` (not `data-bs-auto-close`)
+  - `data-mdb-ripple-init` (not `data-bs-ripple`)
+  - Alpine.js uses its own attributes: `x-data`, `x-show`, `x-on`, `x-model`, `x-bind` — these do NOT conflict with `data-mdb-*`
+  - HTMX uses its own attributes: `hx-get`, `hx-target`, `hx-swap` — these do NOT conflict with `data-mdb-*`
+- **DESIGN.md is the visual source of truth for all UI work.** Read `DESIGN.md` BEFORE changing any `.cshtml`, CSS, component layout, spacing, or interaction pattern.
+- When delegating frontend/UI work to any sub-agent, ALWAYS include `DESIGN.md` and the Frontend Rules section of this file in the prompt/context.
+- Keep JavaScript modern: `const` / `let`, event listeners, null checks, and server-side revalidation.
+- Utilizar la metodología https://github.com/voltagent/awesome-design-md para la generación de interfaces. Todas las interfaces frontend deben crearse siguiendo esta metodología.
