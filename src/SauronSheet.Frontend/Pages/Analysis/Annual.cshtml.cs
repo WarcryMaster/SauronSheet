@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -34,6 +35,20 @@ public class AnnualModel : PageModel
     public bool HasData => Result?.HasData ?? false;
 
     /// <summary>
+    /// Rows filtered to income only (IsIncome == true).
+    /// </summary>
+    public IReadOnlyList<AnnualAnalysisRowDto> IncomeRows =>
+        Result?.Rows.Where(r => r.IsIncome).ToArray()
+        ?? Array.Empty<AnnualAnalysisRowDto>();
+
+    /// <summary>
+    /// Rows filtered to expenses only (IsIncome == false).
+    /// </summary>
+    public IReadOnlyList<AnnualAnalysisRowDto> ExpenseRows =>
+        Result?.Rows.Where(r => !r.IsIncome).ToArray()
+        ?? Array.Empty<AnnualAnalysisRowDto>();
+
+    /// <summary>
     /// User-facing error message for domain rule violations.
     /// </summary>
     [TempData]
@@ -66,11 +81,62 @@ public class AnnualModel : PageModel
             Sentry.SentrySdk.CaptureException(ex, scope =>
             {
                 scope.SetTag("analysis", "annual");
-                scope.SetTag("year", selectedYear.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                scope.SetTag("year", selectedYear.ToString(CultureInfo.InvariantCulture));
                 scope.Level = Sentry.SentryLevel.Error;
             });
 
             return RedirectToPage("/Error");
         }
+    }
+
+    /// <summary>
+    /// Formats a YoY variation percentage for display.
+    /// Returns "N/A" when null, or "+XX.X%"/"-XX.X%" otherwise.
+    /// </summary>
+    public static string FormatVariationPct(decimal? pct)
+    {
+        if (pct is null)
+        {
+            return "N/A";
+        }
+
+        string sign = pct.Value >= 0 ? "+" : string.Empty;
+        return $"{sign}{pct.Value.ToString("F1", CultureInfo.InvariantCulture)}%";
+    }
+
+    /// <summary>
+    /// Returns the MDB badge class for the variation direction.
+    /// Income: up=success (green), down=danger (red)
+    /// Expense: up=danger (red), down=success (green)
+    /// Net: up=success (green), down=danger (red)
+    /// </summary>
+    public static string GetVariationBadgeClass(decimal? pct, bool isIncomeOrNet)
+    {
+        if (pct is null || pct.Value == 0m)
+        {
+            return "bg-secondary";
+        }
+
+        if (isIncomeOrNet)
+        {
+            return pct.Value > 0 ? "bg-success" : "bg-danger";
+        }
+
+        // Expense: up is bad (red), down is good (green)
+        return pct.Value > 0 ? "bg-danger" : "bg-success";
+    }
+
+    /// <summary>
+    /// Returns the arrow symbol for the variation.
+    /// Positive → up arrow, Negative → down arrow.
+    /// </summary>
+    public static string GetVariationArrow(decimal? pct)
+    {
+        if (pct is null || pct.Value == 0m)
+        {
+            return string.Empty;
+        }
+
+        return pct.Value > 0 ? "\u2191" : "\u2193";
     }
 }

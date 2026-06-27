@@ -1,10 +1,19 @@
 @page "/Analysis/Annual"
+@using System.Globalization
 @model SauronSheet.Frontend.Pages.Analysis.AnnualModel
 @{
     ViewData["Title"] = "Annual Analysis";
     int currentYear = DateTime.UtcNow.Year;
     int startYear = currentYear - 5;
     int endYear = currentYear + 1;
+}
+
+@{
+    // Local aliases for cleaner inline access
+    var summary = Model.Result?.Summary;
+    var variation = summary?.Variation;
+    bool hasVariation = variation?.HasPreviousYearData == true;
+    int monthsWithData = summary?.MonthsWithData ?? 0;
 }
 
 <div class="d-flex flex-column gap-4"
@@ -47,98 +56,281 @@
     <template x-if="hasData">
         <div>
             <div x-show="hasData" x-transition.opacity class="d-flex flex-column gap-4">
-                @* Summary block *@
-                <div data-testid="annual-summary">
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+
+                @* ── MonthsWithData card (top, full width) ── *@
+                <div data-testid="annual-months-card" class="card border-0 shadow-sm p-3 text-center">
+                    <div class="small fw-semibold text-muted text-uppercase mb-1">
+                        📅 Meses con datos
+                    </div>
+                    <div class="h4 fw-bold mb-0">
+                        @if (monthsWithData >= 12)
+                        {
+                            <span data-testid="months-full-year" class="text-success">Año completo</span>
+                        }
+                        else
+                        {
+                            <span>@monthsWithData / 12 meses con datos</span>
+                        }
+                    </div>
+                </div>
+
+                @* ── Income section (green tint) ── *@
+                <div class="card border-0 shadow-sm bg-success-subtle p-3"
+                     data-testid="annual-income-section">
+                    <h4 class="h5 fw-bold mb-3 text-success">📈 Ingresos</h4>
+
+                    @* Income summary cards *@
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 mb-3">
+                        @* Income Fixed *@
                         <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos Fijos</div>
-                                <div class="h4 fw-bold text-success mb-0">€@Model.Result!.Summary.IncomeFixed.ToString("N2")</div>
+                            <div class="card border-0 shadow-sm p-3 text-center h-100 bg-white"
+                                 data-testid="income-fixed-card">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Fijo</div>
+                                <div class="h4 fw-bold text-success mb-0">€@summary!.IncomeFixed.ToString("N2")</div>
+                                @if (hasVariation)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeFixedPct, isIncomeOrNet: true) mt-2"
+                                          data-testid="yoy-badge-income-fixed"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.IncomeFixedPct) @AnnualModel.FormatVariationPct(variation.IncomeFixedPct)
+                                    </span>
+                                }
                             </div>
                         </div>
+
+                        @* Income Variable *@
                         <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos Variables</div>
-                                <div class="h4 fw-bold text-success mb-0">€@Model.Result!.Summary.IncomeVariable.ToString("N2")</div>
+                            <div class="card border-0 shadow-sm p-3 text-center h-100 bg-white"
+                                 data-testid="income-variable-card">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Variable</div>
+                                <div class="h4 fw-bold text-success mb-0">€@summary.IncomeVariable.ToString("N2")</div>
+                                @if (hasVariation)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeVariablePct, isIncomeOrNet: true) mt-2"
+                                          data-testid="yoy-badge-income-variable"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.IncomeVariablePct) @AnnualModel.FormatVariationPct(variation.IncomeVariablePct)
+                                    </span>
+                                }
                             </div>
                         </div>
+
+                        @* Income Total *@
                         <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos Total</div>
-                                <div class="h4 fw-bold text-success mb-0">€@Model.Result!.Summary.IncomeTotal.ToString("N2")</div>
+                            <div class="card border-0 shadow-sm p-3 text-center h-100 bg-white"
+                                 data-testid="income-total-card">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Total</div>
+                                <div class="h4 fw-bold text-success mb-0">€@summary.IncomeTotal.ToString("N2")</div>
+                                @if (hasVariation)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeTotalPct, isIncomeOrNet: true) mt-2"
+                                          data-testid="yoy-badge-income-total"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.IncomeTotalPct) @AnnualModel.FormatVariationPct(variation.IncomeTotalPct)
+                                    </span>
+                                }
                             </div>
                         </div>
-                        <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos Fijos</div>
-                                <div class="h4 fw-bold text-danger mb-0">€@Model.Result!.Summary.ExpenseFixed.ToString("N2")</div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos Variables</div>
-                                <div class="h4 fw-bold text-danger mb-0">€@Model.Result!.Summary.ExpenseVariable.ToString("N2")</div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos Total</div>
-                                <div class="h4 fw-bold text-danger mb-0">€@Model.Result!.Summary.ExpenseTotal.ToString("N2")</div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card border-0 shadow-sm p-3 text-center h-100">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
-                                <div class="h4 fw-bold @(Model.Result!.Summary.Net >= 0 ? "text-success" : "text-danger") mb-0">€@Model.Result!.Summary.Net.ToString("N2")</div>
-                            </div>
+                    </div>
+
+                    @* Income table *@
+                    <div class="card border-0 shadow-sm bg-white">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" aria-label="Annual income breakdown"
+                                   data-testid="annual-income-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
+                                        <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Media</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Ene</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Feb</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Mar</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Abr</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">May</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Jun</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Jul</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Ago</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Sep</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Oct</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Nov</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Dic</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.IncomeRows.Count == 0)
+                                    {
+                                        <tr>
+                                            <td colspan="15" class="text-center text-muted py-4">
+                                                No hay ingresos registrados.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var row in Model.IncomeRows)
+                                        {
+                                            <tr>
+                                                <td class="fw-medium">@row.Movement</td>
+                                                <td>
+                                                    <span class="badge bg-success" role="status">
+                                                        @row.TypeLabel
+                                                    </span>
+                                                </td>
+                                                <td class="text-end fw-medium">€@row.Average.ToString("N2")</td>
+                                                @foreach (decimal amount in row.MonthlyAmounts)
+                                                {
+                                                    <td class="text-end small">€@amount.ToString("N2")</td>
+                                                }
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                @* Analysis table *@
-                <div class="card border-0 shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" aria-label="Annual analysis breakdown">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
-                                    <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Media</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Ene</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Feb</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Mar</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Abr</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">May</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Jun</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Jul</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Ago</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Sep</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Oct</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Nov</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Dic</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var row in Model.Result!.Rows)
-                                {
-                                    <tr>
-                                        <td class="fw-medium">@row.Movement</td>
-                                        <td>
-                                            <span class="badge @(row.LineType.ToString().StartsWith("Income") ? "bg-success" : "bg-danger")" role="status">
-                                                @row.TypeLabel
-                                            </span>
-                                        </td>
-                                        <td class="text-end fw-medium">€@row.Average.ToString("N2")</td>
-                                        @foreach (decimal amount in row.MonthlyAmounts)
-                                        {
-                                            <td class="text-end small">€@amount.ToString("N2")</td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                @* ── Neto card (standalone, centered) ── *@
+                <div class="row justify-content-center">
+                    <div class="col-12 col-sm-8 col-lg-6">
+                        <div class="card border-0 shadow-sm p-3 text-center"
+                             data-testid="annual-neto-card">
+                            <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
+                            <div class="@(summary!.Net >= 0 ? "text-success" : "text-danger")">
+                                <span class="h3 fw-bold">€@summary.Net.ToString("N2")</span>
+                            </div>
+                            @if (hasVariation)
+                            {
+                                <div>
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.NetPct, isIncomeOrNet: true) mt-1"
+                                          data-testid="yoy-badge-neto"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.NetPct) @AnnualModel.FormatVariationPct(variation.NetPct)
+                                    </span>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
+
+                @* ── Expense section (red tint) ── *@
+                <div class="card border-0 shadow-sm bg-danger-subtle p-3"
+                     data-testid="annual-expense-section">
+                    <h4 class="h5 fw-bold mb-3 text-danger">📉 Gastos</h4>
+
+                    @* Expense summary cards *@
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 mb-3">
+                        @* Expense Fixed *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100 bg-white"
+                                 data-testid="expense-fixed-card">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Fijo</div>
+                                <div class="h4 fw-bold text-danger mb-0">€@summary.ExpenseFixed.ToString("N2")</div>
+                                @if (hasVariation)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseFixedPct, isIncomeOrNet: false) mt-2"
+                                          data-testid="yoy-badge-expense-fixed"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.ExpenseFixedPct) @AnnualModel.FormatVariationPct(variation.ExpenseFixedPct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        @* Expense Variable *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100 bg-white"
+                                 data-testid="expense-variable-card">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Variable</div>
+                                <div class="h4 fw-bold text-danger mb-0">€@summary.ExpenseVariable.ToString("N2")</div>
+                                @if (hasVariation)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseVariablePct, isIncomeOrNet: false) mt-2"
+                                          data-testid="yoy-badge-expense-variable"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.ExpenseVariablePct) @AnnualModel.FormatVariationPct(variation.ExpenseVariablePct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        @* Expense Total *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100 bg-white"
+                                 data-testid="expense-total-card">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Total</div>
+                                <div class="h4 fw-bold text-danger mb-0">€@summary.ExpenseTotal.ToString("N2")</div>
+                                @if (hasVariation)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseTotalPct, isIncomeOrNet: false) mt-2"
+                                          data-testid="yoy-badge-expense-total"
+                                          x-show="@Json.Serialize(hasVariation)">
+                                        @AnnualModel.GetVariationArrow(variation.ExpenseTotalPct) @AnnualModel.FormatVariationPct(variation.ExpenseTotalPct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Expense table *@
+                    <div class="card border-0 shadow-sm bg-white">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" aria-label="Annual expense breakdown"
+                                   data-testid="annual-expense-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
+                                        <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Media</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Ene</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Feb</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Mar</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Abr</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">May</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Jun</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Jul</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Ago</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Sep</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Oct</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Nov</th>
+                                        <th class="text-uppercase small fw-semibold text-muted text-end">Dic</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.ExpenseRows.Count == 0)
+                                    {
+                                        <tr>
+                                            <td colspan="15" class="text-center text-muted py-4">
+                                                No hay gastos registrados.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var row in Model.ExpenseRows)
+                                        {
+                                            <tr>
+                                                <td class="fw-medium">@row.Movement</td>
+                                                <td>
+                                                    <span class="badge bg-danger" role="status">
+                                                        @row.TypeLabel
+                                                    </span>
+                                                </td>
+                                                <td class="text-end fw-medium">€@row.Average.ToString("N2")</td>
+                                                @foreach (decimal amount in row.MonthlyAmounts)
+                                                {
+                                                    <td class="text-end small">€@amount.ToString("N2")</td>
+                                                }
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </template>
