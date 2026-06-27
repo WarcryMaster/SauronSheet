@@ -44,7 +44,7 @@ Chain strategy: pending
 
 ## Phase 2: UI Rewrite (PR #2)
 
-- [ ] **T-ANN-003** Rewrite `Annual.cshtml` — KPI cards, charts, YoY section
+- [x] **T-ANN-003** Rewrite `Annual.cshtml` — KPI cards, charts, YoY section
   - **Files**: `src/SauronSheet.Frontend/Pages/Analysis/Annual.cshtml`
   - **Description**: Replace entire Razor view. Structure: (1) Year selector form (preserve existing). (2) Empty state with `data-testid="annual-empty-state"` when `!HasData`. (3) KPI row: 4 cards (`annual-kpi-income`, `annual-kpi-expense`, `annual-kpi-net`, `annual-kpi-fixed-pct`) with animated counters and YoY badges using existing `GetVariationBadgeClass`/`GetVariationArrow`/`FormatVariationPct`. (4) Chart section: trend line chart + distribution donut in `card border-0 shadow-sm p-3` containers with `height: 380px`. JSON data blocks `<script type="application/json" id="annual-chart-data">` and `<script id="annual-distribution-data">`. Alpine.js `x-data` with `JSON.parse` + `$nextTick` calling `initAnnualTrendChart($refs.trendCanvas, trendData)` and `initAnnualDistributionChart($refs.distCanvas, distData)`. (5) YoY section: 5 compact cards with `border-start border-3` color indicators, or "Sin datos del año anterior" message when `!hasVariation`. All `data-testid` attributes per design migration plan.
   - **Dependencies**: T-ANN-001, T-ANN-002
@@ -52,7 +52,7 @@ Chain strategy: pending
   - **Test**: Visual verification + E2E in PR #3.
   - **PR slice**: PR #2
 
-- [ ] **T-ANN-004** Rewrite `Annual.cshtml` — collapsible detail tables with row expansion
+- [x] **T-ANN-004** Rewrite `Annual.cshtml` — collapsible detail tables with row expansion
   - **Files**: `src/SauronSheet.Frontend/Pages/Analysis/Annual.cshtml`
   - **Description**: Add collapsible income/expense tables section. Toggle button (`annual-detail-toggle`) shows/hides both tables simultaneously via Alpine.js `x-show`. Tables use `template x-for` (NOT `@foreach`) with Alpine.js model including `expanded: false` per row. Each row: 4 columns (toggle arrow, Movement, TypeLabel badge, Average, Annual Total). Click/Enter/Space toggles `row.expanded`. Expansion row: 12 mini-bars CSS (`height: X%` based on `amt/annualMax*100`), month labels (E,D,M,A,M,J,J,A,S,O,N,D). Preserve `data-testid="annual-income-table"` and `data-testid="annual-expense-table"`. Row data serialized as JSON in `x-data` via `@Json.Serialize(Model.IncomeRows.Select(...))`. Use `@@click`, `@@keydown.enter`, `@@keydown.space.prevent` (double-@ for Razor).
   - **Dependencies**: T-ANN-003
