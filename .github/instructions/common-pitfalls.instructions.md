@@ -18,6 +18,7 @@ description: "Use when debugging, fixing code, or working with Supabase/Postgres
 - ❌ Never use `<input type="date">` — use Flatpickr (`type="text"` + `x-init`). Flatpickr hides the original input and uses a hidden `<input type="hidden">` for the value. E2E tests MUST use `page.evaluate()` + Flatpickr API to set date values, not `page.fill()`.
 - ❌ Never reference local CSS, JS, or image assets with hardcoded `/css/...`, `/js/...`, or `/img/...` paths in Razor. Use `~/...` + `asp-append-version="true"` to prevent stale-cache drift between local and production.
 - ❌ Never embed Razor data in JS via `@Html.Raw(Json.Serialize(model))` (in `on*` attributes or inside `<script>` blocks) or via `@Html.Encode(value)` inside an HTML attribute. Both produce double-encoding / XSS / attribute-breakage bugs. Use `data-*` + a delegated listener for per-item data, or `<script type="application/json">` + `JSON.parse` for larger payloads. Full rationale and patterns in [`docs/adr/0002-safe-json-data-passing.md`](docs/adr/0002-safe-json-data-passing.md).
+- ❌ Never use `data-mdb-toggle="collapse"` — MDB v9 NO reconoce ese atributo. Usa `data-mdb-collapse-init` en su lugar. Lo mismo aplica a otros componentes: `data-mdb-dropdown-init` para dropdowns, `data-mdb-ripple-init` para ripple, etc. Si pones `data-mdb-toggle="collapse"`, MDB lo ignora silenciosamente y el collapse nunca se abre. Esto afecta al navbar-toggler en mobile: sin `data-mdb-collapse-init`, el menú hamburguesa no funciona y los botones quedan permanentemente ocultos.
 
 ---
 

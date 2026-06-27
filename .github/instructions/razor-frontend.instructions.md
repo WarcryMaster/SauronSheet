@@ -245,6 +245,12 @@ Only one `_ViewImports.cshtml` is allowed, located in `Pages/`. It must include:
   - `data-mdb-dismiss="modal"` (not `data-bs-dismiss`)
   - `data-mdb-auto-close="outside"` (not `data-bs-auto-close`)
   - `data-mdb-ripple-init` (not `data-bs-ripple`)
+  - ❌ `data-mdb-toggle="collapse"` — **MDB v9 NO reconoce este atributo para collapse.** Usa `data-mdb-collapse-init` en su lugar. Si lo pones, MDB lo ignora silenciosamente y el menú hamburguesa no funciona en mobile (el navbar toggler no abre el menú). Ejemplo correcto:
+    ```html
+    <button class="navbar-toggler" type="button" data-mdb-collapse-init
+            data-mdb-target="#navMain" aria-controls="navMain"
+            aria-expanded="false" aria-label="Toggle navigation">
+    ```
   - Alpine.js uses its own attributes: `x-data`, `x-show`, `x-on`, `x-model`, `x-bind` — these do NOT conflict with `data-mdb-*`
   - HTMX uses its own attributes: `hx-get`, `hx-target`, `hx-swap` — these do NOT conflict with `data-mdb-*`
 - **DESIGN.md is the visual source of truth for all UI work.** Read `DESIGN.md` BEFORE changing any `.cshtml`, CSS, component layout, spacing, or interaction pattern.
