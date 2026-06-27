@@ -62,7 +62,7 @@ Chain strategy: pending
 
 ## Phase 3: E2E Tests + Accessibility (PR #3)
 
-- [ ] **T-ANN-005** Rewrite E2E test spec for annual analysis
+- [x] **T-ANN-005** Rewrite E2E test spec for annual analysis
   - **Files**: `e2e/tests/07-annual-analysis.spec.ts`
   - **Description**: Full rewrite. Test cases: (1) KPI cards visible with correct `data-testid` and content. (2) Charts render (canvas elements present with `role="img"`). (3) Table toggle — tables hidden by default, visible after click. (4) Row expansion — click row shows 12 mini-bars. (5) Empty state preserved. (6) Year change reloads. (7) YoY section visible or "Sin datos" fallback. Map new testids: `annual-kpi-income`, `annual-kpi-expense`, `annual-kpi-net`, `annual-kpi-fixed-pct`, `annual-trend-chart`, `annual-distribution-chart`, `annual-yoy-section`, `annual-yoy-no-data`, `annual-detail-toggle`, `annual-income-table`, `annual-expense-table`, `annual-empty-state`. Use authenticatedPage fixture.
   - **Dependencies**: T-ANN-004
@@ -70,7 +70,7 @@ Chain strategy: pending
   - **Test**: `npx playwright test --config=e2e/playwright.config.ts --project=chromium`
   - **PR slice**: PR #3
 
-- [ ] **T-ANN-006** Accessibility and responsive polish
+- [x] **T-ANN-006** Accessibility and responsive polish
   - **Files**: `src/SauronSheet.Frontend/Pages/Analysis/Annual.cshtml`
   - **Description**: Add `role="img"` and descriptive `aria-label` on both `<canvas>` elements. Add `visually-hidden` fallback tables for each chart (12-row monthly table for trend, 4-row table for distribution). Ensure toggle buttons are keyboard-navigable (`tabindex="0"`, `@@keydown.enter`, `@@keydown.space.prevent`). Verify responsive breakpoints: KPIs `row-cols-1 row-cols-md-2 row-cols-xl-4`, charts stack on mobile, tables allow horizontal scroll.
   - **Dependencies**: T-ANN-004
