@@ -47,6 +47,11 @@ public record AuthResult
         return new AuthResult(userId, null, null, null, true, null, requiresEmailConfirmation: true);
     }
 
+    public static AuthResult SuccessWithoutSession(bool requiresEmailConfirmation = false)
+    {
+        return new AuthResult(null, null, null, null, true, null, requiresEmailConfirmation);
+    }
+
     public static AuthResult Failure(string errorMessage)
     {
         return new AuthResult(null, null, null, null, false, errorMessage);

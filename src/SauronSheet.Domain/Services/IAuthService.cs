@@ -17,6 +17,12 @@ public interface IAuthService
     Task<AuthResult> RegisterAsync(string email, string password);
 
     /// <summary>
+    /// Resend account confirmation email for a pending signup.
+    /// Returns AuthResult with success/failure details.
+    /// </summary>
+    Task<AuthResult> ResendConfirmationEmailAsync(string email);
+
+    /// <summary>
     /// Login an existing user with email and password.
     /// Returns AuthResult with JWT tokens on success.
     /// </summary>

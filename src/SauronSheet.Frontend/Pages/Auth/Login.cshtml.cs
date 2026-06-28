@@ -41,6 +41,53 @@ public class LoginModel : PageModel
         SuccessMessage = TempData["SuccessMessage"] as string;
     }
 
+    public async Task<IActionResult> OnPostResendConfirmationAsync(string? resendEmail)
+    {
+        ReturnUrl = "/dashboard";
+        Input.Email = resendEmail;
+
+        if (string.IsNullOrWhiteSpace(resendEmail))
+        {
+            ErrorMessage = "Email is required to resend the confirmation message.";
+            return Page();
+        }
+
+        try
+        {
+            await _mediator.Send(new ResendConfirmationEmailCommand(resendEmail));
+            SuccessMessage = "If your account exists and is pending confirmation, a new confirmation email has been sent.";
+            return Page();
+        }
+        catch (DomainException ex)
+        {
+            _logger.LogInformation("Resend confirmation failed for email {Email}: {Message}", resendEmail, ex.Message);
+            ErrorMessage = ex.Message;
+            return Page();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Resend confirmation failed for email {Email}: Network error", resendEmail);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("auth.email", resendEmail);
+                scope.SetTag("auth.stage", "resend_confirmation");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred while resending confirmation email. Please try again.";
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Resend confirmation failed for email {Email}: Unexpected error", resendEmail);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("auth.email", resendEmail);
+                scope.SetTag("auth.stage", "resend_confirmation");
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An error occurred while resending confirmation email. Please try again later.";
+            return Page();
+        }
+    }
+
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         ReturnUrl = returnUrl ?? "/dashboard";

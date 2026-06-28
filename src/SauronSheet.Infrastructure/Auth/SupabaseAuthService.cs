@@ -132,6 +132,51 @@ public class SupabaseAuthService : IAuthService
         }
     }
 
+    public async Task<AuthResult> ResendConfirmationEmailAsync(string email)
+    {
+        Sentry.SentrySdk.Logger?.LogDebug("ResendConfirmationEmailAsync: requesting new confirmation email");
+
+        try
+        {
+            var payload = new
+            {
+                email,
+                type = "signup",
+                redirect_to = $"{_siteUrl}/Auth/Login"
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("auth/v1/resend", payload);
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Sentry.SentrySdk.Logger?.LogWarning("ResendConfirmationEmailAsync: HTTP {0} — resend rejected", (int)response.StatusCode);
+                Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.resend_confirmation", 1.0,
+                    new KeyValuePair<string, object>[] { new("result", "failure") });
+
+                return AuthResult.Failure(ExtractErrorMessage(jsonContent, "Unable to resend confirmation email."));
+            }
+
+            Sentry.SentrySdk.Logger?.LogInfo("ResendConfirmationEmailAsync: confirmation email resent successfully");
+            Sentry.SentrySdk.Experimental.Metrics.EmitCounter("app.auth.resend_confirmation", 1.0,
+                new KeyValuePair<string, object>[] { new("result", "success") });
+
+            // This operation does not return a session/tokens.
+            return AuthResult.SuccessWithoutSession(requiresEmailConfirmation: true);
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.Logger?.LogError("ResendConfirmationEmailAsync: exception — {0}", ex.Message);
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("service", "SupabaseAuthService.ResendConfirmationEmailAsync");
+                scope.SetTag("resend.email", email);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+
+            return AuthResult.Failure("An unexpected error occurred while resending confirmation email. Please try again later.");
+        }
+    }
+
     public async Task<AuthResult> LoginAsync(string email, string password)
     {
         Sentry.SentrySdk.Logger?.LogDebug("LoginAsync: starting login");
