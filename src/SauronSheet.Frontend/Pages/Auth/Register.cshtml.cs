@@ -24,11 +24,25 @@ public class RegisterModel : PageModel
     public RegisterInputModel Input { get; set; } = new();
 
     public string? ErrorMessage { get; set; }
+    public string? SuccessMessage { get; set; }
+    public bool ShowResendConfirmation { get; set; }
 
     public RegisterModel(IMediator mediator, ILogger<RegisterModel> logger)
     {
         _mediator = mediator;
         _logger = logger;
+    }
+
+    public void OnGet()
+    {
+        var pendingEmail = TempData["PendingConfirmationEmail"] as string;
+        if (!string.IsNullOrWhiteSpace(pendingEmail))
+        {
+            Input.Email = pendingEmail;
+            ShowResendConfirmation = true;
+        }
+
+        SuccessMessage = TempData["SuccessMessage"] as string;
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -50,8 +64,9 @@ public class RegisterModel : PageModel
 
             if (registrationResult.RequiresEmailConfirmation)
             {
-                TempData["SuccessMessage"] = "Registro completado. Revisa tu email para confirmar la cuenta antes de iniciar sesión.";
-                return RedirectToPage("/auth/login");
+                TempData["SuccessMessage"] = "Registration completed. Check your email to confirm your account.";
+                TempData["PendingConfirmationEmail"] = Input.Email;
+                return RedirectToPage("/auth/register");
             }
 
             // Auto-login after successful registration
@@ -109,6 +124,53 @@ public class RegisterModel : PageModel
                 scope.Level = Sentry.SentryLevel.Error;
             });
             ErrorMessage = "An error occurred during registration. Please try again later.";
+            return Page();
+        }
+    }
+
+    public async Task<IActionResult> OnPostResendConfirmationAsync(string? resendEmail)
+    {
+        var emailToResend = string.IsNullOrWhiteSpace(resendEmail) ? Input.Email : resendEmail;
+        ShowResendConfirmation = true;
+
+        if (string.IsNullOrWhiteSpace(emailToResend))
+        {
+            ErrorMessage = "Email is required to resend confirmation.";
+            return Page();
+        }
+
+        Input.Email = emailToResend;
+
+        try
+        {
+            await _mediator.Send(new ResendConfirmationEmailCommand(emailToResend));
+            SuccessMessage = "Confirmation email resent. Please check your inbox.";
+            return Page();
+        }
+        catch (DomainException ex)
+        {
+            _logger.LogInformation("Resend confirmation failed for email {Email}: {Message}", emailToResend, ex.Message);
+            ErrorMessage = ex.Message;
+            return Page();
+        }
+        catch (HttpRequestException ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Auth/Register.OnPostResendConfirmationAsync");
+                scope.SetTag("register.email", emailToResend);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "A network error occurred while resending confirmation email. Please try again.";
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            Sentry.SentrySdk.CaptureException(ex, scope => {
+                scope.SetTag("page", "Auth/Register.OnPostResendConfirmationAsync");
+                scope.SetTag("register.email", emailToResend);
+                scope.Level = Sentry.SentryLevel.Error;
+            });
+            ErrorMessage = "An unexpected error occurred while resending confirmation email.";
             return Page();
         }
     }
