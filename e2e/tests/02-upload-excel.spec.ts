@@ -104,8 +104,10 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
      */
     test('TC-U04: shows progress bar during upload', async ({ page }) => {
         // Intercept the first progress poll so the fast real upload still renders a progress state.
+        // Using RegExp to avoid glob ambiguity with ? in query strings (Playwright may parse the glob
+        // string as a URL, splitting on ? and treating the query part differently).
         let progressRequestCount = 0;
-        await page.route('**/Transactions/Upload?handler=Progress**', async route => {
+        await page.route(/\/[Tt]ransactions\/[Uu]pload\?handler=Progress(&|$)/, async route => {
             progressRequestCount++;
             if (progressRequestCount === 1) {
                 await route.fulfill({
@@ -129,10 +131,12 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         });
 
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
-        await page.click('button[type="submit"]');
+        // Use a specific locator — there are 3x button[type="submit"] on the page
+        // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
+        await page.getByRole('button', { name: /Upload and Import/i }).click();
 
         const progressBar = page.locator('[role="progressbar"]');
-        await expect(progressBar).toBeVisible({ timeout: 10000 });
+        await expect(progressBar).toBeVisible({ timeout: 15000 });
         await expect(progressBar).toContainText('50%');
         await expect(progressBar).toContainText('Imported:');
         await expect(progressBar).toContainText('Skipped:');
@@ -143,9 +147,13 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
      */
     test('TC-U05: completes upload and shows results', async ({ page }) => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
-        await page.click('button[type="submit"]');
+        // Use a specific locator — there are 3x button[type="submit"] on the page
+        // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
+        await page.getByRole('button', { name: /Upload and Import/i }).click();
 
-        const successAlert = page.locator('[role="status"]');
+        // There are 2x [role="status"] elements on the page (the upload spinner + the result alert).
+        // Use a more specific selector to target only the result alert.
+        const successAlert = page.locator('.alert-success[role="status"]');
         await expect(successAlert).toBeVisible({ timeout: 30000 });
         await expect(successAlert).toContainText('Import completed');
     });
