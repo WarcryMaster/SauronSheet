@@ -24,11 +24,12 @@ const currentYear = new Date().getFullYear();
 const alternateYear = currentYear - 1;
 const emptyYear = currentYear + 1;
 
-async function seedAnnualData(page: any): Promise<void> {
+async function seedAnnualData(page: any, year?: number): Promise<void> {
+    const targetYear = year ?? currentYear;
+    const testDate = `${targetYear}-01-15`;
+
     await page.goto('/transactions/add');
     await expect(page).toHaveURL(/\/transactions\/add/i);
-
-    const testDate = `${currentYear}-01-15`;
 
     await setFlatpickrDate(page, 'Date', testDate);
     await page.fill('#Description', 'E2E Annual Income');
@@ -160,8 +161,12 @@ test.describe('Annual Analysis Dashboard', () => {
     });
 
     test('YoY section renders fallback when no previous year data', async ({ authenticatedPage: page }) => {
-        await seedAnnualData(page);
-        await page.goto(`/Analysis/Annual?Year=${currentYear}`);
+        // Use a far-future year to guarantee no previous-year data exists in the database.
+        // CI-persisted data from previous runs (when currentYear was 2025) would otherwise
+        // cause hasVariation=true, hiding the fallback.
+        const guaranteedCleanYear = currentYear + 50;
+        await seedAnnualData(page, guaranteedCleanYear);
+        await page.goto(`/Analysis/Annual?Year=${guaranteedCleanYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
 
         const yoySection = page.locator('[data-testid="annual-yoy-section"]');
