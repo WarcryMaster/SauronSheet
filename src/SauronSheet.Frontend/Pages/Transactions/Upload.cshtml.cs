@@ -129,9 +129,16 @@ public class UploadModel : PageModel
                 cancellationToken);
         }
 
+        int fileIndex = 0;
         foreach (IFormFile file in validFiles)
         {
+            fileIndex++;
             string filename = file.FileName;
+
+            if (_progressTracker != null && validFiles.Count > 1)
+            {
+                await _progressTracker.UpdateCurrentFileAsync(uploadId, filename, fileIndex, cancellationToken);
+            }
 
             try
             {

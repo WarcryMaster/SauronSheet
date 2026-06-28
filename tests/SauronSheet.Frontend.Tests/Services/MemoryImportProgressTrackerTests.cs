@@ -28,7 +28,7 @@ public class MemoryImportProgressTrackerTests
     {
         // Arrange
         MemoryImportProgressTracker tracker = CreateTracker(out _);
-        var startedAt = DateTime.UtcNow;
+        DateTime startedAt = DateTime.UtcNow;
 
         // Act
         await tracker.InitializeAsync(

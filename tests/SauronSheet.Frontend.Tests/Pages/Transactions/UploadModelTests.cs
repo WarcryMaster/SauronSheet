@@ -58,7 +58,7 @@ public class UploadModelTests
 
     private static Mock<IFormFile> CreateFormFile(string fileName, long sizeBytes = 1024)
     {
-        var mockFile = new Mock<IFormFile>();
+        Mock<IFormFile> mockFile = new Mock<IFormFile>();
         mockFile.Setup(f => f.FileName).Returns(fileName);
         mockFile.Setup(f => f.Length).Returns(sizeBytes);
         mockFile.Setup(f => f.OpenReadStream()).Returns(new MemoryStream(new byte[sizeBytes]));

@@ -32,6 +32,11 @@ public interface IImportProgressTracker
         CancellationToken ct = default);
 
     /// <summary>
+    /// Updates the current file being processed (for multi-file uploads).
+    /// </summary>
+    Task UpdateCurrentFileAsync(string uploadId, string fileName, int fileIndex, CancellationToken ct);
+
+    /// <summary>
     /// Marks the upload as completed successfully.
     /// </summary>
     Task CompleteAsync(string uploadId);

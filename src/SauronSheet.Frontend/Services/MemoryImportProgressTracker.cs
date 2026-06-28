@@ -102,6 +102,32 @@ public sealed class MemoryImportProgressTracker : IImportProgressTracker, IDispo
     }
 
     /// <inheritdoc />
+    public async Task UpdateCurrentFileAsync(string uploadId, string fileName, int fileIndex, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(uploadId);
+
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            ImportProgress? existing = GetProgressCore(uploadId);
+            if (existing is null)
+            {
+                return;
+            }
+
+            SetProgress(uploadId, existing with
+            {
+                CurrentFileName = fileName,
+                CurrentFileIndex = fileIndex
+            });
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
     public async Task CompleteAsync(string uploadId)
     {
         ArgumentException.ThrowIfNullOrEmpty(uploadId);

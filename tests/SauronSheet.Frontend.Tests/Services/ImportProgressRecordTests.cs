@@ -14,7 +14,7 @@ public class ImportProgressRecordTests
     public void Constructor_WithTypicalValues_StoresAllProperties()
     {
         // Arrange
-        var startedAt = new DateTime(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
+        DateTime startedAt = new DateTime(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
 
         // Act
         ImportProgress progress = new(
