@@ -30,14 +30,15 @@
             @* Active only toggle *@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" id="ShowActiveOnly"
-                       name="ShowActiveOnly" value="true" x-model="showActiveOnly" />
+                       name="ShowActiveOnly" value="true" x-model="showActiveOnly"
+                       data-testid="show-active-only" />
                 <label class="form-check-label small fw-semibold text-muted text-uppercase" for="ShowActiveOnly">Active Only</label>
             </div>
 
             @* Category filter *@
             <div>
                 <select id="CategoryFilter" name="CategoryFilter" class="form-select form-select-sm" style="width:auto"
-                        x-model="categoryFilter">
+                        x-model="categoryFilter" data-testid="category-filter">
                     <option value="">All Categories</option>
                     @foreach (var cat in Model.Categories)
                     {
@@ -46,7 +47,7 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-brand btn-sm">Filter</button>
+            <button type="submit" class="btn btn-brand btn-sm" data-testid="budget-filter-btn">Filter</button>
         </div>
     </form>
 

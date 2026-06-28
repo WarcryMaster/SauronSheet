@@ -441,8 +441,10 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
      * Flow: /budgets → verify table renders → toggle active filter → verify filtering.
      */
     test('TC-M05: budget list renders with filter controls', async ({ budgetReadyPage: page }) => {
-        await ensureBudgetExists(page, E2E_CAT_A, '200.00');
-        await ensureBudgetExists(page, E2E_CAT_B, '120.00');
+        test.setTimeout(60_000);
+
+        // ensureBudgetStatus handles creation (with default 100.00 limit) + status toggle.
+        // This replaces 4 redundant calls with 2, saving ~4 navigations on CI.
         await ensureBudgetStatus(page, E2E_CAT_A, 'Active');
         await ensureBudgetStatus(page, E2E_CAT_B, 'Inactive');
 
@@ -454,18 +456,25 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await expect(budgetRow(page, E2E_CAT_A)).toContainText('Active');
         await expect(budgetRow(page, E2E_CAT_B)).toContainText('Inactive');
 
-        await page.getByLabel('Active Only').check();
-        await page.getByRole('button', { name: 'Filter' }).click();
+        // Use data-testid selectors and Promise.all to properly track GET form navigation.
+        // The GET form with Alpine x-model can race on CI — Promise.all ensures navigation
+        // is captured even if Alpine defers the DOM update.
+        await page.getByTestId('show-active-only').check();
+        await Promise.all([
+            page.waitForURL(/ShowActiveOnly=true/i, { timeout: 10000 }),
+            page.getByTestId('budget-filter-btn').click(),
+        ]);
 
-        await expect(page).toHaveURL(/ShowActiveOnly=true/i);
         await expect(budgetRow(page, E2E_CAT_A)).toHaveCount(1);
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(0);
 
-        await page.getByLabel('Active Only').uncheck();
-        await page.selectOption('#CategoryFilter', { label: E2E_CAT_B });
-        await page.getByRole('button', { name: 'Filter' }).click();
+        await page.getByTestId('show-active-only').uncheck();
+        await page.selectOption('[data-testid="category-filter"]', { label: E2E_CAT_B });
+        await Promise.all([
+            page.waitForURL(/CategoryFilter=/i, { timeout: 10000 }),
+            page.getByTestId('budget-filter-btn').click(),
+        ]);
 
-        await expect(page).toHaveURL(/CategoryFilter=/i);
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(1);
         await expect(budgetRow(page, E2E_CAT_B)).toContainText('Inactive');
         await expect(budgetRow(page, E2E_CAT_A)).toHaveCount(0);
