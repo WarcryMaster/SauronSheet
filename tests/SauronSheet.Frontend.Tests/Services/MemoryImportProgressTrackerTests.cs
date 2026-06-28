@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
+using SauronSheet.Application.Services;
 using SauronSheet.Frontend.Services;
 using Xunit;
 

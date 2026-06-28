@@ -42,10 +42,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Backend Endpoint + DI
 
-- [ ] 4.1 Modify `Upload.cshtml.cs` — inject `IImportProgressTracker`; rename `OnPostAsync` → `OnPostUploadAsync` returning `JsonResult(new { uploadId })` after generating GUID and dispatching command; add `OnGetProgress(string id)` returning Partial HTML via `_ImportProgress.cshtml`; validate userId ownership from claims
-- [ ] 4.2 Create partial view `src/SauronSheet.Frontend/Pages/Transactions/_ImportProgress.cshtml` — accessible progress bar (role="progressbar", aria-valuenow/min/max, aria-label) per REQ-PROG-011; error state with alert-danger
-- [ ] 4.3 Register in `src/SauronSheet.Frontend/Program.cs`: `builder.Services.AddMemoryCache()` + `builder.Services.AddScoped<IImportProgressTracker, MemoryImportProgressTracker>()`
-- [ ] 4.4 Update `UploadModelTests` — adjust constructor for new dependency; add tests: OnPostUploadAsync returns JSON with uploadId, OnGetProgress returns PartialResult for valid owner, OnGetProgress returns 403 for mismatched userId
+- [x] 4.1 Modify `Upload.cshtml.cs` — inject `IImportProgressTracker` (nullable default parameter to keep existing tests compiling); add `OnPostUploadAsync(CancellationToken)` returning `JsonResult(new { uploadId, success = true })` after generating GUID, initializing progress, validating files, and dispatching `ImportTransactionsCommand` with `UploadId`; add `OnGetProgress(string id)` returning inline Partial HTML with accessible progress bar; validate userId ownership from claims and return 403 for mismatch; set `HX-Trigger: {"stopPolling": true}` when `IsComplete` or `IsFailed`
+- [x] 4.2 Progress partial — implemented inline within `OnGetProgress` (not as a separate view) per updated PR #2 scope; renders accessible progress bar (role="progressbar", aria-valuenow/min/max, aria-label) per REQ-PROG-011 and error state with alert-danger
+- [x] 4.3 Register in `src/SauronSheet.Frontend/Program.cs`: `builder.Services.AddMemoryCache()` + `builder.Services.AddScoped<IImportProgressTracker, MemoryImportProgressTracker>()`
+- [x] 4.4 Update `UploadModelTests` — constructor adjusted via optional tracker parameter; add tests: OnPostUploadAsync returns JSON with uploadId and initializes tracker, OnPostUploadAsync returns error JSON for empty/invalid files, OnGetProgress returns Partial HTML with progress bar, OnGetProgress returns 403 for mismatched userId, OnGetProgress sets HX-Trigger on completion
 
 ## Phase 5: Frontend — Progress UI + JS
 

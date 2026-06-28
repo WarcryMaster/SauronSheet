@@ -1,8 +1,14 @@
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Routing;
 using Moq;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Transactions.DTOs;
+using SauronSheet.Application.Services;
 using SauronSheet.Domain.Exceptions;
 using SauronSheet.Frontend.Pages.Transactions;
 using Xunit;
@@ -23,7 +29,32 @@ public class UploadModelTests
         _mockMediator = new Mock<IMediator>();
     }
 
-    private UploadModel CreateModel() => new(_mockMediator.Object);
+    private UploadModel CreateModel(
+        IImportProgressTracker? progressTracker = null,
+        string userId = "test-user-id")
+    {
+        DefaultHttpContext httpContext = new DefaultHttpContext();
+
+        if (userId != null)
+        {
+            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+                new[] { new Claim("sub", userId) },
+                "TestAuth"));
+        }
+
+        PageContext pageContext = new PageContext(new ActionContext(
+            httpContext,
+            new RouteData(),
+            new PageActionDescriptor(),
+            new ModelStateDictionary()));
+
+        UploadModel model = new(_mockMediator.Object, progressTracker)
+        {
+            PageContext = pageContext
+        };
+
+        return model;
+    }
 
     private static Mock<IFormFile> CreateFormFile(string fileName, long sizeBytes = 1024)
     {
@@ -284,5 +315,169 @@ public class UploadModelTests
         Assert.Single(model.FileErrors);
         Assert.DoesNotContain("10.0.0.1", model.FileErrors[0], StringComparison.Ordinal);
         Assert.DoesNotContain("connection", model.FileErrors[0], StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Asynchronous upload endpoint — OnPostUploadAsync
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostUploadAsync_ValidFile_ReturnsJsonWithUploadIdAndSuccess()
+    {
+        // Arrange
+        Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
+        _mockMediator
+            .Setup(m => m.Send(
+                It.Is<ImportTransactionsCommand>(c => c.Filename == "statement.xlsx" && c.UploadId != null),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ImportResultDto(3, 1, 4, "statement.xlsx", DateTime.UtcNow, []));
+
+        UploadModel model = CreateModel(mockTracker.Object);
+        model.ExcelFiles = new[] { CreateFormFile("statement.xlsx").Object };
+
+        // Act
+        IActionResult result = await model.OnPostUploadAsync();
+
+        // Assert
+        JsonResult json = Assert.IsType<JsonResult>(result);
+        Dictionary<string, object?> values = Assert.IsType<Dictionary<string, object?>>(json.Value);
+        Assert.True(values.TryGetValue("uploadId", out object? uploadIdValue));
+        Assert.True(values.TryGetValue("success", out object? successValue));
+        Assert.True((bool)successValue!);
+        Assert.False(string.IsNullOrEmpty((string?)uploadIdValue));
+
+        mockTracker.Verify(t => t.InitializeAsync(
+            (string)uploadIdValue!,
+            "statement.xlsx",
+            0,
+            "test-user-id",
+            "statement.xlsx",
+            1,
+            1,
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostUploadAsync_EmptyFileArray_ReturnsErrorJson()
+    {
+        // Arrange
+        Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
+        UploadModel model = CreateModel(mockTracker.Object);
+        model.ExcelFiles = Array.Empty<IFormFile>();
+
+        // Act
+        IActionResult result = await model.OnPostUploadAsync();
+
+        // Assert
+        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Dictionary<string, object?> values = Assert.IsType<Dictionary<string, object?>>(badRequest.Value!);
+        Assert.False((bool)values["success"]!);
+        Assert.Contains("at least one", (string?)values["error"], StringComparison.OrdinalIgnoreCase);
+        mockTracker.Verify(t => t.InitializeAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnPostUploadAsync_InvalidFileExtension_ReturnsErrorJsonWithoutDispatching()
+    {
+        // Arrange
+        Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
+        UploadModel model = CreateModel(mockTracker.Object);
+        model.ExcelFiles = new[] { CreateFormFile("statement.pdf").Object };
+
+        // Act
+        IActionResult result = await model.OnPostUploadAsync();
+
+        // Assert
+        BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Dictionary<string, object?> values = Assert.IsType<Dictionary<string, object?>>(badRequest.Value!);
+        Assert.False((bool)values["success"]!);
+        Assert.Contains("Excel", (string?)values["error"], StringComparison.OrdinalIgnoreCase);
+        _mockMediator.Verify(m => m.Send(It.IsAny<ImportTransactionsCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Progress polling endpoint — OnGetProgress
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetProgress_WrongUserId_ReturnsForbid()
+    {
+        // Arrange
+        Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
+        ImportProgress progress = new(
+            "upload-1", "statement.xlsx", 100, 50, 45, 5, false, false, null,
+            "statement.xlsx", 1, 1, "other-user", DateTime.UtcNow);
+
+        mockTracker.Setup(t => t.GetProgress("upload-1")).Returns(progress);
+
+        UploadModel model = CreateModel(mockTracker.Object);
+
+        // Act
+        IActionResult result = await model.OnGetProgress("upload-1");
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetProgress_ValidOwner_ReturnsPartialHtmlWithProgressBar()
+    {
+        // Arrange
+        Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
+        ImportProgress progress = new(
+            "upload-1", "statement.xlsx", 200, 50, 45, 5, false, false, null,
+            "statement.xlsx", 1, 1, "test-user-id", DateTime.UtcNow);
+
+        mockTracker.Setup(t => t.GetProgress("upload-1")).Returns(progress);
+
+        UploadModel model = CreateModel(mockTracker.Object);
+
+        // Act
+        IActionResult result = await model.OnGetProgress("upload-1");
+
+        // Assert
+        ContentResult content = Assert.IsType<ContentResult>(result);
+        Assert.Equal("text/html", content.ContentType);
+        Assert.Contains("role=\"progressbar\"", content.Content);
+        Assert.Contains("aria-valuenow=\"25\"", content.Content);
+        Assert.Contains("25%", content.Content);
+        Assert.Contains("Processing file 1 of 1: statement.xlsx", content.Content);
+        Assert.Contains("50/200 rows", content.Content);
+        Assert.Contains("Imported: 45", content.Content);
+        Assert.Contains("Skipped: 5", content.Content);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetProgress_CompletedProgress_SetsStopPollingHeader()
+    {
+        // Arrange
+        Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
+        ImportProgress progress = new(
+            "upload-1", "statement.xlsx", 100, 100, 95, 5, true, false, null,
+            "statement.xlsx", 1, 1, "test-user-id", DateTime.UtcNow);
+
+        mockTracker.Setup(t => t.GetProgress("upload-1")).Returns(progress);
+
+        UploadModel model = CreateModel(mockTracker.Object);
+
+        // Act
+        IActionResult result = await model.OnGetProgress("upload-1");
+
+        // Assert
+        ContentResult content = Assert.IsType<ContentResult>(result);
+        Assert.Equal("text/html", content.ContentType);
+        Assert.True(model.Response.Headers.ContainsKey("HX-Trigger"));
+        Assert.Contains("stopPolling", model.Response.Headers["HX-Trigger"].ToString());
     }
 }

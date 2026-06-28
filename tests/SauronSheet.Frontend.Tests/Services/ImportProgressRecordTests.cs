@@ -1,6 +1,6 @@
 namespace SauronSheet.Frontend.Tests.Services;
 
-using SauronSheet.Frontend.Services;
+using SauronSheet.Application.Services;
 using Xunit;
 
 /// <summary>

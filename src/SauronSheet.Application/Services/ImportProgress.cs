@@ -1,4 +1,4 @@
-namespace SauronSheet.Frontend.Services;
+namespace SauronSheet.Application.Services;
 
 /// <summary>
 /// Immutable snapshot of an in-progress transaction import.

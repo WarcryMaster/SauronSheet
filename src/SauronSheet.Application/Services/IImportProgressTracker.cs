@@ -40,4 +40,9 @@ public interface IImportProgressTracker
     /// Marks the upload as failed and stores a user-safe error message.
     /// </summary>
     Task FailAsync(string uploadId, string error);
+
+    /// <summary>
+    /// Reads the current progress snapshot for the given upload.
+    /// </summary>
+    ImportProgress? GetProgress(string uploadId);
 }

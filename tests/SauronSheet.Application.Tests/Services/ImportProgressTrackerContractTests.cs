@@ -63,6 +63,12 @@ public class ImportProgressTrackerContractTests
             Failed = true;
             return Task.CompletedTask;
         }
+
+        public ImportProgress? GetProgress(string uploadId)
+        {
+            LastUploadId = uploadId;
+            return null;
+        }
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
 import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
@@ -18,6 +19,9 @@ import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 /** Default seeded test user — exists in Supabase with email_confirmed_at pre-set. */
 const SEEDED_EMAIL    = 'e2e@saurontest.local';
 const SEEDED_PASSWORD = '***REMOVED***';
+
+/** Real ING Excel fixture used across parser and integration tests (21 rows, 0 errors, 0 skipped). */
+const EXCEL_FIXTURE_PATH = path.resolve(__dirname, '../../src/SauronSheet.Infrastructure/Excel/movements-non-2501.xls');
 
 /**
  * Attempts login with the given credentials.
@@ -93,5 +97,56 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         // The heading should not mention PDF
         const heading = page.locator('h3');
         await expect(heading).not.toContainText('PDF', { ignoreCase: true });
+    });
+
+    /**
+     * REQ-PROG-011: Real-time progress bar is visible during upload with ARIA attributes and counts.
+     */
+    test('TC-U04: shows progress bar during upload', async ({ page }) => {
+        // Intercept the first progress poll so the fast real upload still renders a progress state.
+        let progressRequestCount = 0;
+        await page.route('**/Transactions/Upload?handler=Progress**', async route => {
+            progressRequestCount++;
+            if (progressRequestCount === 1) {
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'text/html',
+                    body: `
+                        <div id="progress-container" role="progressbar"
+                             aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"
+                             aria-label="Import progress: 50%">
+                            <p class="small text-muted mb-1">Processing file 1 of 1: statement.xls</p>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" style="width: 50%">50%</div>
+                            </div>
+                            <p class="small mt-1">5/10 rows | Imported: 3 | Skipped: 2</p>
+                        </div>
+                    `
+                });
+                return;
+            }
+            await route.continue();
+        });
+
+        await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
+        await page.click('button[type="submit"]');
+
+        const progressBar = page.locator('[role="progressbar"]');
+        await expect(progressBar).toBeVisible({ timeout: 10000 });
+        await expect(progressBar).toContainText('50%');
+        await expect(progressBar).toContainText('Imported:');
+        await expect(progressBar).toContainText('Skipped:');
+    });
+
+    /**
+     * REQ-PROG-006: Upload completes and the final success result is displayed.
+     */
+    test('TC-U05: completes upload and shows results', async ({ page }) => {
+        await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
+        await page.click('button[type="submit"]');
+
+        const successAlert = page.locator('[role="status"]');
+        await expect(successAlert).toBeVisible({ timeout: 30000 });
+        await expect(successAlert).toContainText('Import completed');
     });
 });

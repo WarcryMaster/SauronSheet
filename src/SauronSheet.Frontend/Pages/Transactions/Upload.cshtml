@@ -69,10 +69,14 @@
 
     <div class="card border-0 shadow-sm p-4">
         <form method="post" enctype="multipart/form-data" class="d-flex flex-column gap-4"
+              x-ref="uploadForm"
               x-data="{
                   files: [],
                   dragging: false,
                   uploading: false,
+                  progressVisible: false,
+                  progressUploadId: null,
+                  errorMessage: null,
                   handleFileSelect(event) {
                       const selectedFiles = Array.from(event.target.files);
                       event.target.value = '';
@@ -98,9 +102,63 @@
                       if (bytes < 1024) return bytes + ' B';
                       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
                       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                  },
+                  async handleUpload() {
+                      if (this.files.length === 0) return;
+
+                      this.uploading = true;
+                      this.progressVisible = true;
+                      this.errorMessage = null;
+
+                      const form = this.$refs.uploadForm;
+                      const formData = new FormData(form);
+                      const tokenInput = form.querySelector('input[name=__RequestVerificationToken]');
+                      const token = tokenInput ? tokenInput.value : '';
+
+                      try {
+                          const response = await fetch('/Transactions/Upload?handler=UploadAsync', {
+                              method: 'POST',
+                              headers: { 'RequestVerificationToken': token },
+                              body: formData
+                          });
+
+                          const result = await response.json();
+                          if (result.success) {
+                              this.progressUploadId = result.uploadId;
+                              const progressEl = document.getElementById('upload-progress');
+                              if (progressEl) {
+                                  progressEl.setAttribute('hx-get', '/Transactions/Upload?handler=Progress&id=' + result.uploadId);
+                                  progressEl.setAttribute('hx-trigger', 'every 1s');
+                                  htmx.process(progressEl);
+                                  htmx.trigger(progressEl, 'startProgress');
+                              }
+                          } else {
+                              this.uploading = false;
+                              this.progressVisible = false;
+                              this.errorMessage = result.error || 'Upload failed';
+                          }
+                      } catch (error) {
+                          this.uploading = false;
+                          this.progressVisible = false;
+                          this.errorMessage = 'Network error. Please try again.';
+                          if (typeof Sentry !== 'undefined') {
+                              Sentry.captureException(error);
+                          }
+                      }
                   }
               }"
-              @@submit="if (files.length === 0) { $event.preventDefault(); return; } uploading = true">
+              x-init="() => {
+                  const stopPollingHandler = () => {
+                      const progressEl = document.getElementById('upload-progress');
+                      if (progressEl) {
+                          progressEl.removeAttribute('hx-trigger');
+                          htmx.process(progressEl);
+                      }
+                  };
+                  document.body.addEventListener('stopPolling', stopPollingHandler);
+                  return () => document.body.removeEventListener('stopPolling', stopPollingHandler);
+              }"
+              @@submit.prevent="handleUpload()">
 
             <div>
                 <label class="form-label fw-semibold">Select Excel Bank Statement(s)</label>
@@ -140,6 +198,17 @@
                         </button>
                     </div>
                 </template>
+            </div>
+
+            <!-- Async upload error message -->
+            <div x-show="errorMessage" x-transition class="alert alert-danger d-flex flex-column gap-2 rounded-3" role="alert">
+                <p class="fw-semibold mb-0">⚠️ Upload failed</p>
+                <p class="small mb-0" x-text="errorMessage"></p>
+            </div>
+
+            <!-- Real-time progress container -->
+            <div id="upload-progress" x-show="progressVisible" x-transition
+                 hx-get="" hx-trigger="startProgress from:body" hx-target="this" hx-swap="innerHTML">
             </div>
 
             <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold"

@@ -1,10 +1,12 @@
 
 using SauronSheet.Application;
+using SauronSheet.Application.Services;
 using SauronSheet.Infrastructure;
 using SauronSheet.Infrastructure.Auth;
 using SauronSheet.Infrastructure.Middleware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using SauronSheet.Frontend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,10 @@ builder.WebHost.AddSentryMonitoring(builder.Configuration);
 // Register application and infrastructure services
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// Register progress tracking for real-time upload feedback
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IImportProgressTracker, MemoryImportProgressTracker>();
 
 // Add Razor Pages with authorization policy
 builder.Services.AddRazorPages()
