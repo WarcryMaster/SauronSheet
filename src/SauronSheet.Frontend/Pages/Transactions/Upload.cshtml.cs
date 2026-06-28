@@ -148,9 +148,13 @@ public class UploadModel : PageModel
             fileData.Add((file.FileName, ms.ToArray()));
         }
 
-        // Capture user principal BEFORE Task.Run — HttpUserContext depends on
-        // IHttpContextAccessor, which is null outside the HTTP request.
+        // Capture user principal and access token BEFORE Task.Run so we can
+        // reconstruct the HttpContext in the background scope. HttpUserContext
+        // depends on IHttpContextAccessor, and Supabase.Client reads the
+        // sb-access-token cookie for RLS compliance — both are null outside
+        // the HTTP request pipeline.
         ClaimsPrincipal capturedUser = User;
+        string? accessToken = Request.Cookies["sb-access-token"];
 
         // Fire-and-forget: process files in a background scope so the frontend
         // can poll progress while the handler reports it via IMemoryCache.
@@ -162,11 +166,17 @@ public class UploadModel : PageModel
             {
                 using IServiceScope scope = _serviceScopeFactory.CreateScope();
 
-                // Set up a fake HttpContext with the captured ClaimsPrincipal so
-                // HttpUserContext (resolved as IUserContext from DI) can read
-                // the user's identity in the background scope.
+                // Reconstruct a fake HttpContext with the captured user and access
+                // token cookie. This allows:
+                //   1. HttpUserContext (IUserContext) to resolve UserId correctly
+                //   2. Supabase.Client factory to read sb-access-token for RLS
                 httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
-                httpContextAccessor.HttpContext = new DefaultHttpContext { User = capturedUser };
+                DefaultHttpContext fakeContext = new() { User = capturedUser };
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    fakeContext.Request.Headers["Cookie"] = $"sb-access-token={accessToken}";
+                }
+                httpContextAccessor.HttpContext = fakeContext;
 
                 IMediator scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
                 IImportProgressTracker? scopedTracker = scope.ServiceProvider.GetService<IImportProgressTracker>();
