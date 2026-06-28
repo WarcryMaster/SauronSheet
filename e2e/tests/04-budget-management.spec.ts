@@ -17,18 +17,15 @@
  * Data provisioning: uses budget-data.fixture.ts for auth + test categories.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_A, E2E_CAT_B } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, AUTH_FILE, E2E_CAT_A, E2E_CAT_B } from '../fixtures/budget-data.fixture';
 import { budgetRow, ensureBudgetDeleted, ensureBudgetExists, ensureBudgetStatus, getCurrentBudgetMonth } from './budgets/helpers';
 import { setFlatpickrDate } from '../helpers';
 
 test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
     test.afterAll(async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await browser.newContext({ storageState: AUTH_FILE });
         const page    = await context.newPage();
-
-        await context.clearCookies();
-        await loginAsTestAccount(page);
 
         await cleanupE2EBudgets(page);
         await cleanupE2ETransactions(page);

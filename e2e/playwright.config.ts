@@ -5,6 +5,13 @@ import { defineConfig, devices } from '@playwright/test';
  * 
  * Tests the Razor Pages frontend application running on .NET 10.
  * Uses Supabase for authentication and data persistence.
+ *
+ * Auth strategy:
+ *   The `setup` project logs in once and saves storage state to `.auth/user.json`.
+ *   All test projects depend on `setup` and use `storageState` to skip the login step,
+ *   saving ~3-4s per test file.
+ *   The login spec (01-login.spec.ts) clears cookies via `context.clearCookies()`
+ *   in its beforeEach to start unauthenticated.
  */
 export default defineConfig({
   testDir: './tests',
@@ -55,19 +62,30 @@ export default defineConfig({
   
   // Configure projects for major browsers
   projects: [
+    // ── Auth setup — logs in once, saves cookies for all test projects ──
+    {
+      name: 'setup',
+      testDir: '.',
+      testMatch: 'auth.setup.ts',
+    },
+
+    // ── Chromium test projects ──
     {
       name: 'chromium',
+      dependencies: ['setup'],
       // Use installed Edge/Chrome as fallback when the Playwright headless shell
       // is not available locally (e.g. fresh checkout without `playwright install`).
       // On CI, the channel is left unset so the downloaded headless shell is used.
       use: {
         ...devices['Desktop Chrome'],
+        storageState: '.auth/user.json',
         ...(process.env.CI ? {} : { channel: 'msedge' }),
       },
     },
     {
       name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
+      dependencies: ['setup'],
+      use: { ...devices['Pixel 5'], storageState: '.auth/user.json' },
     },
 
     // Only run additional browsers locally (CI uses Chromium + Mobile Chrome only)
@@ -75,15 +93,18 @@ export default defineConfig({
       ? [
           {
             name: 'firefox',
-            use: { ...devices['Desktop Firefox'] },
+            dependencies: ['setup'],
+            use: { ...devices['Desktop Firefox'], storageState: '.auth/user.json' },
           },
           {
             name: 'webkit',
-            use: { ...devices['Desktop Safari'] },
+            dependencies: ['setup'],
+            use: { ...devices['Desktop Safari'], storageState: '.auth/user.json' },
           },
           {
             name: 'Mobile Safari',
-            use: { ...devices['iPhone 12'] },
+            dependencies: ['setup'],
+            use: { ...devices['iPhone 12'], storageState: '.auth/user.json' },
           },
         ]
       : []),

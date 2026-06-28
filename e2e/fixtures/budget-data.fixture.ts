@@ -3,20 +3,17 @@ import { test as base, expect, Page } from '@playwright/test';
 /**
  * Budget data fixture for SauronSheet E2E tests.
  *
- * Provisions deterministic test data before each test using the app's own API endpoints.
+ * Provisions deterministic test data before each test using the app's own UI.
  * Idempotent: safe to run multiple times without creating duplicates.
  *
  * Provisioning steps (in order):
- *   1. Login via dual-path (env-var credentials, then seeded fallback)
- *   2. Ensure category "E2E-Budget-Cat-A" exists (Expense)
- *   3. Ensure category "E2E-Budget-Cat-B" exists (Expense)
- *   4. Ensure a -25€ expense transaction exists for "E2E-Budget-Cat-B" in the current month
- *   5. Yield the authenticated, provisioned page to the test
+ *   1. Ensure category "E2E-Budget-Cat-A" exists (Expense)
+ *   2. Ensure category "E2E-Budget-Cat-B" exists (Expense)
+ *   3. Ensure a -25€ expense transaction exists for "E2E-Budget-Cat-B" in the current month
+ *   4. Yield the authenticated, provisioned page to the test
  *
- * Auth strategy (same dual-path as other E2E specs):
- *   Priority 1 — Env-var credentials: TEST_USER_EMAIL / TEST_USER_PASSWORD (CI / override)
- *   Priority 2 — Seeded test user: e2e@saurontest.local / ***REMOVED***
- *                (pre-confirmed in Supabase auth.users — no email confirmation needed)
+ * Auth is handled by Playwright's storageState (from auth.setup.ts).
+ * The page is already authenticated — no login step needed in the fixture.
  *
  * Implementation note — Categories API:
  *   The /categories page has two [BindProperty] models (CreateForm, EditForm). ASP.NET
@@ -341,12 +338,13 @@ export async function cleanupE2ECategories(page: Page): Promise<void> {
 // Fixture export
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Shared storage state file path for auth setup. */
+export const AUTH_FILE = '.auth/user.json';
+
 export const test = base.extend<BudgetFixtures>({
     budgetReadyPage: async ({ page }, use) => {
-        const context = page.context();
-        await context.clearCookies();
-
-        await loginAsTestAccount(page);
+        // Page is already authenticated via storageState (from auth.setup.ts).
+        // Only provision the deterministic test data.
 
         await ensureCategoryExists(page, E2E_CAT_A);
         await ensureCategoryExists(page, E2E_CAT_B);

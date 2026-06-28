@@ -1,60 +1,19 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
-import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
  * E2E Tests for Excel Upload page — ESP-4
  *
- * Auth strategy:
- *   Priority 1 — Env-var credentials: TEST_USER_EMAIL / TEST_USER_PASSWORD (CI / custom override).
- *   Priority 2 — Seeded test user: e2e@saurontest.local / ***REMOVED*** (pre-seeded in Supabase
- *                with email_confirmed_at set directly in auth.users — no email confirmation needed).
- *
- *   If both paths fail, tests skip with a diagnostic message rather than misleading failures.
- *
- *   NOTE: Self-registration is NOT used because Supabase email confirmation is ON for this project.
- *   The seeded user bypasses that requirement entirely.
+ * Auth is handled by Playwright's storageState (from auth.setup.ts).
+ * The page is already authenticated — no login step needed.
  */
-
-/** Default seeded test user — exists in Supabase with email_confirmed_at pre-set. */
-const SEEDED_EMAIL    = 'e2e@saurontest.local';
-const SEEDED_PASSWORD = '***REMOVED***';
 
 /** Real ING Excel fixture used across parser and integration tests (21 rows, 0 errors, 0 skipped). */
 const EXCEL_FIXTURE_PATH = path.resolve(__dirname, '../../src/SauronSheet.Infrastructure/Excel/movements-non-2501.xls');
 
-/**
- * Attempts login with the given credentials.
- * Returns true if the browser reached /dashboard, false otherwise.
- */
-async function loginWith(page: any, email: string, password: string): Promise<boolean> {
-    await page.goto('/auth/login');
-    await page.fill('input[type="email"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.click('button[type="submit"]');
-
-    try {
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 test.describe('Upload Excel Bank Statement — ESP-4', () => {
     test.beforeEach(async ({ page }) => {
-        const account = resolveTestAccount();
-        const authenticated = await loginWith(page, account.email, account.password);
-        if (authenticated) {
-            await page.goto('/transactions/upload');
-            return;
-        }
-
-        test.skip(
-            true,
-            `W-2 BLOCKED: login failed for ${account.email}. ` +
-            `Verify the user exists in Supabase auth.users with email_confirmed_at set.`
-        );
+        await page.goto('/transactions/upload');
     });
 
     /**

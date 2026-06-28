@@ -24,7 +24,7 @@
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, loginAsTestAccount, E2E_CAT_B } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, AUTH_FILE, E2E_CAT_B } from '../fixtures/budget-data.fixture';
 import { ensureBudgetDeleted, ensureBudgetExists, getCurrentBudgetMonth } from './budgets/helpers';
 import { setFlatpickrDate } from '../helpers';
 
@@ -33,11 +33,8 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
     // Clean up all E2E artifacts after the entire suite finishes.
     // This prevents test data from accumulating under the test user's account.
     test.afterAll(async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await browser.newContext({ storageState: AUTH_FILE });
         const page    = await context.newPage();
-
-        await context.clearCookies();
-        await loginAsTestAccount(page);
 
         await cleanupE2EBudgets(page);
         await cleanupE2ETransactions(page);

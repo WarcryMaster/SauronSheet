@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
  * E2E Tests for Transaction Edit flow — Phase 6
@@ -11,40 +10,17 @@ import { resolveTestAccount } from '../fixtures/budget-data.fixture';
  *   TC-E04: Non-existent transaction ID redirects with error handling
  *   TC-E05: Cancel button returns to transactions list
  *
- * Auth strategy (same as other E2E specs):
- *   Priority 1 — Env-var credentials: TEST_USER_EMAIL / TEST_USER_PASSWORD (CI).
- *   Priority 2 — Seeded test user: e2e@saurontest.local / ***REMOVED***
+ * Auth is handled by Playwright's storageState (from auth.setup.ts).
+ * The page is already authenticated — no login step needed.
  *
  * NOTE: The Transactions Index page does not currently render TempData success/error
  * messages. Tests verify redirect behaviour (URL change) rather than alert banners.
  * This is a known gap — adding TempData display to the Index page is tracked separately.
  */
 
-/**
- * Attempts login with the given credentials.
- * Returns true if the browser reached /dashboard, false otherwise.
- */
-async function loginWith(page: any, email: string, password: string): Promise<boolean> {
-    await page.goto('/auth/login');
-    await page.fill('input[type="email"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.click('button[type="submit"]');
-
-    try {
-        await page.waitForURL(/dashboard/i, { timeout: 15000 });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 test.describe('Edit Transaction', () => {
     test.beforeEach(async ({ page }) => {
-        const account = resolveTestAccount();
-        const authenticated = await loginWith(page, account.email, account.password);
-        if (!authenticated) {
-            test.skip(true, `Login failed for ${account.email}`);
-        }
+        await page.goto('/transactions');
     });
 
     /**

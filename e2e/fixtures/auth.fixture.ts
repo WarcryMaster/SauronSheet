@@ -1,9 +1,14 @@
 import { test as base } from '@playwright/test';
-import { loginAsTestAccount } from './budget-data.fixture';
 
 /**
- * Auth fixture for SauronSheet E2E tests
- * Provides authenticated page context for tests that require login
+ * Auth fixture for SauronSheet E2E tests.
+ *
+ * The page is already authenticated via storageState (from auth.setup.ts).
+ * This fixture exists solely as a typed alias so tests can use
+ * `{ authenticatedPage: page }` for self-documenting intent.
+ *
+ * No login or teardown needed — the Playwright context manages auth
+ * lifecycle via the shared `.auth/user.json` storage state.
  */
 
 interface TestFixtures {
@@ -12,19 +17,7 @@ interface TestFixtures {
 
 export const test = base.extend<TestFixtures>({
   authenticatedPage: async ({ page }, use) => {
-    // Setup: Login before each test
-    await loginAsTestAccount(page);
-    
-    // Provide the authenticated page to the test
     await use(page);
-    
-    // Teardown: Logout after each test
-    try {
-      await page.goto('/Auth/Logout');
-      await page.waitForURL(/\/Auth\/Login|\/Index/, { timeout: 5000 });
-    } catch (e) {
-      // Ignore logout errors in teardown
-    }
   },
 });
 

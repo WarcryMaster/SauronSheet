@@ -5,6 +5,9 @@
  *   TC-C01 — Create a category via UI modal
  *   TC-C02 — Delete a category via list page
  *
+ * Auth is handled by Playwright's storageState (from auth.setup.ts).
+ * The page is already authenticated — no login step needed.
+ *
  * E2E Testing Policy (from AGENTS.md):
  *   - MUST act as real user: page.click(), page.fill(), page.selectOption()
  *   - Wait for elements to be visible before interacting
@@ -13,19 +16,17 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginAsTestAccount } from '../fixtures/budget-data.fixture';
+import { AUTH_FILE } from '../fixtures/budget-data.fixture';
 
 const E2E_CAT_DELETE = 'E2E-Delete-Cat';
 
 test.describe('Categories — create and delete lifecycle', () => {
 
     test.afterAll(async ({ browser }) => {
-        // Cleanup: delete the test category if it still exists
-        const context = await browser.newContext();
+        // Cleanup: delete the test category if it still exists.
+        // Authenticated via storageState (no manual login needed).
+        const context = await browser.newContext({ storageState: AUTH_FILE });
         const page = await context.newPage();
-
-        await context.clearCookies();
-        await loginAsTestAccount(page);
 
         await page.goto('/categories');
         await page.waitForLoadState('domcontentloaded');
@@ -53,9 +54,6 @@ test.describe('Categories — create and delete lifecycle', () => {
      * TC-C01: Create a category via the UI modal form.
      */
     test('TC-C01: create category via modal form', async ({ page }) => {
-        // ── Authenticate ─────────────────────────────────────────────────────
-        await loginAsTestAccount(page);
-
         // ── Navigate to categories ───────────────────────────────────────────
         await page.goto('/categories');
         await page.waitForLoadState('domcontentloaded');
@@ -66,33 +64,26 @@ test.describe('Categories — create and delete lifecycle', () => {
         });
 
         if ((await existing.count()) > 0) {
-            // Already exists — skip creation, just verify it's there
-            await expect(existing).toBeVisible();
             return;
         }
 
-        // ── Open create modal ────────────────────────────────────────────────
+        // ── Create category via modal form ───────────────────────────────────
         await page.getByRole('button', { name: 'Add New Category' }).click();
+        await page.locator('#createCategoryModal').waitFor({ state: 'visible' });
 
-        const createModal = page.locator('#createCategoryModal');
-        await expect(createModal).toBeVisible();
-
-        // ── Fill form ────────────────────────────────────────────────────────
         await page.fill('#createName', E2E_CAT_DELETE);
-        await page.selectOption('#createType', '1'); // Expense
+        await page.selectOption('#createType', '1');
         await page.selectOption('#createIcon', 'tag');
         await page.fill('#createColor', '#3498DB');
 
         const submitBtn = page.locator('#createSubmitBtn');
         await expect(submitBtn).toBeEnabled({ timeout: 5000 });
-
-        // ── Submit ───────────────────────────────────────────────────────────
         await submitBtn.click();
 
-        // ── Verify category appears in list ──────────────────────────────────
-        await expect(createModal).toBeHidden({ timeout: 10000 });
+        await page.locator('#createCategoryModal').waitFor({ state: 'hidden', timeout: 10000 });
         await page.waitForLoadState('domcontentloaded');
 
+        // ── Verify category appears in list ─────────────────────────────────
         const newItem = page.locator('.list-group-item').filter({
             has: page.locator('.fw-bold', { hasText: new RegExp(`^${E2E_CAT_DELETE}$`) }),
         });
@@ -103,10 +94,7 @@ test.describe('Categories — create and delete lifecycle', () => {
      * TC-C02: Delete a category via the list page.
      */
     test('TC-C02: delete category removes it from list', async ({ page }) => {
-        // ── Authenticate ─────────────────────────────────────────────────────
-        await loginAsTestAccount(page);
-
-        // ── Ensure category exists (reuse TC-C01 logic) ──────────────────────
+        // ── Ensure category exists ──────────────────────────────────────────
         await page.goto('/categories');
         await page.waitForLoadState('domcontentloaded');
 

@@ -3,10 +3,15 @@ import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 /**
  * E2E Tests for Login/Authentication Flow
+ *
+ * NOTE: This test file deliberately overrides the project-wide storageState.
+ * beforeEach clears cookies to start unauthenticated, because this spec
+ * tests the login flow itself (which assumes the user is logged out).
  */
 
 test.describe('Login Flow', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, context }) => {
+    await context.clearCookies();
     await page.goto('/auth/login');
   });
 
