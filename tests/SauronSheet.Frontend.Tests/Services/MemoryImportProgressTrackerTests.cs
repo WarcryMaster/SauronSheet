@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Memory;
 using SauronSheet.Application.Services;
 using SauronSheet.Frontend.Services;
 using Xunit;
@@ -17,17 +16,13 @@ using Xunit;
 [Trait("Category", "Frontend")]
 public class MemoryImportProgressTrackerTests
 {
-    private static MemoryImportProgressTracker CreateTracker(out IMemoryCache cache)
-    {
-        cache = new MemoryCache(new MemoryCacheOptions());
-        return new MemoryImportProgressTracker(cache);
-    }
+    private static MemoryImportProgressTracker CreateTracker() => new();
 
     [Fact]
     public async Task InitializeAsync_StoresProgressEntry()
     {
         // Arrange
-        MemoryImportProgressTracker tracker = CreateTracker(out _);
+        MemoryImportProgressTracker tracker = CreateTracker();
         DateTime startedAt = DateTime.UtcNow;
 
         // Act
@@ -65,7 +60,7 @@ public class MemoryImportProgressTrackerTests
     public async Task ReportProgressAsync_UpdatesCounts()
     {
         // Arrange
-        MemoryImportProgressTracker tracker = CreateTracker(out _);
+        MemoryImportProgressTracker tracker = CreateTracker();
         await tracker.InitializeAsync(
             "upload-2",
             "report.xlsx",
@@ -97,7 +92,7 @@ public class MemoryImportProgressTrackerTests
     public async Task CompleteAsync_SetsIsComplete()
     {
         // Arrange
-        MemoryImportProgressTracker tracker = CreateTracker(out _);
+        MemoryImportProgressTracker tracker = CreateTracker();
         await tracker.InitializeAsync(
             "upload-3",
             "complete.xlsx",
@@ -127,7 +122,7 @@ public class MemoryImportProgressTrackerTests
     public async Task FailAsync_SetsIsFailedAndErrorMessage()
     {
         // Arrange
-        MemoryImportProgressTracker tracker = CreateTracker(out _);
+        MemoryImportProgressTracker tracker = CreateTracker();
         await tracker.InitializeAsync(
             "upload-4",
             "fail.xlsx",
@@ -154,7 +149,7 @@ public class MemoryImportProgressTrackerTests
     public void GetProgress_UnknownUploadId_ReturnsNull()
     {
         // Arrange
-        MemoryImportProgressTracker tracker = CreateTracker(out _);
+        MemoryImportProgressTracker tracker = CreateTracker();
 
         // Act
         ImportProgress? progress = tracker.GetProgress("unknown-upload");
@@ -167,7 +162,7 @@ public class MemoryImportProgressTrackerTests
     public async Task ConcurrentUpdates_MaintainConsistentState()
     {
         // Arrange
-        MemoryImportProgressTracker tracker = CreateTracker(out _);
+        MemoryImportProgressTracker tracker = CreateTracker();
         const string uploadId = "upload-concurrent";
         const int totalRows = 1000;
         const int workers = 10;

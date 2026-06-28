@@ -1,9 +1,11 @@
 using System.Net;
+using System.Security.Claims;
 using System.Threading;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Transactions.DTOs;
 using SauronSheet.Application.Services;
@@ -16,6 +18,7 @@ public class UploadModel : PageModel
 {
     private readonly IMediator _mediator;
     private readonly IImportProgressTracker? _progressTracker;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     [BindProperty]
     public IFormFile[] ExcelFiles { get; set; } = Array.Empty<IFormFile>();
@@ -23,10 +26,14 @@ public class UploadModel : PageModel
     public List<ImportResultDto> ImportResults { get; set; } = new();
     public List<string> FileErrors { get; set; } = new();
 
-    public UploadModel(IMediator mediator, IImportProgressTracker? progressTracker = null)
+    public UploadModel(
+        IMediator mediator,
+        IServiceScopeFactory serviceScopeFactory,
+        IImportProgressTracker? progressTracker = null)
     {
         _mediator = mediator;
         _progressTracker = progressTracker;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     public void OnGet() { }
@@ -115,7 +122,10 @@ public class UploadModel : PageModel
         string uploadId = Guid.NewGuid().ToString("N");
         string userId = User.FindFirst("sub")?.Value ?? string.Empty;
         string firstFileName = validFiles[0].FileName;
+        int totalFiles = validFiles.Count;
 
+        // Initialize tracker so the frontend can start polling immediately.
+        // totalRows=0 here; the handler will re-initialize with the real count after parsing.
         if (_progressTracker != null)
         {
             await _progressTracker.InitializeAsync(
@@ -125,71 +135,107 @@ public class UploadModel : PageModel
                 userId,
                 firstFileName,
                 currentFileIndex: 1,
-                validFiles.Count,
+                totalFiles,
                 cancellationToken);
         }
 
-        int fileIndex = 0;
+        // Copy file contents to memory — IFormFile streams are request-scoped.
+        List<(string FileName, byte[] Content)> fileData = new(validFiles.Count);
         foreach (IFormFile file in validFiles)
         {
-            fileIndex++;
-            string filename = file.FileName;
+            using MemoryStream ms = new();
+            await file.CopyToAsync(ms, cancellationToken);
+            fileData.Add((file.FileName, ms.ToArray()));
+        }
 
-            if (_progressTracker != null && validFiles.Count > 1)
-            {
-                await _progressTracker.UpdateCurrentFileAsync(uploadId, filename, fileIndex, cancellationToken);
-            }
+        // Capture user principal BEFORE Task.Run — HttpUserContext depends on
+        // IHttpContextAccessor, which is null outside the HTTP request.
+        ClaimsPrincipal capturedUser = User;
 
+        // Fire-and-forget: process files in a background scope so the frontend
+        // can poll progress while the handler reports it via IMemoryCache.
+        // Per spec REQ-PROG-005: upload does not reload the page.
+        _ = Task.Run(async () =>
+        {
+            IHttpContextAccessor? httpContextAccessor = null;
             try
             {
-                using Stream stream = file.OpenReadStream();
-                await _mediator.Send(
-                    new ImportTransactionsCommand(stream, filename, uploadId),
-                    cancellationToken);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return RedirectToPage("/auth/login");
-            }
-            catch (HttpRequestException ex)
-            {
-                Sentry.SentrySdk.CaptureException(ex, scope =>
+                using IServiceScope scope = _serviceScopeFactory.CreateScope();
+
+                // Set up a fake HttpContext with the captured ClaimsPrincipal so
+                // HttpUserContext (resolved as IUserContext from DI) can read
+                // the user's identity in the background scope.
+                httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+                httpContextAccessor.HttpContext = new DefaultHttpContext { User = capturedUser };
+
+                IMediator scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                IImportProgressTracker? scopedTracker = scope.ServiceProvider.GetService<IImportProgressTracker>();
+
+                int fileIndex = 0;
+                foreach ((string fileName, byte[] content) in fileData)
                 {
-                    scope.SetTag("page", "Transactions/Upload.OnPostUploadAsync");
-                    scope.SetTag("exception_type", ex.GetType().Name);
-                    scope.SetTag("filename", filename);
-                    scope.Level = Sentry.SentryLevel.Error;
-                });
-                return BadRequest(new Dictionary<string, object>
+                    fileIndex++;
+                    if (scopedTracker != null && totalFiles > 1)
+                    {
+                        await scopedTracker.UpdateCurrentFileAsync(uploadId, fileName, fileIndex, CancellationToken.None);
+                    }
+
+                    try
+                    {
+                        using MemoryStream stream = new(content);
+                        await scopedMediator.Send(
+                            new ImportTransactionsCommand(stream, fileName, uploadId),
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (scopedTracker != null)
+                        {
+                            string safeMessage = ex is DomainException
+                                ? ex.Message
+                                : "An unexpected error occurred.";
+                            await scopedTracker.FailAsync(uploadId, $"{fileName}: {safeMessage}");
+                        }
+
+                        Sentry.SentrySdk.CaptureException(ex, sentryScope =>
+                        {
+                            sentryScope.SetTag("page", "Transactions/Upload.OnPostUploadAsync.background");
+                            sentryScope.SetTag("exception_type", ex.GetType().Name);
+                            sentryScope.SetTag("filename", fileName);
+                            sentryScope.SetTag("uploadId", uploadId);
+                            sentryScope.Level = Sentry.SentryLevel.Error;
+                        });
+
+                        return; // Stop on first failure
+                    }
+                }
+
+                if (scopedTracker != null)
                 {
-                    ["success"] = false,
-                    ["error"] = $"{filename}: Network error. Please check your connection and try again."
-                });
-            }
-            catch (DomainException ex)
-            {
-                return BadRequest(new Dictionary<string, object>
-                {
-                    ["success"] = false,
-                    ["error"] = $"{filename}: {ex.Message}"
-                });
+                    await scopedTracker.CompleteAsync(uploadId);
+                }
             }
             catch (Exception ex)
             {
-                Sentry.SentrySdk.CaptureException(ex, scope =>
+                Sentry.SentrySdk.CaptureException(ex, sentryScope =>
                 {
-                    scope.SetTag("page", "Transactions/Upload.OnPostUploadAsync");
-                    scope.SetTag("exception_type", ex.GetType().Name);
-                    scope.SetTag("filename", filename);
-                    scope.Level = Sentry.SentryLevel.Error;
-                });
-                return BadRequest(new Dictionary<string, object>
-                {
-                    ["success"] = false,
-                    ["error"] = $"{filename}: An unexpected error occurred. Please try again later."
+                    sentryScope.SetTag("page", "Transactions/Upload.OnPostUploadAsync.background");
+                    sentryScope.SetTag("exception_type", ex.GetType().Name);
+                    sentryScope.SetTag("uploadId", uploadId);
+                    sentryScope.Level = Sentry.SentryLevel.Fatal;
                 });
             }
-        }
+            finally
+            {
+                // Clean up the fake HttpContext to prevent leaking across async flows.
+                if (httpContextAccessor != null)
+                {
+                    if (httpContextAccessor.HttpContext is IDisposable d)
+                        d.Dispose();
+                    httpContextAccessor.HttpContext = null;
+                }
+            }
+        });
 
         return new JsonResult(new Dictionary<string, object>
         {

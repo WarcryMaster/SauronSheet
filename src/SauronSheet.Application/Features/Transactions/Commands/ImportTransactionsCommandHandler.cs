@@ -314,11 +314,6 @@ public class ImportTransactionsCommandHandler
                 }
                 // ─────────────────────────────────────────────────────────────────────
 
-                if (_progressTracker != null && request.UploadId != null)
-                {
-                    await _progressTracker.CompleteAsync(request.UploadId);
-                }
-
                 return new ImportResultDto(
                     importedCount,
                     skippedCount,
@@ -327,13 +322,8 @@ public class ImportTransactionsCommandHandler
                     DateTime.UtcNow,
                     errors);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                if (_progressTracker != null && request.UploadId != null)
-                {
-                    await _progressTracker.FailAsync(request.UploadId, ex.Message);
-                }
-
                 throw;
             }
         }

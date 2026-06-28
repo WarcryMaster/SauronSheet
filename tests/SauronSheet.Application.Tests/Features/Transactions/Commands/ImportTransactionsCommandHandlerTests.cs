@@ -543,8 +543,8 @@ public class ImportTransactionsCommandHandlerTests
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
         _mockProgressTracker.Verify(
-            x => x.CompleteAsync("upload-123"),
-            Times.Once);
+            x => x.CompleteAsync(It.IsAny<string>()),
+            Times.Never);
         _mockProgressTracker.Verify(
             x => x.FailAsync(It.IsAny<string>(), It.IsAny<string>()),
             Times.Never);
@@ -604,10 +604,11 @@ public class ImportTransactionsCommandHandlerTests
 
     /// <summary>
     /// T-PROG-003: If an exception occurs after progress was initialized,
-    /// the tracker receives FailAsync with the error message and the original exception still propagates.
+    /// the exception propagates. The handler does NOT call FailAsync — that
+    /// responsibility belongs to the orchestrator (Upload.cshtml.cs).
     /// </summary>
     [Fact]
-    public async Task Handle_WithUploadId_ExceptionAfterInit_CallsFailAsyncAndRethrows()
+    public async Task Handle_WithUploadId_ExceptionAfterInit_RethrowsWithoutFailAsync()
     {
         // Arrange
         var rows = new List<RawTransactionRow>
@@ -631,7 +632,7 @@ public class ImportTransactionsCommandHandlerTests
 
         Assert.Equal("Simulated persistence failure", ex.Message);
         _mockProgressTracker.Verify(
-            x => x.FailAsync("upload-fail", It.Is<string>(m => m.Contains("Simulated persistence failure"))),
-            Times.Once);
+            x => x.FailAsync(It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
     }
 }

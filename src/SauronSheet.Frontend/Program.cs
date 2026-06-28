@@ -20,7 +20,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Register progress tracking for real-time upload feedback
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<IImportProgressTracker, MemoryImportProgressTracker>();
+builder.Services.AddSingleton<IImportProgressTracker, MemoryImportProgressTracker>();
 
 // Add Razor Pages with authorization policy
 builder.Services.AddRazorPages()

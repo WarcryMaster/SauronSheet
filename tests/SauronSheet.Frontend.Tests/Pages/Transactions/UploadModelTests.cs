@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Transactions.DTOs;
@@ -31,7 +32,8 @@ public class UploadModelTests
 
     private UploadModel CreateModel(
         IImportProgressTracker? progressTracker = null,
-        string userId = "test-user-id")
+        string userId = "test-user-id",
+        IServiceScopeFactory? serviceScopeFactory = null)
     {
         DefaultHttpContext httpContext = new DefaultHttpContext();
 
@@ -48,7 +50,7 @@ public class UploadModelTests
             new PageActionDescriptor(),
             new ModelStateDictionary()));
 
-        UploadModel model = new(_mockMediator.Object, progressTracker)
+        UploadModel model = new(_mockMediator.Object, serviceScopeFactory!, progressTracker)
         {
             PageContext = pageContext
         };
@@ -63,6 +65,34 @@ public class UploadModelTests
         mockFile.Setup(f => f.Length).Returns(sizeBytes);
         mockFile.Setup(f => f.OpenReadStream()).Returns(new MemoryStream(new byte[sizeBytes]));
         return mockFile;
+    }
+
+    /// <summary>
+    /// Creates a mock <see cref="IServiceScopeFactory"/> whose scopes resolve the
+    /// given <paramref name="mediator"/> and <paramref name="progressTracker"/>.
+    /// Required because <c>OnPostUploadAsync</c> launches background processing
+    /// in its own DI scope.
+    /// </summary>
+    private static Mock<IServiceScopeFactory> CreateMockScopeFactory(
+        Mock<IMediator> mediator,
+        Mock<IImportProgressTracker> progressTracker)
+    {
+        Mock<IServiceProvider> mockServiceProvider = new();
+        mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(IMediator)))
+            .Returns(mediator.Object);
+        mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(IImportProgressTracker)))
+            .Returns(progressTracker.Object);
+
+        Mock<IServiceScope> mockScope = new();
+        mockScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider.Object);
+        mockScope.Setup(s => s.Dispose());
+
+        Mock<IServiceScopeFactory> mockFactory = new();
+        mockFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+
+        return mockFactory;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -327,19 +357,18 @@ public class UploadModelTests
     {
         // Arrange
         Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
-        _mockMediator
-            .Setup(m => m.Send(
-                It.Is<ImportTransactionsCommand>(c => c.Filename == "statement.xlsx" && c.UploadId != null),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ImportResultDto(3, 1, 4, "statement.xlsx", DateTime.UtcNow, []));
+        Mock<IServiceScopeFactory> mockScopeFactory = CreateMockScopeFactory(_mockMediator, mockTracker);
 
-        UploadModel model = CreateModel(mockTracker.Object);
+        UploadModel model = CreateModel(
+            mockTracker.Object,
+            serviceScopeFactory: mockScopeFactory.Object);
         model.ExcelFiles = new[] { CreateFormFile("statement.xlsx").Object };
 
         // Act
         IActionResult result = await model.OnPostUploadAsync();
 
-        // Assert
+        // Assert — endpoint returns immediately with uploadId.
+        // Actual processing happens in a background task (Task.Run + IServiceScopeFactory).
         JsonResult json = Assert.IsType<JsonResult>(result);
         Dictionary<string, object?> values = Assert.IsType<Dictionary<string, object?>>(json.Value);
         Assert.True(values.TryGetValue("uploadId", out object? uploadIdValue));

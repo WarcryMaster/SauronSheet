@@ -276,6 +276,13 @@
 /* Alpine.js x-cloak: hide elements until Alpine initializes */
 [x-cloak] { display: none !important; }
 
+/* Flex column without !important — safe for Alpine x-show toggling */
+.upload-flex-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 /* Counter animation (prevent layout shift during count-up) */
 .counter-value {
     font-variant-numeric: tabular-nums;

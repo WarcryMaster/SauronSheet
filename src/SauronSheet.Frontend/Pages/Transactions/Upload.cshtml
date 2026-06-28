@@ -77,32 +77,64 @@
                   progressVisible: false,
                   progressUploadId: null,
                   errorMessage: null,
-                  handleFileSelect(event) {
+                  stopPollingHandler: null,
+
+                  // Read a File into a plain object (name, size, type, lastModified, buffer).
+                  // This sidesteps Alpine's deep proxy which would break the native File object
+                  // and prevent FormData.append() from recognising it as a Blob.
+                  readFile(rawFile) {
+                      return new Promise(resolve => {
+                          const reader = new FileReader();
+                          reader.onload = e => resolve({
+                              name: rawFile.name,
+                              size: rawFile.size,
+                              type: rawFile.type,
+                              lastModified: rawFile.lastModified,
+                              buffer: e.target.result
+                          });
+                          reader.readAsArrayBuffer(rawFile);
+                      });
+                  },
+
+                  async handleFileSelect(event) {
                       const selectedFiles = Array.from(event.target.files);
                       event.target.value = '';
-                      this.addFiles(selectedFiles);
+                      await this.addFiles(selectedFiles);
                   },
-                  addFiles(newFiles) {
-                      for (const f of newFiles) {
-                          if (this.files.some(e => e.name === f.name && e.size === f.size)) continue;
-                          this.files.push(f);
+
+                  async handleDrop(event) {
+                      await this.addFiles(event.dataTransfer.files);
+                      this.dragging = false;
+                  },
+
+                  async addFiles(newFiles) {
+                      const fileInfos = await Promise.all(
+                          Array.from(newFiles).map(f => this.readFile(f))
+                      );
+                      for (const fi of fileInfos) {
+                          if (this.files.some(e => e.name === fi.name && e.size === fi.size)) continue;
+                          this.files.push(fi);
                       }
                       this.syncInput();
                   },
+
                   removeFile(idx) {
                       this.files.splice(idx, 1);
                       this.syncInput();
                   },
+
                   syncInput() {
-                      const dt = new DataTransfer();
-                      this.files.forEach(f => dt.items.add(f));
-                      $refs.fileInput.files = dt.files;
+                      // NOTE: input[type=file].files is READONLY in Chrome.
+                      // This call is kept as best-effort for older browsers;
+                      // FormData is built manually from this.files in handleUpload.
                   },
+
                   formatSize(bytes) {
                       if (bytes < 1024) return bytes + ' B';
                       if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
                       return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
                   },
+
                   async handleUpload() {
                       if (this.files.length === 0) return;
 
@@ -110,27 +142,57 @@
                       this.progressVisible = true;
                       this.errorMessage = null;
 
-                      const form = this.$refs.uploadForm;
-                      const formData = new FormData(form);
-                      const tokenInput = form.querySelector('input[name=__RequestVerificationToken]');
-                      const token = tokenInput ? tokenInput.value : '';
+                      // Build FormData from the stored buffers + antiforgery token.
+                      // Recreate native File objects from plain buffers so FormData.append()
+                      // recognises them as Blobs regardless of Alpine's proxy.
+                      const formData = new FormData();
+                      const tokenInput = this.$refs.uploadForm.querySelector('input[name=__RequestVerificationToken]');
+                      if (tokenInput) {
+                          formData.append('__RequestVerificationToken', tokenInput.value);
+                      }
+                      this.files.forEach(f => {
+                          const rawFile = new File([f.buffer], f.name, { type: f.type, lastModified: f.lastModified });
+                          formData.append('ExcelFiles', rawFile);
+                      });
 
                       try {
-                          const response = await fetch('/Transactions/Upload?handler=UploadAsync', {
+                          const response = await fetch('/Transactions/Upload?handler=Upload', {
                               method: 'POST',
-                              headers: { 'RequestVerificationToken': token },
                               body: formData
                           });
+
+                          // Guard: ensure the server returned JSON, not HTML
+                          const contentType = response.headers.get('content-type') || '';
+                          if (!contentType.includes('application/json')) {
+                              const text = await response.text();
+                              throw new Error('Server returned ' + response.status + ' ' + contentType + ': ' + text.substring(0, 200));
+                          }
 
                           const result = await response.json();
                           if (result.success) {
                               this.progressUploadId = result.uploadId;
                               const progressEl = document.getElementById('upload-progress');
-                              if (progressEl) {
-                                  progressEl.setAttribute('hx-get', '/Transactions/Upload?handler=Progress&id=' + result.uploadId);
+                              const url = '/Transactions/Upload?handler=Progress&id=' + result.uploadId;
+
+                              // Register stopPolling listener BEFORE first HTMX request
+                              if (this.stopPollingHandler) {
+                                  document.body.removeEventListener('stopPolling', this.stopPollingHandler);
+                              }
+                              this.stopPollingHandler = () => {
+                                  progressEl.removeAttribute('hx-trigger');
+                                  htmx.process(progressEl);
+                                  this.uploading = false;
+                              };
+                              document.body.addEventListener('stopPolling', this.stopPollingHandler);
+
+                              // Load initial progress snippet
+                              await htmx.ajax('GET', url, { target: '#upload-progress', swap: 'innerHTML' });
+
+                              // Start polling only if processing is still ongoing
+                              if (this.uploading) {
+                                  progressEl.setAttribute('hx-get', url);
                                   progressEl.setAttribute('hx-trigger', 'every 1s');
                                   htmx.process(progressEl);
-                                  htmx.trigger(progressEl, 'startProgress');
                               }
                           } else {
                               this.uploading = false;
@@ -147,17 +209,6 @@
                       }
                   }
               }"
-              x-init="() => {
-                  const stopPollingHandler = () => {
-                      const progressEl = document.getElementById('upload-progress');
-                      if (progressEl) {
-                          progressEl.removeAttribute('hx-trigger');
-                          htmx.process(progressEl);
-                      }
-                  };
-                  document.body.addEventListener('stopPolling', stopPollingHandler);
-                  return () => document.body.removeEventListener('stopPolling', stopPollingHandler);
-              }"
               @@submit.prevent="handleUpload()">
 
             <div>
@@ -169,7 +220,7 @@
                      @@dragenter.prevent="dragging = true"
                      @@dragover.prevent="dragging = true"
                      @@dragleave.prevent="dragging = false"
-                     @@drop.prevent="dragging = false; addFiles($event.dataTransfer.files)">
+                     @@drop.prevent="handleDrop($event)">
                     <div class="fs-1 mb-2">📊</div>
                     <p class="mb-1 small">
                         <span class="fw-semibold text-brand" style="cursor: pointer;">
@@ -184,7 +235,7 @@
             </div>
 
             <!-- File list -->
-            <div x-show="files.length > 0" x-transition class="d-flex flex-column gap-2">
+            <div x-show="files.length > 0" x-transition x-cloak class="upload-flex-col">
                 <p class="small fw-semibold mb-0 text-muted">
                     <span x-text="files.length"></span> file(s) selected:
                 </p>
@@ -201,15 +252,13 @@
             </div>
 
             <!-- Async upload error message -->
-            <div x-show="errorMessage" x-transition class="alert alert-danger d-flex flex-column gap-2 rounded-3" role="alert">
-                <p class="fw-semibold mb-0">⚠️ Upload failed</p>
+            <div x-show="errorMessage" x-transition x-cloak class="alert alert-danger rounded-3" role="alert">
+                <p class="fw-semibold mb-1">⚠️ Upload failed</p>
                 <p class="small mb-0" x-text="errorMessage"></p>
             </div>
 
-            <!-- Real-time progress container -->
-            <div id="upload-progress" x-show="progressVisible" x-transition
-                 hx-get="" hx-trigger="startProgress from:body" hx-target="this" hx-swap="innerHTML">
-            </div>
+            <!-- Real-time progress container (HTMX attributes set dynamically in handleUpload) -->
+            <div id="upload-progress" x-show="progressVisible" x-transition x-cloak></div>
 
             <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold"
                     :disabled="uploading || files.length === 0">
