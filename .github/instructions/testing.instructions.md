@@ -38,6 +38,25 @@ npx playwright test --config=e2e/playwright.config.ts --project=chromium
 
 ---
 
+## E2E Element Selection: `data-testid` Required
+
+**All E2E tests MUST use dedicated `data-testid` attributes for element selection.** CSS classes, ARIA roles, text content, or DOM position must NOT be used as primary selectors.
+
+**Pattern:**
+- Attribute: `data-testid` with kebab-case value
+- Naming: `{page-or-section}-{element-purpose}` (e.g. `upload-progressbar`, `upload-success-alert`, `annual-yoy-no-data`)
+- Selector in tests: `page.locator('[data-testid="upload-progressbar"]')`
+- Test files MUST NOT contain CSS class names, generic roles, or text content matches
+
+**Rationale:**
+- CSS classes change frequently with design updates (MDBootstrap, theme changes)
+- ARIA roles are generic and collide (e.g. multiple `[role="status"]` on the same page)
+- Text content changes with i18n/l10n or copy updates
+- DOM position is brittle — adding or removing elements shifts indexes
+- `data-testid` creates an explicit contract between test and markup that survives refactors
+
+**Implementation:** When writing new tests or modifying existing ones, add `data-testid` attributes to the corresponding `.cshtml` markup if they don't exist yet. The test selector must reference the `data-testid`, not CSS classes or text.
+
 ## E2E Testing Policy: Real User Interaction Required
 
 **Fundamental rule:** E2E interface tests **MUST** act as a real user navigating and interacting with the web. If they don't simulate real interaction, **they are worthless**.
