@@ -35,6 +35,9 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         if (!result.IsSuccess)
             throw new DomainException(result.ErrorMessage ?? "Registration failed.");
 
-        return new RegistrationResultDto(result.UserId!.Value, request.Email);
+        return new RegistrationResultDto(
+            result.UserId!.Value,
+            request.Email,
+            RequiresEmailConfirmation: result.RequiresEmailConfirmation);
     }
 }

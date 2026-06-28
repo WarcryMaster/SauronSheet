@@ -13,6 +13,7 @@ public record AuthResult
     public DateTime? ExpiresAt { get; }
     public bool IsSuccess { get; }
     public string? ErrorMessage { get; }
+    public bool RequiresEmailConfirmation { get; }
 
     private AuthResult(
         UserId? userId,
@@ -20,7 +21,8 @@ public record AuthResult
         string? refreshToken,
         DateTime? expiresAt,
         bool isSuccess,
-        string? errorMessage)
+        string? errorMessage,
+        bool requiresEmailConfirmation = false)
     {
         UserId = userId;
         AccessToken = accessToken;
@@ -28,6 +30,7 @@ public record AuthResult
         ExpiresAt = expiresAt;
         IsSuccess = isSuccess;
         ErrorMessage = errorMessage;
+        RequiresEmailConfirmation = requiresEmailConfirmation;
     }
 
     public static AuthResult Success(
@@ -37,6 +40,11 @@ public record AuthResult
         DateTime expiresAt)
     {
         return new AuthResult(userId, accessToken, refreshToken, expiresAt, true, null);
+    }
+
+    public static AuthResult SuccessWithConfirmationRequired(UserId userId)
+    {
+        return new AuthResult(userId, null, null, null, true, null, requiresEmailConfirmation: true);
     }
 
     public static AuthResult Failure(string errorMessage)

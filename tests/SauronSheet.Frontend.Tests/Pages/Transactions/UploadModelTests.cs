@@ -444,7 +444,7 @@ public class UploadModelTests
         Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
         ImportProgress progress = new(
             "upload-1", "statement.xlsx", 100, 50, 45, 5, false, false, null,
-            "statement.xlsx", 1, 1, "other-user", DateTime.UtcNow);
+            "statement.xlsx", 1, 1, "other-user", DateTime.UtcNow, null);
 
         mockTracker.Setup(t => t.GetProgress("upload-1")).Returns(progress);
 
@@ -465,7 +465,7 @@ public class UploadModelTests
         Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
         ImportProgress progress = new(
             "upload-1", "statement.xlsx", 200, 50, 45, 5, false, false, null,
-            "statement.xlsx", 1, 1, "test-user-id", DateTime.UtcNow);
+            "statement.xlsx", 1, 1, "test-user-id", DateTime.UtcNow, null);
 
         mockTracker.Setup(t => t.GetProgress("upload-1")).Returns(progress);
 
@@ -494,7 +494,7 @@ public class UploadModelTests
         Mock<IImportProgressTracker> mockTracker = new Mock<IImportProgressTracker>();
         ImportProgress progress = new(
             "upload-1", "statement.xlsx", 100, 100, 95, 5, true, false, null,
-            "statement.xlsx", 1, 1, "test-user-id", DateTime.UtcNow);
+            "statement.xlsx", 1, 1, "test-user-id", DateTime.UtcNow, null);
 
         mockTracker.Setup(t => t.GetProgress("upload-1")).Returns(progress);
 

@@ -6,4 +6,5 @@ namespace SauronSheet.Application.Features.Auth.DTOs;
 /// </summary>
 public record RegistrationResultDto(
     string UserId,
-    string Email);
+    string Email,
+    bool RequiresEmailConfirmation = false);

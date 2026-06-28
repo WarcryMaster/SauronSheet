@@ -44,7 +44,8 @@ public sealed class MemoryImportProgressTracker : IImportProgressTracker
             currentFileIndex,
             totalFiles,
             userId,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            null);
 
         return Task.CompletedTask;
     }
@@ -106,7 +107,7 @@ public sealed class MemoryImportProgressTracker : IImportProgressTracker
     }
 
     /// <inheritdoc />
-    public Task CompleteAsync(string uploadId)
+    public Task CompleteAsync(string uploadId, string? completionDetails = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(uploadId);
 
@@ -116,7 +117,7 @@ public sealed class MemoryImportProgressTracker : IImportProgressTracker
             if (!_store.TryGetValue(uploadId, out ImportProgress? existing))
                 return Task.CompletedTask;
 
-            ImportProgress updated = existing with { IsComplete = true };
+            ImportProgress updated = existing with { IsComplete = true, CompletionDetails = completionDetails };
 
             if (_store.TryUpdate(uploadId, updated, existing))
                 return Task.CompletedTask;

@@ -181,6 +181,9 @@ public class UploadModel : PageModel
                 IMediator scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
                 IImportProgressTracker? scopedTracker = scope.ServiceProvider.GetService<IImportProgressTracker>();
 
+                List<ImportRowErrorDto> accumulatedErrors = new();
+                int accumulatedSkipped = 0;
+
                 int fileIndex = 0;
                 foreach ((string fileName, byte[] content) in fileData)
                 {
@@ -193,9 +196,11 @@ public class UploadModel : PageModel
                     try
                     {
                         using MemoryStream stream = new(content);
-                        await scopedMediator.Send(
+                        ImportResultDto result = await scopedMediator.Send(
                             new ImportTransactionsCommand(stream, fileName, uploadId),
                             CancellationToken.None);
+                        accumulatedErrors.AddRange(result.Errors);
+                        accumulatedSkipped += result.SkippedCount;
                     }
                     catch (Exception ex)
                     {
@@ -222,7 +227,8 @@ public class UploadModel : PageModel
 
                 if (scopedTracker != null)
                 {
-                    await scopedTracker.CompleteAsync(uploadId);
+                    string? completionDetails = BuildCompletionDetails(accumulatedErrors, accumulatedSkipped);
+                    await scopedTracker.CompleteAsync(uploadId, completionDetails);
                 }
             }
             catch (Exception ex)
@@ -348,10 +354,17 @@ public class UploadModel : PageModel
 
         if (progress.IsComplete)
         {
+            string completionDetailsHtml = string.IsNullOrEmpty(progress.CompletionDetails)
+                ? string.Empty
+                : $"""
+                    <p class="small text-muted">{WebUtility.HtmlEncode(progress.CompletionDetails)}</p>
+                    """;
+
             return $"""
                 <div class="alert alert-success" role="status">
                   <p class="fw-semibold">Import completed</p>
                   <p class="small">{filename}: {progress.ImportedCount} imported, {progress.SkippedCount} skipped.</p>
+                  {completionDetailsHtml}
                 </div>
                 """;
         }
@@ -367,5 +380,45 @@ public class UploadModel : PageModel
               <p class="small mt-1">{progress.ProcessedRows}/{progress.TotalRows} rows | Imported: {progress.ImportedCount} | Skipped: {progress.SkippedCount}</p>
             </div>
             """;
+    }
+
+    private static string? BuildCompletionDetails(List<ImportRowErrorDto> errors, int skippedCount)
+    {
+        if (errors.Count == 0 && skippedCount == 0)
+        {
+            return null;
+        }
+
+        if (errors.Count == 0 && skippedCount > 0)
+        {
+            return $"All {skippedCount} rows were duplicates";
+        }
+
+        // Agrupar errores por mensaje y contar ocurrencias
+        List<KeyValuePair<string, int>> grouped = errors
+            .GroupBy(e => e.ErrorMessage)
+            .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
+            .OrderByDescending(kvp => kvp.Value)
+            .ToList();
+
+        List<string> parts = new();
+        foreach (KeyValuePair<string, int> group in grouped)
+        {
+            string singular = group.Key;
+            if (group.Value != 1)
+            {
+                singular = group.Key switch
+                {
+                    "Duplicate" => "duplicates",
+                    "Invalid date format" => "invalid dates",
+                    "Invalid amount format" => "invalid amounts",
+                    _ => group.Key.ToLowerInvariant()
+                };
+            }
+
+            parts.Add($"{group.Value} {singular}");
+        }
+
+        return string.Join(", ", parts);
     }
 }

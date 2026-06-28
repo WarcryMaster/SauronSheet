@@ -31,7 +31,8 @@ public class ImportProgressRecordTests
             CurrentFileIndex: 1,
             TotalFiles: 1,
             UserId: "user-1",
-            StartedAt: startedAt);
+            StartedAt: startedAt,
+            CompletionDetails: null);
 
         // Assert
         Assert.Equal("upload-1", progress.UploadId);
@@ -48,6 +49,7 @@ public class ImportProgressRecordTests
         Assert.Equal(1, progress.TotalFiles);
         Assert.Equal("user-1", progress.UserId);
         Assert.Equal(startedAt, progress.StartedAt);
+        Assert.Null(progress.CompletionDetails);
     }
 
     [Fact]
@@ -68,7 +70,8 @@ public class ImportProgressRecordTests
             CurrentFileIndex: 1,
             TotalFiles: 1,
             UserId: "user-2",
-            StartedAt: DateTime.UtcNow);
+            StartedAt: DateTime.UtcNow,
+            CompletionDetails: null);
 
         // Assert
         Assert.True(progress.IsFailed);

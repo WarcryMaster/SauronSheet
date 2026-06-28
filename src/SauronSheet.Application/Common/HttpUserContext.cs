@@ -32,7 +32,7 @@ public class HttpUserContext : IUserContext
 
     public string UserEmail =>
         _httpContextAccessor.HttpContext?.User
-            ?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+            ?.FindFirst("email")?.Value ?? "";
 
     public bool IsAuthenticated =>
         _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;

@@ -39,7 +39,7 @@ public interface IImportProgressTracker
     /// <summary>
     /// Marks the upload as completed successfully.
     /// </summary>
-    Task CompleteAsync(string uploadId);
+    Task CompleteAsync(string uploadId, string? completionDetails = null);
 
     /// <summary>
     /// Marks the upload as failed and stores a user-safe error message.

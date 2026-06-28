@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using MediatR;
 using SauronSheet.Application.Features.Auth.Commands;
+using SauronSheet.Application.Features.Auth.DTOs;
 using SauronSheet.Domain.Exceptions;
 
 namespace SauronSheet.Frontend.Pages.Auth;
@@ -44,11 +45,17 @@ public class RegisterModel : PageModel
         try
         {
             // Register new user
-            await _mediator.Send(
+            RegistrationResultDto registrationResult = await _mediator.Send(
                 new RegisterUserCommand(Input.Email, Input.Password, Input.ConfirmPassword));
 
+            if (registrationResult.RequiresEmailConfirmation)
+            {
+                TempData["SuccessMessage"] = "Registro completado. Revisa tu email para confirmar la cuenta antes de iniciar sesión.";
+                return RedirectToPage("/auth/login");
+            }
+
             // Auto-login after successful registration
-            var loginResult = await _mediator.Send(
+            AuthTokenDto loginResult = await _mediator.Send(
                 new LoginUserCommand(Input.Email, Input.Password));
 
             // Set JWT cookies

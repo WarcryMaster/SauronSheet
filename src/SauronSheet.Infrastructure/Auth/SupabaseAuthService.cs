@@ -88,7 +88,9 @@ public class SupabaseAuthService : IAuthService
 
             if (root.TryGetProperty("confirmation_sent_at", out _))
             {
-                return AuthResult.Failure("Registration failed: confirmation_sent_at present but no session returned.");
+                // Email confirmation is ON in Supabase project. User must confirm email before logging in.
+                // userId has already been resolved from either Format 1 (user.id) or Format 2 (root id).
+                return AuthResult.SuccessWithConfirmationRequired(new UserId(userId));
             }
 
             // Extract session if available

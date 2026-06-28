@@ -234,7 +234,6 @@ public class SupabaseTransactionRepository : ITransactionRepository
 
         var response = await _client.From<TransactionRow>()
             .Where(x => x.UserId == userId)
-            .Limit(specification.MaxResults)
             .Get();
 
         var allTransactions = response.Models.Select(r => r.ToDomain()).ToList();

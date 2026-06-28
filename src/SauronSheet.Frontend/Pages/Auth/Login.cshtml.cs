@@ -25,6 +25,7 @@ public class LoginModel : PageModel
     public LoginInputModel Input { get; set; } = new();
 
     public string? ErrorMessage { get; set; }
+    public string? SuccessMessage { get; set; }
     public string? ReturnUrl { get; set; }
 
     public LoginModel(IMediator mediator, ILogger<LoginModel> logger, IWebHostEnvironment environment)
@@ -37,6 +38,7 @@ public class LoginModel : PageModel
     public void OnGet(string? returnUrl = null)
     {
         ReturnUrl = returnUrl ?? "/dashboard";
+        SuccessMessage = TempData["SuccessMessage"] as string;
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)

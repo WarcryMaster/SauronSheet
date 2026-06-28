@@ -19,4 +19,5 @@ public record ImportProgress(
     int CurrentFileIndex,
     int TotalFiles,
     string UserId,
-    DateTime StartedAt);
+    DateTime StartedAt,
+    string? CompletionDetails);

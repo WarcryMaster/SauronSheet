@@ -54,7 +54,7 @@ public class ImportProgressTrackerContractTests
             return Task.CompletedTask;
         }
 
-        public Task CompleteAsync(string uploadId)
+        public Task CompleteAsync(string uploadId, string? completionDetails = null)
         {
             LastUploadId = uploadId;
             Completed = true;
