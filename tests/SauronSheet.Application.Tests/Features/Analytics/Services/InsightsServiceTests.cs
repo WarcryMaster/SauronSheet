@@ -169,8 +169,8 @@ public class InsightsServiceTests
         // Act
         string result = InsightsService.GenerateSmartSummary(transactions, summary, ratios, categories);
 
-        // Assert: 2-4 sentences
-        int sentenceCount = result.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        // Assert: 2-4 sentences (split on sentence-ending punctuation followed by whitespace, not decimal points)
+        int sentenceCount = System.Text.RegularExpressions.Regex.Split(result, @"(?<=[.!?])\s+").Length;
         Assert.True(sentenceCount >= 2 && sentenceCount <= 5,
             $"Expected 2-4 sentences, got {sentenceCount}: '{result}'");
         Assert.False(string.IsNullOrWhiteSpace(result));
