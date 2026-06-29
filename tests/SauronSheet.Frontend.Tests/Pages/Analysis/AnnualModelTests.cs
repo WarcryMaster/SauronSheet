@@ -1,7 +1,10 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Moq;
 using SauronSheet.Application.Features.Analytics.Classification;
 using SauronSheet.Application.Features.Analytics.DTOs;
+using SauronSheet.Application.Features.Analytics.Queries;
 using SauronSheet.Frontend.Pages.Analysis;
 using MediatR;
 using Xunit;
@@ -43,6 +46,83 @@ public class AnnualModelTests
     {
         90m, 100m, 110m, 120m, 130m, 140m, 150m, 160m, 170m, 180m, 190m, 200m
     };
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetAsync_WithBoundYear_SendsQueryWithSameYear()
+    {
+        // Arrange
+        Mock<IMediator> mediatorMock = new();
+        GetAnnualDashboardResultDto result = CreateSampleResult();
+        mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetAnnualDashboardQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+
+        AnnualModel model = new AnnualModel(mediatorMock.Object)
+        {
+            Year = 2024
+        };
+
+        // Act
+        IActionResult actionResult = await model.OnGetAsync(CancellationToken.None);
+
+        // Assert
+        mediatorMock.Verify(
+            m => m.Send(
+                It.Is<GetAnnualDashboardQuery>(q => q.Year == 2024),
+                CancellationToken.None),
+            Times.Once);
+        Assert.IsType<PageResult>(actionResult);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetAsync_WithoutBoundYear_UsesCurrentUtcYear()
+    {
+        // Arrange
+        Mock<IMediator> mediatorMock = new();
+        GetAnnualDashboardResultDto result = CreateSampleResult();
+        mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetAnnualDashboardQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+
+        AnnualModel model = new AnnualModel(mediatorMock.Object);
+        int currentUtcYear = DateTime.UtcNow.Year;
+
+        // Act
+        await model.OnGetAsync(CancellationToken.None);
+
+        // Assert
+        mediatorMock.Verify(
+            m => m.Send(
+                It.Is<GetAnnualDashboardQuery>(q => q.Year == currentUtcYear),
+                CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetAsync_AssignsResultFromMediatorResponse()
+    {
+        // Arrange
+        Mock<IMediator> mediatorMock = new();
+        GetAnnualDashboardResultDto expectedResult = CreateSampleResult();
+        mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetAnnualDashboardQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        AnnualModel model = new AnnualModel(mediatorMock.Object)
+        {
+            Year = 2026
+        };
+
+        // Act
+        IActionResult actionResult = await model.OnGetAsync(CancellationToken.None);
+
+        // Assert
+        Assert.IsType<PageResult>(actionResult);
+        Assert.Same(expectedResult, model.Result);
+    }
 
     [Fact]
     [Trait("Category", "Frontend")]
@@ -211,14 +291,12 @@ public class AnnualModelTests
         decimal actual = model.FixedCostPercentage;
 
         // Assert
-        // ExpenseFixed = 720, ExpenseTotal = 720 + 1020 = 1740
-        // 720 / 1740 * 100 = 41.37931... => rounded to 41.4
         Assert.Equal(41.4m, actual);
     }
 
     private static AnnualModel CreateModelWithData()
     {
-        AnnualAnalysisResultDto result = CreateSampleResult();
+        GetAnnualDashboardResultDto result = CreateSampleResult();
         AnnualModel model = new AnnualModel(Mock.Of<IMediator>())
         {
             Result = result
@@ -234,21 +312,39 @@ public class AnnualModelTests
     private static AnnualModel CreateModelWithZeroExpenseTotal()
     {
         AnnualAnalysisSummaryDto summary = new AnnualAnalysisSummaryDto(
-            IncomeFixed: 100m,
-            IncomeVariable: 50m,
-            IncomeTotal: 150m,
-            ExpenseFixed: 0m,
-            ExpenseVariable: 0m,
-            ExpenseTotal: 0m,
-            Net: 150m,
-            Currency: "EUR");
+            IncomeFixed: 100m, IncomeVariable: 50m, IncomeTotal: 150m,
+            ExpenseFixed: 0m, ExpenseVariable: 0m, ExpenseTotal: 0m,
+            Net: 150m, Currency: "EUR");
 
-        AnnualAnalysisResultDto result = new AnnualAnalysisResultDto(
+        GetAnnualDashboardResultDto result = new GetAnnualDashboardResultDto(
             Year: 2026,
             Rows: Array.Empty<AnnualAnalysisRowDto>(),
-            Summary: summary,
+            AnalysisSummary: summary,
+            ExecutiveSummary: null,
+            Ratios: null,
+            HealthScore: null,
+            SmartSummary: string.Empty,
             HasData: true,
-            Currency: "EUR");
+            Currency: "EUR",
+            AvailableYears: Array.Empty<int>(),
+
+            // T2 — all null
+            MultiYear: null,
+            MonthlyEvolution: null,
+            Categories: null,
+            CategoryTable: null,
+            Timeline: null,
+            TopExpenses: null,
+            TopIncomes: null,
+            MostFrequent: null,
+
+            // T3
+            Anomalies: null,
+            Discoveries: null,
+            Achievements: null,
+            Trends: null,
+            Predictions: null,
+            HistoricalComparison: null);
 
         return new AnnualModel(Mock.Of<IMediator>())
         {
@@ -256,7 +352,7 @@ public class AnnualModelTests
         };
     }
 
-    private static AnnualAnalysisResultDto CreateSampleResult()
+    private static GetAnnualDashboardResultDto CreateSampleResult()
     {
         IReadOnlyList<AnnualAnalysisRowDto> rows = new AnnualAnalysisRowDto[]
         {
@@ -291,20 +387,41 @@ public class AnnualModelTests
         };
 
         AnnualAnalysisSummaryDto summary = new AnnualAnalysisSummaryDto(
-            IncomeFixed: 7800m,
-            IncomeVariable: 600m,
-            IncomeTotal: 8400m,
-            ExpenseFixed: 720m,
-            ExpenseVariable: 1020m,
-            ExpenseTotal: 1740m,
-            Net: 6660m,
-            Currency: "EUR");
+            IncomeFixed: 7800m, IncomeVariable: 600m, IncomeTotal: 8400m,
+            ExpenseFixed: 720m, ExpenseVariable: 1020m, ExpenseTotal: 1740m,
+            Net: 6660m, Currency: "EUR")
+        {
+            MonthsWithData = 12
+        };
 
-        return new AnnualAnalysisResultDto(
+        return new GetAnnualDashboardResultDto(
             Year: 2026,
             Rows: rows,
-            Summary: summary,
+            AnalysisSummary: summary,
+            ExecutiveSummary: null,
+            Ratios: null,
+            HealthScore: null,
+            SmartSummary: string.Empty,
             HasData: true,
-            Currency: "EUR");
+            Currency: "EUR",
+            AvailableYears: Array.Empty<int>(),
+
+            // T2 — all null
+            MultiYear: null,
+            MonthlyEvolution: null,
+            Categories: null,
+            CategoryTable: null,
+            Timeline: null,
+            TopExpenses: null,
+            TopIncomes: null,
+            MostFrequent: null,
+
+            // T3
+            Anomalies: null,
+            Discoveries: null,
+            Achievements: null,
+            Trends: null,
+            Predictions: null,
+            HistoricalComparison: null);
     }
 }

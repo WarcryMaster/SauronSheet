@@ -475,6 +475,351 @@ function initAnnualDistributionChart(canvas, data) {
 }
 
 /**
+ * Initialize a grouped bar chart for multi-year comparison (REQ-003).
+ *
+ * PRECONDITION: data contains parallel arrays for income, expenses, savings,
+ * and balances, one entry per year. The handler controls the array order
+ * (chronological ascending); this function MUST NOT reorder.
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas element reference
+ * @param {{labels: string[], income: number[], expenses: number[], savings: number[], balances: number[], highlightYear: number}} data
+ */
+function initMultiYearChart(canvas, data) {
+    if (!canvas || !data || !Array.isArray(data.labels) || data.labels.length < 2) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const highlightIdx = data.labels.indexOf(String(data.highlightYear));
+    const defaultBg = hexToRgba(tokens.info, 0.6);
+    const highlightBg = hexToRgba(tokens.brand, 0.85);
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: data.income,
+                    backgroundColor: data.income.map((_, i) =>
+                        i === highlightIdx ? hexToRgba(tokens.success, 0.75) : hexToRgba(tokens.success, 0.35)
+                    ),
+                    borderColor: data.income.map((_, i) =>
+                        i === highlightIdx ? tokens.success : hexToRgba(tokens.success, 0.5)
+                    ),
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Expenses',
+                    data: data.expenses,
+                    backgroundColor: data.expenses.map((_, i) =>
+                        i === highlightIdx ? hexToRgba(tokens.danger, 0.75) : hexToRgba(tokens.danger, 0.35)
+                    ),
+                    borderColor: data.expenses.map((_, i) =>
+                        i === highlightIdx ? tokens.danger : hexToRgba(tokens.danger, 0.5)
+                    ),
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Net',
+                    data: data.balances,
+                    backgroundColor: data.balances.map((_, i) =>
+                        i === highlightIdx ? hexToRgba(tokens.brand, 0.85) : hexToRgba(tokens.brand, 0.4)
+                    ),
+                    borderColor: data.balances.map((_, i) =>
+                        i === highlightIdx ? tokens.brandDark : hexToRgba(tokens.brand, 0.55)
+                    ),
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return `${context.dataset.label}: €${Number(context.parsed.y).toFixed(2)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                    ticks: { callback: v => '€' + v }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Initialize a line chart for monthly evolution (REQ-004).
+ * Shows 12 months of income/expense/savings with average lines.
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas element reference
+ * @param {{labels: string[], income: number[], expenses: number[], savings: number[], avgIncome: number|null, avgExpense: number|null}} data
+ */
+function initMonthlyEvolutionChart(canvas, data) {
+    if (!canvas || !data || !Array.isArray(data.labels) || data.labels.length === 0) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const datasets = [
+        {
+            label: 'Income',
+            data: data.income,
+            borderColor: tokens.success,
+            backgroundColor: hexToRgba(tokens.success, 0.08),
+            tension: 0.3,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            order: 1
+        },
+        {
+            label: 'Expenses',
+            data: data.expenses,
+            borderColor: tokens.danger,
+            backgroundColor: hexToRgba(tokens.danger, 0.08),
+            tension: 0.3,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            order: 1
+        },
+        {
+            label: 'Savings',
+            data: data.savings,
+            borderColor: tokens.info,
+            backgroundColor: hexToRgba(tokens.info, 0.08),
+            tension: 0.3,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            borderDash: [5, 3],
+            order: 1
+        }
+    ];
+
+    // Add average lines if available (rendered as horizontal dashed lines)
+    if (data.avgIncome != null) {
+        datasets.push({
+            label: 'Avg Income',
+            data: Array(12).fill(data.avgIncome),
+            borderColor: hexToRgba(tokens.success, 0.5),
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderDash: [8, 4],
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            fill: false,
+            order: 0
+        });
+    }
+
+    if (data.avgExpense != null) {
+        datasets.push({
+            label: 'Avg Expense',
+            data: Array(12).fill(data.avgExpense),
+            borderColor: hexToRgba(tokens.danger, 0.5),
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderDash: [8, 4],
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            fill: false,
+            order: 0
+        });
+    }
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: { labels: data.labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                    ticks: { callback: v => '€' + v }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            }
+        }
+    });
+}
+
+/**
+ * Initialize a donut chart for category distribution (REQ-005).
+ *
+ * PRECONDITION: data.categories is ordered by the handler descending by amount.
+ * This function MUST NOT reorder.
+ *
+ * @param {HTMLCanvasElement} canvas - Canvas element reference
+ * @param {{labels: string[], values: number[]}} data
+ */
+function initCategoryDonutChart(canvas, data) {
+    if (!canvas || !data || !Array.isArray(data.values) || data.values.length === 0) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: data.values.map((_, idx) => designColors[idx % designColors.length]),
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 14,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                            return `${context.label}: €${Number(context.parsed).toFixed(2)} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Initialize anomaly chart (REQ-008).
+ * Uses bars for anomaly amounts and a dashed line for historical mean.
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {{labels: string[], values: number[], means: number[], types: string[]}} data
+ */
+function initAnomalyChart(canvas, data) {
+    if (!canvas || !data || !Array.isArray(data.labels) || data.labels.length === 0) return;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const barColors = (data.types || []).map(type => {
+        if (type === 'exceptional') return hexToRgba(tokens.warning, 0.8);
+        if (type === 'extraordinary') return hexToRgba(tokens.danger, 0.8);
+        return hexToRgba(tokens.info, 0.8);
+    });
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Anomaly amount',
+                    data: data.values,
+                    backgroundColor: barColors,
+                    borderColor: barColors,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    type: 'line',
+                    label: 'Historical mean',
+                    data: data.means,
+                    borderColor: tokens.muted,
+                    backgroundColor: 'transparent',
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    tension: 0,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
+                }
+            ]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: {
+                ...chartDefaults.plugins,
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: €${Number(context.parsed.y).toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
  * Convert a hex color to rgba string with given alpha.
  * @param {string} hex — e.g. "#556B2F"
  * @param {number} alpha — 0..1

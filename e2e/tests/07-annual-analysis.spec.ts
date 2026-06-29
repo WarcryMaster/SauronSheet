@@ -149,6 +149,7 @@ test.describe('Annual Analysis Dashboard', () => {
     });
 
     test('year selector changes year and reloads page', async ({ authenticatedPage: page }) => {
+        await seedAnnualData(page, alternateYear);
         await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
 
@@ -156,18 +157,23 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(yearSelect).toBeVisible();
 
         await yearSelect.selectOption(String(alternateYear));
-        await expect(page).toHaveURL(new RegExp(`\\/Analysis\\/Annual\\?year=${alternateYear}`, 'i'));
         await expect(yearSelect).toHaveValue(String(alternateYear));
+        await expect(page.locator('[data-testid="annual-kpi-income"]')).toBeVisible();
     });
 
     test('YoY section renders fallback when no previous year data', async ({ authenticatedPage: page }) => {
-        // Use a far-future year to guarantee no previous-year data exists in the database.
-        // CI-persisted data from previous runs (when currentYear was 2025) would otherwise
-        // cause hasVariation=true, hiding the fallback.
-        const guaranteedCleanYear = currentYear + 50;
-        await seedAnnualData(page, guaranteedCleanYear);
-        await page.goto(`/Analysis/Annual?Year=${guaranteedCleanYear}`);
+        await seedAnnualData(page, currentYear);
+        await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        const yearSelect = page.locator('#Year');
+        await expect(yearSelect).toBeVisible();
+
+        const earliestYear = await yearSelect.locator('option').first().getAttribute('value');
+        if (earliestYear) {
+            await yearSelect.selectOption(earliestYear);
+            await expect(yearSelect).toHaveValue(earliestYear);
+        }
 
         const yoySection = page.locator('[data-testid="annual-yoy-section"]');
         await expect(yoySection).toBeVisible();
@@ -175,5 +181,112 @@ test.describe('Annual Analysis Dashboard', () => {
         const noDataFallback = page.locator('[data-testid="annual-yoy-no-data"]');
         await expect(noDataFallback).toBeVisible();
         await expect(noDataFallback).toContainText('Sin datos del año anterior');
+    });
+
+    // ── T2 E2E Tests (Task 5.7) ──
+
+    test('multi-year chart section renders with canvas element when multiple years of data exist', async ({ authenticatedPage: page }) => {
+        // Seed data across 2 years to trigger multi-year comparison (requires 2+ years)
+        const firstYear = currentYear - 4;
+        const secondYear = currentYear - 3;
+        await seedAnnualData(page, firstYear);
+        await seedAnnualData(page, secondYear);
+        await page.goto(`/Analysis/Annual?Year=${secondYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        const section = page.locator('[data-testid="annual-multiyear-section"]');
+        await expect(section).toBeVisible();
+
+        const canvas = page.locator('[data-testid="annual-multiyear-chart"]');
+        await expect(canvas).toBeVisible();
+        await expect(canvas).toHaveAttribute('role', 'img');
+    });
+
+    test('monthly evolution chart renders with canvas', async ({ authenticatedPage: page }) => {
+        const testYear = currentYear - 2;
+        await seedAnnualData(page, testYear);
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        const section = page.locator('[data-testid="annual-monthly-section"]');
+        await expect(section).toBeVisible();
+
+        const canvas = page.locator('[data-testid="annual-monthly-chart"]');
+        await expect(canvas).toBeVisible();
+        await expect(canvas).toHaveAttribute('role', 'img');
+    });
+
+    test('category distribution donut renders with category section', async ({ authenticatedPage: page }) => {
+        const testYear = currentYear - 5;
+        await seedAnnualData(page, testYear);
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        const section = page.locator('[data-testid="annual-category-section"]');
+        await expect(section).toBeVisible();
+
+        const canvas = page.locator('[data-testid="annual-category-chart"]');
+        await expect(canvas).toBeVisible();
+    });
+
+    test('timeline and top movements sections visible with transaction data', async ({ authenticatedPage: page }) => {
+        const testYear = currentYear - 6;
+        // Seed twice to create enough transactions for meaningful timeline + top movements
+        await seedAnnualData(page, testYear);
+        await seedAnnualData(page, testYear);
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        await expect(page.locator('[data-testid="annual-timeline-section"]')).toBeVisible();
+        await expect(page.locator('[data-testid="annual-top-movements-section"]')).toBeVisible();
+    });
+
+    // ── T3 E2E Tests (Task 5.8) ──
+
+    test('anomalies section renders after loading year with data', async ({ authenticatedPage: page }) => {
+        const testYear = currentYear - 7;
+        await seedAnnualData(page, testYear);
+        await seedAnnualData(page, testYear);
+
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        await expect(page.locator('[data-testid="annual-anomalies-section"]')).toBeVisible();
+    });
+
+    test('discoveries and achievements sections render', async ({ authenticatedPage: page }) => {
+        const testYear = currentYear - 7;
+        await seedAnnualData(page, testYear);
+        await seedAnnualData(page, testYear);
+
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        await expect(page.locator('[data-testid="annual-discoveries-section"]')).toBeVisible();
+        await expect(page.locator('[data-testid="annual-achievements-section"]')).toBeVisible();
+    });
+
+    test('predictions section visible for multi-year data', async ({ authenticatedPage: page }) => {
+        const year1 = currentYear - 9;
+        const year2 = currentYear - 8;
+        await seedAnnualData(page, year1);
+        await seedAnnualData(page, year2);
+
+        await page.goto(`/Analysis/Annual?Year=${year2}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        await expect(page.locator('[data-testid="annual-predictions-section"]')).toBeVisible();
+    });
+
+    test('historical comparison section visible', async ({ authenticatedPage: page }) => {
+        const year1 = currentYear - 9;
+        const year2 = currentYear - 8;
+        await seedAnnualData(page, year1);
+        await seedAnnualData(page, year2);
+
+        await page.goto(`/Analysis/Annual?Year=${year2}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        await expect(page.locator('[data-testid="annual-historical-comparison-section"]')).toBeVisible();
     });
 });

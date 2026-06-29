@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Postgrest;
 using Postgrest.Attributes;
 using Postgrest.Models;
+using Sentry;
 using Sentry.Extensibility;
 using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Entities;
@@ -426,5 +427,47 @@ public class SupabaseTransactionRepository : ITransactionRepository
             .Get();
 
         return response.Models.Any();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Transaction>> GetByUserIdAndYearRangeAsync(
+        UserId userId, int fromYear, int toYear)
+    {
+        Dictionary<string, string> breadcrumbData = new()
+        {
+            ["userId"] = userId.Value,
+            ["fromYear"] = fromYear.ToString(),
+            ["toYear"] = toYear.ToString()
+        };
+
+        SentrySdk.AddBreadcrumb(
+            message: "Loading transactions by year range",
+            category: "repository.query",
+            data: breadcrumbData,
+            level: BreadcrumbLevel.Info);
+
+        Sentry.SentrySdk.Logger?.LogDebug(
+            "SupabaseTransactionRepository.GetByUserIdAndYearRangeAsync: querying transactions for user {0} from {1} to {2}",
+            userId.Value, fromYear, toYear);
+
+        DateTime fromDate = new(fromYear, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime toDate = new(toYear, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+
+        var response = await _client.From<TransactionRow>()
+            .Where(x => x.UserId == userId.Value)
+            .Where(x => x.Date >= fromDate)
+            .Where(x => x.Date <= toDate)
+            .Order("date", Constants.Ordering.Ascending)
+            .Get();
+
+        List<Transaction> result = response.Models
+            .Select(r => r.ToDomain())
+            .ToList();
+
+        Sentry.SentrySdk.Logger?.LogInfo(
+            "SupabaseTransactionRepository.GetByUserIdAndYearRangeAsync: loaded {0} transactions for user {1} ({2}-{3})",
+            result.Count, userId.Value, fromYear, toYear);
+
+        return result.AsReadOnly();
     }
 }

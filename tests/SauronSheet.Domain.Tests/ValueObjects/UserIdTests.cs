@@ -14,7 +14,7 @@ public class UserIdTests
         string validUserId = "user-123";
 
         // Act
-        var userId = new UserId(validUserId);
+        UserId userId = new UserId(validUserId);
 
         // Assert
         Assert.Equal(validUserId, userId.Value);
@@ -29,7 +29,7 @@ public class UserIdTests
         string? nullUserId = null;
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => new UserId(nullUserId!));
+        DomainException exception = Assert.Throws<DomainException>(() => new UserId(nullUserId!));
         Assert.Contains("cannot be null or empty", exception.Message);
     }
 
@@ -41,7 +41,7 @@ public class UserIdTests
         string emptyUserId = "";
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => new UserId(emptyUserId));
+        DomainException exception = Assert.Throws<DomainException>(() => new UserId(emptyUserId));
         Assert.Contains("cannot be null or empty", exception.Message);
     }
 
@@ -53,7 +53,7 @@ public class UserIdTests
         string whitespaceUserId = "   ";
 
         // Act & Assert
-        var exception = Assert.Throws<DomainException>(() => new UserId(whitespaceUserId));
+        DomainException exception = Assert.Throws<DomainException>(() => new UserId(whitespaceUserId));
         Assert.Contains("cannot be null or empty", exception.Message);
     }
 
@@ -62,8 +62,8 @@ public class UserIdTests
     public void UserId_Equality_SameValue()
     {
         // Arrange
-        var userId1 = new UserId("user-123");
-        var userId2 = new UserId("user-123");
+        UserId userId1 = new UserId("user-123");
+        UserId userId2 = new UserId("user-123");
 
         // Act & Assert
         Assert.Equal(userId1, userId2);
@@ -74,8 +74,8 @@ public class UserIdTests
     public void UserId_Inequality_DifferentValue()
     {
         // Arrange
-        var userId1 = new UserId("user-123");
-        var userId2 = new UserId("user-456");
+        UserId userId1 = new UserId("user-123");
+        UserId userId2 = new UserId("user-456");
 
         // Act & Assert
         Assert.NotEqual(userId1, userId2);
@@ -86,13 +86,13 @@ public class UserIdTests
     public void AuthResult_SuccessFactory_SetsProperties()
     {
         // Arrange
-        var userId = new UserId("user-123");
+        UserId userId = new UserId("user-123");
         string accessToken = "access-token";
         string refreshToken = "refresh-token";
-        var expiresAt = DateTime.UtcNow.AddHours(1);
+        DateTime expiresAt = DateTime.UtcNow.AddHours(1);
 
         // Act
-        var result = AuthResult.Success(userId, accessToken, refreshToken, expiresAt);
+        AuthResult result = AuthResult.Success(userId, accessToken, refreshToken, expiresAt);
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -111,7 +111,7 @@ public class UserIdTests
         string errorMessage = "Invalid credentials";
 
         // Act
-        var result = AuthResult.Failure(errorMessage);
+        AuthResult result = AuthResult.Failure(errorMessage);
 
         // Assert
         Assert.False(result.IsSuccess);
@@ -119,6 +119,61 @@ public class UserIdTests
         Assert.Null(result.AccessToken);
         Assert.Null(result.RefreshToken);
         Assert.Null(result.ExpiresAt);
+        Assert.False(result.RequiresEmailConfirmation);
         Assert.Equal(errorMessage, result.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void AuthResult_SuccessWithConfirmationRequiredFactory_SetsExpectedFlags()
+    {
+        // Arrange
+        UserId userId = new UserId("user-confirmation");
+
+        // Act
+        AuthResult result = AuthResult.SuccessWithConfirmationRequired(userId);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(userId, result.UserId);
+        Assert.True(result.RequiresEmailConfirmation);
+        Assert.Null(result.AccessToken);
+        Assert.Null(result.RefreshToken);
+        Assert.Null(result.ExpiresAt);
+        Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void AuthResult_SuccessWithoutSessionFactory_DefaultsToNoEmailConfirmation()
+    {
+        // Act
+        AuthResult result = AuthResult.SuccessWithoutSession();
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.UserId);
+        Assert.Null(result.AccessToken);
+        Assert.Null(result.RefreshToken);
+        Assert.Null(result.ExpiresAt);
+        Assert.False(result.RequiresEmailConfirmation);
+        Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    [Trait("Category", "Domain")]
+    public void AuthResult_SuccessWithoutSessionFactory_AllowsEmailConfirmationFlag()
+    {
+        // Act
+        AuthResult result = AuthResult.SuccessWithoutSession(requiresEmailConfirmation: true);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.UserId);
+        Assert.Null(result.AccessToken);
+        Assert.Null(result.RefreshToken);
+        Assert.Null(result.ExpiresAt);
+        Assert.True(result.RequiresEmailConfirmation);
+        Assert.Null(result.ErrorMessage);
     }
 }

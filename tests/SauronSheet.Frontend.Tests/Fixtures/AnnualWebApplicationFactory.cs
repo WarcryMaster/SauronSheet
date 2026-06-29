@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using SauronSheet.Application.Features.Analytics.Classification;
 using SauronSheet.Application.Features.Analytics.DTOs;
 using SauronSheet.Application.Features.Analytics.Queries;
 using SauronSheet.Infrastructure.Auth;
@@ -13,16 +14,17 @@ using SauronSheet.Infrastructure.Auth;
 namespace SauronSheet.Frontend.Tests.Fixtures;
 
 /// <summary>
-/// Web application factory for integration tests of the Annual analysis page.
-/// Configures test authentication, mocks IMediator, and stubs external HTTP calls.
+/// Web application factory for integration tests of the Annual Dashboard page.
+/// Configures test authentication, mocks IMediator for GetAnnualDashboardQuery,
+/// and stubs external HTTP calls.
 /// </summary>
 public sealed class AnnualWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private AnnualAnalysisResultDto? _analysisResult;
+    private GetAnnualDashboardResultDto? _dashboardResult;
 
-    public AnnualWebApplicationFactory WithAnalysisResult(AnnualAnalysisResultDto result)
+    public AnnualWebApplicationFactory WithDashboardResult(GetAnnualDashboardResultDto result)
     {
-        _analysisResult = result;
+        _dashboardResult = result;
         return this;
     }
 
@@ -39,16 +41,16 @@ public sealed class AnnualWebApplicationFactory : WebApplicationFactory<Program>
                 TestAuthHandler.SchemeName,
                 _ => { });
 
-            // Mock the mediator so the annual analysis handler is bypassed.
+            // Mock the mediator so the dashboard handler is bypassed.
             services.AddSingleton(_ =>
             {
                 Mock<IMediator> mediator = new();
 
                 mediator
                     .Setup(m => m.Send(
-                        It.IsAny<GetAnnualAnalysisQuery>(),
+                        It.IsAny<GetAnnualDashboardQuery>(),
                         It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(_analysisResult ?? CreateEmptyResult());
+                    .ReturnsAsync(_dashboardResult ?? CreateEmptyResult());
 
                 return mediator.Object;
             });
@@ -75,22 +77,49 @@ public sealed class AnnualWebApplicationFactory : WebApplicationFactory<Program>
         });
     }
 
-    private static AnnualAnalysisResultDto CreateEmptyResult()
+    private static GetAnnualDashboardResultDto CreateEmptyResult()
     {
-        return new AnnualAnalysisResultDto(
+        return new GetAnnualDashboardResultDto(
             Year: DateTime.UtcNow.Year,
             Rows: Array.Empty<AnnualAnalysisRowDto>(),
-            Summary: new AnnualAnalysisSummaryDto(
-                IncomeFixed: 0m,
-                IncomeVariable: 0m,
-                IncomeTotal: 0m,
-                ExpenseFixed: 0m,
-                ExpenseVariable: 0m,
-                ExpenseTotal: 0m,
-                Net: 0m,
-                Currency: "EUR"),
+            AnalysisSummary: new AnnualAnalysisSummaryDto(0m, 0m, 0m, 0m, 0m, 0m, 0m, "EUR"),
+            ExecutiveSummary: new AnnualDashboardSummaryDto(
+                Income: 0m, Expense: 0m, Net: 0m, Savings: 0m, SavingsRate: 0m,
+                Year: DateTime.UtcNow.Year,
+                HasPreviousYear: false, HasNextYear: false,
+                YearRank: null, TotalYears: 0,
+                PreviousYearIncome: null, PreviousYearExpense: null,
+                PreviousYearNet: null, PreviousYearSavings: null, PreviousYearSavingsRate: null,
+                IncomeChangeAbs: null, IncomeChangePct: null,
+                ExpenseChangeAbs: null, ExpenseChangePct: null,
+                NetChangeAbs: null, NetChangePct: null,
+                SavingsChangeAbs: null, SavingsChangePct: null,
+                AverageIncome: null, AverageExpense: null,
+                AverageNet: null, AverageSavings: null, AverageSavingsRate: null),
+            Ratios: null,
+            AvailableYears: Array.Empty<int>(),
+            HealthScore: null,
+            SmartSummary: "Sin datos para este año. Añade transacciones para ver el resumen anual.",
             HasData: false,
-            Currency: "EUR");
+            Currency: "EUR",
+
+            // T2 — all null (empty result)
+            MultiYear: null,
+            MonthlyEvolution: null,
+            Categories: null,
+            CategoryTable: null,
+            Timeline: null,
+            TopExpenses: null,
+            TopIncomes: null,
+            MostFrequent: null,
+
+            // T3 — empty result
+            Anomalies: null,
+            Discoveries: null,
+            Achievements: null,
+            Trends: null,
+            Predictions: null,
+            HistoricalComparison: null);
     }
 
     /// <summary>

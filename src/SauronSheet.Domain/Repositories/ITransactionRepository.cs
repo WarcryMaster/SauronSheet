@@ -64,4 +64,12 @@ public interface ITransactionRepository
     /// Used by DeleteSubcategoryCommandHandler to prevent deletion of subcategories with active transactions.
     /// </summary>
     Task<bool> HasTransactionsForSubcategoryAsync(SubcategoryId subcategoryId);
+
+    /// <summary>
+    /// Gets transactions for a user within a year range, filtering server-side by date.
+    /// fromYear and toYear are inclusive (e.g., 2024 to 2026 includes all three years).
+    /// This is a server-side filtered query to avoid loading all user transactions into memory.
+    /// PR 1 — T1 Core — Annual Report Redesign.
+    /// </summary>
+    Task<IReadOnlyList<Transaction>> GetByUserIdAndYearRangeAsync(UserId userId, int fromYear, int toYear);
 }

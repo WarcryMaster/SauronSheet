@@ -3,16 +3,17 @@
 @using SauronSheet.Application.Features.Analytics.DTOs
 @model SauronSheet.Frontend.Pages.Analysis.AnnualModel
 @{
-    ViewData["Title"] = "Annual Analysis";
+    ViewData["Title"] = "Annual Dashboard";
     int currentYear = DateTime.UtcNow.Year;
-    int startYear = currentYear - 5;
-    int endYear = currentYear + 1;
+    int selectedYear = Model.Year.GetValueOrDefault(currentYear);
 
-    AnnualAnalysisSummaryDto? summary = Model.Result?.Summary;
-    YearOverYearVariationDto? variation = summary?.Variation;
-    object? variationObject = variation;
-    bool hasVariation = variation?.HasPreviousYearData == true;
-    int monthsWithData = summary?.MonthsWithData ?? 0;
+    AnnualDashboardSummaryDto? exec = Model.Result?.ExecutiveSummary;
+    AnnualDashboardRatiosDto? ratios = Model.Result?.Ratios;
+    AnnualDashboardHealthScoreDto? health = Model.Result?.HealthScore;
+    AnnualAnalysisSummaryDto? analysisSummary = Model.Result?.AnalysisSummary;
+    bool hasData = Model.HasData;
+    bool hasPreviousYear = Model.HasPreviousYear;
+    bool hasNextYear = Model.HasNextYear;
 }
 
 <style>
@@ -21,502 +22,1247 @@
     .mini-bar-income { background: var(--mdb-success); }
     .mini-bar-expense { background: var(--mdb-danger); }
     .chart-wrapper { position: relative; height: 380px; }
+    .health-ring { width: 140px; height: 140px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-size: 2rem; font-weight: 700; position: relative; }
+    .health-ring-inner { position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .skeleton-pulse { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; border-radius: 4px; }
+    @@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>
 
-<div class="d-flex flex-column gap-4"
-     x-data='{
-         hasData: @(Model.HasData.ToString().ToLowerInvariant()),
-         showDetail: false,
-         incomeRows: @Json.Serialize(Model.IncomeRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })),
-         expenseRows: @Json.Serialize(Model.ExpenseRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })),
-         variation: @Json.Serialize(variationObject),
-         hasVariation: @(hasVariation.ToString().ToLowerInvariant()),
+@* ── Outer Alpine Controller (NOT swapped by HTMX — persists loading state across nav) ── *@
+<div x-data="{ loading: false }" id="annual-page-root">
 
-         init() {
-             if (this.hasData) {
-                 this.$nextTick(() => {
-                      const trendData = JSON.parse((document.getElementById("annual-trend-data")?.textContent || "{}").trim());
-                      const distData = JSON.parse((document.getElementById("annual-distribution-data")?.textContent || "{}").trim());
-                     initAnnualTrendChart(this.$refs.trendCanvas, trendData);
-                     initAnnualDistributionChart(this.$refs.distCanvas, distData);
-                 });
-             }
-         },
-
-         toggleDetail() { this.showDetail = !this.showDetail; },
-
-         toggleRow(row) { row.expanded = !row.expanded; },
-
-         getBarWidth(amount, max) {
-             return max > 0 ? (amount / max * 100).toFixed(1) : 0;
-         },
-
-         getRowMax(row) {
-             return Math.max(...row.monthlyAmounts, 1);
-         },
-
-         formatCurrency(value) {
-             return "€" + Number(value).toFixed(2);
-         },
-
-         getPreviousYearValue(current, pct) {
-             if (!this.hasVariation || pct === null || pct === undefined) return null;
-             const factor = 1 + (Number(pct) / 100);
-             return factor !== 0 ? current / factor : 0;
-         }
-     }'>
-
-    <div class="d-flex justify-content-between align-items-center">
-        <h3 class="h3 fw-bold mb-0">Annual Analysis</h3>
-    </div>
-
-    @* Year selector *@
-    <form method="get" action="/Analysis/Annual" class="card border-0 shadow-sm p-3">
-        <div class="d-flex align-items-center gap-3">
-            <label for="Year" class="form-label small fw-semibold text-muted text-uppercase mb-0">Year</label>
-            <select id="Year" name="Year" class="form-select form-select-sm" style="width:auto"
-                    x-data="{ year: '@Model.Year.GetValueOrDefault(currentYear)' }"
-                    x-model="year"
-                    @@change="$el.form.submit()">
-                @for (int year = startYear; year <= endYear; year++)
-                {
-                    <option value="@year" selected="@(year == Model.Year.GetValueOrDefault(currentYear) ? "selected" : null)">@year</option>
-                }
-            </select>
-        </div>
-    </form>
-
-    @* Empty state *@
-    <template x-if="!hasData">
-        <div>
-            <div x-show="!hasData" x-transition.opacity
-                 class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite"
-                 data-testid="annual-empty-state">
-                <div class="fs-1 mb-3">📊</div>
-                <p class="h5 fw-semibold mb-2">Sin datos para este año</p>
-                <p class="text-muted mb-4">Add transactions to see the annual breakdown.</p>
+    @* ── Skeleton Loader (REQ-018: shown during HTMX fetch with Alpine x-show) ── *@
+    <div x-show="loading" x-transition.opacity class="d-flex flex-column gap-4" role="status" aria-label="Loading annual dashboard">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="skeleton-pulse mb-2" style="width: 180px; height: 24px;"></div>
+                <div class="skeleton-pulse" style="width: 120px; height: 16px;"></div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="skeleton-pulse" style="width: 36px; height: 36px;"></div>
+                <div class="skeleton-pulse" style="width: 80px; height: 36px;"></div>
+                <div class="skeleton-pulse" style="width: 36px; height: 36px;"></div>
             </div>
         </div>
-    </template>
-
-    @* Data state *@
-    @if (Model.HasData)
-    {
-        <div x-show="hasData" x-transition.opacity class="d-flex flex-column gap-4">
-
-                @* ── KPI Row ── *@
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
-                    @* Income KPI *@
-                    <div class="col">
-                        <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-success"
-                             data-testid="annual-kpi-income"
-                             x-data="{ display: 0, target: @((summary?.IncomeTotal ?? 0m).ToString(CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos Total</div>
-                            <div class="h4 fw-bold text-success mb-0">
-                                <span x-text="'€' + display.toFixed(2)"></span>
-                            </div>
-                            @if (hasVariation)
-                            {
-                                <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeTotalPct, true) mt-2">
-                                    @AnnualModel.GetVariationArrow(variation.IncomeTotalPct) @AnnualModel.FormatVariationPct(variation.IncomeTotalPct)
-                                </span>
-                            }
-                        </div>
-                    </div>
-
-                    @* Expense KPI *@
-                    <div class="col">
-                        <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-danger"
-                             data-testid="annual-kpi-expense"
-                             x-data="{ display: 0, target: @((summary?.ExpenseTotal ?? 0m).ToString(CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos Total</div>
-                            <div class="h4 fw-bold text-danger mb-0">
-                                <span x-text="'€' + display.toFixed(2)"></span>
-                            </div>
-                            @if (hasVariation)
-                            {
-                                <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseTotalPct, false) mt-2">
-                                    @AnnualModel.GetVariationArrow(variation.ExpenseTotalPct) @AnnualModel.FormatVariationPct(variation.ExpenseTotalPct)
-                                </span>
-                            }
-                        </div>
-                    </div>
-
-                    @* Net KPI *@
-                    <div class="col">
-                        <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-primary"
-                             data-testid="annual-kpi-net"
-                             x-data="{ display: 0, target: @((summary?.Net ?? 0m).ToString(CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
-                            <div class="h4 fw-bold @(summary?.Net >= 0 ? "text-success" : "text-danger") mb-0">
-                                <span x-text="'€' + display.toFixed(2)"></span>
-                            </div>
-                            @if (hasVariation)
-                            {
-                                <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.NetPct, true) mt-2">
-                                    @AnnualModel.GetVariationArrow(variation.NetPct) @AnnualModel.FormatVariationPct(variation.NetPct)
-                                </span>
-                            }
-                        </div>
-                    </div>
-
-                    @* Fixed Cost % KPI *@
-                    <div class="col">
-                        <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-warning"
-                             data-testid="annual-kpi-fixed-pct"
-                             x-data="{ display: 0, target: @Model.FixedCostPercentage.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                            <div class="small fw-semibold text-muted text-uppercase mb-1">% Coste Fijo</div>
-                            <div class="h4 fw-bold text-warning mb-0">
-                                <span x-text="display.toFixed(1) + '%'"></span>
-                            </div>
-                        </div>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="col">
+                    <div class="card border-0 shadow-sm h-100 p-3">
+                        <div class="skeleton-pulse mb-2" style="width: 60px; height: 14px;"></div>
+                        <div class="skeleton-pulse" style="width: 100px; height: 28px;"></div>
                     </div>
                 </div>
+            }
+        </div>
+        <div class="row g-4">
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm p-3">
+                    <div class="skeleton-pulse mb-3" style="width: 100px; height: 16px;"></div>
+                    <div class="skeleton-pulse" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm p-3">
+                    <div class="skeleton-pulse mb-3" style="width: 100px; height: 16px;"></div>
+                    <div class="skeleton-pulse" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                @* ── Months with data card (kept existing testid) ── *@
-                <div data-testid="annual-months-card" class="card border-0 shadow-sm p-3 text-center">
-                    <div class="small fw-semibold text-muted text-uppercase mb-1">
-                        📅 Meses con datos
-                    </div>
-                    <div class="h4 fw-bold mb-0">
-                        @if (monthsWithData >= 12)
+    @* ── Dashboard Content (SWAPPED by HTMX on year navigation) ── *@
+    <div x-show="!loading" x-transition.opacity>
+        <div id="annual-content" class="d-flex flex-column gap-4"
+             x-data='{
+                 hasData: @(hasData.ToString().ToLowerInvariant()),
+                 showDetail: false,
+                 incomeRows: @(hasData ? Json.Serialize(Model.IncomeRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })) : "[]"),
+                 expenseRows: @(hasData ? Json.Serialize(Model.ExpenseRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })) : "[]"),
+
+                 init() {
+                     if (this.hasData) {
+                         this.$nextTick(() => {
+                             const trendData = JSON.parse((document.getElementById("annual-trend-data")?.textContent || "{}").trim());
+                             const distData = JSON.parse((document.getElementById("annual-distribution-data")?.textContent || "{}").trim());
+                             if (typeof initAnnualTrendChart === "function" && trendData.labels) initAnnualTrendChart(this.$refs.trendCanvas, trendData);
+                             if (typeof initAnnualDistributionChart === "function" && distData.labels) initAnnualDistributionChart(this.$refs.distCanvas, distData);
+
+                             // T2 charts
+                             const multiYearData = JSON.parse((document.getElementById("annual-multiyear-data")?.textContent || "{}").trim());
+                             const monthlyData = JSON.parse((document.getElementById("annual-monthly-data")?.textContent || "{}").trim());
+                             const categoryData = JSON.parse((document.getElementById("annual-category-data")?.textContent || "{}").trim());
+                             if (typeof initMultiYearChart === "function" && multiYearData.labels) initMultiYearChart(this.$refs.multiyearCanvas, multiYearData);
+                             if (typeof initMonthlyEvolutionChart === "function" && monthlyData.labels) initMonthlyEvolutionChart(this.$refs.monthlyCanvas, monthlyData);
+                              if (typeof initCategoryDonutChart === "function" && categoryData.labels) initCategoryDonutChart(this.$refs.categoryCanvas, categoryData);
+
+                              // T3 charts
+                              const anomalyData = JSON.parse((document.getElementById("annual-anomaly-data")?.textContent || "{}").trim());
+                              if (typeof initAnomalyChart === "function" && anomalyData.labels) initAnomalyChart(this.$refs.anomalyCanvas, anomalyData);
+                          });
+                      }
+                  },
+
+                 toggleDetail() { this.showDetail = !this.showDetail; },
+                 toggleRow(row) { row.expanded = !row.expanded; },
+
+                 getBarWidth(amount, max) {
+                     return max > 0 ? (amount / max * 100).toFixed(1) : 0;
+                 },
+
+                 getRowMax(row) {
+                     return Math.max(...row.monthlyAmounts, 1);
+                 },
+
+                 formatCurrency(value) {
+                     return "€" + Number(value).toFixed(2);
+                 }
+             }'>
+
+            @* ── Header + Year Nav (REQ-018: HTMX fetch+swap, ◀ ▶ buttons, dropdown) ── *@
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="h3 fw-bold mb-0">Annual Dashboard</h3>
+                    @if (hasData && exec is not null)
+                    {
+                        <p class="text-muted small mb-0 mt-1">@exec.Year · Rank #@(exec.YearRank?.ToString() ?? "—") of @exec.TotalYears</p>
+                    }
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    @* Previous Year button *@
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            hx-get="/Analysis/Annual?Year=@(selectedYear - 1)"
+                            hx-target="#annual-content"
+                            hx-swap="outerHTML"
+                            disabled="@(!hasPreviousYear)"
+                            aria-label="Previous year"
+                            title="Previous year">
+                        ◀
+                    </button>
+
+                    @* Year dropdown *@
+                    <select id="Year"
+                            name="Year"
+                            class="form-select form-select-sm"
+                            style="width:auto"
+                            hx-get="/Analysis/Annual"
+                            hx-target="#annual-content"
+                            hx-swap="outerHTML"
+                            hx-trigger="change">
+                        @{
+                            var displayYears = Model.AvailableYears.Any()
+                                ? Model.AvailableYears
+                                : new[] { selectedYear };
+                        }
+                        @foreach (int year in displayYears)
                         {
-                            <span data-testid="months-full-year" class="text-success">Año completo</span>
+                            <option value="@year" selected="@(year == selectedYear ? "selected" : null)">@year</option>
+                        }
+                    </select>
+
+                    @* Next Year button *@
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            hx-get="/Analysis/Annual?Year=@(selectedYear + 1)"
+                            hx-target="#annual-content"
+                            hx-swap="outerHTML"
+                            disabled="@(!hasNextYear)"
+                            aria-label="Next year"
+                            title="Next year">
+                        ▶
+                    </button>
+                </div>
+            </div>
+
+            @* ── Empty State ── *@
+            <template x-if="!hasData">
+                <div x-show="!hasData" x-transition.opacity
+                     class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite"
+                     data-testid="annual-empty-state">
+                    <div class="fs-1 mb-3">📊</div>
+                    <p class="h5 fw-semibold mb-2">Sin datos para este año</p>
+                    <p class="text-muted mb-4">Add transactions to see the annual breakdown and dashboard.</p>
+                    @if (Model.Result?.ExecutiveSummary is not null)
+                    {
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <div class="card border-0 bg-light p-3">
+                                <div class="small text-muted">HasPreviousYear</div>
+                                <div class="fw-bold">@(Model.Result.ExecutiveSummary.HasPreviousYear ? "Yes" : "No")</div>
+                            </div>
+                            <div class="card border-0 bg-light p-3">
+                                <div class="small text-muted">HasNextYear</div>
+                                <div class="fw-bold">@(Model.Result.ExecutiveSummary.HasNextYear ? "Yes" : "No")</div>
+                            </div>
+                            <div class="card border-0 bg-light p-3">
+                                <div class="small text-muted">Total Years</div>
+                                <div class="fw-bold">@Model.Result.ExecutiveSummary.TotalYears</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </template>
+
+            @* ── Data State ── *@
+            @if (hasData && exec is not null && ratios is not null)
+            {
+                <div x-show="hasData" x-transition.opacity class="d-flex flex-column gap-4">
+
+                    @* ── Smart Summary Banner ── *@
+                    @if (!string.IsNullOrEmpty(Model.Result?.SmartSummary))
+                    {
+                        <div class="card border-0 shadow-sm p-3 bg-light" data-testid="annual-smart-summary">
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="fs-5">💡</span>
+                                <p class="mb-0 small">@Model.Result.SmartSummary</p>
+                            </div>
+                        </div>
+                    }
+
+                    @* ── Health Score Hero ── *@
+                    @if (health is not null)
+                    {
+                        <div class="card border-0 shadow-sm p-4 text-center" data-testid="annual-health-score">
+                            <div class="small fw-semibold text-muted text-uppercase mb-3">Health Score</div>
+                            <div class="health-ring"
+                                 style="background: conic-gradient(@(health.Total.HasValue ? (health.Total.Value >= 80m ? "var(--mdb-success)" : health.Total.Value >= 50m ? "var(--mdb-warning)" : "var(--mdb-danger)") : "var(--mdb-gray)") @(health.Total.HasValue ? $"{health.Total.Value}%" : "0%") transparent @(health.Total.HasValue ? $"{health.Total.Value}%" : "0%") 100%)">
+                                <div class="health-ring-inner">
+                                    <span class="h2 fw-bold mb-0" style="color: @(health.Total.HasValue ? (health.Total.Value >= 80m ? "var(--mdb-success)" : health.Total.Value >= 50m ? "var(--mdb-warning)" : "var(--mdb-danger)") : "var(--mdb-gray)")">
+                                        @(health.Total?.ToString("F0") ?? "—")
+                                    </span>
+                                    <small class="text-muted">/ 100</small>
+                                </div>
+                            </div>
+                            @if (health.Total.HasValue)
+                            {
+                                <div class="mt-2 small text-muted">
+                                    @(health.Total.Value >= 80m ? "Excelente" : health.Total.Value >= 60m ? "Buena" : health.Total.Value >= 40m ? "Regular" : "Necesita atención")
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @* ── Executive Summary KPIs ── *@
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                        @* Income *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-success"
+                                 data-testid="annual-kpi-income"
+                                 x-data="{ display: 0, target: @exec.Income.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos</div>
+                                <div class="h4 fw-bold text-success mb-0">
+                                    <span x-text="'€' + display.toFixed(2)"></span>
+                                </div>
+                                @if (exec.HasPreviousYear && exec.IncomeChangePct.HasValue)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(exec.IncomeChangePct, true) mt-2">
+                                        @AnnualModel.GetVariationArrow(exec.IncomeChangePct) @AnnualModel.FormatVariationPct(exec.IncomeChangePct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        @* Expense *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-danger"
+                                 data-testid="annual-kpi-expense"
+                                 x-data="{ display: 0, target: @exec.Expense.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos</div>
+                                <div class="h4 fw-bold text-danger mb-0">
+                                    <span x-text="'€' + display.toFixed(2)"></span>
+                                </div>
+                                @if (exec.HasPreviousYear && exec.ExpenseChangePct.HasValue)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(exec.ExpenseChangePct, false) mt-2">
+                                        @AnnualModel.GetVariationArrow(exec.ExpenseChangePct) @AnnualModel.FormatVariationPct(exec.ExpenseChangePct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        @* Net *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-primary"
+                                 data-testid="annual-kpi-net"
+                                 x-data="{ display: 0, target: @exec.Net.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
+                                <div class="h4 fw-bold mb-0 @(exec.Net >= 0 ? "text-success" : "text-danger")">
+                                    <span x-text="'€' + display.toFixed(2)"></span>
+                                </div>
+                                @if (exec.HasPreviousYear && exec.NetChangePct.HasValue)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(exec.NetChangePct, true) mt-2">
+                                        @AnnualModel.GetVariationArrow(exec.NetChangePct) @AnnualModel.FormatVariationPct(exec.NetChangePct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        @* Fixed Cost Percentage (REQ: executive KPI with testid for E2E) *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-info"
+                                 data-testid="annual-kpi-fixed-pct"
+                                 x-data="{ display: 0, target: @Model.FixedCostPercentage.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Fixed Cost %</div>
+                                <div class="h4 fw-bold text-info mb-0">
+                                    <span x-text="display.toFixed(1) + '%'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Savings Rate *@
+                        <div class="col">
+                            <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-secondary"
+                                 data-testid="annual-kpi-savings-rate"
+                                 x-data="{ display: 0, target: @exec.SavingsRate.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">Tasa Ahorro</div>
+                                <div class="h4 fw-bold text-secondary mb-0">
+                                    <span x-text="display.toFixed(1) + '%'"></span>
+                                </div>
+                                @if (exec.HasPreviousYear && exec.SavingsChangePct.HasValue)
+                                {
+                                    <span class="badge @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true) mt-2">
+                                        @AnnualModel.GetVariationArrow(exec.SavingsChangePct) @AnnualModel.FormatVariationPct(exec.SavingsChangePct)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Financial Ratios Row ── *@
+                    <div class="row row-cols-2 row-cols-md-4 g-2">
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-savings-rate">
+                                <div class="small fw-semibold text-muted text-uppercase">Savings Rate</div>
+                                <div class="h5 fw-bold mb-0 @(ratios.SavingsRate >= 20m ? "text-success" : "text-warning")">
+                                    @(ratios.SavingsRate?.ToString("F1") ?? "—")%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-avg-monthly-income">
+                                <div class="small fw-semibold text-muted text-uppercase">Avg Monthly Income</div>
+                                <div class="h5 fw-bold mb-0">€@(ratios.AverageMonthlyIncome?.ToString("N0") ?? "—")</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-avg-monthly-expense">
+                                <div class="small fw-semibold text-muted text-uppercase">Avg Monthly Expense</div>
+                                <div class="h5 fw-bold mb-0">€@(ratios.AverageMonthlyExpense?.ToString("N0") ?? "—")</div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-transaction-count">
+                                <div class="small fw-semibold text-muted text-uppercase">Transactions</div>
+                                <div class="h5 fw-bold mb-0">@ratios.TransactionCount</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── Months with data ── *@
+                    @{
+                        int monthsWithData = analysisSummary?.MonthsWithData ?? 0;
+                    }
+                    <div data-testid="annual-months-card" class="card border-0 shadow-sm p-3 text-center">
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">
+                            📅 Meses con datos
+                        </div>
+                        <div class="h4 fw-bold mb-0">
+                            @if (monthsWithData >= 12)
+                            {
+                                <span data-testid="months-full-year" class="text-success">Año completo</span>
+                            }
+                            else
+                            {
+                                <span>@monthsWithData / 12 meses con datos</span>
+                            }
+                        </div>
+                    </div>
+
+                    @* ── Charts Row ── *@
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-6">
+                            <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column">
+                                <h4 class="h6 fw-semibold mb-3">Monthly Trend</h4>
+                                <div class="chart-wrapper flex-grow-1">
+                                    <canvas x-ref="trendCanvas"
+                                            id="annual-trend-chart"
+                                            data-testid="annual-trend-chart"
+                                            role="img"
+                                            aria-label="Monthly trend chart showing income and expenses for each month of the year"></canvas>
+                                </div>
+                                <table class="visually-hidden" aria-hidden="true">
+                                    <caption>Monthly trend (fallback table)</caption>
+                                    <thead>
+                                        <tr><th>Month</th><th>Income</th><th>Expenses</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int m = 0; m < 12; m++)
+                                        {
+                                            <tr>
+                                                <td>@(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[m])</td>
+                                                <td>€@Model.MonthlyIncomeTotals[m].ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                <td>€@Model.MonthlyExpenseTotals[m].ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column">
+                                <h4 class="h6 fw-semibold mb-3">Fixed / Variable Distribution</h4>
+                                <div class="chart-wrapper flex-grow-1">
+                                    <canvas x-ref="distCanvas"
+                                            id="annual-distribution-chart"
+                                            data-testid="annual-distribution-chart"
+                                            role="img"
+                                            aria-label="Donut chart showing fixed versus variable income and expenses"></canvas>
+                                </div>
+                                <table class="visually-hidden" aria-hidden="true">
+                                    <caption>Fixed / variable distribution (fallback table)</caption>
+                                    <thead>
+                                        <tr><th>Category</th><th>Amount</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (analysisSummary is not null)
+                                        {
+                                            <tr><td>Income Fixed</td><td>€@analysisSummary.IncomeFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>Income Variable</td><td>€@analysisSummary.IncomeVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>Expense Fixed</td><td>€@analysisSummary.ExpenseFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>Expense Variable</td><td>€@analysisSummary.ExpenseVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ── YoY Comparison Section ── *@
+                    @if (exec.HasPreviousYear)
+                    {
+                        <div data-testid="annual-yoy-section">
+                            <h4 class="h6 fw-semibold mb-3">Year over Year</h4>
+                            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-2">
+                                @* Income change *@
+                                <div class="col">
+                                    <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.IncomeChangePct, true).Replace("bg-", "border-")">
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos</div>
+                                        <div class="h5 fw-bold mb-0">€@exec.Income.ToString("N2")</div>
+                                        <span class="badge @AnnualModel.GetVariationBadgeClass(exec.IncomeChangePct, true) mt-2">
+                                            @AnnualModel.GetVariationArrow(exec.IncomeChangePct) @AnnualModel.FormatVariationPct(exec.IncomeChangePct)
+                                        </span>
+                                    </div>
+                                </div>
+                                @* Expense change *@
+                                <div class="col">
+                                    <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.ExpenseChangePct, false).Replace("bg-", "border-")">
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos</div>
+                                        <div class="h5 fw-bold mb-0">€@exec.Expense.ToString("N2")</div>
+                                        <span class="badge @AnnualModel.GetVariationBadgeClass(exec.ExpenseChangePct, false) mt-2">
+                                            @AnnualModel.GetVariationArrow(exec.ExpenseChangePct) @AnnualModel.FormatVariationPct(exec.ExpenseChangePct)
+                                        </span>
+                                    </div>
+                                </div>
+                                @* Net change *@
+                                <div class="col">
+                                    <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.NetChangePct, true).Replace("bg-", "border-")">
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
+                                        <div class="h5 fw-bold mb-0">€@exec.Net.ToString("N2")</div>
+                                        <span class="badge @AnnualModel.GetVariationBadgeClass(exec.NetChangePct, true) mt-2">
+                                            @AnnualModel.GetVariationArrow(exec.NetChangePct) @AnnualModel.FormatVariationPct(exec.NetChangePct)
+                                        </span>
+                                    </div>
+                                </div>
+                                @* Savings change *@
+                                <div class="col">
+                                    <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true).Replace("bg-", "border-")">
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Ahorro</div>
+                                        <div class="h5 fw-bold mb-0">€@exec.Savings.ToString("N2")</div>
+                                        <span class="badge @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true) mt-2">
+                                            @AnnualModel.GetVariationArrow(exec.SavingsChangePct) @AnnualModel.FormatVariationPct(exec.SavingsChangePct)
+                                        </span>
+                                    </div>
+                                </div>
+                                @* Savings Rate change *@
+                                <div class="col">
+                                    <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.SavingsRate > 0 ? exec.SavingsRate : null, true).Replace("bg-", "border-")">
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Tasa Ahorro</div>
+                                        <div class="h5 fw-bold mb-0">@exec.SavingsRate.ToString("F1")%</div>
+                                        <span class="badge @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true) mt-2">
+                                            @AnnualModel.GetVariationArrow(exec.SavingsChangePct) @AnnualModel.FormatVariationPct(exec.SavingsChangePct)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div data-testid="annual-yoy-section">
+                            <h4 class="h6 fw-semibold mb-3">Year over Year</h4>
+                            <div class="card border-0 shadow-sm p-3 text-center text-muted" data-testid="annual-yoy-no-data">
+                                Sin datos del año anterior
+                            </div>
+                        </div>
+                    }
+
+                    @* ── Sub-Score Breakdown (Health Score Detail) ── *@
+                    @if (health is not null && health.Total.HasValue)
+                    {
+                        <div class="card border-0 shadow-sm p-4" data-testid="annual-health-sub-scores">
+                            <h4 class="h6 fw-semibold mb-3">Health Score Breakdown</h4>
+                            <div class="d-flex flex-column gap-2">
+                                @* Savings *@
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted" style="width: 140px;">Ahorro (25%)</small>
+                                    <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
+                                        <div class="rounded h-100 @(health.SavingsScore >= 80m ? "bg-success" : health.SavingsScore >= 50m ? "bg-warning" : "bg-danger")"
+                                             style="width: @(health.SavingsScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
+                                    </div>
+                                    <small class="fw-bold" style="width: 40px;">@(health.SavingsScore?.ToString("F0") ?? "—")</small>
+                                </div>
+                                @* Income Stability *@
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted" style="width: 140px;">Estabilidad Ingresos (15%)</small>
+                                    <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
+                                        <div class="rounded h-100 @(health.IncomeStabilityScore >= 80m ? "bg-success" : health.IncomeStabilityScore >= 50m ? "bg-warning" : "bg-danger")"
+                                             style="width: @(health.IncomeStabilityScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
+                                    </div>
+                                    <small class="fw-bold" style="width: 40px;">@(health.IncomeStabilityScore?.ToString("F0") ?? "—")</small>
+                                </div>
+                                @* Expense Stability *@
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted" style="width: 140px;">Estabilidad Gastos (15%)</small>
+                                    <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
+                                        <div class="rounded h-100 @(health.ExpenseStabilityScore >= 80m ? "bg-success" : health.ExpenseStabilityScore >= 50m ? "bg-warning" : "bg-danger")"
+                                             style="width: @(health.ExpenseStabilityScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
+                                    </div>
+                                    <small class="fw-bold" style="width: 40px;">@(health.ExpenseStabilityScore?.ToString("F0") ?? "—")</small>
+                                </div>
+                                @* Category Dependency *@
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted" style="width: 140px;">Dependencia Categorías (10%)</small>
+                                    <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
+                                        <div class="rounded h-100 @(health.CategoryDependencyScore >= 80m ? "bg-success" : health.CategoryDependencyScore >= 50m ? "bg-warning" : "bg-danger")"
+                                             style="width: @(health.CategoryDependencyScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
+                                    </div>
+                                    <small class="fw-bold" style="width: 40px;">@(health.CategoryDependencyScore?.ToString("F0") ?? "—")</small>
+                                </div>
+                                @* Balance *@
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted" style="width: 140px;">Balance I/E (20%)</small>
+                                    <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
+                                        <div class="rounded h-100 @(health.BalanceScore >= 80m ? "bg-success" : health.BalanceScore >= 50m ? "bg-warning" : "bg-danger")"
+                                             style="width: @(health.BalanceScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
+                                    </div>
+                                    <small class="fw-bold" style="width: 40px;">@(health.BalanceScore?.ToString("F0") ?? "—")</small>
+                                </div>
+                                @* Trend *@
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-muted" style="width: 140px;">Tendencia (15%)</small>
+                                    <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
+                                        <div class="rounded h-100 @(health.TrendScore >= 80m ? "bg-success" : health.TrendScore >= 50m ? "bg-warning" : "bg-danger")"
+                                             style="width: @(health.TrendScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
+                                    </div>
+                                    <small class="fw-bold" style="width: 40px;">@(health.TrendScore?.ToString("F0") ?? "—")</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* ── T2: Multi-Year Comparison (REQ-003) ── *@
+                    @if (Model.HasMultiYear)
+                    {
+                        <div data-testid="annual-multiyear-section">
+                            <h4 class="h6 fw-semibold mb-3">Multi-Year Comparison</h4>
+                            <div class="card border-0 shadow-sm p-3">
+                                <div class="chart-wrapper" style="height: 320px;">
+                                    <canvas x-ref="multiyearCanvas"
+                                            id="annual-multiyear-chart"
+                                            data-testid="annual-multiyear-chart"
+                                            role="img"
+                                            aria-label="Multi-year comparison bar chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* ── T2: Monthly Evolution (REQ-004) ── *@
+                    @if (Model.Result?.MonthlyEvolution is not null)
+                    {
+                        <div data-testid="annual-monthly-section">
+                            <h4 class="h6 fw-semibold mb-3">Monthly Evolution</h4>
+                            <div class="card border-0 shadow-sm p-3">
+                                <div class="chart-wrapper" style="height: 320px;">
+                                    <canvas x-ref="monthlyCanvas"
+                                            id="annual-monthly-chart"
+                                            data-testid="annual-monthly-chart"
+                                            role="img"
+                                            aria-label="Monthly evolution chart with averages"></canvas>
+                                </div>
+                            </div>
+                            @{
+                                var monthly = Model.Result.MonthlyEvolution;
+                            }
+                            @if (monthly.BestIncomeMonth.HasValue || monthly.BestExpenseMonth.HasValue)
+                            {
+                                <div class="row row-cols-1 row-cols-md-2 g-2 mt-2">
+                                    @if (monthly.BestIncomeMonth.HasValue)
+                                    {
+                                        <div class="col">
+                                            <div class="card border-0 bg-light p-2 text-center">
+                                                <small class="text-muted">Best Income Month</small>
+                                                <div class="fw-bold text-success">
+                                                    @(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[monthly.BestIncomeMonth.Value])
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (monthly.BestExpenseMonth.HasValue)
+                                    {
+                                        <div class="col">
+                                            <div class="card border-0 bg-light p-2 text-center">
+                                                <small class="text-muted">Best Expense Month</small>
+                                                <div class="fw-bold text-danger">
+                                                    @(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[monthly.BestExpenseMonth.Value])
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @* ── T2: Category Distribution (REQ-005, REQ-006) ── *@
+                    @if (Model.Result?.Categories is { Count: > 0 })
+                    {
+                        <div data-testid="annual-category-section">
+                            <h4 class="h6 fw-semibold mb-3">Expense Categories</h4>
+                            <div class="row g-3">
+                                <div class="col-12 col-lg-6">
+                                    <div class="card border-0 shadow-sm p-3">
+                                        <div class="chart-wrapper" style="height: 320px;">
+                                            <canvas x-ref="categoryCanvas"
+                                                    id="annual-category-chart"
+                                                    data-testid="annual-category-chart"
+                                                    role="img"
+                                                    aria-label="Category distribution donut chart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <div class="card border-0 shadow-sm p-3">
+                                        <h5 class="h6 fw-semibold mb-3">Category Breakdown</h5>
+                                        <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                            <table class="table table-sm table-hover mb-0"
+                                                   data-testid="annual-category-table"
+                                                   aria-label="Category breakdown">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="small fw-semibold text-muted">Category</th>
+                                                        <th class="small fw-semibold text-muted text-end">Amount</th>
+                                                        <th class="small fw-semibold text-muted text-end">%</th>
+                                                        <th class="small fw-semibold text-muted text-center">Trend</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (CategoryItemDto cat in Model.Result.Categories)
+                                                    {
+                                                        <tr>
+                                                            <td class="fw-medium">
+                                                                @cat.CategoryName
+                                                                @if (cat.IsNewThisYear)
+                                                                {
+                                                                    <span class="badge bg-success ms-1" style="font-size: 0.65rem;">NEW</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-end">€@cat.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                            <td class="text-end">@cat.Percentage.ToString("F1", CultureInfo.InvariantCulture)%</td>
+                                                            <td class="text-center">
+                                                                @if (cat.Trend == "up")
+                                                                {
+                                                                    <span class="text-danger" title="Increased from last year">▲</span>
+                                                                }
+                                                                else if (cat.Trend == "down")
+                                                                {
+                                                                    <span class="text-success" title="Decreased from last year">▼</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-muted" title="Same as last year">—</span>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* ── T2: Category Comparison Table (REQ-007) ── *@
+                    @if (Model.HasCategoryComparison)
+                    {
+                        <div data-testid="annual-category-comparison-section">
+                            <h4 class="h6 fw-semibold mb-3">Category Comparison</h4>
+                            <div class="card border-0 shadow-sm p-3">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0"
+                                           data-testid="annual-category-comparison-table"
+                                           aria-label="Year-over-year category comparison">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="small fw-semibold text-muted">Category</th>
+                                                <th class="small fw-semibold text-muted text-end">@(Model.Result!.Year - 1)</th>
+                                                <th class="small fw-semibold text-muted text-end">@Model.Result.Year</th>
+                                                <th class="small fw-semibold text-muted text-end">Change</th>
+                                                <th class="small fw-semibold text-muted text-end">Change %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (CategoryComparisonRowDto row in Model.CategoryTable!.Rows)
+                                            {
+                                                <tr>
+                                                    <td class="fw-medium">@row.CategoryName</td>
+                                                    <td class="text-end">€@row.PreviousYearAmount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                    <td class="text-end">€@row.SelectedYearAmount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                    <td class="text-end @(row.DiffAbs >= 0 ? "text-danger" : "text-success")">
+                                                        @(row.DiffAbs >= 0 ? "+" : "")€@row.DiffAbs.ToString("N2", CultureInfo.InvariantCulture)
+                                                    </td>
+                                                    <td class="text-end @(row.DiffPct >= 0 ? "text-danger" : "text-success")">
+                                                        @(row.DiffPct >= 0 ? "+" : "")@row.DiffPct.ToString("F1", CultureInfo.InvariantCulture)%
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* ── T2: Timeline (REQ-009) ── *@
+                    @if (Model.Result?.Timeline is { Count: > 0 })
+                    {
+                        <div data-testid="annual-timeline-section">
+                            <h4 class="h6 fw-semibold mb-3">Year Timeline</h4>
+                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+                                @foreach (TimelineEventDto evt in Model.Result.Timeline)
+                                {
+                                    <div class="col">
+                                        <div class="card border-0 shadow-sm h-100 p-3" data-testid="timeline-event-@evt.Type">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <span>@evt.Icon</span>
+                                                <small class="fw-semibold text-muted text-uppercase">@evt.Label</small>
+                                            </div>
+                                            <div class="small text-muted">@evt.Date</div>
+                                            <div class="fw-bold mt-1">
+                                                @if (evt.Type == "savings-record" || evt.Type == "highest-income")
+                                                {
+                                                    <span class="text-success">€@evt.Amount.ToString("N2", CultureInfo.InvariantCulture)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-danger">€@evt.Amount.ToString("N2", CultureInfo.InvariantCulture)</span>
+                                                }
+                                            </div>
+                                            <div class="small text-muted mt-1">@evt.Description</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @* ── T2: Top Movements (REQ-010) ── *@
+                    @if (Model.Result?.TopExpenses is { Count: > 0 } || Model.Result?.TopIncomes is { Count: > 0 } || Model.Result?.MostFrequent is { Count: > 0 })
+                    {
+                        <div data-testid="annual-top-movements-section">
+                            <h4 class="h6 fw-semibold mb-3">Top Movements</h4>
+                            <div class="row g-3">
+                                @if (Model.Result.TopExpenses is { Count: > 0 })
+                                {
+                                    <div class="col-12 col-md-4">
+                                        <div class="card border-0 shadow-sm h-100 p-3">
+                                            <h5 class="h6 fw-semibold mb-3 text-danger">Top Expenses</h5>
+                                            <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                                                <table class="table table-sm table-borderless mb-0"
+                                                       data-testid="annual-top-expenses-table"
+                                                       aria-label="Top expenses">
+                                                    <tbody>
+                                                        @foreach (TopMovementDto mov in Model.Result.TopExpenses)
+                                                        {
+                                                    <tr>
+                                                                 <td class="ps-0 small text-truncate" style="max-width: 120px;" title="@mov.Description">
+                                                                     @if (mov.TransactionId is not null)
+                                                                     {
+                                                                         <a href="/transactions/edit/@mov.TransactionId" class="text-decoration-none">@mov.Description</a>
+                                                                     }
+                                                                     else
+                                                                     {
+                                                                         @mov.Description
+                                                                     }
+                                                                 </td>
+                                                                 <td class="text-end text-danger fw-medium text-nowrap">€@mov.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                                 <td class="text-end text-muted small text-nowrap">@mov.Date</td>
+                                                             </tr>
+                                                         }
+                                                     </tbody>
+                                                 </table>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 }
+                                 @if (Model.Result.TopIncomes is { Count: > 0 })
+                                 {
+                                     <div class="col-12 col-md-4">
+                                         <div class="card border-0 shadow-sm h-100 p-3">
+                                             <h5 class="h6 fw-semibold mb-3 text-success">Top Incomes</h5>
+                                             <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                                                 <table class="table table-sm table-borderless mb-0"
+                                                        data-testid="annual-top-incomes-table"
+                                                        aria-label="Top incomes">
+                                                     <tbody>
+                                                         @foreach (TopMovementDto mov in Model.Result.TopIncomes)
+                                                         {
+                                                             <tr>
+                                                                 <td class="ps-0 small text-truncate" style="max-width: 120px;" title="@mov.Description">
+                                                                     @if (mov.TransactionId is not null)
+                                                                     {
+                                                                         <a href="/transactions/edit/@mov.TransactionId" class="text-decoration-none">@mov.Description</a>
+                                                                     }
+                                                                     else
+                                                                     {
+                                                                         @mov.Description
+                                                                     }
+                                                                 </td>
+                                                                 <td class="text-end text-success fw-medium text-nowrap">€@mov.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                                 <td class="text-end text-muted small text-nowrap">@mov.Date</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (Model.Result.MostFrequent is { Count: > 0 })
+                                {
+                                    <div class="col-12 col-md-4">
+                                        <div class="card border-0 shadow-sm h-100 p-3">
+                                            <h5 class="h6 fw-semibold mb-3 text-info">Most Frequent</h5>
+                                            <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                                                <table class="table table-sm table-borderless mb-0"
+                                                       data-testid="annual-most-frequent-table"
+                                                       aria-label="Most frequent movements">
+                                                    <tbody>
+                                                        @foreach (TopMovementDto mov in Model.Result.MostFrequent)
+                                                        {
+                                                            <tr>
+                                                                <td class="ps-0 small text-truncate" style="max-width: 120px;" title="@mov.Description">@mov.Description</td>
+                                                                <td class="text-end fw-medium text-nowrap">€@mov.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                                <td class="text-end text-muted small text-nowrap">
+                                                                    <span class="badge bg-info">@mov.Category</span>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @* ── T3: Anomalies (REQ-008) ── *@
+                    <div data-testid="annual-anomalies-section">
+                        <h4 class="h6 fw-semibold mb-3">Anomalies</h4>
+                        @if (Model.Anomalies.Count == 0)
+                        {
+                            <div class="card border-0 shadow-sm p-3 text-muted">No anomalies</div>
                         }
                         else
                         {
-                            <span>@monthsWithData / 12 meses con datos</span>
+                            <div class="card border-0 shadow-sm p-3 mb-2">
+                                <div class="chart-wrapper" style="height: 280px;">
+                                    <canvas x-ref="anomalyCanvas"
+                                            id="annual-anomaly-chart"
+                                            data-testid="annual-anomaly-chart"
+                                            role="img"
+                                            aria-label="Anomaly chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Month</th>
+                                            <th class="text-end">Amount</th>
+                                            <th class="text-end">μ</th>
+                                            <th class="text-end">σ</th>
+                                            <th>Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (AnomalyDto anomaly in Model.Anomalies)
+                                        {
+                                            <tr>
+                                                <td>@anomaly.Category</td>
+                                                <td>@anomaly.Month</td>
+                                                <td class="text-end">€@anomaly.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                <td class="text-end">@anomaly.Mean.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                <td class="text-end">@anomaly.StandardDeviation.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                                <td>
+                                                    <span class="badge @(anomaly.Type == "exceptional" ? "bg-warning" : anomaly.Type == "extraordinary" ? "bg-danger" : "bg-info")">
+                                                        @anomaly.Type
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
                         }
                     </div>
-                </div>
 
-                @* ── Charts Row ── *@
-                <div class="row g-4">
-                    <div class="col-12 col-lg-6">
-                        <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column">
-                            <h4 class="h6 fw-semibold mb-3">Monthly Trend</h4>
-                            <div class="chart-wrapper flex-grow-1">
-                                <canvas x-ref="trendCanvas"
-                                        id="annual-trend-chart"
-                                        data-testid="annual-trend-chart"
-                                        role="img"
-                                        aria-label="Monthly trend chart showing income and expenses for each month of the year"></canvas>
+                    @* ── T3: Discoveries (REQ-013) ── *@
+                    <div data-testid="annual-discoveries-section">
+                        <h4 class="h6 fw-semibold mb-3">Discoveries</h4>
+                        @if (Model.Discoveries.Count == 0 || (Model.Discoveries.Count == 1 && Model.Discoveries[0].Category == "insufficient-data"))
+                        {
+                            <div class="card border-0 shadow-sm p-3 text-muted">No discoveries</div>
+                        }
+                        else
+                        {
+                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+                                @foreach (DiscoveryDto discovery in Model.Discoveries)
+                                {
+                                    <div class="col">
+                                        <div class="card border-0 shadow-sm h-100 p-3">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <span>@discovery.Icon</span>
+                                                <span class="fw-semibold">@discovery.Title</span>
+                                            </div>
+                                            <div class="small text-muted">@discovery.Description</div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
-                            <table class="visually-hidden" aria-hidden="true">
-                                <caption>Monthly trend (fallback table)</caption>
-                                <thead>
-                                    <tr><th>Month</th><th>Income</th><th>Expenses</th></tr>
-                                </thead>
-                                <tbody>
-                                    @for (int m = 0; m < 12; m++)
-                                    {
+                        }
+                    </div>
+
+                    @* ── T3: Achievements (REQ-014) ── *@
+                    <div data-testid="annual-achievements-section">
+                        <h4 class="h6 fw-semibold mb-3">Achievements</h4>
+                        @if (Model.Achievements.Count == 0 || !Model.Achievements.Any(a => a.Unlocked))
+                        {
+                            <div class="card border-0 shadow-sm p-3 text-muted">No achievements</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (AchievementDto achievement in Model.Achievements.Where(a => a.Unlocked))
+                                {
+                                    <span class="badge bg-success fs-6" title="@achievement.Description">@achievement.Icon @achievement.Title</span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* ── T3: Trends (REQ-015) ── *@
+                    <div data-testid="annual-trends-section">
+                        <h4 class="h6 fw-semibold mb-3">Trends</h4>
+                        @if (Model.Trends.Count == 0)
+                        {
+                            <div class="card border-0 shadow-sm p-3 text-muted">insufficient</div>
+                        }
+                        else
+                        {
+                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+                                @foreach (TrendDto trend in Model.Trends)
+                                {
+                                    <div class="col">
+                                        <div class="card border-0 shadow-sm h-100 p-3">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <span class="fw-semibold">@trend.Category</span>
+                                                <span>@trend.Icon</span>
+                                            </div>
+                                            <div class="small text-muted">@trend.Direction</div>
+                                            <div class="small">@(trend.ChangePercentage?.ToString("F1", CultureInfo.InvariantCulture) ?? "—")%</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* ── T3: Predictions (REQ-016) ── *@
+                    <div data-testid="annual-predictions-section">
+                        <h4 class="h6 fw-semibold mb-3">Predictions</h4>
+                        @if (!Model.HasPredictions || Model.Predictions is null)
+                        {
+                            <div class="card border-0 shadow-sm p-3 text-muted">2 years needed</div>
+                        }
+                        else
+                        {
+                            <div class="row row-cols-2 row-cols-md-4 g-2">
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Income</small><div class="fw-bold">€@Model.Predictions.ProjectedIncome?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Expense</small><div class="fw-bold">€@Model.Predictions.ProjectedExpense?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Savings</small><div class="fw-bold">€@Model.Predictions.ProjectedSavings?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Confidence</small><div class="fw-bold">@((Model.Predictions.Confidence ?? 0m).ToString("P0", CultureInfo.InvariantCulture))</div></div></div>
+                            </div>
+                        }
+                    </div>
+
+                    @* ── T3: Historical Comparison (REQ-017) ── *@
+                    <div data-testid="annual-historical-comparison-section">
+                        <h4 class="h6 fw-semibold mb-3">Historical Comparison</h4>
+                        @if (Model.HistoricalComparison?.Message is not null)
+                        {
+                            <div class="card border-0 shadow-sm p-3 text-muted">@Model.HistoricalComparison.Message</div>
+                        }
+                        else if (Model.HistoricalComparison is not null)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
                                         <tr>
-                                            <td>@(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[m])</td>
-                                            <td>€@Model.MonthlyIncomeTotals[m].ToString("N2", CultureInfo.InvariantCulture)</td>
-                                            <td>€@Model.MonthlyExpenseTotals[m].ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <th>Metric</th>
+                                            <th class="text-end">Current</th>
+                                            <th class="text-end">vs Prev</th>
+                                            <th class="text-end">vs Avg</th>
+                                            <th class="text-end">vs Best</th>
+                                            <th class="text-end">vs Worst</th>
                                         </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Income</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Income?.Current.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Income?.PreviousDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Income?.AverageDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Income?.BestDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Income?.WorstDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Expense</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Expense?.Current.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Expense?.PreviousDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Expense?.AverageDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Expense?.BestDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Expense?.WorstDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Savings</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Savings?.Current.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Savings?.PreviousDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Savings?.AverageDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Savings?.BestDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                            <td class="text-end">@Model.HistoricalComparison.Savings?.WorstDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
                     </div>
-                    <div class="col-12 col-lg-6">
-                        <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column">
-                            <h4 class="h6 fw-semibold mb-3">Fixed / Variable Distribution</h4>
-                            <div class="chart-wrapper flex-grow-1">
-                                <canvas x-ref="distCanvas"
-                                        id="annual-distribution-chart"
-                                        data-testid="annual-distribution-chart"
-                                        role="img"
-                                        aria-label="Donut chart showing fixed versus variable income and expenses"></canvas>
-                            </div>
-                            <table class="visually-hidden" aria-hidden="true">
-                                <caption>Fixed / variable distribution (fallback table)</caption>
-                                <thead>
-                                    <tr><th>Category</th><th>Amount</th></tr>
-                                </thead>
-                                <tbody>
-                                    @if (summary is not null)
-                                    {
-                                        <tr><td>Income Fixed</td><td>€@summary.IncomeFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                        <tr><td>Income Variable</td><td>€@summary.IncomeVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                        <tr><td>Expense Fixed</td><td>€@summary.ExpenseFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                        <tr><td>Expense Variable</td><td>€@summary.ExpenseVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+
+                    @* ── Detail Toggle ── *@
+                    <div class="d-flex justify-content-center">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-testid="annual-detail-toggle"
+                                @@click="toggleDetail()"
+                                @@keydown.enter="toggleDetail()"
+                                @@keydown.space.prevent="toggleDetail()"
+                                tabindex="0"
+                                :aria-expanded="showDetail">
+                            <span x-show="!showDetail">📂 Mostrar detalle</span>
+                            <span x-show="showDetail">📁 Ocultar detalle</span>
+                        </button>
                     </div>
-                </div>
 
-                @* ── YoY Comparison Section ── *@
-                <div data-testid="annual-yoy-section">
-                    <h4 class="h6 fw-semibold mb-3">Year over Year</h4>
+                    @* ── Detail Tables ── *@
+                    <div x-show="showDetail" x-transition.opacity>
+                        <div class="d-flex flex-column gap-4">
 
-                    <template x-if="!hasVariation">
-                        <div class="card border-0 shadow-sm p-3 text-center text-muted"
-                             data-testid="annual-yoy-no-data">
-                            Sin datos del año anterior
-                        </div>
-                    </template>
-
-                    <template x-if="hasVariation">
-                        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-2">
-                            @* Income Fixed *@
-                            <div class="col">
-                                <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(variation?.IncomeFixedPct, true).Replace("bg-", "border-")">
-                                    <div class="small fw-semibold text-muted text-uppercase mb-1">Income Fixed</div>
-                                    <div class="h5 fw-bold mb-0">€@summary!.IncomeFixed.ToString("N2")</div>
-                                    @if (hasVariation)
-                                    {
-                                        <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeFixedPct, true) mt-2">
-                                            @AnnualModel.GetVariationArrow(variation.IncomeFixedPct) @AnnualModel.FormatVariationPct(variation.IncomeFixedPct)
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-
-                            @* Income Variable *@
-                            <div class="col">
-                                <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(variation?.IncomeVariablePct, true).Replace("bg-", "border-")">
-                                    <div class="small fw-semibold text-muted text-uppercase mb-1">Income Variable</div>
-                                    <div class="h5 fw-bold mb-0">€@summary.IncomeVariable.ToString("N2")</div>
-                                    @if (hasVariation)
-                                    {
-                                        <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeVariablePct, true) mt-2">
-                                            @AnnualModel.GetVariationArrow(variation.IncomeVariablePct) @AnnualModel.FormatVariationPct(variation.IncomeVariablePct)
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-
-                            @* Expense Fixed *@
-                            <div class="col">
-                                <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(variation?.ExpenseFixedPct, false).Replace("bg-", "border-")">
-                                    <div class="small fw-semibold text-muted text-uppercase mb-1">Expense Fixed</div>
-                                    <div class="h5 fw-bold mb-0">€@summary.ExpenseFixed.ToString("N2")</div>
-                                    @if (hasVariation)
-                                    {
-                                        <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseFixedPct, false) mt-2">
-                                            @AnnualModel.GetVariationArrow(variation.ExpenseFixedPct) @AnnualModel.FormatVariationPct(variation.ExpenseFixedPct)
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-
-                            @* Expense Variable *@
-                            <div class="col">
-                                <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(variation?.ExpenseVariablePct, false).Replace("bg-", "border-")">
-                                    <div class="small fw-semibold text-muted text-uppercase mb-1">Expense Variable</div>
-                                    <div class="h5 fw-bold mb-0">€@summary.ExpenseVariable.ToString("N2")</div>
-                                    @if (hasVariation)
-                                    {
-                                        <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseVariablePct, false) mt-2">
-                                            @AnnualModel.GetVariationArrow(variation.ExpenseVariablePct) @AnnualModel.FormatVariationPct(variation.ExpenseVariablePct)
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-
-                            @* Net *@
-                            <div class="col">
-                                <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(variation?.NetPct, true).Replace("bg-", "border-")">
-<div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
-                                    <div class="h5 fw-bold mb-0">€@summary.Net.ToString("N2")</div>
-                                    @if (hasVariation)
-                                    {
-                                        <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.NetPct, true) mt-2">
-                                            @AnnualModel.GetVariationArrow(variation.NetPct) @AnnualModel.FormatVariationPct(variation.NetPct)
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                @* ── Detail Toggle ── *@
-                <div class="d-flex justify-content-center">
-                    <button type="button"
-                            class="btn btn-outline-secondary"
-                            data-testid="annual-detail-toggle"
-                            @@click="toggleDetail()"
-                            @@keydown.enter="toggleDetail()"
-                            @@keydown.space.prevent="toggleDetail()"
-                            tabindex="0"
-                            :aria-expanded="showDetail">
-                        <span x-show="!showDetail">📂 Mostrar detalle</span>
-                        <span x-show="showDetail">📁 Ocultar detalle</span>
-                    </button>
-                </div>
-
-                @* ── Detail Tables ── *@
-                <div x-show="showDetail" x-transition.opacity>
-                    <div class="d-flex flex-column gap-4">
-
-                        @* Income Table *@
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="h6 fw-semibold mb-3 text-success">Income Detail</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0"
-                                           aria-label="Annual income detail"
-                                           data-testid="annual-income-table">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
-                                                <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
-                                                <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
-                                                <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
-                                                <th class="text-uppercase small fw-semibold text-muted text-end">Variación YoY</th>
-                                            </tr>
-                                        </thead>
-                                        <template x-for="row in incomeRows" :key="row.movement">
-                                            <tbody>
-                                                <tr role="button" tabindex="0"
-                                                    @@click="toggleRow(row)"
-                                                    @@keydown.enter="toggleRow(row)"
-                                                    @@keydown.space.prevent="toggleRow(row)"
-                                                    class="cursor-pointer"
-                                                    :aria-expanded="row.expanded">
-                                                    <td class="fw-medium">
-                                                        <span x-text="row.expanded ? '▼' : '▶'" class="me-2"></span>
-                                                        <span x-text="row.movement"></span>
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge"
-                                                              :class="row.typeLabel.includes('Fijo') ? 'bg-success' : 'bg-info'"
-                                                              x-text="row.typeLabel"></span>
-                                                    </td>
-                                                    <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
-                                                    <td class="text-end" x-text="formatCurrency(row.average)"></td>
-                                                    <td class="text-end">
-                                                        @if (hasVariation)
-                                                        {
-                                                            <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.IncomeTotalPct, true)">
-                                                                @AnnualModel.GetVariationArrow(variation.IncomeTotalPct) @AnnualModel.FormatVariationPct(variation.IncomeTotalPct)
-                                                            </span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-secondary">N/A</span>
-                                                        }
-                                                    </td>
+                            @* Income Table *@
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="h6 fw-semibold mb-3 text-success">Income Detail</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0"
+                                               aria-label="Annual income detail"
+                                               data-testid="annual-income-table">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
                                                 </tr>
-                                                <tr x-show="row.expanded" x-transition>
-                                                    <td colspan="5" class="p-3 bg-light">
-                                                        <div class="d-flex flex-column gap-1">
-                                                            <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                    <small class="text-muted" style="width: 24px;"
-                                                                           x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
-                                                                    <div class="flex-grow-1 bg-white rounded">
-                                                                        <div class="mini-bar"
-                                                                             :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
-                                                                             :style="'width: ' + getBarWidth(amount, getRowMax(row)) + '%'">
+                                            </thead>
+                                            <template x-for="row in incomeRows" :key="row.movement">
+                                                <tbody>
+                                                    <tr role="button" tabindex="0"
+                                                        @@click="toggleRow(row)"
+                                                        @@keydown.enter="toggleRow(row)"
+                                                        @@keydown.space.prevent="toggleRow(row)"
+                                                        class="cursor-pointer"
+                                                        :aria-expanded="row.expanded">
+                                                        <td class="fw-medium">
+                                                            <span x-text="row.expanded ? '▼' : '▶'" class="me-2"></span>
+                                                            <span x-text="row.movement"></span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge"
+                                                                  :class="row.typeLabel.includes('Fijo') ? 'bg-success' : 'bg-info'"
+                                                                  x-text="row.typeLabel"></span>
+                                                        </td>
+                                                        <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
+                                                        <td class="text-end" x-text="formatCurrency(row.average)"></td>
+                                                    </tr>
+                                                    <tr x-show="row.expanded" x-transition>
+                                                        <td colspan="4" class="p-3 bg-light">
+                                                            <div class="d-flex flex-column gap-1">
+                                                                <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <small class="text-muted" style="width: 24px;"
+                                                                               x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
+                                                                        <div class="flex-grow-1 bg-white rounded">
+                                                                            <div class="mini-bar"
+                                                                                 :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
+                                                                                 :style="'width: ' + getBarWidth(amount, getRowMax(row)) + '%'">
+                                                                            </div>
                                                                         </div>
+                                                                        <small class="text-muted" style="width: 60px; text-align: right;"
+                                                                               x-text="formatCurrency(amount)"></small>
                                                                     </div>
-                                                                    <small class="text-muted" style="width: 60px; text-align: right;"
-                                                                           x-text="formatCurrency(amount)"></small>
-                                                                </div>
-                                                            </template>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </template>
-                                    </table>
+                                                                </template>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </template>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        @* Expense Table *@
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="h6 fw-semibold mb-3 text-danger">Expense Detail</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0"
-                                           aria-label="Annual expense detail"
-                                           data-testid="annual-expense-table">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
-                                                <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
-                                                <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
-                                                <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
-                                                <th class="text-uppercase small fw-semibold text-muted text-end">Variación YoY</th>
-                                            </tr>
-                                        </thead>
-                                        <template x-for="row in expenseRows" :key="row.movement">
-                                            <tbody>
-                                                <tr role="button" tabindex="0"
-                                                    @@click="toggleRow(row)"
-                                                    @@keydown.enter="toggleRow(row)"
-                                                    @@keydown.space.prevent="toggleRow(row)"
-                                                    class="cursor-pointer"
-                                                    :aria-expanded="row.expanded">
-                                                    <td class="fw-medium">
-                                                        <span x-text="row.expanded ? '▼' : '▶'" class="me-2"></span>
-                                                        <span x-text="row.movement"></span>
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge"
-                                                              :class="row.typeLabel.includes('Fijo') ? 'bg-danger' : 'bg-warning'"
-                                                              x-text="row.typeLabel"></span>
-                                                    </td>
-                                                    <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
-                                                    <td class="text-end" x-text="formatCurrency(row.average)"></td>
-                                                    <td class="text-end">
-                                                        @if (hasVariation)
-                                                        {
-                                                            <span class="badge @AnnualModel.GetVariationBadgeClass(variation!.ExpenseTotalPct, false)">
-                                                                @AnnualModel.GetVariationArrow(variation.ExpenseTotalPct) @AnnualModel.FormatVariationPct(variation.ExpenseTotalPct)
-                                                            </span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-secondary">N/A</span>
-                                                        }
-                                                    </td>
+                            @* Expense Table *@
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="h6 fw-semibold mb-3 text-danger">Expense Detail</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0"
+                                               aria-label="Annual expense detail"
+                                               data-testid="annual-expense-table">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
                                                 </tr>
-                                                <tr x-show="row.expanded" x-transition>
-                                                    <td colspan="5" class="p-3 bg-light">
-                                                        <div class="d-flex flex-column gap-1">
-                                                            <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                    <small class="text-muted" style="width: 24px;"
-                                                                           x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
-                                                                    <div class="flex-grow-1 bg-white rounded">
-                                                                        <div class="mini-bar"
-                                                                             :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
-                                                                             :style="'width: ' + getBarWidth(amount, getRowMax(row)) + '%'">
+                                            </thead>
+                                            <template x-for="row in expenseRows" :key="row.movement">
+                                                <tbody>
+                                                    <tr role="button" tabindex="0"
+                                                        @@click="toggleRow(row)"
+                                                        @@keydown.enter="toggleRow(row)"
+                                                        @@keydown.space.prevent="toggleRow(row)"
+                                                        class="cursor-pointer"
+                                                        :aria-expanded="row.expanded">
+                                                        <td class="fw-medium">
+                                                            <span x-text="row.expanded ? '▼' : '▶'" class="me-2"></span>
+                                                            <span x-text="row.movement"></span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge"
+                                                                  :class="row.typeLabel.includes('Fijo') ? 'bg-danger' : 'bg-warning'"
+                                                                  x-text="row.typeLabel"></span>
+                                                        </td>
+                                                        <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
+                                                        <td class="text-end" x-text="formatCurrency(row.average)"></td>
+                                                    </tr>
+                                                    <tr x-show="row.expanded" x-transition>
+                                                        <td colspan="4" class="p-3 bg-light">
+                                                            <div class="d-flex flex-column gap-1">
+                                                                <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <small class="text-muted" style="width: 24px;"
+                                                                               x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
+                                                                        <div class="flex-grow-1 bg-white rounded">
+                                                                            <div class="mini-bar"
+                                                                                 :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
+                                                                                 :style="'width: ' + getBarWidth(amount, getRowMax(row)) + '%'">
+                                                                            </div>
                                                                         </div>
+                                                                        <small class="text-muted" style="width: 60px; text-align: right;"
+                                                                               x-text="formatCurrency(amount)"></small>
                                                                     </div>
-                                                                    <small class="text-muted" style="width: 60px; text-align: right;"
-                                                                           x-text="formatCurrency(amount)"></small>
-                                                                </div>
-                                                            </template>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </template>
-                                    </table>
+                                                                </template>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </template>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
-
                     </div>
+
                 </div>
+            }
 
-            </div>
-    }
+            @if (hasData)
+            {
+                <script type="application/json" id="annual-trend-data">@Html.Raw(Model.ChartDataJson)</script>
+                <script type="application/json" id="annual-distribution-data">@Html.Raw(Model.FixedVariableChartJson)</script>
 
-    @if (Model.HasData)
-    {
-        <script type="application/json" id="annual-trend-data">@Html.Raw(Model.ChartDataJson)</script>
-        <script type="application/json" id="annual-distribution-data">@Html.Raw(Model.FixedVariableChartJson)</script>
-    }
+                @* T2 chart data blocks *@
+                <script type="application/json" id="annual-multiyear-data">@Html.Raw(Model.MultiYearChartJson)</script>
+                <script type="application/json" id="annual-monthly-data">@Html.Raw(Model.MonthlyEvolutionChartJson)</script>
+                <script type="application/json" id="annual-category-data">@Html.Raw(Model.CategoryChartJson)</script>
+
+                @* T3 chart data blocks *@
+                <script type="application/json" id="annual-anomaly-data">@Html.Raw(Model.AnomalyChartJson)</script>
+            }
+        </div>
+    </div>
 </div>
+
+@* ── HTMX Loading State Management (outside #annual-content — survives swaps) ── *@
+<script>
+    (function() {
+        var root = document.getElementById('annual-page-root');
+        if (!root) return;
+
+        document.addEventListener('htmx:beforeRequest', function(e) {
+            if (e.detail.target && e.detail.target.id === 'annual-content') {
+                if (typeof Alpine !== 'undefined' && Alpine.$data) {
+                    Alpine.$data(root).loading = true;
+                }
+            }
+        });
+        document.addEventListener('htmx:afterSwap', function(e) {
+            if (e.detail.target && e.detail.target.id === 'annual-content') {
+                if (typeof Alpine !== 'undefined' && Alpine.$data) {
+                    Alpine.$data(root).loading = false;
+                }
+            }
+        });
+    })();
+</script>
 
 <script src="~/js/charts.js" asp-append-version="true"></script>
