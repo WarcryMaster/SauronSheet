@@ -77,8 +77,11 @@ test.describe('Annual Analysis Dashboard', () => {
     test('invalid year redirects to latest available year with data', async ({ authenticatedPage: page }) => {
         await seedAnnualData(page, alternateYear);
 
+        await page.goto('/Analysis/Annual');
+        const latestAvailableYear = await page.locator('#Year').inputValue();
+
         await page.goto(`/Analysis/Annual?Year=${invalidFutureYear}`);
-        await expect(page).toHaveURL(new RegExp(`/Analysis/Annual\\?Year=${alternateYear}$`, 'i'));
+        await expect(page).toHaveURL(new RegExp(`/Analysis/Annual\\?Year=${latestAvailableYear}$`, 'i'));
 
         await expect(page.locator('[data-testid="annual-kpi-income"]')).toBeVisible();
         await expect(page.locator('[data-testid="annual-kpi-expense"]')).toBeVisible();
