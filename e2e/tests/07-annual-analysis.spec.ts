@@ -22,7 +22,7 @@ import { setFlatpickrDate } from '../helpers';
 
 const currentYear = new Date().getFullYear();
 const alternateYear = currentYear - 1;
-const emptyYear = currentYear + 1;
+const invalidFutureYear = currentYear + 1;
 
 async function seedAnnualData(page: any, year?: number): Promise<void> {
     const targetYear = year ?? currentYear;
@@ -74,23 +74,15 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-detail-toggle"]')).toBeVisible();
     });
 
-    test('shows empty state when no data and hides dashboard elements', async ({ authenticatedPage: page }) => {
-        await page.goto(`/Analysis/Annual?Year=${emptyYear}`);
-        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+    test('invalid year redirects to latest available year with data', async ({ authenticatedPage: page }) => {
+        await seedAnnualData(page, alternateYear);
 
-        const emptyState = page.locator('[data-testid="annual-empty-state"]');
-        await expect(emptyState).toBeVisible();
-        await expect(emptyState).toContainText('Sin datos para este año');
+        await page.goto(`/Analysis/Annual?Year=${invalidFutureYear}`);
+        await expect(page).toHaveURL(new RegExp(`/Analysis/Annual\\?Year=${alternateYear}$`, 'i'));
 
-        await expect(page.locator('[data-testid="annual-kpi-income"]')).toHaveCount(0);
-        await expect(page.locator('[data-testid="annual-kpi-expense"]')).toHaveCount(0);
-        await expect(page.locator('[data-testid="annual-kpi-net"]')).toHaveCount(0);
-        await expect(page.locator('[data-testid="annual-kpi-fixed-pct"]')).toHaveCount(0);
-
-        await expect(page.locator('[data-testid="annual-trend-chart"]')).toHaveCount(0);
-        await expect(page.locator('[data-testid="annual-distribution-chart"]')).toHaveCount(0);
-        await expect(page.locator('[data-testid="annual-yoy-section"]')).toHaveCount(0);
-        await expect(page.locator('[data-testid="annual-detail-toggle"]')).toHaveCount(0);
+        await expect(page.locator('[data-testid="annual-kpi-income"]')).toBeVisible();
+        await expect(page.locator('[data-testid="annual-kpi-expense"]')).toBeVisible();
+        await expect(page.locator('[data-testid="annual-kpi-net"]')).toBeVisible();
     });
 
     test('detail tables toggle shows and hides both tables', async ({ authenticatedPage: page }) => {

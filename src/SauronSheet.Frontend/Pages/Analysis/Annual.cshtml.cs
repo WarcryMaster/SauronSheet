@@ -53,6 +53,29 @@ public class AnnualModel : PageModel
     /// </summary>
     public bool HasNextYear => Result?.ExecutiveSummary?.HasNextYear ?? false;
 
+    /// <summary>
+    /// Effective year rendered in the page, resolved from query result when available.
+    /// </summary>
+    public int YearToRender => Result?.Year ?? Year ?? DateTime.UtcNow.Year;
+
+    /// <summary>
+    /// Previous available year with real data.
+    /// </summary>
+    public int? PreviousAvailableYear => AvailableYears
+        .Where(y => y < YearToRender)
+        .OrderByDescending(y => y)
+        .Select(y => (int?)y)
+        .FirstOrDefault();
+
+    /// <summary>
+    /// Next available year with real data.
+    /// </summary>
+    public int? NextAvailableYear => AvailableYears
+        .Where(y => y > YearToRender)
+        .OrderBy(y => y)
+        .Select(y => (int?)y)
+        .FirstOrDefault();
+
     // ── T2: Multi-Year Comparison (REQ-003) ──
 
     /// <summary>
@@ -339,13 +362,31 @@ public class AnnualModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        int selectedYear = Year ?? DateTime.UtcNow.Year;
+        int requestedYear = Year ?? DateTime.UtcNow.Year;
 
         try
         {
             Result = await _mediator.Send(
-                new GetAnnualDashboardQuery(selectedYear),
+                new GetAnnualDashboardQuery(requestedYear),
                 cancellationToken);
+
+            IReadOnlyList<int> availableYears = Result.AvailableYears;
+            if (availableYears.Count > 0)
+            {
+                int latestAvailableYear = availableYears.Max();
+                bool hasExplicitYear = Year.HasValue;
+                bool requestedYearHasData = availableYears.Contains(requestedYear);
+
+                if (!hasExplicitYear && requestedYear != latestAvailableYear)
+                {
+                    return RedirectToPage("/Analysis/Annual", new { Year = latestAvailableYear });
+                }
+
+                if (hasExplicitYear && !requestedYearHasData)
+                {
+                    return RedirectToPage("/Analysis/Annual", new { Year = latestAvailableYear });
+                }
+            }
 
             return Page();
         }
@@ -359,7 +400,7 @@ public class AnnualModel : PageModel
             Sentry.SentrySdk.CaptureException(ex, scope =>
             {
                 scope.SetTag("analysis", "annual-dashboard");
-                scope.SetTag("year", selectedYear.ToString(CultureInfo.InvariantCulture));
+                scope.SetTag("year", requestedYear.ToString(CultureInfo.InvariantCulture));
                 scope.Level = Sentry.SentryLevel.Error;
             });
 

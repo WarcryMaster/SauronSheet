@@ -4,16 +4,15 @@
 @model SauronSheet.Frontend.Pages.Analysis.AnnualModel
 @{
     ViewData["Title"] = "Annual Dashboard";
-    int currentYear = DateTime.UtcNow.Year;
-    int selectedYear = Model.Year.GetValueOrDefault(currentYear);
+    int selectedYear = Model.YearToRender;
+    int? previousAvailableYear = Model.PreviousAvailableYear;
+    int? nextAvailableYear = Model.NextAvailableYear;
 
     AnnualDashboardSummaryDto? exec = Model.Result?.ExecutiveSummary;
     AnnualDashboardRatiosDto? ratios = Model.Result?.Ratios;
     AnnualDashboardHealthScoreDto? health = Model.Result?.HealthScore;
     AnnualAnalysisSummaryDto? analysisSummary = Model.Result?.AnalysisSummary;
     bool hasData = Model.HasData;
-    bool hasPreviousYear = Model.HasPreviousYear;
-    bool hasNextYear = Model.HasNextYear;
 }
 
 <style>
@@ -24,55 +23,12 @@
     .chart-wrapper { position: relative; height: 380px; }
     .health-ring { width: 140px; height: 140px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-size: 2rem; font-weight: 700; position: relative; }
     .health-ring-inner { position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-    .skeleton-pulse { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s infinite; border-radius: 4px; }
-    @@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>
 
-@* ── Outer Alpine Controller (NOT swapped by HTMX — persists loading state across nav) ── *@
-<div x-data="{ loading: false }" id="annual-page-root">
-
-    @* ── Skeleton Loader (REQ-018: shown during HTMX fetch with Alpine x-show) ── *@
-    <div x-show="loading" x-transition.opacity class="d-flex flex-column gap-4" role="status" aria-label="Loading annual dashboard">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <div class="skeleton-pulse mb-2" style="width: 180px; height: 24px;"></div>
-                <div class="skeleton-pulse" style="width: 120px; height: 16px;"></div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <div class="skeleton-pulse" style="width: 36px; height: 36px;"></div>
-                <div class="skeleton-pulse" style="width: 80px; height: 36px;"></div>
-                <div class="skeleton-pulse" style="width: 36px; height: 36px;"></div>
-            </div>
-        </div>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
-            @for (int i = 0; i < 4; i++)
-            {
-                <div class="col">
-                    <div class="card border-0 shadow-sm h-100 p-3">
-                        <div class="skeleton-pulse mb-2" style="width: 60px; height: 14px;"></div>
-                        <div class="skeleton-pulse" style="width: 100px; height: 28px;"></div>
-                    </div>
-                </div>
-            }
-        </div>
-        <div class="row g-4">
-            <div class="col-12 col-lg-6">
-                <div class="card border-0 shadow-sm p-3">
-                    <div class="skeleton-pulse mb-3" style="width: 100px; height: 16px;"></div>
-                    <div class="skeleton-pulse" style="width: 100%; height: 200px;"></div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="card border-0 shadow-sm p-3">
-                    <div class="skeleton-pulse mb-3" style="width: 100px; height: 16px;"></div>
-                    <div class="skeleton-pulse" style="width: 100%; height: 200px;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div id="annual-page-root">
 
     @* ── Dashboard Content (SWAPPED by HTMX on year navigation) ── *@
-    <div x-show="!loading" x-transition.opacity>
+    <div>
         <div id="annual-content" class="d-flex flex-column gap-4"
              x-data='{
                  hasData: @(hasData.ToString().ToLowerInvariant()),
@@ -132,10 +88,11 @@
                     @* Previous Year button *@
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm"
-                            hx-get="/Analysis/Annual?Year=@(selectedYear - 1)"
+                            hx-get="/Analysis/Annual?Year=@(previousAvailableYear ?? selectedYear)"
                             hx-target="#annual-content"
+                            hx-select="#annual-content"
                             hx-swap="outerHTML"
-                            disabled="@(!hasPreviousYear)"
+                            disabled="@(!previousAvailableYear.HasValue)"
                             aria-label="Previous year"
                             title="Previous year">
                         ◀
@@ -148,10 +105,11 @@
                             style="width:auto"
                             hx-get="/Analysis/Annual"
                             hx-target="#annual-content"
+                            hx-select="#annual-content"
                             hx-swap="outerHTML"
                             hx-trigger="change">
                         @{
-                            var displayYears = Model.AvailableYears.Any()
+                            IReadOnlyList<int> displayYears = Model.AvailableYears.Any()
                                 ? Model.AvailableYears
                                 : new[] { selectedYear };
                         }
@@ -164,10 +122,11 @@
                     @* Next Year button *@
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm"
-                            hx-get="/Analysis/Annual?Year=@(selectedYear + 1)"
+                            hx-get="/Analysis/Annual?Year=@(nextAvailableYear ?? selectedYear)"
                             hx-target="#annual-content"
+                            hx-select="#annual-content"
                             hx-swap="outerHTML"
-                            disabled="@(!hasNextYear)"
+                            disabled="@(!nextAvailableYear.HasValue)"
                             aria-label="Next year"
                             title="Next year">
                         ▶
@@ -1240,29 +1199,5 @@
             }
         </div>
     </div>
-</div>
-
-@* ── HTMX Loading State Management (outside #annual-content — survives swaps) ── *@
-<script>
-    (function() {
-        var root = document.getElementById('annual-page-root');
-        if (!root) return;
-
-        document.addEventListener('htmx:beforeRequest', function(e) {
-            if (e.detail.target && e.detail.target.id === 'annual-content') {
-                if (typeof Alpine !== 'undefined' && Alpine.$data) {
-                    Alpine.$data(root).loading = true;
-                }
-            }
-        });
-        document.addEventListener('htmx:afterSwap', function(e) {
-            if (e.detail.target && e.detail.target.id === 'annual-content') {
-                if (typeof Alpine !== 'undefined' && Alpine.$data) {
-                    Alpine.$data(root).loading = false;
-                }
-            }
-        });
-    })();
-</script>
 
 <script src="~/js/charts.js" asp-append-version="true"></script>

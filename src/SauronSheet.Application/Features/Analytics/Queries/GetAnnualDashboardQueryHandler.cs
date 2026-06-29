@@ -65,12 +65,11 @@ public class GetAnnualDashboardQueryHandler
 
         if (!dateRange.HasValue)
         {
-            return BuildEmptyResult(request.Year, 0, 0, 0);
+            return BuildEmptyResult(request.Year, Array.Empty<int>());
         }
 
         int minYear = dateRange.Value.MinDate.Year;
         int maxYear = dateRange.Value.MaxDate.Year;
-        int totalYears = maxYear - minYear + 1;
 
         // 2. Load subcategories once
         IReadOnlyList<Subcategory> subcategories = await _subcategoryRepo.GetByUserIdAsync(userId);
@@ -87,17 +86,21 @@ public class GetAnnualDashboardQueryHandler
             .GroupBy(t => t.Date.Year)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        List<int> availableYears = transactionsByYear.Keys
+            .OrderBy(y => y)
+            .ToList();
+
+        int totalYears = availableYears.Count;
+        int minAvailableYear = totalYears > 0 ? availableYears[0] : 0;
+        int maxAvailableYear = totalYears > 0 ? availableYears[totalYears - 1] : 0;
+
         int selectedYear = request.Year;
 
         // 5. Handle empty selected year
         if (!transactionsByYear.TryGetValue(selectedYear, out List<Transaction>? currentYearTransactions)
             || currentYearTransactions.Count == 0)
         {
-            IReadOnlyList<int> emptyAvailableYears = totalYears > 0
-                ? Enumerable.Range(minYear, totalYears).ToList()
-                : Array.Empty<int>();
-
-            return BuildEmptyResult(selectedYear, minYear, maxYear, totalYears, emptyAvailableYears);
+            return BuildEmptyResult(selectedYear, availableYears);
         }
 
         // 6. Classify current year
@@ -107,8 +110,9 @@ public class GetAnnualDashboardQueryHandler
         string currency = rows.FirstOrDefault()?.Currency ?? "EUR";
 
         // 7. Previous year data from partition (NO extra DB query)
-        int? prevYear = selectedYear > minYear
-            ? selectedYear - 1
+        int selectedYearIndex = availableYears.IndexOf(selectedYear);
+        int? prevYear = selectedYearIndex > 0
+            ? availableYears[selectedYearIndex - 1]
             : null;
 
         decimal? prevIncome = null;
@@ -150,8 +154,8 @@ public class GetAnnualDashboardQueryHandler
             selectedYear,
             rows,
             subcategoryNames,
-            minYear,
-            maxYear,
+            minAvailableYear,
+            maxAvailableYear,
             prevIncome,
             prevExpense,
             prevNet,
@@ -188,25 +192,20 @@ public class GetAnnualDashboardQueryHandler
             "app.analytics.annual_dashboard.smart_summary_ms",
             (DateTime.UtcNow - smartSummaryStart).TotalMilliseconds);
 
-        // 13. Available years (full range for year navigation — REQ-018)
-        IReadOnlyList<int> availableYears = totalYears > 0
-            ? Enumerable.Range(minYear, totalYears).ToList()
-            : Array.Empty<int>();
-
-        // 14. Compute months with data
+        // 13. Compute months with data
         int monthsWithData = currentYearTransactions
             .Select(t => t.Date.Month)
             .Distinct()
             .Count();
 
-        // 15. Build the existing analysis result fields from classified rows
+        // 14. Build the existing analysis result fields from classified rows
         AnnualAnalysisSummaryDto analysisSummary = BuildAnalysisSummary(rows, currency, monthsWithData);
 
-        // 16. T2 — Multi-Year & Monthly Evolution (REQ-003, REQ-004)
+        // 15. T2 — Multi-Year & Monthly Evolution (REQ-003, REQ-004)
         AnnualDashboardMultiYearDto? multiYear = MultiYearComparisonService.Compute(transactionsByYear, selectedYear);
         AnnualDashboardMonthlyDto monthlyEvolution = MonthlyEvolutionService.Compute(currentYearTransactions, selectedYear, transactionsByYear);
 
-        // 17. T2 — Category Analysis (REQ-005, REQ-006, REQ-007)
+        // 16. T2 — Category Analysis (REQ-005, REQ-006, REQ-007)
         IReadOnlyList<AnnualAnalysisRowDto>? prevYearRows = null;
         if (prevYear.HasValue
             && transactionsByYear.TryGetValue(prevYear.Value, out List<Transaction>? prevYearTxsForCat)
@@ -216,7 +215,9 @@ public class GetAnnualDashboardQueryHandler
         }
 
         IReadOnlyList<AnnualAnalysisRowDto>? nextYearRows = null;
-        int? nextYear = selectedYear < maxYear ? selectedYear + 1 : null;
+        int? nextYear = selectedYearIndex >= 0 && selectedYearIndex < availableYears.Count - 1
+            ? availableYears[selectedYearIndex + 1]
+            : null;
         if (nextYear.HasValue
             && transactionsByYear.TryGetValue(nextYear.Value, out List<Transaction>? nextYearTxs)
             && nextYearTxs is { Count: > 0 })
@@ -227,14 +228,14 @@ public class GetAnnualDashboardQueryHandler
         (IReadOnlyList<CategoryItemDto> categories, CategoryComparisonTableDto? categoryTable) =
             CategoryAnalysisService.ComputeCategories(rows, prevYearRows, nextYearRows);
 
-        // 18. T2 — Timeline & Top Movements (REQ-009, REQ-010)
+        // 17. T2 — Timeline & Top Movements (REQ-009, REQ-010)
         IReadOnlyList<TimelineEventDto> timeline = TimelineService.Compute(currentYearTransactions, selectedYear);
         TopMovementsResult topMovements = TopMovementsService.Compute(currentYearTransactions, selectedYear);
 
-        // 19. Build annual summaries for all years (reused by multiple T3 services)
+        // 18. Build annual summaries for all years (reused by multiple T3 services)
         Dictionary<int, AnnualDashboardSummaryDto> yearlySummaries = BuildYearlySummaries(transactionsByYear, subcategoryNames);
 
-        // 20. T3 — Advanced (REQ-008, 013, 014, 015, 016, 017)
+        // 19. T3 — Advanced (REQ-008, 013, 014, 015, 016, 017)
         DateTime anomalyStart = DateTime.UtcNow;
         IReadOnlyList<AnomalyDto> anomalies = AnomalyDetectionService.Compute(transactionsByYear, selectedYear);
         SentrySdk.Experimental.Metrics.EmitDistribution(
@@ -273,7 +274,7 @@ public class GetAnnualDashboardQueryHandler
             "app.analytics.annual_dashboard.historical_comparison_ms",
             (DateTime.UtcNow - historicalStart).TotalMilliseconds);
 
-        // 21. Build result with all tiers
+        // 20. Build result with all tiers
         return new GetAnnualDashboardResultDto(
             Year: selectedYear,
             Rows: rows,
@@ -314,14 +315,19 @@ public class GetAnnualDashboardQueryHandler
     }
 
     private static GetAnnualDashboardResultDto BuildEmptyResult(
-        int selectedYear, int minYear, int maxYear, int totalYears,
+        int selectedYear,
         IReadOnlyList<int>? availableYears = null)
     {
+        IReadOnlyList<int> years = availableYears ?? Array.Empty<int>();
+        int totalYears = years.Count;
+        bool hasPreviousYear = years.Count > 0 && years.Any(y => y < selectedYear);
+        bool hasNextYear = years.Count > 0 && years.Any(y => y > selectedYear);
+
         AnnualDashboardSummaryDto emptySummary = new(
             Income: 0m, Expense: 0m, Net: 0m, Savings: 0m, SavingsRate: 0m,
             Year: selectedYear,
-            HasPreviousYear: minYear > 0 && minYear < selectedYear,
-            HasNextYear: maxYear > selectedYear,
+            HasPreviousYear: hasPreviousYear,
+            HasNextYear: hasNextYear,
             YearRank: null, TotalYears: totalYears,
             PreviousYearIncome: null, PreviousYearExpense: null,
             PreviousYearNet: null, PreviousYearSavings: null,
@@ -345,7 +351,7 @@ public class GetAnnualDashboardQueryHandler
             SmartSummary: "Sin datos para este año. Añade transacciones para ver el resumen anual.",
             HasData: false,
             Currency: "EUR",
-            AvailableYears: availableYears ?? Array.Empty<int>(),
+            AvailableYears: years,
 
             // T2 — empty
             MultiYear: null,

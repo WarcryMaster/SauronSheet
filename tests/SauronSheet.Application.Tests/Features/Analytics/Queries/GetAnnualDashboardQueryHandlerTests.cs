@@ -519,4 +519,76 @@ public class GetAnnualDashboardQueryHandlerTests
             x => x.GetByUserIdAndYearRangeAsync(It.IsAny<UserId>(), It.IsAny<int>(), It.IsAny<int>()),
             Times.Once);
     }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_WithYearGaps_ReturnsOnlyYearsWithDataInAvailableYears()
+    {
+        // Arrange
+        SubcategoryId salaryId = SubcategoryId.New();
+
+        List<Transaction> transactions = new()
+        {
+            CreateTransaction(2000m, new DateTime(2022, 1, 15), salaryId, "Salary 22"),
+            CreateTransaction(-500m, new DateTime(2022, 1, 10), null, "Rent 22"),
+            CreateTransaction(3000m, new DateTime(2024, 1, 15), salaryId, "Salary 24"),
+            CreateTransaction(-700m, new DateTime(2024, 1, 10), null, "Rent 24"),
+        };
+
+        SetupYearRange(new DateTime(2022, 1, 1), new DateTime(2024, 12, 31));
+        SetupTransactions(transactions);
+        SetupSubcategories(new List<Subcategory>
+        {
+            CreateSubcategory(salaryId, "Salary"),
+        });
+
+        // Act
+        GetAnnualDashboardResultDto result = await _handler.Handle(
+            new GetAnnualDashboardQuery(2024),
+            CancellationToken.None);
+
+        // Assert
+        Assert.Equal(new[] { 2022, 2024 }, result.AvailableYears);
+    }
+
+    [Fact]
+    [Trait("Category", "Application")]
+    public async Task Handle_WithYearGaps_ComputesPreviousAndNextUsingRealAvailableYears()
+    {
+        // Arrange
+        SubcategoryId salaryId = SubcategoryId.New();
+
+        List<Transaction> transactions = new()
+        {
+            CreateTransaction(2000m, new DateTime(2022, 1, 15), salaryId, "Salary 22"),
+            CreateTransaction(-500m, new DateTime(2022, 1, 10), null, "Rent 22"),
+            CreateTransaction(3000m, new DateTime(2024, 1, 15), salaryId, "Salary 24"),
+            CreateTransaction(-700m, new DateTime(2024, 1, 10), null, "Rent 24"),
+        };
+
+        SetupYearRange(new DateTime(2022, 1, 1), new DateTime(2024, 12, 31));
+        SetupTransactions(transactions);
+        SetupSubcategories(new List<Subcategory>
+        {
+            CreateSubcategory(salaryId, "Salary"),
+        });
+
+        // Act
+        GetAnnualDashboardResultDto latestYearResult = await _handler.Handle(
+            new GetAnnualDashboardQuery(2024),
+            CancellationToken.None);
+
+        GetAnnualDashboardResultDto firstYearResult = await _handler.Handle(
+            new GetAnnualDashboardQuery(2022),
+            CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(latestYearResult.ExecutiveSummary);
+        Assert.True(latestYearResult.ExecutiveSummary.HasPreviousYear);
+        Assert.False(latestYearResult.ExecutiveSummary.HasNextYear);
+
+        Assert.NotNull(firstYearResult.ExecutiveSummary);
+        Assert.False(firstYearResult.ExecutiveSummary.HasPreviousYear);
+        Assert.True(firstYearResult.ExecutiveSummary.HasNextYear);
+    }
 }

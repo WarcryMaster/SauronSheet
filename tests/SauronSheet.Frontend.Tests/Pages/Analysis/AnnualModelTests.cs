@@ -77,27 +77,81 @@ public class AnnualModelTests
 
     [Fact]
     [Trait("Category", "Frontend")]
-    public async Task OnGetAsync_WithoutBoundYear_UsesCurrentUtcYear()
+    public async Task OnGetAsync_WithoutBoundYear_RedirectsToLatestAvailableYear()
     {
         // Arrange
         Mock<IMediator> mediatorMock = new();
-        GetAnnualDashboardResultDto result = CreateSampleResult();
+        GetAnnualDashboardResultDto result = CreateSampleResult() with
+        {
+            Year = DateTime.UtcNow.Year,
+            AvailableYears = new[] { 2022, 2024 }
+        };
         mediatorMock
             .Setup(m => m.Send(It.IsAny<GetAnnualDashboardQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
 
         AnnualModel model = new AnnualModel(mediatorMock.Object);
-        int currentUtcYear = DateTime.UtcNow.Year;
 
         // Act
-        await model.OnGetAsync(CancellationToken.None);
+        IActionResult actionResult = await model.OnGetAsync(CancellationToken.None);
 
         // Assert
-        mediatorMock.Verify(
-            m => m.Send(
-                It.Is<GetAnnualDashboardQuery>(q => q.Year == currentUtcYear),
-                CancellationToken.None),
-            Times.Once);
+        RedirectToPageResult redirectResult = Assert.IsType<RedirectToPageResult>(actionResult);
+        Assert.Equal("/Analysis/Annual", redirectResult.PageName);
+        Assert.NotNull(redirectResult.RouteValues);
+        Assert.True(redirectResult.RouteValues.TryGetValue("Year", out object? yearValue));
+        Assert.Equal(2024, yearValue);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public async Task OnGetAsync_WithInvalidBoundYear_RedirectsToLatestAvailableYear()
+    {
+        // Arrange
+        Mock<IMediator> mediatorMock = new();
+        GetAnnualDashboardResultDto result = CreateSampleResult() with
+        {
+            Year = 2023,
+            AvailableYears = new[] { 2022, 2024 },
+            HasData = false
+        };
+        mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetAnnualDashboardQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+
+        AnnualModel model = new AnnualModel(mediatorMock.Object)
+        {
+            Year = 2023
+        };
+
+        // Act
+        IActionResult actionResult = await model.OnGetAsync(CancellationToken.None);
+
+        // Assert
+        RedirectToPageResult redirectResult = Assert.IsType<RedirectToPageResult>(actionResult);
+        Assert.Equal("/Analysis/Annual", redirectResult.PageName);
+        Assert.NotNull(redirectResult.RouteValues);
+        Assert.True(redirectResult.RouteValues.TryGetValue("Year", out object? yearValue));
+        Assert.Equal(2024, yearValue);
+    }
+
+    [Fact]
+    [Trait("Category", "Frontend")]
+    public void PreviousAndNextAvailableYear_WithYearGaps_UseRealYearsOnly()
+    {
+        // Arrange
+        AnnualModel model = new AnnualModel(Mock.Of<IMediator>())
+        {
+            Result = CreateSampleResult() with
+            {
+                Year = 2024,
+                AvailableYears = new[] { 2022, 2024, 2027 }
+            }
+        };
+
+        // Assert
+        Assert.Equal(2022, model.PreviousAvailableYear);
+        Assert.Equal(2027, model.NextAvailableYear);
     }
 
     [Fact]

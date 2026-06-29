@@ -135,6 +135,33 @@ public class AnnualPageRenderingTests
         Assert.Contains("data-testid=\"annual-health-sub-scores\"", html);
     }
 
+    [Fact]
+    [Trait("Category", "Frontend")]
+    [Trait("Category", "Integration")]
+    public async Task AnnualPage_WithYearGaps_RendersPreviousAndNextWithRealAvailableYears()
+    {
+        // Arrange
+        GetAnnualDashboardResultDto result = CreateSampleResult() with
+        {
+            Year = 2024,
+            AvailableYears = new[] { 2022, 2024, 2027 }
+        };
+        AnnualWebApplicationFactory factory = new AnnualWebApplicationFactory()
+            .WithDashboardResult(result);
+        HttpClient client = CreateClient(factory);
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/Analysis/Annual?Year=2024");
+        string html = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("hx-get=\"/Analysis/Annual?Year=2022\"", html);
+        Assert.Contains("hx-get=\"/Analysis/Annual?Year=2027\"", html);
+        Assert.DoesNotContain("hx-get=\"/Analysis/Annual?Year=2023\"", html);
+        Assert.DoesNotContain("hx-get=\"/Analysis/Annual?Year=2025\"", html);
+    }
+
     private static GetAnnualDashboardResultDto CreateSampleResult()
     {
         IReadOnlyList<AnnualAnalysisRowDto> rows = new AnnualAnalysisRowDto[]
