@@ -33,13 +33,13 @@ Chain strategy: feature-branch-chain
 
 ## PR1: Infraestructura + Login piloto + E2E data-testid (~350 L)
 
-- [ ] **T1.1** Crear `src/SauronSheet.Application/Resources/SharedResources.cs` (marker) + `.es.resx` / `.en.resx` con ~50 claves mínimas para Login/_Layout/switcher. Test: xUnit verifica acceso `IStringLocalizer<SharedResources>`.
-- [ ] **T1.2** `Program.cs`: `AddLocalization`, `RequestLocalizationOptions` (culturas es-ES/en-US, fallback en), providers Cookie→QueryString→AcceptLanguage. Cookie `.AspNetCore.Culture` 1 año, `HttpOnly=false`, `SameSite=Strict`. `UseRequestLocalization` tras `UseResponseCompression`, antes de `UseStaticFiles`.
-- [ ] **T1.3** `_LanguageSwitcher.cshtml` (partial navbar, icono globo + dropdown ES/EN Alpine.js) + endpoint `POST /api/culture?c=`. `data-testid="lang-switcher"`.
-- [ ] **T1.4** `_Layout.cshtml`: `<html lang>` dinámico, `window.__i18n` scaffold, Flatpickr locale condicional, inject switcher.
-- [ ] **T1.5** `Login.cshtml`: `@inject IStringLocalizer<SharedResources> Localizer` + `data-testid` (email, password, submit, register-link, error).
-- [ ] **T1.6** E2E `00-culture.spec.ts`: conmutación ES↔EN, persistencia cookie, render cultura. Añadir `data-testid` a Login donde falten.
-- [ ] **T1.7** Unit tests: resolución `IStringLocalizer` ES/EN, middleware cultura, fallback inglés.
+- [x] **T1.1** Crear `src/SauronSheet.Application/Resources/SharedResources.cs` (marker) + `.es.resx` / `.en.resx` con ~50 claves mínimas para Login/_Layout/switcher. Test: xUnit verifica acceso `IStringLocalizer<SharedResources>`.
+- [x] **T1.2** `Program.cs`: `AddLocalization`, `RequestLocalizationOptions` (culturas es-ES/en-US, fallback en), providers Cookie→QueryString→AcceptLanguage. Cookie `.AspNetCore.Culture` 1 año, `HttpOnly=false`, `SameSite=Strict`. `UseRequestLocalization` tras `UseResponseCompression`, antes de `UseStaticFiles`.
+- [x] **T1.3** `_LanguageSwitcher.cshtml` (partial navbar, icono globo + dropdown ES/EN Alpine.js) + endpoint `POST /api/culture?c=`. `data-testid="lang-switcher"`.
+- [x] **T1.4** `_Layout.cshtml`: `<html lang>` dinámico, `window.__i18n` scaffold, Flatpickr locale condicional, inject switcher.
+- [x] **T1.5** `Login.cshtml`: `@inject IStringLocalizer<SharedResources> Localizer` + `data-testid` (email, password, submit, register-link, error).
+- [x] **T1.6** E2E `00-culture.spec.ts`: conmutación ES↔EN, persistencia cookie, render cultura. Añadir `data-testid` a Login donde falten.
+- [x] **T1.7** Unit tests: resolución `IStringLocalizer` ES/EN, middleware cultura, fallback inglés.
 
 ## PR2: Auth/Register/Index/Error (~300 L)
 
