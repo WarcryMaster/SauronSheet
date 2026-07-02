@@ -67,8 +67,8 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
     options.SupportedUICultures = supportedCultures;
     options.RequestCultureProviders = new List<IRequestCultureProvider>
     {
-        new CookieRequestCultureProvider { CookieName = ".AspNetCore.Culture" },
         new QueryStringRequestCultureProvider(),
+        new CookieRequestCultureProvider { CookieName = ".AspNetCore.Culture" },
         new AcceptLanguageHeaderRequestCultureProvider()
     };
 });
