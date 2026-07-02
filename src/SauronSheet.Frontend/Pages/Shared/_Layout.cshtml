@@ -1,11 +1,13 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration _config
+@inject IStringLocalizer<SharedResources> Localizer
 @{
     string fontAwesomeUrl = "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css";
     string sentryDsn = _config["Sentry:Dsn"] ?? "";
+    string currentLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 }
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@currentLang">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -87,10 +89,25 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.min.js"></script>
     <!-- Font Awesome via CDN (jsdelivr - allowed by CSP) -->
     <link rel="stylesheet" href="@fontAwesomeUrl" />
-    <!-- Flatpickr — accessible date picker (airbnb theme, Spanish locale) -->
+    <!-- Flatpickr — accessible date picker (airbnb theme, localized) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css" />
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    @if (currentLang == "es")
+    {
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+        <script>flatpickr.localize(flatpickr.l10ns.es);</script>
+    }
+    else
+    {
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/en.js"></script>
+        <script>flatpickr.localize(flatpickr.l10ns.en);</script>
+    }
+
+    <!-- Client-side i18n scaffold: JS-relevant keys are serialized here (populated in PR6). -->
+    <script>
+        window.__i18n = @System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object>());
+    </script>
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/report-print.css" asp-append-version="true" />
 
@@ -103,8 +120,7 @@
 
     <!-- Skip to content link (accessibility) -->
     <a href="#main-content"
-           class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-sm btn-light shadow-sm">Saltar al
-        contenido principal</a>
+       class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-sm btn-light shadow-sm">@Localizer["Layout.SkipToContent"]</a>
 
         <!-- Navbar -->
         <nav class="navbar navbar-expand-lg navbar-light bg-white shadow" role="navigation" aria-label="Main navigation">
@@ -128,6 +144,7 @@
                 <div class="collapse navbar-collapse" id="desktopNav">
                     <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
                         @await Html.PartialAsync("~/Pages/Shared/Components/_NavItems.cshtml")
+                        @await Html.PartialAsync("~/Pages/Shared/Components/_LanguageSwitcher.cshtml")
                         @if (User?.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item d-none d-lg-flex align-items-center border-start border-secondary ps-3 ms-1">
@@ -136,13 +153,13 @@
                             </li>
                             <li class="nav-item">
                                 <form method="post" asp-page="/auth/logout" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-lg-1">Logout</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-lg-1">@Localizer["Layout.Logout"]</button>
                                 </form>
                             </li>
                         }
                         else
                         {
-                            <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/auth/register">Get Started</a>
+                            <li class="nav-item"><a class="btn btn-sm btn-brand ms-lg-2" href="/auth/register">@Localizer["Layout.GetStarted"]</a>
                             </li>
                         }
                     </ul>
@@ -168,6 +185,7 @@
             <div class="offcanvas-body">
                 <ul class="navbar-nav">
                     @await Html.PartialAsync("~/Pages/Shared/Components/_NavItems.cshtml")
+                    @await Html.PartialAsync("~/Pages/Shared/Components/_LanguageSwitcher.cshtml")
                     @if (User?.Identity?.IsAuthenticated == true)
                     {
                         <li class="nav-item border-top mt-3 pt-3">
@@ -175,14 +193,14 @@
                         </li>
                         <li class="nav-item">
                             <form method="post" asp-page="/auth/logout">
-                                <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Logout</button>
+                                <button type="submit" class="btn btn-sm btn-outline-secondary w-100">@Localizer["Layout.Logout"]</button>
                             </form>
                         </li>
                     }
                     else
                     {
                         <li class="nav-item mt-2">
-                            <a class="btn btn-sm btn-brand w-100" href="/auth/register">Get Started</a>
+                            <a class="btn btn-sm btn-brand w-100" href="/auth/register">@Localizer["Layout.GetStarted"]</a>
                         </li>
                     }
                 </ul>
@@ -199,9 +217,9 @@
             <div class="container-xl px-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <img src="~/img/sauron-sheet-logo.svg" asp-append-version="true" alt="" height="16" class="opacity-50" />
-                    <small class="text-muted">&copy; 2026 SauronSheet</small>
+                    <small class="text-muted">@Localizer["Layout.FooterCopyright"]</small>
                 </div>
-                <small class="text-secondary">v1.2.0 — Phase 6 Polish &amp; Release</small>
+                <small class="text-secondary">@Localizer["Layout.Version"]</small>
             </div>
         </footer>
 
