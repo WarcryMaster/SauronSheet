@@ -7,6 +7,8 @@ using SauronSheet.Infrastructure.Middleware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using SauronSheet.Frontend.Services;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +51,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;
     });
 
+// Add localization services and configure the request culture pipeline.
+// English is the default fallback; Spanish is the only other supported UI culture.
+builder.Services.AddLocalization();
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    CultureInfo[] supportedCultures = new[]
+    {
+        new CultureInfo("es-ES"),
+        new CultureInfo("en-US")
+    };
+
+    options.DefaultRequestCulture = new RequestCulture("en-US", "en-US");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+    options.RequestCultureProviders = new List<IRequestCultureProvider>
+    {
+        new CookieRequestCultureProvider { CookieName = ".AspNetCore.Culture" },
+        new QueryStringRequestCultureProvider(),
+        new AcceptLanguageHeaderRequestCultureProvider()
+    };
+});
+
 // Add response compression (Brotli/Gzip)
 builder.Services.AddResponseCompression(options =>
 {
@@ -67,6 +91,7 @@ if (!app.Environment.IsDevelopment())
 // Global exception middleware: catches unhandled exceptions and logs them to Sentry
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseResponseCompression();
+app.UseRequestLocalization();
 app.UseStaticFiles();
 app.UseRouting();
 
@@ -74,6 +99,42 @@ app.UseRouting();
 app.UseMiddleware<JwtCookieMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Language switcher endpoint: POST /api/culture?c=es|en
+// Sets the culture cookie and redirects back to the referring page.
+app.MapPost("/api/culture", (string? c, HttpContext context) =>
+{
+    if (string.IsNullOrWhiteSpace(c))
+    {
+        return Results.BadRequest("Culture is required.");
+    }
+
+    string cultureName = c.Trim().ToLowerInvariant() switch
+    {
+        "es" => "es-ES",
+        "en" => "en-US",
+        _ => "en-US"
+    };
+
+    RequestCulture culture = new(cultureName, cultureName);
+    string cookieValue = CookieRequestCultureProvider.MakeCookieValue(culture);
+
+    context.Response.Cookies.Append(".AspNetCore.Culture", cookieValue, new CookieOptions
+    {
+        Expires = DateTimeOffset.UtcNow.AddYears(1),
+        HttpOnly = false,
+        SameSite = SameSiteMode.Strict,
+        Path = "/"
+    });
+
+    string returnUrl = context.Request.Headers.Referer.ToString();
+    if (string.IsNullOrWhiteSpace(returnUrl))
+    {
+        returnUrl = "/";
+    }
+
+    return Results.Redirect(returnUrl);
+}).AllowAnonymous();
 
 app.MapRazorPages();
 
