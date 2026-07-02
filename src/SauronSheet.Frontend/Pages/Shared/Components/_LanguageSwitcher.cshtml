@@ -1,37 +1,36 @@
 @inject IStringLocalizer<SharedResources> Localizer
 
 <li class="nav-item dropdown"
-    x-data="{ open: false }"
     data-testid="lang-switcher"
     aria-label="@Localizer["Switcher.ChangeLanguage"]">
     <button type="button"
             class="btn btn-link nav-link dropdown-toggle d-flex align-items-center gap-1"
-            @@click="open = !open"
-            aria-haspopup="true"
-            :aria-expanded="open">
+            data-mdb-dropdown-init
+            data-mdb-toggle="dropdown"
+            aria-expanded="false">
         <i class="fas fa-globe" aria-hidden="true"></i>
         <span class="d-none d-lg-inline">@Localizer["Switcher.Language"]</span>
     </button>
-    <ul class="dropdown-menu dropdown-menu-end"
-        :class="open ? 'show' : ''"
-        @@click.away="open = false">
+    <ul class="dropdown-menu dropdown-menu-end">
         <li>
-            <button type="button"
-                    class="dropdown-item d-flex align-items-center gap-2"
-                    data-testid="lang-switcher-option-es"
-                    @@click="fetch('/api/culture?c=es', { method: 'POST' }).then(() => window.location.reload()).catch(() => window.location.reload())">
-                <span class="fw-bold">ES</span>
-                <span>@Localizer["Switcher.Spanish"]</span>
-            </button>
+            <form method="post" action="/api/culture?c=es" class="d-inline">
+                <button type="submit"
+                        class="dropdown-item d-flex align-items-center gap-2"
+                        data-testid="lang-switcher-option-es">
+                    <span class="fw-bold">ES</span>
+                    <span>@Localizer["Switcher.Spanish"]</span>
+                </button>
+            </form>
         </li>
         <li>
-            <button type="button"
-                    class="dropdown-item d-flex align-items-center gap-2"
-                    data-testid="lang-switcher-option-en"
-                    @@click="fetch('/api/culture?c=en', { method: 'POST' }).then(() => window.location.reload()).catch(() => window.location.reload())">
-                <span class="fw-bold">EN</span>
-                <span>@Localizer["Switcher.English"]</span>
-            </button>
+            <form method="post" action="/api/culture?c=en" class="d-inline">
+                <button type="submit"
+                        class="dropdown-item d-flex align-items-center gap-2"
+                        data-testid="lang-switcher-option-en">
+                    <span class="fw-bold">EN</span>
+                    <span>@Localizer["Switcher.English"]</span>
+                </button>
+            </form>
         </li>
     </ul>
 </li>
