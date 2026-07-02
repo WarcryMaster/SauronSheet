@@ -54,7 +54,7 @@ activation_command_timeout: 180
 # line ending convention to use when writing source files.
 # Possible values: unset (use global setting), "lf", "crlf", or "native" (platform default)
 # This does not affect Serena's own files (e.g. memories and configuration files), which always use native line endings.
-line_ending:
+line_ending: "crlf"
 
 # The language backend to use for this project.
 # If not set, the global setting from serena_config.yml is used.
@@ -86,7 +86,10 @@ additional_workspace_folders: []
 # list of additional paths to ignore in this project.
 # Same syntax as gitignore, so you can use * and **.
 # Note: global ignored_paths from serena_config.yml are also applied additively.
-ignored_paths: []
+ignored_paths:
+  - coverage-results/
+  - e2e/results/
+  - node_modules/
 
 # whether the project is in read-only mode
 # If set to true, all editing tools will be disabled and attempts to use them will result in an error
@@ -125,7 +128,7 @@ added_modes:
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
-initial_prompt: ""
+initial_prompt: "SauronSheet: Clean Architecture C# .NET 10, CQRS + MediatR + DDD. Domain has zero NuGet deps. No var — explicit types always. Sentry for ALL logging (no Console/Debug/Trace). CDN-only frontend (MDBootstrap, Alpine.js, HTMX, Chart.js). E2E via Playwright. Spanish for specs/conversation, English for code. Full rules in AGENTS.md."
 
 # time budget (seconds) per tool call for the retrieval of additional symbol information
 # such as docstrings or parameter information.

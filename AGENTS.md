@@ -112,15 +112,18 @@ Architecture & Code anti-patterns, Supabase/Postgrest C# client gotchas, and PDF
 
 If there is any conflict, this file and the linked instruction files take priority over other conversational context.
 
+## MCP Tools Overview
+
+Available MCP tools in this environment. Sub-agents receive this file; use accordingly.
 
 <!-- headroom:rtk-instructions -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
+## RTK (Rust Token Killer)
 
-When running shell commands, **always prefix with `rtk`**. This reduces context
-usage by 60-90% with zero behavior change. If rtk has no filter for a command,
-it passes through unchanged — so it is always safe to use.
+Token compression for shell commands. The opencode plugin (`plugins/rtk.ts`) auto-rewrites commands transparently via `tool.execute.before` — no manual prefix needed from this agent.
 
-## Key Commands
+**For sub-agents without the plugin**: prefix all shell commands with `rtk` manually. RTK reduces context usage 60-90% with zero behavior change; if no filter exists for a command, it passes through unchanged.
+
+### Key Commands (for sub-agent manual use)
 ```bash
 # Git (59-80% savings)
 rtk git status          rtk git diff            rtk git log
@@ -150,8 +153,14 @@ rtk docker ps           rtk kubectl get         rtk docker logs <c>
 rtk pip list            rtk pnpm install        rtk npm run <script>
 ```
 
-## Rules
+### Rules (sub-agents only)
 - In command chains, prefix each segment: `rtk git add . && rtk git commit -m "msg"`
 - For debugging, use raw command without rtk prefix
 - `rtk proxy <cmd>` runs command without filtering but tracks usage
 <!-- /headroom:rtk-instructions -->
+
+- **Headroom** — Context window compression via `headroom_compress`/`headroom_retrieve`. Use on large outputs (&gt;50 lines) before reasoning.
+- **Serena** — Semantic code analysis (LSP-based): `find_symbol`, `find_declarations`, `find_implementations`, `rename_symbol`, `get_diagnostics_for_file`, `replace_in_files`. Use for symbol-level code queries instead of grep.
+- **Engram** — Persistent memory across sessions. `mem_save` after decisions, bugs, discoveries, conventions. `mem_search`/`mem_context` for recall.
+- **Supabase** — Database schema, migrations, Edge Functions, authenticated queries.
+- **Azure SQL (TheMangerDB)** — SQL Server queries, stored procedures, table analysis.
