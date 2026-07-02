@@ -168,4 +168,241 @@
   <data name="Annual.Title" xml:space="preserve">
     <value>Análisis Anual</value>
   </data>
+  <!-- PR5: Annual / Analysis keys -->
+  <data name="Annual.PageTitle" xml:space="preserve">
+    <value>Análisis Anual</value>
+  </data>
+  <data name="Annual.EmptyTitle" xml:space="preserve">
+    <value>Sin datos para este año</value>
+  </data>
+  <data name="Annual.EmptyDescription" xml:space="preserve">
+    <value>Añade transacciones para ver el desglose anual.</value>
+  </data>
+  <data name="Annual.HealthScore" xml:space="preserve">
+    <value>Salud Financiera</value>
+  </data>
+  <data name="Annual.HealthExcellent" xml:space="preserve">
+    <value>Excelente</value>
+  </data>
+  <data name="Annual.HealthGood" xml:space="preserve">
+    <value>Buena</value>
+  </data>
+  <data name="Annual.HealthFair" xml:space="preserve">
+    <value>Regular</value>
+  </data>
+  <data name="Annual.HealthNeedsAttention" xml:space="preserve">
+    <value>Necesita atención</value>
+  </data>
+  <data name="Annual.KpiIncome" xml:space="preserve">
+    <value>Ingresos</value>
+  </data>
+  <data name="Annual.KpiExpense" xml:space="preserve">
+    <value>Gastos</value>
+  </data>
+  <data name="Annual.KpiNet" xml:space="preserve">
+    <value>Neto</value>
+  </data>
+  <data name="Annual.KpiFixedCost" xml:space="preserve">
+    <value>Coste Fijo %</value>
+  </data>
+  <data name="Annual.KpiSavingsRate" xml:space="preserve">
+    <value>Tasa Ahorro</value>
+  </data>
+  <data name="Annual.RatioSavingsRate" xml:space="preserve">
+    <value>Tasa de Ahorro</value>
+  </data>
+  <data name="Annual.RatioAvgIncome" xml:space="preserve">
+    <value>Ingreso Medio Mensual</value>
+  </data>
+  <data name="Annual.RatioAvgExpense" xml:space="preserve">
+    <value>Gasto Medio Mensual</value>
+  </data>
+  <data name="Annual.RatioTransactionCount" xml:space="preserve">
+    <value>Transacciones</value>
+  </data>
+  <data name="Annual.MonthsWithData" xml:space="preserve">
+    <value>Meses con datos</value>
+  </data>
+  <data name="Annual.FullYear" xml:space="preserve">
+    <value>Año completo</value>
+  </data>
+  <data name="Annual.MonthsWithDataCount" xml:space="preserve">
+    <value>{0} / 12 meses con datos</value>
+  </data>
+  <data name="Annual.ChartTrend" xml:space="preserve">
+    <value>Tendencia Mensual</value>
+  </data>
+  <data name="Annual.ChartDistribution" xml:space="preserve">
+    <value>Distribución Fijo / Variable</value>
+  </data>
+  <data name="Annual.YoyTitle" xml:space="preserve">
+    <value>Interanual</value>
+  </data>
+  <data name="Annual.YoyNoData" xml:space="preserve">
+    <value>Sin datos del año anterior</value>
+  </data>
+  <data name="Annual.HealthSavings" xml:space="preserve">
+    <value>Ahorro (25%)</value>
+  </data>
+  <data name="Annual.HealthIncomeStability" xml:space="preserve">
+    <value>Estabilidad Ingresos (15%)</value>
+  </data>
+  <data name="Annual.HealthExpenseStability" xml:space="preserve">
+    <value>Estabilidad Gastos (15%)</value>
+  </data>
+  <data name="Annual.HealthCategoryDep" xml:space="preserve">
+    <value>Dependencia Categorías (10%)</value>
+  </data>
+  <data name="Annual.HealthBalance" xml:space="preserve">
+    <value>Balance I/E (20%)</value>
+  </data>
+  <data name="Annual.HealthTrend" xml:space="preserve">
+    <value>Tendencia (15%)</value>
+  </data>
+  <data name="Annual.MultiYear" xml:space="preserve">
+    <value>Comparativa Multi-Anual</value>
+  </data>
+  <data name="Annual.MonthlyEvolution" xml:space="preserve">
+    <value>Evolución Mensual</value>
+  </data>
+  <data name="Annual.BestIncomeMonth" xml:space="preserve">
+    <value>Mejor Mes de Ingresos</value>
+  </data>
+  <data name="Annual.BestExpenseMonth" xml:space="preserve">
+    <value>Peor Mes de Gastos</value>
+  </data>
+  <data name="Annual.Categories" xml:space="preserve">
+    <value>Categorías de Gastos</value>
+  </data>
+  <data name="Annual.CategoryBreakdown" xml:space="preserve">
+    <value>Desglose por Categoría</value>
+  </data>
+  <data name="Annual.ColCategory" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Annual.ColAmount" xml:space="preserve">
+    <value>Importe</value>
+  </data>
+  <data name="Annual.ColPercent" xml:space="preserve">
+    <value>%</value>
+  </data>
+  <data name="Annual.ColTrend" xml:space="preserve">
+    <value>Tendencia</value>
+  </data>
+  <data name="Annual.NewBadge" xml:space="preserve">
+    <value>NUEVA</value>
+  </data>
+  <data name="Annual.CategoryComparison" xml:space="preserve">
+    <value>Comparativa de Categorías</value>
+  </data>
+  <data name="Annual.TimelineTitle" xml:space="preserve">
+    <value>Cronología del Año</value>
+  </data>
+  <data name="Annual.TopMovements" xml:space="preserve">
+    <value>Principales Movimientos</value>
+  </data>
+  <data name="Annual.TopExpenses" xml:space="preserve">
+    <value>Principales Gastos</value>
+  </data>
+  <data name="Annual.TopIncomes" xml:space="preserve">
+    <value>Principales Ingresos</value>
+  </data>
+  <data name="Annual.MostFrequent" xml:space="preserve">
+    <value>Más Frecuentes</value>
+  </data>
+  <data name="Annual.Anomalies" xml:space="preserve">
+    <value>Anomalías</value>
+  </data>
+  <data name="Annual.NoAnomalies" xml:space="preserve">
+    <value>Sin anomalías</value>
+  </data>
+  <data name="Annual.ColMonth" xml:space="preserve">
+    <value>Mes</value>
+  </data>
+  <data name="Annual.ColMean" xml:space="preserve">
+    <value>μ</value>
+  </data>
+  <data name="Annual.ColStdDev" xml:space="preserve">
+    <value>σ</value>
+  </data>
+  <data name="Annual.ColType" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="Annual.Discoveries" xml:space="preserve">
+    <value>Descubrimientos</value>
+  </data>
+  <data name="Annual.NoDiscoveries" xml:space="preserve">
+    <value>Sin descubrimientos</value>
+  </data>
+  <data name="Annual.Achievements" xml:space="preserve">
+    <value>Logros</value>
+  </data>
+  <data name="Annual.NoAchievements" xml:space="preserve">
+    <value>Sin logros</value>
+  </data>
+  <data name="Annual.Trends" xml:space="preserve">
+    <value>Tendencias</value>
+  </data>
+  <data name="Annual.Insufficient" xml:space="preserve">
+    <value>Datos insuficientes</value>
+  </data>
+  <data name="Annual.Predictions" xml:space="preserve">
+    <value>Predicciones</value>
+  </data>
+  <data name="Annual.NeedTwoYears" xml:space="preserve">
+    <value>Requiere 2+ años de datos</value>
+  </data>
+  <data name="Annual.PredIncome" xml:space="preserve">
+    <value>Ingresos</value>
+  </data>
+  <data name="Annual.PredExpense" xml:space="preserve">
+    <value>Gastos</value>
+  </data>
+  <data name="Annual.PredSavings" xml:space="preserve">
+    <value>Ahorro</value>
+  </data>
+  <data name="Annual.PredConfidence" xml:space="preserve">
+    <value>Confianza</value>
+  </data>
+  <data name="Annual.HistoricalComparison" xml:space="preserve">
+    <value>Comparativa Histórica</value>
+  </data>
+  <data name="Annual.ShowDetail" xml:space="preserve">
+    <value>Mostrar detalle</value>
+  </data>
+  <data name="Annual.HideDetail" xml:space="preserve">
+    <value>Ocultar detalle</value>
+  </data>
+  <data name="Annual.IncomeDetail" xml:space="preserve">
+    <value>Detalle de Ingresos</value>
+  </data>
+  <data name="Annual.ExpenseDetail" xml:space="preserve">
+    <value>Detalle de Gastos</value>
+  </data>
+  <data name="Annual.ColMovement" xml:space="preserve">
+    <value>Movimiento</value>
+  </data>
+  <data name="Annual.ColTotalAnnual" xml:space="preserve">
+    <value>Total Anual</value>
+  </data>
+  <data name="Annual.ColMonthlyAvg" xml:space="preserve">
+    <value>Media Mensual</value>
+  </data>
+  <!-- PR5: Insights fixed phrases -->
+  <data name="Insights.NoSavings" xml:space="preserve">
+    <value>No se generó ahorro neto este año.</value>
+  </data>
+  <data name="Discovery.InsufficientData" xml:space="preserve">
+    <value>Datos insuficientes para generar descubrimientos.</value>
+  </data>
+  <!-- PR5: Anomaly descriptions (format strings) -->
+  <data name="Anomaly.Exceptional" xml:space="preserve">
+    <value>{0}: pico excepcional (€{1:F2}) sin repetición el año anterior.</value>
+  </data>
+  <data name="Anomaly.Extraordinary" xml:space="preserve">
+    <value>{0}: gasto extraordinario (€{1:F2}) sobre 3× media (€{2:F2}).</value>
+  </data>
+  <data name="Anomaly.Generic" xml:space="preserve">
+    <value>{0}: anomalía (€{1:F2}) sobre umbral μ+2σ (€{2:F2}).</value>
+  </data>
 </root>
