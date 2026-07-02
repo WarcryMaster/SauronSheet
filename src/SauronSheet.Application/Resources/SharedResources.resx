@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Layout.Brand" xml:space="preserve">
+    <value>SauronSheet</value>
+  </data>
+  <data name="Layout.SkipToContent" xml:space="preserve">
+    <value>Skip to main content</value>
+  </data>
+  <data name="Layout.ToggleNavigation" xml:space="preserve">
+    <value>Toggle navigation</value>
+  </data>
+  <data name="Layout.NavHome" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Layout.NavDashboard" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Layout.NavTransactions" xml:space="preserve">
+    <value>Transactions</value>
+  </data>
+  <data name="Layout.NavCategories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Layout.NavBudgets" xml:space="preserve">
+    <value>Budgets</value>
+  </data>
+  <data name="Layout.NavAnnual" xml:space="preserve">
+    <value>Annual</value>
+  </data>
+  <data name="Layout.Logout" xml:space="preserve">
+    <value>Logout</value>
+  </data>
+  <data name="Layout.GetStarted" xml:space="preserve">
+    <value>Get Started</value>
+  </data>
+  <data name="Layout.FooterCopyright" xml:space="preserve">
+    <value>© 2026 SauronSheet</value>
+  </data>
+  <data name="Layout.Version" xml:space="preserve">
+    <value>v1.2.0 — Phase 6 Polish &amp; Release</value>
+  </data>
+  <data name="Login.Title" xml:space="preserve">
+    <value>Welcome back</value>
+  </data>
+  <data name="Login.Subtitle" xml:space="preserve">
+    <value>Sign in to continue to your dashboard</value>
+  </data>
+  <data name="Login.SuccessTitle" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="Login.ErrorTitle" xml:space="preserve">
+    <value>Authentication failed</value>
+  </data>
+  <data name="Login.EmailLabel" xml:space="preserve">
+    <value>Email address</value>
+  </data>
+  <data name="Login.PasswordLabel" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Login.RememberMe" xml:space="preserve">
+    <value>Remember me</value>
+  </data>
+  <data name="Login.ShowPassword" xml:space="preserve">
+    <value>Show password</value>
+  </data>
+  <data name="Login.HidePassword" xml:space="preserve">
+    <value>Hide password</value>
+  </data>
+  <data name="Login.Submit" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login.SubmitLoading" xml:space="preserve">
+    <value>Signing in…</value>
+  </data>
+  <data name="Login.RegisterPrompt" xml:space="preserve">
+    <value>Not a member?</value>
+  </data>
+  <data name="Login.RegisterLink" xml:space="preserve">
+    <value>Create a free account</value>
+  </data>
+  <data name="Login.FooterProtected" xml:space="preserve">
+    <value>Protected with secure authentication · SauronSheet © 2026</value>
+  </data>
+  <data name="Switcher.Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Switcher.Spanish" xml:space="preserve">
+    <value>Spanish</value>
+  </data>
+  <data name="Switcher.English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Switcher.ChangeLanguage" xml:space="preserve">
+    <value>Change language</value>
+  </data>
+  <data name="Common.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common.Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Common.Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="Common.Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="Common.No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="Auth.RegisterTitle" xml:space="preserve">
+    <value>Create account</value>
+  </data>
+  <data name="Auth.RegisterSubtitle" xml:space="preserve">
+    <value>Sign up for free to get started</value>
+  </data>
+  <data name="Auth.LogoutTitle" xml:space="preserve">
+    <value>Logged out</value>
+  </data>
+  <data name="Auth.LogoutMessage" xml:space="preserve">
+    <value>You have been logged out successfully.</value>
+  </data>
+  <data name="Error.PageTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Error.GenericMessage" xml:space="preserve">
+    <value>An unexpected error has occurred.</value>
+  </data>
+  <data name="Index.Welcome" xml:space="preserve">
+    <value>Welcome to SauronSheet</value>
+  </data>
+  <data name="Index.Description" xml:space="preserve">
+    <value>Manage your personal finances easily.</value>
+  </data>
+  <data name="Index.LoginButton" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Dashboard.Title" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Dashboard.Welcome" xml:space="preserve">
+    <value>Welcome back</value>
+  </data>
+  <data name="Transactions.Title" xml:space="preserve">
+    <value>Transactions</value>
+  </data>
+  <data name="Categories.Title" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Budgets.Title" xml:space="preserve">
+    <value>Budgets</value>
+  </data>
+  <data name="Annual.Title" xml:space="preserve">
+    <value>Annual Analysis</value>
+  </data>
+  <data name="Test.EnglishOnlyKey" xml:space="preserve">
+    <value>English only fallback</value>
+  </data>
+</root>
