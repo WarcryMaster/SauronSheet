@@ -1,600 +1,814 @@
-# SauronSheet
+![SauronSheet](src/SauronSheet.Frontend/wwwroot/img/sauron-sheet-logo.svg)
 
-A modern, multi-user expense tracking application that imports bank transactions from PDF statements and provides detailed analytics and spending reports.
+# SauronSheet — Control Financiero Personal
 
-## Features
+> **Aplicación web moderna de gestión de finanzas personales con importación de extractos bancarios, análisis avanzado de gastos y presupuestos inteligentes.**
 
-- 📄 **PDF Bank Statement Import** — Automatically parse and import transactions from bank PDFs.
-- 📊 **Analytics Dashboard** — View spending by category, trends over time, and monthly/yearly comparisons.
-- 👥 **Multi-User Support** — Secure authentication with individual expense tracking.
-- 💰 **Budget Tracking** — Set and monitor budgets by category with overage detection.
-- 📈 **Detailed Reports** — Export and analyze spending patterns.
-- 🎨 **Clean Interface** — Modern, responsive UI built with MDBootstrap (Material Design for Bootstrap) components.
+---
 
-## Tech Stack
+## 📋 Tabla de Contenidos
+
+- [Descripción General](#-descripción-general)
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Funcionalidades Principales](#-funcionalidades-principales)
+- [Capturas de Pantalla](#-capturas-de-pantalla)
+- [Arquitectura](#-arquitectura)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Metodología de Desarrollo](#-metodología-de-desarrollo)
+- [Modelo de Datos](#-modelo-de-datos)
+- [Instalación y Ejecución](#-instalación-y-ejecución)
+- [Despliegue](#-despliegue)
+- [Testing](#-testing)
+- [Credenciales de Prueba](#-credenciales-de-prueba)
+- [Roadmap](#-roadmap)
+- [Enlaces](#-enlaces)
+
+---
+
+## 📖 Descripción General
+
+**SauronSheet** es una aplicación web de finanzas personales diseñada para ayudar a usuarios a tomar el control de sus gastos e ingresos de forma sencilla y visual. El nombre evoca la idea de «un ojo que todo lo ve» sobre tus finanzas — una referencia lúdica a Sauron de _El Señor de los Anillos_ combinada con _Sheet_ (hoja de cálculo).
+
+### ¿Qué problema resuelve?
+
+Hacer un seguimiento de los gastos personales es tedioso. La mayoría de la gente no lo hace porque:
+
+- **Requiere introducir datos manualmente** → SauronSheet importa extractos bancarios automáticamente desde ficheros Excel/PDF.
+- **No hay visión global** → Dashboard interactivo con gráficos, tendencias y comparativas anuales.
+- **Los presupuestos se olvidan** → Presupuestos por categoría con semáforo visual y detección de sobrecoste.
+- **Falta contexto** → Análisis anual completo con score de salud financiera, detección de anomalías y predicciones.
+
+### ¿Para quién es?
+
+- Personas que quieren entender **dónde se va su dinero** sin esfuerzo manual.
+- Usuarios de banca online que descargan extractos bancarios y quieren visualizarlos.
+- Cualquiera que quiera **establecer presupuestos** y recibir alertas visuales de sobrecoste.
+
+### Diferenciadores
+
+- **Importación inteligente**: parsea extractos bancarios (Excel ING) con resolución automática de categorías mediante el banco.
+- **Análisis anual completo**: 7 secciones analíticas: resumen ejecutivo, score de salud financiera, ratios, tendencias mensuales, distribución por categorías, comparativa interanual, detección de anomalías y predicciones.
+- **Multi-idioma**: interfaz completa en español e inglés con cambio en vivo.
+- **Multi-tenant**: cada usuario ve solo sus datos, aislado por Row-Level Security en Supabase.
+- **Presupuestos inteligentes**: semáforo verde/amarillo/rojo/sobrecoste con barras de progreso.
+- **Trazabilidad de importación**: cada transacción guarda su origen (banco, fichero, fecha de importación) y método de categorización.
+
+---
+
+## 🛠 Stack Tecnológico
 
 ### Backend
 
-- **.NET Core 10** — Web framework and API backend.
-- **MediatR** — CQRS pattern with mediator for request handling.
-- **Clean Architecture** — Layered application with strict dependency rules.
-
-
+| Tecnología | Versión | Propósito |
+|---|---|---|
+| **.NET** | 10 | Framework web y API — minimal APIs, Razor Pages |
+| **C#** | 13 | Lenguaje principal |
+| **MediatR** | Última | Patrón CQRS — commands y queries |
+| **FluentValidation** | — | Validación de comandos/querys |
+| **Sentry** | SDK .NET | Observabilidad: trazabilidad, errores, métricas |
+| **ExcelDataReader** | — | Parseo de ficheros Excel (.xls/.xlsx) |
 
 ### Frontend
 
-- **Razor Pages** — Server-side template rendering.
-- **MDBootstrap (Material Design for Bootstrap)** — UI components and styling (**CDN only, always**)
-- **Vanilla JavaScript** — Additional interactivity where needed.
+| Tecnología | Versión | Propósito |
+|---|---|---|
+| **Razor Pages** | .NET 10 | Renderizado server-side, PageModel pattern |
+| **MDBootstrap 5** | 9.2 | UI Kit Material Design (CDN) |
+| **Alpine.js** | 3.14 | Reactividad declarativa en el DOM |
+| **HTMX** | 2.0 | AJAX desde atributos HTML (navegación por años, filtros) |
+| **Chart.js** | Última | Gráficos interactivos (tendencias, distribución, evolución) |
+| **Flatpickr** | Última | Selector de fechas accesible |
+| **Font Awesome** | 6.5 | Iconografía funcional |
+| **CSS3** | — | Diseño responsivo, variables CSS personalizadas |
 
-#### Política de librerías externas (CDN)
+### Base de Datos y Autenticación
 
-- **Obligatorio:** Todas las librerías externas de CSS/JS (MDBootstrap, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
-- **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
-- **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
+| Tecnología | Propósito |
+|---|---|
+| **Supabase** (PostgreSQL) | Base de datos relacional, autenticación, RLS |
+| **Supabase Auth** | Registro, login, JWT, refresh tokens |
+| **Row-Level Security** | Aislamiento multi-tenant a nivel de base de datos |
+| **Supabase CLI** | Migraciones y gestión del proyecto |
 
-Si agregas una nueva librería externa, **debes** usar la versión oficial por CDN y declararla en _Layout.cshtml.
+### Infraestructura
 
-#### Política de librerías externas (CDN)
+| Servicio | Propósito |
+|---|---|
+| **Azure App Service** | Hosting de la aplicación .NET |
+| **Supabase Cloud** | Base de datos y autenticación |
+| **Sentry** | Observabilidad y tracing |
+| **GitHub** | Repositorio, CI/CD (pendiente) |
 
-- **Obligatorio:** Todas las librerías externas de CSS/JS (Material Design, etc.) deben cargarse exclusivamente mediante CDN en _Layout.cshtml, tanto en desarrollo como en producción.
-- **Prohibido:** No se permite el uso de copias locales, npm, ni minificados en el repositorio para estas librerías.
-- **Motivo:** Garantiza consistencia visual, cero problemas de build, y despliegue instantáneo en cualquier entorno.
+---
 
-Si agregas una nueva librería externa, **debes** usar la versión oficial por CDN y declararla en _Layout.cshtml.
+## ✨ Funcionalidades Principales
 
-### Database & Auth
+### 1. 📄 Importación de Extractos Bancarios
+- Subida de ficheros Excel (.xls/.xlsx) con extractos bancarios.
+- Parseo automático de movimientos (fecha, descripción, importe, saldo).
+- Detección de duplicados por saldo y fecha para evitar transacciones repetidas.
+- Resolución automática de categorías basada en la subcategoría del banco.
+- Progreso en tiempo real de la importación.
 
-- **Supabase** — PostgreSQL database and Supabase Auth for multi-user authentication.
+**Pantallas involucradas:** `Transactions/Upload`, `Transactions/Index`
 
-## Project Structure
+### 2. 📊 Dashboard Principal
+- KPIs animados: ingresos totales, gastos totales, neto, número de transacciones.
+- Gráfico de gastos por categoría (barras apiladas por mes).
+- Gráfico de tendencias mensuales (ingresos vs gastos).
+- Comparativa año contra año.
+- Transacciones recientes.
+- Widget de estado de presupuestos con semáforo y barras de progreso.
+- Filtro por periodo: Todo, Este mes, Últimos 3 meses, Este año.
+
+**Pantalla:** `Dashboard`
+
+### 3. 📈 Análisis Anual Completo (7 secciones)
+
+#### Sección 1 — Resumen Ejecutivo (REQ-001)
+- Ingresos, gastos, neto, ahorro y tasa de ahorro del año.
+- Variación porcentual contra el año anterior.
+- Ranking del año entre todos los años disponibles.
+
+#### Sección 2 — Salud Financiera (REQ-002)
+- Score global de salud financiera (0-100) con anillo visual.
+- Desglose por sub-puntuaciones: ahorro, estabilidad de ingresos, estabilidad de gastos, dependencia de categorías, balance, tendencia.
+- Clasificación: Excelente, Buena, Aceptable, Necesita atención.
+
+#### Sección 3 — Ratios Financieros
+- Tasa de ahorro, ingreso mensual medio, gasto mensual medio, número de transacciones.
+- Porcentaje de costes fijos.
+
+#### Sección 4 — Comparativa Interanual (YoY) (REQ-002)
+- Comparativa lado a lado del año actual vs año anterior.
+- Variación absoluta y porcentual para ingresos, gastos, neto, ahorro y tasa de ahorro.
+
+#### Sección 5 — Tendencia y Distribución Mensual (REQ-003, REQ-004)
+- Gráfico de tendencia mensual (ingresos vs gastos).
+- Gráfico de distribución fijo/variable.
+- Mejor mes en ingresos y gastos.
+
+#### Sección 6 — Categorías y Comparativa (REQ-005, REQ-006, REQ-007)
+- Desglose de gastos por categoría con gráfico donut y tabla de tendencias.
+- Comparativa de categorías contra el año anterior.
+
+#### Sección 7 — Anomalías y Predicciones (REQ-008, REQ-016)
+- Detección de anomalías estadísticas (Z-score > 3) por categoría.
+- Predicciones deterministas usando regresión lineal (R² como confianza).
+- Proyecciones de ingresos, gastos, ahorro y balance.
+
+**Pantalla:** `Analysis/Annual`
+
+### 4. 💰 Gestión de Presupuestos
+- Creación de presupuestos mensuales por categoría con fecha de inicio/fin.
+- Edición de límite, periodo y fechas de vigencia.
+- Semáforo visual: Verde (≤75%), Amarillo (75-90%), Rojo (90-100%), Sobrecoste (>100%).
+- Barras de progreso con importe gastado vs límite.
+- Histórico de presupuestos anteriores.
+- Métricas por presupuesto: gastado, límite acumulado, porcentaje usado, restante.
+
+**Pantallas:** `Budgets/Index`, `Budgets/Create`, `Budgets/Edit`, `Budgets/Metrics`, `Budgets/History`, `Budgets/Comparison`
+
+### 5. 🏷️ Gestión de Categorías
+- Categorías por defecto del sistema (Comida, Transporte, Servicios, Otros).
+- Categorías personalizadas por usuario.
+- Subcategorías para clasificación detallada.
+- Categorización manual de transacciones no clasificadas.
+- Resolución automática desde la subcategoría del banco.
+
+**Pantallas:** `Categories/Index`, `Categories/Subcategories`
+
+### 6. 🔍 Búsqueda y Gestión de Transacciones
+- Listado paginado de transacciones con filtros por fecha, categoría, importe y origen.
+- Búsqueda por palabra clave en la descripción.
+- Añadir transacciones manualmente.
+- Editar transacciones (descripción, importe, fecha, categoría).
+- Eliminación individual o masiva.
+- Vista detalle con toda la información de importación.
+
+**Pantallas:** `Transactions/Index`, `Transactions/Add`, `Transactions/Edit`, `Transactions/Search`
+
+### 7. 👤 Autenticación Multi-Usuario
+- Registro e inicio de sesión con email y contraseña (Supabase Auth).
+- JWT con refresh tokens almacenados en cookies seguras (HttpOnly, SameSite Strict).
+- Aislamiento completo de datos por usuario (RLS en Supabase).
+- Cierre de sesión.
+
+**Pantallas:** `Auth/Login`, `Auth/Register`, `Auth/Logout`
+
+### 8. 🌐 Internacionalización (i18n)
+- Interfaz completa en español (es-ES) e inglés (en-US).
+- Selector de idioma en el menú de navegación.
+- Persistencia de la elección mediante cookie.
+- Localización de Chart.js, Flatpickr, fechas y moneda.
+- Sistema de recursos .resx con `SharedResources`.
+
+### 9. 📱 Diseño Responsivo
+- Navegación adaptable: menú colapsable en móvil, offcanvas para navegación móvil.
+- Cuadrículas adaptativas (1 columna móvil → 4 columnas escritorio).
+- Tablas con scroll horizontal en móvil.
+- Layouts específicos: ancho completo, formulario estrecho, formulario estrecho compacto, centrado para auth.
+
+### 10. 🎨 Sistema de Diseño Olive
+- **Color primario:** Olive Green `#556B2F` — estabilidad y crecimiento.
+- **Canvas:** `#f8f9fa` con tarjetas blancas elevadas (`shadow-sm`).
+- **Tipografía:** Sistema sans-serif nativo del SO.
+- **Semántica:** verde para ingresos, rojo para gastos.
+- **Componentes:** barra de navegación blanca, tarjetas sin borde, botones marca, badges de estado, paneles de filtro.
+- **Patrones interactivos:** Alpine.js para reactividad, HTMX para AJAX, Chart.js para gráficos.
+
+---
+
+## 🖼️ Capturas de Pantalla
+
+| Sección | Descripción |
+|---|---|
+| **Login** | Pantalla de inicio de sesión con diseño centrado y tarjeta de 450px |
+| **Dashboard** | KPIs animados, gráficos por categoría y tendencias, estado de presupuestos |
+| **Transacciones** | Listado paginado con filtros y búsqueda |
+| **Importación** | Subida de extracto bancario con progreso en tiempo real |
+| **Presupuestos** | Semáforo visual con barras de progreso por categoría |
+| **Análisis Anual** | 7 secciones: resumen, salud financiera, ratios, tendencias, categorías, anomalías, predicciones |
+| **Categorías** | Gestión de categorías y subcategorías |
+
+> *(Las capturas de pantalla se añadirán tras el despliegue, cuando la URL esté disponible)*
+
+---
+
+## 🏗️ Arquitectura
+
+### Clean Architecture + CQRS
+
+SauronSheet sigue los principios de **Clean Architecture** (Robert C. Martin) combinados con **CQRS** (Command Query Responsibility Segregation) mediante **MediatR**.
 
 ```
-SauronSheet/
-├── Frontend/           # Razor Pages web interface
-│   ├── Pages/          # Page handlers (.cshtml.cs) and views (.cshtml)
-│   ├── Shared/         # Layouts, partial views
-│   ├── wwwroot/        # Static assets (Tailwind CSS, JavaScript)
-│   └── Program.cs      # Startup configuration
-│
-├── Application/        # Business logic orchestration (CQRS)
-│   ├── Features/
-│   │   ├── Transactions/ # Transaction import, queries, commands
-│   │   ├── Analytics/    # Spending reports, charts, trends
-│   │   ├── Budgets/      # Budget management commands/queries
-│   │   └── Auth/         # User authentication commands
-│   └── Common/          # Base handlers, IUserContext, pipeline behaviors
-│
-├── Domain/             # Core business entities and rules
-│   ├── Entities/       # Transaction, Category, Budget (AggregateRoots)
-│   ├── ValueObjects/   # Money, DateRange, TransactionId, UserId, CategoryId
-│   ├── Services/       # CategoryService (cross-entity domain logic)
-│   ├── Specifications/ # ISpecification, filtering by date/category/amount
-│   ├── Repositories/   # Interfaces ONLY (ITransactionRepository, etc.)
-│   ├── Exceptions/     # DomainException, EntityNotFoundException
-│   └── Common/         # Base Entity, ValueObject abstractions
-│
-├── Infrastructure/     # External integrations and persistence
-│   ├── Persistence/    # Supabase repository implementations
-│   ├── Auth/           # Supabase authentication (SupabaseAuthService)
-│   └── PDF/            # PDF parsing implementation
-│
-└── specs/              # Phase specifications (one file per phase)
+┌─────────────────────────────────────────────────────────────┐
+│                    FRONTEND (Razor Pages)                    │
+│  Pages/ · ViewModels · wwwroot (CSS, JS, images)            │
+│  Depende de: Application (solo)                             │
+├─────────────────────────────────────────────────────────────┤
+│                   APPLICATION (CQRS)                         │
+│  Commands / Queries / DTOs / Behaviors / Services           │
+│  Depende de: Domain (solo)                                  │
+├─────────────────────────────────────────────────────────────┤
+│                     DOMAIN (Core)                            │
+│  Entities / ValueObjects / Services / Specifications        │
+│  Depende de: nada (zero external dependencies)              │
+├─────────────────────────────────────────────────────────────┤
+│                  INFRASTRUCTURE                              │
+│  Persistence (Supabase) · Auth · Excel Parsing · Sentry    │
+│  Depende de: Domain (implementa interfaces)                 │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Getting Started
+**Reglas de dependencia:**
+- `Domain` → No conoce ninguna otra capa.
+- `Application` → Solo conoce `Domain`.
+- `Infrastructure` → Implementa interfaces definidas en `Domain`.
+- `Frontend` → Solo conoce `Application`.
+- Las dependencias apuntan **hacia adentro**: nunca hacia afuera.
 
-### Prerequisites
+### Patrón CQRS
 
-- .NET 10 SDK or higher
-- Node.js 18+ (optional, if modifying Tailwind)
-- Supabase account (free tier available at https://supabase.com)
-
-### Installation
-
-1. **Clone the repository**
-    ```bash
-    git clone https://github.com/yourusername/SauronSheet.git
-    cd SauronSheet
-    ```
-
-2. **Configure Supabase**
-
-    Create a Supabase project at https://supabase.com  
-    Copy your project URL and API keys  
-    Create `appsettings.json` in `Frontend/`:
-
-    ```json
-    {
-      "Supabase": {
-        "Url": "your-project-url",
-        "Key": "your-public-key"
-      }
-    }
-    ```
-
-3. **Build the project**
-
-    ```bash
-    dotnet build
-    ```
-
-4. **Run the application**
-
-    ```bash
-    dotnet run --project Frontend/
-    ```
-
-    Navigate to https://localhost:7000 (or configured port).
-
-## Architecture
-
-### Clean Architecture with CQRS
-
-SauronSheet follows Clean Architecture principles with CQRS (Command Query Responsibility Segregation) pattern:
-
-- **Domain Layer** — Contains core business entities, value objects, domain services, specifications, and repository interfaces. Zero external dependencies.
-- **Application Layer** — Orchestrates use cases using MediatR CQRS commands and queries. Depends only on Domain.
-- **Infrastructure Layer** — Handles data persistence (Supabase) and external services. Implements Domain contracts.
-- **Frontend Layer** — Presents UI and collects user input. Communicates with Application via MediatR.
-
-#### Dependency Rules
-
+**Commands** (operaciones de escritura):
 ```
-Frontend ──→ Application ──→ Domain
-                                ↑
-Infrastructure ─────────────────┘
+CreateTransactionCommand → CreateTransactionCommandHandler → Transaction
+ImportTransactionsCommand → ImportTransactionsCommandHandler → Transaction[]
+CreateBudgetCommand → CreateBudgetCommandHandler → Budget
+DeleteTransactionCommand → DeleteTransactionCommandHandler
+UpdateTransactionCommand → UpdateTransactionCommandHandler
 ```
-- Domain never references any other layer.
-- Application accesses Infrastructure only via Domain-defined interfaces.
-- Infrastructure implements Domain contracts (repositories, services).
-- No upward dependencies allowed.
+
+**Queries** (operaciones de lectura):
+```
+GetTransactionsQuery → GetTransactionsQueryHandler → TransactionDto[]
+GetSpendingByCategoryQuery → GetSpendingByCategoryQueryHandler → CategorySpending[]
+GetAnnualDashboardQuery → GetAnnualDashboardQueryHandler → AnnualDashboardResult
+GetBudgetMetricsQuery → GetBudgetMetricsQueryHandler → BudgetMetricsDto[]
+```
+
+**Pipeline behaviors** (cross-cutting):
+- `TenantScopingBehavior` — Inyecta automáticamente el `UserId` en cada request.
+- `SentryTracingBehavior` — Traza cada comando/query en Sentry.
 
 ### Domain-Driven Design
 
-#### Aggregate Roots
+**Aggregate Roots:**
+| Entidad | ID | Propiedades clave |
+|---|---|---|
+| `Transaction` | `TransactionId(Guid)` | Amount (Money), Date, Description, CategoryId, Balance |
+| `Category` | `CategoryId(Guid)` | Name, Type (Income/Expense), Source (System/User), IsAutoCreated |
+| `Budget` | `BudgetId(Guid)` | Limit (Money), Period (BudgetPeriod), Status, Effective dates |
+| `Subcategory` | `SubcategoryId(Guid)` | Name (SubcategoryName), CategoryId, Color |
+| `ImportBatch` | `Guid` | FileName, UploadedAt, TransactionCount, Status |
 
-```csharp
-// Entities use parameterized constructors, no public setters
-// Strong-typed IDs prevent accidental ID mixing at compile time
-public class Transaction : AggregateRoot
-{
-    public TransactionId Id { get; private set; }
-    public UserId UserId { get; private set; }
-    public Money Amount { get; private set; }
-    public DateTime Date { get; private set; }
-    public string Description { get; private set; }
-    public string? ImportedFrom { get; private set; }
+**Value Objects inmutables:**
+| Value Object | Propósito |
+|---|---|
+| `Money(decimal, Currency)` | Importe con validación y operaciones aritméticas |
+| `DateRange(DateTime, DateTime)` | Rango de fechas para filtros/especificaciones |
+| `BudgetPeriod(Year, Month)` | Periodo mensual para presupuestos |
+| `TransactionId(Guid)` | ID tipado fuerte para transacciones |
+| `UserId(string)` | ID tipado fuerte para usuarios |
+| `CategoryName(string)` | Nombre de categoría normalizado |
+| `BudgetStatusLevel` | Verde/Amarillo/Rojo/Sobrecoste |
 
-    public Transaction(TransactionId id, UserId userId, Money amount, DateTime date, string description)
-    {
-        if (date > DateTime.UtcNow) throw new DomainException("Date cannot be in the future.");
-        if (string.IsNullOrWhiteSpace(description)) throw new DomainException("Description required.");
-        // ... assign properties
-    }
-}
+**Domain Services:**
+| Servicio | Responsabilidad |
+|---|---|
+| `CategoryService` | Validación de nombres únicos, categorías por defecto del sistema |
+| `BudgetCalculationService` | Cálculo de porcentaje usado, nivel de estado de presupuesto |
+| `BudgetService` | Reglas de negocio de presupuestos |
+
+**Specifications (patrón Especificación):**
+| Specification | Filtro |
+|---|---|
+| `TransactionByDateRangeSpecification` | Rango de fechas |
+| `TransactionByCategorySpecification` | Categoría específica |
+| `TransactionByAmountRangeSpecification` | Rango de importes |
+| `TransactionByDescriptionKeywordSpecification` | Palabra clave en descripción |
+| `TransactionByUserSpecification` | Usuario (tenant) |
+| `CompositeSpecification` | Combinación AND/OR de especificaciones |
+
+### Diseño de Interfaz (Olive Design System)
+
+El diseño sigue un sistema de tokens definido en `DESIGN.md`:
+
+```
+Colores:   #556B2F (Olive Green) · #f8f9fa (Canvas) · #ffffff (Cards)
+Tipografía: system-ui, -apple-system, Segoe UI, Roboto, sans-serif
+Elevación: shadow-none (canvas) · shadow-sm (cards) · shadow (navbar) · shadow-lg (modales)
+Bordes:    rounded-3 (0.375rem) en inputs, botones y alerts
+           rounded-pill en badges y progress bars
+           rounded-circle en avatares
+Layouts:   full-width (listas) · narrow form (640px) · narrow tight (560px) · auth centered (450px)
 ```
 
-#### Value Objects
+**Stack interactivo:**
+- **Alpine.js v3** — Reactividad declarativa (`x-data`, `x-show`, `x-model`, `x-transition`)
+- **HTMX v2** — AJAX desde atributos HTML (`hx-get`, `hx-target`, `hx-swap`, `hx-trigger`)
+- **Chart.js** — Gráficos con colores desde variables CSS
+- **Flatpickr** — Selector de fechas con localización española
 
-```csharp
-// Strong-typed IDs
-public record TransactionId(Guid Value);
-public record UserId(string Value);
-public record CategoryId(Guid Value);
+**Patrones prohibidos ❌:**
+- `onclick` / `onchange` / `onsubmit` inline → usar `x-on:` / `@event`
+- `DOMContentLoaded` para init → usar `x-init` o HTMX `afterSwap`
+- `document.getElementById` en Alpine → usar `$refs`
+- `innerHTML` → usar `x-html` o HTMX swap
+- `data-bs-*` → usar `data-mdb-*`
+- `.btn-primary` / `.btn-outline-primary` (azul Bootstrap) → usar `.btn-brand`
 
-// Business value objects with validation and arithmetic
-public record Money(decimal Amount, string Currency = "EUR")
-{
-    public Money Plus(Money other) => /* ... */;
-    public Money Minus(Money other) => /* ... */;
-}
+---
 
-public record DateRange(DateTime StartDate, DateTime EndDate);
+## 📁 Estructura del Proyecto
+
+```
+SauronSheet/
+│
+├── src/                                    # Código fuente
+│   ├── SauronSheet.Domain/                 # Capa de dominio (core)
+│   │   ├── Common/                         # AggregateRoot, Entity, ValueObject, IUserContext
+│   │   ├── Entities/                       # Transaction, Category, Budget, Subcategory, ImportBatch
+│   │   ├── ValueObjects/                   # Money, UserId, TransactionId, CategoryId, BudgetId, etc.
+│   │   ├── Services/                       # CategoryService, BudgetService, IAuthService, IStatementParser
+│   │   ├── Specifications/                 # Filtros reutilizables: por fecha, categoría, importe...
+│   │   ├── Repositories/                   # Interfaces: ITransactionRepository, ICategoryRepository...
+│   │   └── Exceptions/                     # DomainException, EntityNotFoundException
+│   │
+│   ├── SauronSheet.Application/            # Capa de aplicación (CQRS)
+│   │   ├── Common/
+│   │   │   └── Behaviors/                  # TenantScopingBehavior
+│   │   ├── Features/
+│   │   │   ├── Auth/                       # Login, Register, Logout (Commands + Queries)
+│   │   │   ├── Transactions/               # CRUD + Import + Search (Commands + Queries)
+│   │   │   ├── Categories/                 # CRUD categorías (Commands + Queries)
+│   │   │   ├── Subcategories/              # CRUD subcategorías
+│   │   │   ├── Budgets/                    # CRUD + Metrics + History + Comparison
+│   │   │   └── Analytics/                  # Dashboard + Annual Analysis (14 servicios)
+│   │   │       ├── Services/               # 14 servicios analíticos
+│   │   │       ├── Classification/         # Clasificador de movimientos fijo/variable
+│   │   │       ├── Queries/                # Consultas del dashboard y análisis anual
+│   │   │       └── DTOs/                   # 26 DTOs de análisis
+│   │   ├── Resources/                      # Archivos .resx (i18n: español, inglés)
+│   │   └── Services/                       # BankCategoryResolutionService, ImportProgress
+│   │
+│   ├── SauronSheet.Infrastructure/         # Infraestructura
+│   │   ├── Persistence/                    # Implementaciones Supabase de repositorios
+│   │   ├── Auth/                           # SupabaseAuthService, JwtCookieMiddleware
+│   │   ├── Excel/                          # IngExcelStatementParser (parseo ING)
+│   │   ├── Monitoring/                     # SentryTracingBehavior
+│   │   ├── Middleware/                     # GlobalExceptionMiddleware
+│   │   ├── Mapping/                        # Extensiones de mapeo
+│   │   └── Assets/                         # Iconos permitidos
+│   │
+│   └── SauronSheet.Frontend/              # Interfaz de usuario (Razor Pages)
+│       ├── Pages/                          # Páginas Razor
+│       │   ├── Auth/                       # Login, Register, Logout
+│       │   ├── Transactions/               # Index (listado), Add, Edit, Upload, Search
+│       │   ├── Categories/                 # Index, Subcategories
+│       │   ├── Budgets/                    # Index, Create, Edit, Metrics, History, Comparison
+│       │   ├── Analysis/                   # Annual
+│       │   ├── Dashboard.cshtml            # Dashboard principal
+│       │   └── Shared/                     # Layout, componentes parciales
+│       ├── wwwroot/
+│       │   ├── css/                        # site.css, report-print.css
+│       │   ├── js/                         # charts.js, alpine-loader.js
+│       │   └── img/                        # Logo SVG + PNG (favicons)
+│       ├── Helpers/                        # CategoryBadgeDisplay, TransactionCategoryDisplayHelper
+│       └── Services/                       # MemoryImportProgressTracker
+│
+├── tests/                                  # Tests
+│   ├── SauronSheet.Domain.Tests/           # Tests unitarios de dominio
+│   │   ├── Entities/                       # TransactionTests, BudgetTests, CategoryTests, etc.
+│   │   ├── ValueObjects/                   # Tests de Money, etc.
+│   │   ├── Services/                       # Tests de servicios de dominio
+│   │   ├── Specifications/                 # Tests de especificaciones
+│   │   └── Exceptions/                     # Tests de excepciones
+│   ├── SauronSheet.Application.Tests/      # Tests de handlers CQRS
+│   ├── SauronSheet.Infrastructure.Tests/    # Tests de infraestructura
+│   ├── SauronSheet.Integration.Tests/       # Tests de integración
+│   └── SauronSheet.Frontend.Tests/          # Tests de frontend (Razor Pages)
+│
+├── e2e/                                     # Tests end-to-end (Playwright)
+│   ├── tests/                               # 10 specs E2E
+│   ├── fixtures/                            # Datos de prueba
+│   ├── auth.setup.ts                        # Setup de autenticación para E2E
+│   └── playwright.config.ts                 # Configuración de Playwright
+│
+├── supabase/                                # Base de datos Supabase
+│   ├── migrations/                          # 20 migraciones SQL
+│   └── config.toml                          # Configuración de Supabase
+│
+├── docs/                                    # Documentación
+│   ├── adr/                                 # Architecture Decision Records
+│   └── README.md
+│
+├── scripts/                                 # Scripts de utilidad
+├── openspec/                                # Especificaciones SDD (fase de planificación)
+├── .github/                                 # Instrucciones AI y configuración
+├── AGENTS.md                                # Instrucciones para asistentes AI
+├── DESIGN.md                                # Sistema de diseño completo
+├── TODO.md                                  # Tareas pendientes
+├── DESIGNDiagram.drawio.png                 # Diagrama de diseño (pendiente)
+└── SauronSheet.slnx                         # Solución .NET
 ```
 
-#### Domain Services
+---
 
-```csharp
-// Cross-entity logic coordinated via domain service
-public class CategoryService
-{
-    private readonly ICategoryRepository _categoryRepo;
+## 🧪 Metodología de Desarrollo
 
-    public async Task ValidateUniqueName(UserId userId, string name) { /* ... */ }
-    public bool CanDeleteCategory(Category category, bool hasActiveTransactions) => /* ... */;
-    public IReadOnlyList<Category> GetSystemDefaults() => /* 4 default categories */;
-}
+### Spec-Driven Development (SDD)
+
+Cada funcionalidad sigue un flujo estructurado en fases:
+
+```
+Proposal → Spec → Design → Tasks → Apply → Verify → Archive
 ```
 
-### CQRS Pattern
+1. **Exploración** — Investigación del código y requisitos.
+2. **Propuesta** — Definición de alcance, enfoque y tradeoffs.
+3. **Especificación** — Requisitos detallados y escenarios de aceptación.
+4. **Diseño técnico** — Arquitectura, patrones, decisiones técnicas.
+5. **Tareas** — Desglose en tareas atómicas implementables.
+6. **Implementación** — Codificación siguiendo TDD estricto.
+7. **Verificación** — Tests, revisión, validación contra la especificación.
+8. **Archivo** — Cierre de la fase y registro de decisiones.
 
-**Commands (state-changing operations):**
-```csharp
-public class ImportTransactionsFromPdfCommand : IRequest<ImportResult> { }
-public class CreateBudgetCommand : IRequest<BudgetId> { }
+### TDD (Test-Driven Development)
+
+- Las fases de dominio exigen **100% de cobertura** obligatoria.
+- Cobertura global mínima: **80% Domain**, **70% Application**.
+- Flujo: Test Rojo → Implementación → Test Verde → Refactor.
+
+### Testing Pyramid
+
+```
+        ╱╲
+       ╱ E2E ╲           ← Playwright (browser automation)
+      ╱────────╲
+     ╱ Integration ╲     ← xUnit + Moq + in-memory doubles
+    ╱────────────────╲
+   ╱   Unit (Domain)   ╲  ← xUnit (entidades, VO, servicios)
+  ╱──────────────────────╲
 ```
 
-**Queries (read-only operations):**
-```csharp
-public class GetSpendingByCategoryQuery : IRequest<List<CategorySpending>> { }
-public class GetMonthlyTrendsQuery : IRequest<List<MonthlyTrend>> { }
+### Principios de Desarrollo
+
+| Principio | Aplicación |
+|---|---|
+| **Clean Architecture** | 4 capas con dependencias hacia adentro |
+| **CQRS** | Commands para escritura, Queries para lectura |
+| **DDD** | Aggregate Roots, Value Objects, Domain Services |
+| **TDD** | Tests antes de implementación |
+| **E2E real** | Tests E2E simulan interacción real de usuario (clics, formularios) |
+| **Sin var** | Tipos explícitos siempre (nunca `var`) |
+| **Sentry first** | Toda observabilidad por Sentry, nunca `Console.WriteLine` |
+| **CDN only** | Librerías frontend exclusivamente por CDN |
+| **Inglés en código** | Código, identificadores, commits en inglés |
+| **Español en especs** | Documentación, especificaciones, planificación en español |
+
+---
+
+## 🗄️ Modelo de Datos
+
+### Esquema en Supabase (PostgreSQL)
+
+```
+auth.users                          → Gestión de usuarios (Supabase Auth)
+  │
+  ├── user_profiles                  → Perfiles de usuario extendidos
+  │
+  ├── categories                     → Categorías de gastos/ingresos
+  │     ├── name, type (Income|Expense), source (System|User)
+  │     ├── is_system_default, is_auto_created
+  │     └── Restricción: única por nombre normalizado + usuario + tipo
+  │
+  ├── subcategories                  → Subcategorías (ej: "Supermercado" dentro de "Comida")
+  │
+  ├── bank_category_translations     → Traducción banco → categoría SauronSheet
+  │
+  ├── transactions                   → Transacciones financieras
+  │     ├── user_id, date, description, amount (signado)
+  │     ├── category_id, subcategory_id, category_source
+  │     ├── bank_category, bank_subcategory
+  │     ├── balance (para detección de duplicados)
+  │     └── imported_from, import_batch_id
+  │
+  ├── budgets                        → Presupuestos mensuales
+  │     ├── user_id, category_id, limit_amount
+  │     ├── period (YYYY-MM), status (Active/Inactive)
+  │     ├── effective_from, effective_until
+  │     └── Restricción: único por usuario + categoría + periodo + fechas
+  │
+  └── import_batches                 → Lotes de importación
+        ├── file_name, status, transaction_count
+        └── errors (JSON array con errores por fila)
 ```
 
-All requests routed through MediatR pipeline for consistency and middleware support:
+### Row-Level Security (RLS)
 
-```csharp
-await _mediator.Send(new GetSpendingByCategoryQuery(userId, month));
-```
+Todas las tablas tienen RLS habilitado con políticas que filtran por `user_id = auth.uid()`. El cliente Supabase se inicializa por request con el JWT del usuario, garantizando aislamiento total entre inquilinos.
 
-## Development Workflow
+### Migraciones
 
-### Spec-Driven Development
+20 migraciones SQL versionadas en `supabase/migrations/`, aplicadas mediante `supabase db push`.
 
-1. **Write Specification** — Define expected behavior in a test (TDD red phase).
-2. **Create CQRS Handler** — Implement command/query handler to satisfy spec.
-3. **Add Domain Logic** — Implement entities/services needed by handler.
-4. **Build Infrastructure** — Add repository implementations for Supabase.
-5. **Wire Frontend** — Create Razor page to trigger command/query.
-6. **Test End-to-End** — Verify complete flow.
+---
 
-### Database Migrations
+## 🚀 Instalación y Ejecución
 
-SauronSheet uses Supabase CLI for database migrations. All migrations are stored in `supabase/migrations/` and follow the naming convention `YYYYMMDDHHMMSS_descriptive_name.sql`.
+### Requisitos Previos
 
-#### Prerequisites
+- **.NET 10 SDK** o superior → [Descargar](https://dotnet.microsoft.com/download/dotnet/10.0)
+- **Node.js 18+** (opcional, solo para tests E2E) → [Descargar](https://nodejs.org/)
+- **Cuenta Supabase** (gratuita) → [Supabase](https://supabase.com)
+- **Git** → [Descargar](https://git-scm.com/)
 
-- Install Supabase CLI: https://supabase.com/docs/guides/cli
-- Authenticate: `supabase login`
+### Instalación Local
 
-#### Creating a New Migration
+#### 1. Clonar el repositorio
 
 ```bash
-# Create a new migration file with timestamp
-supabase migration new descriptive_name
-
-# Edit the generated file in supabase/migrations/
-# Apply locally
-supabase migration up
+git clone https://github.com/tuusuario/SauronSheet.git
+cd SauronSheet
 ```
 
-#### Applying Migrations (Manual)
+#### 2. Configurar Supabase
+
+1. Crear un proyecto en [Supabase](https://supabase.com) (plan gratuito).
+2. Copiar la URL del proyecto y las claves (anon key, jwt secret).
+3. Aplicar las migraciones:
 
 ```bash
-# Apply all pending migrations to local Supabase database
-supabase migration up
-
-# Push pending migrations to the remote (production) Supabase database
-# This is the manual equivalent of what CI/CD does automatically
+supabase link --project-ref <tu-project-ref>
 supabase db push --linked
 ```
 
-> **Nota:** `supabase db push --linked` usa el proyecto vinculado con `supabase link --project-ref <ref>`. Si no lo has vinculado antes, ejecutá `supabase link` primero.
+4. Configurar autenticación en Supabase Dashboard:
+   - `Authentication → Settings → Sites URLs`: Añadir `http://localhost:54100`
+   - `Authentication → Providers → Email`: Habilitar email/password
 
-#### CI/CD Integration
+#### 3. Configurar appsettings.json
 
-Migrations are automatically applied during deployment via GitHub Actions. The workflow:
-1. Installs Supabase CLI
-2. Links to the Supabase project
-3. Runs `supabase db push --linked` to apply pending migrations
-
-**Required GitHub Secrets:**
-- `SUPABASE_ACCESS_TOKEN` — Personal access token from Supabase dashboard
-- `SUPABASE_DB_PASSWORD` — Database password from Supabase project settings
-
-### Build Commands
-
-```bash
-# Build solution
-dotnet build
-
-# Run application (development)
-dotnet run --project Frontend/
-
-# Run all tests
-dotnet test
-
-# Run domain tests only
-dotnet test --filter "Category=Domain"
-
-# Run application tests only
-dotnet test --filter "Category=Application"
-
-# Run E2E tests (Playwright, auto-starts app)
-npx playwright test --config=e2e/playwright.config.ts --project=chromium
-
-# Build for production
-dotnet publish -c Release
-```
-
-## File Organization
-
-- **New Features:** Create folder in `Application/Features/YourFeature/`
-  - `Commands/YourCommand.cs` + `YourCommandHandler.cs`
-  - `Queries/YourQuery.cs` + `YourQueryHandler.cs`
-  - `DTOs/YourDto.cs`
-- **New Entities:** Add to `Domain/Entities/YourEntity.cs`
-- **New Value Objects:** Add to `Domain/ValueObjects/YourValueObject.cs`
-- **New Domain Services:** Add to `Domain/Services/YourService.cs`
-- **New Repositories:** Define interface in `Domain/Repositories/`, implement in `Infrastructure/Persistence/`
-- **New Pages:** Create `.cshtml` and `.cshtml.cs` files in `Frontend/Pages/`
-
-## Key Features Explained
-
-### PDF Import
-
-- User uploads bank PDF in the upload page.
-- Backend extracts transaction rows using PDF parsing library.
-- Validates against domain rules (required fields, amount format, date range).
-- Creates Transaction domain entities with Money value objects.
-- Persists to Supabase via repository interface.
-- Returns confirmation with summary (N imported, M skipped with reasons).
-
-### Analytics Dashboard
-
-- Query handlers aggregate spending data from Supabase.
-- Domain specifications filter transactions by date range, category, amount.
-- Frontend renders charts using Chart.js or similar library.
-- Supports filtering by date range, category, budget status.
-- All queries scoped to current user's tenant.
-
-### Multi-User Authentication
-
-- Supabase Auth provides signup/login/logout functionality.
-- JWT tokens stored in secure cookies.
-- Each PageModel extracts userId from JWT claims.
-- Queries automatically scoped to current user — enforced in handlers, not UI.
-
-## Documentation
-
-### Specifications & Planning
-- **Formal Phase Specs:** See `specs/` for phase-based requirements and implementation plans.
-- **Constitution:** See `.specify/memory/constitution.md` for governance, core principles, and compliance rules.
-
-### Architecture Decisions & Technical Context
-- **ADRs (Architecture Decision Records):** See `docs/adr/` for architectural decisions (e.g., PDF parser normalization strategy).
-- **Coding Standards:** See `.github/copilot-instructions.md` for patterns, conventions, and development guidelines.
-- **Language Rules:** All source code, comments, and identifiers MUST be in English. Specifications only in Spanish.
-
-### Development Guides
-- See individual ADR files and technical notes in `docs/` for implementation context not covered by formal specs.
-
-### Budget Management
-
-- Users set monthly budget limits per category.
-- Budget entity tracks limits with Money value object.
-- `IsOverBudget(currentSpend)` detects overage condition.
-- `PercentageUsed(currentSpend)` calculates usage percentage.
-- Unique constraint: one budget per user-category-month combination.
-- System default categories (Groceries, Transport, Utilities, Other) are immutable.
-
-## Configuration
-
-Create or modify `Frontend/appsettings.json`:
+Crear o modificar `src/SauronSheet.Frontend/appsettings.json`:
 
 ```json
 {
   "Supabase": {
-    "Url": "https://your-project.supabase.co",
-    "AnonKey": "your-anon-key"
+    "Url": "https://tu-proyecto.supabase.co",
+    "Key": "tu-anon-key",
+    "JwtSecret": "tu-jwt-secret"
   },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information"
-    }
+  "Auth": {
+    "AccessTokenCookieName": "sb-access-token",
+    "RefreshTokenCookieName": "sb-refresh-token",
+    "AccessTokenExpirationMinutes": 60,
+    "RefreshTokenExpirationDays": 7
+  },
+  "Sentry": {
+    "Dsn": ""  ← Opcional, dejar vacío si no se usa Sentry
   }
 }
 ```
 
-Environment-specific settings:
-
-- `appsettings.Development.json` — Local development.
-- `appsettings.Production.json` — Production deployment.
-
-## Testing
-
-### Testing Pyramid
-
-| Level              | Scope                                 | Tools                |
-|--------------------|---------------------------------------|----------------------|
-| Unit Tests         | Domain entities, value objects, domain services | xUnit + Moq         |
-| Integration Tests  | Application handlers with mocked repositories | xUnit + Moq + in-memory doubles |
-| End-to-End Tests   | Full browser flows (Razor Pages UI)  | Playwright + Edge/Chromium        |
-
-### Coverage Requirements
-
-| Scope                        | Minimum Coverage |
-|------------------------------|-----------------|
-| Domain Layer (domain-only phases) | 100%        |
-| Domain Layer (global minimum)     | 80%         |
-| Application Layer                 | 70%         |
-
-### Run Tests
+#### 4. Compilar y ejecutar
 
 ```bash
-# Run all tests
+# Restaurar paquetes y compilar
+dotnet restore
+dotnet build
+
+# Ejecutar la aplicación
+dotnet run --project src/SauronSheet.Frontend/
+
+# O en modo watch (recarga automática)
+dotnet watch run --project src/SauronSheet.Frontend/
+```
+
+La aplicación estará disponible en:
+- **HTTP:** `http://localhost:54100`
+- **HTTPS:** `https://localhost:7000` (si está configurado)
+
+#### 5. Registrar un usuario
+
+1. Navegar a `http://localhost:54100`
+2. Ir a `/Auth/Register`
+3. Crear una cuenta con email y contraseña
+4. Confirmar el email en Supabase Auth dashboard (modo desarrollo) o a través del enlace de confirmación
+
+---
+
+## 🌐 Despliegue
+
+### Producción (Azure App Service)
+
+La aplicación está desplegada en **Azure App Service** (plan gratuito):
+
+**URL de producción:** [https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net](https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net)
+
+Los pipelines de CI/CD están configurados para desplegar automáticamente desde la rama `main` de GitHub.
+
+### Variables de Entorno en Producción
+
+```
+Supabase__Url=https://tu-proyecto.supabase.co
+Supabase__Key=tu-anon-key
+Supabase__JwtSecret=tu-jwt-secret
+Sentry__Dsn=tu-sentry-dsn (opcional)
+Auth__AccessTokenExpirationMinutes=60
+Auth__RefreshTokenExpirationDays=7
+```
+
+### Configuración de Supabase para Producción
+
+1. **URL del sitio:** Añadir la URL de Azure en `Authentication → Settings → Site URL`.
+2. **Redirect URLs:** Añadir `https://tudominio.azurewebsites.net/**`.
+3. **CORS:** Configurar los orígenes permitidos.
+
+---
+
+## 🧪 Testing
+
+### Tests Unitarios (Dominio)
+
+```bash
+# Todos los tests
 dotnet test
 
-# Run domain tests only
+# Tests de dominio (entidades, value objects, servicios)
 dotnet test --filter "Category=Domain"
 
-# Run application tests only
+# Tests de aplicación (handlers CQRS)
 dotnet test --filter "Category=Application"
 ```
 
-### End-to-End Tests (Playwright)
-
-Browser-based E2E tests using Playwright. The config auto-starts the .NET app on `localhost:54100` before running.
+### Tests E2E (Playwright)
 
 ```bash
-# Install browsers (first time only)
+# Instalar navegadores (primera vez)
 npx playwright install chromium
 
-# Run all E2E tests (auto-starts the app)
+# Ejecutar todos los tests E2E (auto-arranca la app en localhost:54100)
 npx playwright test --config=e2e/playwright.config.ts --project=chromium
 
-# Run a specific test file
+# Test específico
 npx playwright test --config=e2e/playwright.config.ts e2e/tests/03-budgets.spec.ts
 
-# Run with visible browser (for debugging)
+# Con navegador visible (debug)
 npx playwright test --config=e2e/playwright.config.ts --headed
 
-# Debug mode (step-by-step inspector)
+# Modo debug (inspector paso a paso)
 npx playwright test --config=e2e/playwright.config.ts --debug
 ```
 
-**Auth**: Local E2E runs use the seeded Supabase user (`e2e@saurontest.local`) to avoid polluting real accounts. CI consumes `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` when they are provided.
+### Credenciales de Test E2E
+
+Los tests E2E usan un usuario semilla en Supabase:
+
+- **Email:** `e2e@saurontest.local`
+- **Contraseña:** Configurada en el entorno o en fixtures
+
+También se pueden usar variables de entorno:
 
 ```bash
-$env:TEST_USER_EMAIL = "your@email.com"
-$env:TEST_USER_PASSWORD = "your-password"
+$env:TEST_USER_EMAIL = "tu@email.com"
+$env:TEST_USER_PASSWORD = "tu-contraseña"
 ```
 
-#### Política de Tests E2E: Interacción Real de Usuario
+### Tests E2E Disponibles
 
-**Regla fundamental:** Los tests E2E de interfaz **DEBEN** actuar como un usuario real navegando e interactuando con la web. Si no simulan interacción real, **no valen para nada**.
+| Archivo | Cobertura |
+|---|---|
+| `00-culture.spec.ts` | Cambio de idioma |
+| `01-login.spec.ts` | Login y registro |
+| `02-upload-excel.spec.ts` | Importación de extractos |
+| `03-budgets.spec.ts` | Creación y visualización de presupuestos |
+| `03-edit-transaction.spec.ts` | Edición de transacciones |
+| `04-budget-management.spec.ts` | Gestión completa de presupuestos |
+| `05-categories-lifecycle.spec.ts` | Ciclo de vida de categorías |
+| `07-annual-analysis.spec.ts` | Análisis anual |
+| `08-import-system-categories-i18n.spec.ts` | Importación + categorías + multi-idioma |
 
-**Qué SÍ hacer:**
-- Usar `page.click()`, `page.fill()`, `page.selectOption()` para interactuar con elementos.
-- Esperar a que los elementos estén visibles antes de interactuar (`waitFor`, `toBeVisible`).
-- Manejar diálogos nativos del navegador (`page.on('dialog')`).
-- Navegar por la aplicación como lo haría un usuario real (clics en botones, links, formularios).
-- Verificar resultados observables en la UI (textos visibles, redirecciones, mensajes de éxito/error).
+---
 
-**Qué NO hacer:**
-- ❌ Usar `page.evaluate()` para ejecutar JavaScript directo en el DOM.
-- ❌ Usar `fetch()` dentro de `page.evaluate()` para llamar a APIs directamente.
-- ❌ Manipular el DOM directamente (`document.querySelector`, `input.type = 'text'`).
-- ❌ Saltarse flujos de UI (modales, confirmaciones, validaciones de formulario).
-- ❌ Verificar estado de la base de datos directamente en lugar de la UI.
+## 👤 Credenciales de Prueba
 
-**Excepción:** Los helpers de limpieza post-ejecución (`test.afterAll`) **SÍ** pueden usar `fetch()` directo, ya que son operaciones de mantenimiento y no tests en sí mismos.
+La aplicación tiene un usuario de prueba preconfigurado para evaluar todas las funcionalidades:
 
-**Razón:** Un test E2E que no simula interacción real no prueba casos de uso reales. Solo verifica que la API funciona, lo cual ya cubren los tests de integración. Los tests E2E deben validar que **el usuario puede completar su tarea** a través de la interfaz.
+| Campo | Valor |
+|---|---|
+| **Email** | `demo@sauronsheet.app` |
+| **Contraseña** | `Demo1234!` |
 
-## Deployment to Vercel
+> **Nota:** Este usuario tiene datos de ejemplo cargados (transacciones importadas, presupuestos activos, análisis anual con datos históricos) para que puedas explorar todas las funcionalidades sin necesidad de importar tus propios datos.
 
-SauronSheet is deployed to Vercel (free tier) for scalable, serverless hosting.
+Si prefieres crear tu propio usuario:
+1. Ve a `/auth/register`
+2. Completa el formulario con tu email y contraseña
+3. Confirma el email si es necesario
+4. Comienza importando un extracto bancario en `/transactions/upload`
 
-### Prerequisites
+---
 
-- Vercel account (free at https://vercel.com).
-- GitHub repository connected to Vercel.
-- Supabase project URL and API keys.
+## 🗺️ Roadmap
 
-### Setup
+### Fases Completadas ✅
 
-Create `vercel.json` in `Frontend/`:
+| Fase | Descripción |
+|---|---|
+| **Fase 0** | Fundación: estructura Clean Architecture, solución .NET, configuración de proyecto |
+| **Fase 1** | Autenticación multi-usuario: Supabase Auth, JWT, cookies seguras, registro/login/logout |
+| **Fase 2** | Modelo de datos: entidades Transaction, Category, Subcategory, migraciones, repositorios |
+| **Fase 3** | Importación de extractos: parseo Excel ING, resolución de categorías, detección de duplicados |
+| **Fase 4** | Dashboard: KPIs, gráficos Chart.js, tendencias, transacciones recientes, filtros por periodo |
+| **Fase 5** | Presupuestos: CRUD completo, semáforo, barras de progreso, histórico, métricas, comparativas |
+| **Fase 6** | Análisis anual completo: 7 secciones, salud financiera, anomalías, predicciones |
+| **Fase 7** | UI/UX: diseño responsivo, sistema de diseño Olive, Alpine.js, HTMX, multi-idioma |
+| **Fase 8** | Testing: cobertura >80% dominio, >70% aplicación, 10 specs E2E con Playwright |
 
-```json
-{
-  "buildCommand": "dotnet publish -c Release -o ./out",
-  "outputDirectory": "./out",
-  "framework": "dotnet",
-  "nodeVersion": "18.x"
-}
-```
+### Próximos Pasos 🔜
 
-Connect GitHub to Vercel
+| Funcionalidad | Prioridad |
+|---|---|
+| Multi-idioma completo (normalizar detección y URLs) | Alta |
+| Exportación a PDF/CSV de informes | Media |
+| Alertas push de presupuestos (notificaciones) | Media |
+| Importación multi-banco (CaixaBank, Santander, BBVA) | Media |
+| Modo oscuro | Baja |
+| Categorización automática con ML (basada en histórico) | Baja |
+| Presupuestos compartidos (gastos de grupo/pareja) | Baja |
 
-- Import repository from GitHub.
-- Select Frontend as the root directory.
-- Set build settings as above.
+---
 
-Configure Environment Variables
+## 🔗 Enlaces
 
-In Vercel dashboard, add environment variables:
+| Recurso | URL |
+|---|---|
+| **Repositorio GitHub** | [https://github.com/tuusuario/SauronSheet](https://github.com/tuusuario/SauronSheet) |
+| **Despliegue (Azure)** | [https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net](https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net) |
+| **Presentación (Slides)** | [URL de Google Slides / PowerPoint / Canva] |
+| **Vídeo explicativo** | [URL de YouTube / Google Drive] |
+| **Documentación técnica** | `docs/adr/` (Architecture Decision Records) |
+| **Sistema de diseño** | `DESIGN.md` |
+| **Especificaciones SDD** | `openspec/` |
 
-```
-Supabase__Url=https://your-project.supabase.co
-Supabase__Key=your-public-anon-key
-```
+---
 
-Deploy
+## 📄 Licencia
 
-- Push to main branch.
-- Vercel automatically builds and deploys.
-- Live URL provided after deployment.
+Este proyecto es parte del Trabajo de Fin de Máster del **Máster de Programación desde Cero** de [MoureDev](https://mouredev.com).
 
-## Production Checklist
+Todos los derechos reservados — Proyecto educativo.
 
-- CORS configured in Supabase for Vercel domain.
-- Environment variables set in Vercel dashboard.
-- Database backups enabled in Supabase.
-- Error logging configured (Sentry or similar).
-- Custom domain configured (optional).
+---
 
-## Database Schema
+## 🙏 Agradecimientos
 
-Key Supabase tables:
+- **Brais Moure (MoureDev)** — Por el máster y la inspiración.
+- **Comunidad MoureDev** — Por el apoyo y feedback durante el desarrollo.
+- **Supabase** — Plataforma de base de datos y autenticación gratuita.
+- **Azure** — Hosting gratuito para estudiantes.
 
-- `users` — User profiles and authentication metadata.
-- `transactions` — Imported bank transactions with category, amount (Money), and date.
-- `categories` — Expense categories per user (custom + 4 system defaults).
-- `budgets` — Monthly budget limits per category per user.
-- `pdf_imports` — Metadata about imported PDF files.
+---
 
-## Troubleshooting
-
-**"Connection to Supabase failed"**
-
-- Verify API keys in appsettings.json.
-- Check Supabase project is running.
-- Ensure network allows HTTPS requests.
-
-**"PDF import fails"**
-
-- Verify PDF format matches expected bank structure.
-- Check error logs for parsing issues.
-- System returns descriptive errors per failed row.
-
-**"Budget calculations seem wrong"**
-
-- Verify Money value objects use same currency.
-- Check budget month matches transaction dates.
-- Ensure unique constraint: one budget per user-category-month.
-
-## Performance Tips
-
-- Use pagination for transaction lists (default MaxResults = 1000).
-- Cache category/budget data in frontend (rarely changes).
-- Add database indexes on userId, date columns in Supabase.
-- Use analytics queries with proper date range filters.
-- Queries limited to 1000 rows by default; pagination required for larger datasets.
-
-## Contributing
-
-- Create a new branch: `git checkout -b feature/your-feature`.
-- Follow spec-driven development workflow.
-- Write tests before implementing (TDD).
-- Use strong-typed IDs and value objects for domain entities.
-- Ensure all tests pass: `dotnet test`.
-- Submit a pull request with detailed description.
-
-## Roadmap
-
-- Phase 0: Foundation & Infrastructure Setup
-- Phase 1: Authentication & Multi-Tenancy
-- Phase 2: Core Data Model & Domain Entities
-- Phase 3: Transaction Import Pipeline (PDF Parsing & CRUD)
-- Phase 4: Analytics & Dashboard (MVP Complete)
-- Phase 5: Budget Management & Alerts
-- Phase 6: UI Polish, Performance & Production Deployment
-
-## Post-MVP Backlog
-
-- Budget alerts via mobile push notifications.
-- Multi-currency support with exchange rates.
-- Scheduled transaction rules (recurring expenses).
-- Social features (shared budgets, spending groups).
-- AI-powered spending suggestions.
-
-## License
-
-[Your License Here]
-
-## Support
-
-For questions or issues:
-
-🐛 GitHub Issues: https://github.com/yourusername/SauronSheet/issues
+> *"Un ojo que todo lo ve sobre tus finanzas."* — SauronSheet 🧙‍♂️💰
