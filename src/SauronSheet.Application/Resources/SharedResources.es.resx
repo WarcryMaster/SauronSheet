@@ -666,6 +666,9 @@
   <data name="Import.Error.Duplicate" xml:space="preserve">
     <value>Duplicado</value>
   </data>
+  <data name="Import.Error.InvalidFileFormat" xml:space="preserve">
+    <value>El archivo no es un documento Excel válido. Sube un archivo .xls o .xlsx genuino.</value>
+  </data>
   <data name="Import.Parser.SheetNotFound" xml:space="preserve">
     <value>No se encontró la hoja '{0}' en el archivo. Verifica que sea un extracto ING con la hoja 'Movimientos'.</value>
   </data>

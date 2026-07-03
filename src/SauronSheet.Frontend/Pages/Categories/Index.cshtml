@@ -20,6 +20,15 @@
     }
 }
 
+<script>
+    // i18n data for Alpine.js — defined outside x-data to avoid JSON-in-HTML-attribute quoting issues
+    window.__categoryI18n = {
+        errorGeneric: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Categories.Error.Generic"].Value)),
+        errorRequestFailed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Categories.Error.RequestFailed"].Value)),
+        charCount: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Categories.Modal.Create.CharCount"].Value))
+    };
+</script>
+
 <div class="d-flex flex-column gap-4" x-data="{
     currentDeleteCategoryId: null,
     deleteCategoryName: '',
@@ -36,11 +45,7 @@
     editError: '',
     editCharCount: 0,
     deleteError: '',
-    categoryI18n: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
-        errorGeneric = Localizer["Categories.Error.Generic"].Value,
-        errorRequestFailed = Localizer["Categories.Error.RequestFailed"].Value,
-        charCount = Localizer["Categories.Modal.Create.CharCount"].Value
-    })),
+    categoryI18n: window.__categoryI18n,
 
     get createValid() {
         return this.createName.trim() && this.createType && this.createIcon;

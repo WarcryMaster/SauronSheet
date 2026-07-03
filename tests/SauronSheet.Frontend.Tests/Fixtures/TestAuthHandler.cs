@@ -12,7 +12,7 @@ namespace SauronSheet.Frontend.Tests.Fixtures;
 public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public const string SchemeName = "TestScheme";
-    public const string UserId = "test-user-annual-analysis";
+    public const string UserId = "00000000-0000-0000-0000-000000000001";
 
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,

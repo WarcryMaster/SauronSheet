@@ -42,7 +42,8 @@ public class IngExcelStatementParserTests
             ["Import.Parser.HeaderMismatch"] = "Invalid header in column {0}: expected '{1}' but found '{2}'.",
             ["Import.Parser.EmptyValue"] = "(empty)",
             ["Import.Parser.InvalidDate"] = "Invalid date format: '{0}'",
-            ["Import.Parser.InvalidAmount"] = "Invalid amount format: '{0}'"
+            ["Import.Parser.InvalidAmount"] = "Invalid amount format: '{0}'",
+            ["Import.Error.InvalidFileFormat"] = "The file is not a valid Excel document. Please upload a genuine .xls or .xlsx file."
         };
 
         Dictionary<string, string> spanishTranslations = new Dictionary<string, string>
@@ -51,7 +52,8 @@ public class IngExcelStatementParserTests
             ["Import.Parser.HeaderMismatch"] = "Cabecera incorrecta en columna {0}: se esperaba '{1}' pero se encontró '{2}'.",
             ["Import.Parser.EmptyValue"] = "(vacío)",
             ["Import.Parser.InvalidDate"] = "Formato de fecha inválido: '{0}'",
-            ["Import.Parser.InvalidAmount"] = "Formato de importe inválido: '{0}'"
+            ["Import.Parser.InvalidAmount"] = "Formato de importe inválido: '{0}'",
+            ["Import.Error.InvalidFileFormat"] = "El archivo no es un documento Excel válido. Sube un archivo .xls o .xlsx genuino."
         };
 
         Mock<IStringLocalizer<SharedResources>> localizerMock = new Mock<IStringLocalizer<SharedResources>>();
@@ -520,6 +522,32 @@ public class IngExcelStatementParserTests
 
         // Assert hardcoded currency
         Assert.Equal("EUR", row.Currency);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Invalid file format — HeaderException → DomainException
+    // ════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Uploading a file with .xls extension that is NOT a valid Excel binary
+    /// (e.g. HTML/CSV renamed to .xls) must throw DomainException, not leak
+    /// HeaderException to Sentry as a system failure.
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_InvalidFileSignature_ThrowsDomainException()
+    {
+        // Arrange — garbage bytes that are not a valid OLE2/XLSF signature
+        byte[] garbageBytes = System.Text.Encoding.UTF8.GetBytes(
+            "<html><body>This is not an Excel file</body></html>");
+        var stream = new MemoryStream(garbageBytes);
+
+        IngExcelStatementParser parser = CreateParser();
+
+        // Act & Assert
+        DomainException ex = await Assert.ThrowsAsync<DomainException>(
+            () => parser.ParseAsync(stream, "invalid-format.xls"));
+
+        Assert.Contains("not a valid Excel document", ex.Message);
     }
 
     /// <summary>

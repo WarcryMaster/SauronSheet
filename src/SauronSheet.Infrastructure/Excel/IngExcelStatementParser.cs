@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using ExcelDataReader;
+using ExcelDataReader.Exceptions;
 using Microsoft.Extensions.Localization;
 using SauronSheet.Application.Resources;
 using SauronSheet.Domain.Exceptions;
@@ -61,13 +62,33 @@ public sealed class IngExcelStatementParser : IStatementParser
 
     public Task<StatementParseResult> ParseAsync(Stream stream, string filename)
     {
-        // Register code pages required for legacy .xls encoding (Windows-1252, ISO-8859-1, etc.)
+        // Register code pages required for legacy .xls encoding (Windows-1252, ISO-8889-1, etc.)
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        using var reader = ExcelReaderFactory.CreateReader(stream, new ExcelReaderConfiguration
+        IExcelDataReader reader;
+        try
         {
-            FallbackEncoding = Encoding.GetEncoding(1252)
-        });
+            reader = ExcelReaderFactory.CreateReader(stream, new ExcelReaderConfiguration
+            {
+                FallbackEncoding = Encoding.GetEncoding(1252)
+            });
+        }
+        catch (HeaderException ex)
+        {
+            // User uploaded a file that is not a valid Excel format (e.g. renamed .html/.csv to .xls).
+            // Convert to domain exception so the handler treats it as a user error, not a system failure.
+            throw new DomainException(
+                _localizer["Import.Error.InvalidFileFormat"], ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // ExcelDataReader throws InvalidOperationException for certain corrupt/unsupported files.
+            throw new DomainException(
+                _localizer["Import.Error.InvalidFileFormat"], ex);
+        }
+
+        using (reader)
+        {
 
         // ── Step 1: Locate the "Movimientos" sheet ─────────────────────────────
         bool foundSheet = false;
@@ -115,6 +136,7 @@ public sealed class IngExcelStatementParser : IStatementParser
         }
 
         return Task.FromResult(new StatementParseResult(validRows, rowErrors, skippedCount));
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
