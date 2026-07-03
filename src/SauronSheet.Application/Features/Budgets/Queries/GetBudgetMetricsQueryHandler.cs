@@ -68,11 +68,11 @@ public class GetBudgetMetricsQueryHandler
             IReadOnlyList<Transaction> transactions =
                 await _transactionRepo.FindBySpecificationAsync(scopedSpec);
 
-            // Group spending by category
+            // Group spending by category (expenses are stored as negative, convert to absolute for budget comparison)
             var spendingByCategory = transactions
                 .Where(t => t.CategoryId != null)
                 .GroupBy(t => t.CategoryId!)
-                .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount.Amount));
+                .ToDictionary(g => g.Key, g => Math.Abs(g.Sum(t => t.Amount.Amount)));
 
             var result = new List<BudgetMetricsDto>();
             var processedCategoryIds = new HashSet<CategoryId>();

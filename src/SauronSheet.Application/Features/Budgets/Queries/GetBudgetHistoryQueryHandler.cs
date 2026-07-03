@@ -114,12 +114,12 @@ public class GetBudgetHistoryQueryHandler
                     accumulatedLimit = accumulatedLimit.Plus(
                         new Money(budget.Limit.Amount, budget.Limit.Currency));
 
-                    // Sum spending for this period and category
-                    decimal periodSpent = transactions
+                    // Sum spending for this period and category (expenses are stored as negative, use absolute for budget comparison)
+                    decimal periodSpent = Math.Abs(transactions
                         .Where(t => t.CategoryId == budget.CategoryId
                             && DateOnly.FromDateTime(t.Date) >= periodFrom
                             && DateOnly.FromDateTime(t.Date) <= periodTo)
-                        .Sum(t => t.Amount.Amount);
+                        .Sum(t => t.Amount.Amount));
 
                     spentSoFar += periodSpent;
 

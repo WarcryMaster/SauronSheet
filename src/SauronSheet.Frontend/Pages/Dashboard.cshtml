@@ -297,7 +297,7 @@
                             </div>
                             <div class="progress rounded-pill" style="height:10px" role="progressbar"
                                  aria-valuenow="@((int)pct)" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar @barColor transition" style="width:@(pct)%"></div>
+                                <div class="progress-bar @barColor" style="width:@(pct.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%"></div>
                             </div>
                             <div class="d-flex justify-content-between small text-muted mt-1">
                                 <span>@Math.Round(metric.PercentageUsed, 1)% @Localizer["Dashboard.BudgetUsed"]</span>
