@@ -96,8 +96,9 @@ Hacer un seguimiento de los gastos personales es tedioso. La mayoría de la gent
 |---|---|
 | **Azure App Service** | Hosting de la aplicación .NET |
 | **Supabase Cloud** | Base de datos y autenticación |
-| **Sentry** | Observabilidad y tracing |
-| **GitHub** | Repositorio, CI/CD (pendiente) |
+| **Sentry** | Observabilidad unificada: tracing, errores, logs, métricas. Pipeline único (sin Console.WriteLine) |
+| **GitHub Actions** | CI/CD: tests unitarios, E2E, migraciones Supabase y deploy a Azure |
+| **GitHub** | Repositorio y control de versiones |
 
 ---
 
@@ -480,6 +481,27 @@ Proposal → Spec → Design → Tasks → Apply → Verify → Archive
 - Cobertura global mínima: **80% Domain**, **70% Application**.
 - Flujo: Test Rojo → Implementación → Test Verde → Refactor.
 
+### 🤖 Asistencia con IA (Gentle AI)
+
+Todo el desarrollo se ha realizado con **Gentle AI**, un asistente de codificación basado en `opencode` con el modelo `deepseek-v4-flash-free`, siguiendo el flujo SDD de forma estructurada. El ecosistema de herramientas incluye:
+
+| Herramienta | Propósito | Ahorro |
+|---|---|---|
+| **Headroom** | Compresión de contexto en ventana | Reduce el uso de tokens hasta un 90% comprimiendo respuestas largas, logs y resultados de búsqueda antes de razonar sobre ellos |
+| **Serena** | Análisis semántico de código con LSP | Navegación precisa de símbolos (clases, métodos, interfaces) sin depender de grep — búsquedas por nombre, declaraciones, implementaciones y referencias |
+| **RTK (Rust Token Killer)** | Compresión de comandos de terminal | Reduce 60–99% el consumo de tokens en comandos `git`, `dotnet test`, `dotnet build`, `grep`, `find` y otros, filtrando salida irrelevante sin alterar el comportamiento |
+| **Engram** | Memoria persistente entre sesiones | Guarda decisiones, bugs, descubrimientos y configuraciones para que cada sesión retome sin perder contexto |
+
+El flujo de trabajo típico con estas herramientas:
+
+1. **Spec-Driven Development (SDD)** con Gentle AI orquestando las fases.
+2. **Exploración** del código mediante Serena (símbolos) y Headroom (contexto comprimido).
+3. **Implementación** con comandos prefijados por RTK para minimizar el consumo de tokens.
+4. **Verificación** continua con `dotnet test` y Playwright.
+5. **Memoria persistente** vía Engram para mantener decisiones entre sesiones.
+
+Este enfoque ha permitido desarrollar **910 tests** (unidad, integración, frontend, infraestructura) y **10 specs E2E** con un consumo eficiente de tokens, manteniendo trazabilidad completa de cada decisión arquitectónica.
+
 ### Testing Pyramid
 
 ```
@@ -646,7 +668,17 @@ La aplicación está desplegada en **Azure App Service** (plan gratuito):
 
 **URL de producción:** [https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net](https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net)
 
-Los pipelines de CI/CD están configurados para desplegar automáticamente desde la rama `main` de GitHub.
+El pipeline de CI/CD está configurado con **GitHub Actions** (`.github/workflows/master_sauronsheet.yml`) y se dispara automáticamente al hacer push a ramas con el patrón `RELEASE/Sauron.Sheet/*`. También se puede ejecutar manualmente desde el portal de GitHub.
+
+**Flujo del pipeline:**
+
+1. **Build & Test** — `dotnet restore` → `dotnet build --configuration Release` → `dotnet test` (910 tests)
+2. **E2E Tests** — Instala Playwright Chromium → ejecuta 10 specs E2E con credenciales de test
+3. **Migraciones Supabase** — `supabase link` → `supabase db push --linked` (aplica migraciones antes del deploy)
+4. **Publish** — `dotnet publish` con limpieza de archivos `.map` y `.pdb`
+5. **Deploy a Azure** — Login con OIDC → `azure/webapps-deploy` a App Service
+
+**Rollback:** Revertir el commit en la rama `RELEASE/Sauron.Sheet/*` y pushear de nuevo — GitHub Actions redeploya la versión anterior automáticamente.
 
 ### Variables de Entorno en Producción
 
