@@ -716,6 +716,80 @@ dotnet test --filter "Category=Application"
 
 ### Tests E2E (Playwright)
 
+**¿Por qué Playwright?**
+
+| Ventajas | Detalle |
+|---|---|
+| **Multi-navegador** | Chromium, Firefox, WebKit, Mobile Chrome/Safari con una misma API |
+| **Velocidad** | Ejecución paralela, auto-wait inteligente, sin `sleep()` arbitrarios |
+| **Selectores robustos** | Soporte nativo para `data-testid` — los tests no se rompen al cambiar idioma (ES/EN) |
+| **Debugging** | Trace viewer con timeline, screenshots automáticos en fallo, video en CI |
+| **CI/CD nativo** | Integración directa con GitHub Actions, reportes HTML/JUnit |
+
+**Arquitectura de tests:**
+
+```
+e2e/
+├── auth.setup.ts              # Login global una vez → storageState compartido
+├── fixtures/                  # Datos de prueba y helpers de autenticación
+│   └── budget-data.fixture.ts
+├── helpers.ts                 # Utilidades reutilizables
+├── playwright.config.ts       # Configuración: webServer, projects, reporters
+└── tests/                     # 9 specs E2E (~60 tests)
+    ├── 00-culture.spec.ts
+    ├── 01-login.spec.ts
+    ├── 02-upload-excel.spec.ts
+    ├── 03-budgets.spec.ts
+    ├── 03-edit-transaction.spec.ts
+    ├── 04-budget-management.spec.ts
+    ├── 05-categories-lifecycle.spec.ts
+    ├── 07-annual-analysis.spec.ts
+    └── 08-import-system-categories-i18n.spec.ts
+```
+
+**Estrategia de autenticación:**
+
+El `auth.setup.ts` hace login **una vez** al inicio y guarda las cookies en `.auth/user.json`. Todos los tests reutilizan ese estado vía `storageState`, ahorrando ~3-4s por archivo de test. El test `01-login.spec.ts` limpia cookies explícitamente para probar el flujo de login desde cero.
+
+**Selectores independientes del idioma:**
+
+Todos los elementos interactivos tienen `data-testid` para que los tests funcionen tanto en español como en inglés:
+
+```html
+<!-- En la plantilla Razor -->
+<input data-testid="login-email" ... />
+<button data-testid="login-submit">Sign in</button>
+
+<!-- En el test (inmune al idioma) -->
+await page.fill('[data-testid="login-email"]', 'test@example.com');
+await page.locator('[data-testid="login-submit"]').click();
+```
+
+**Flujos de usuario cubiertos:**
+
+| Spec | Escenarios |
+|---|---|
+| `00-culture` | Cambio de idioma ES↔EN, persistencia en cookie, `<html lang>` |
+| `01-login` | Login válido/inválido, validación de campos, registro, logout |
+| `02-upload-excel` | Subida de extracto ING, progreso, detección de duplicados |
+| `03-budgets` | Creación de presupuesto, visualización, semáforo |
+| `03-edit-transaction` | Edición de descripción, importe, categoría |
+| `04-budget-management` | CRUD completo de presupuestos, filtros, histórico |
+| `05-categories-lifecycle` | Crear/editar/eliminar categorías, subcategorías |
+| `07-annual-analysis` | Navegación por años, 7 secciones del análisis |
+| `08-import-system-categories-i18n` | Importación + categorías del sistema + multi-idioma |
+
+**Integración con CI/CD:**
+
+Los tests E2E se ejecutan automáticamente en el pipeline de GitHub Actions **antes del deploy a Azure**. Si fallan, el deploy se bloquea.
+
+```bash
+# En CI: auto-arranca la app, instala Playwright, ejecuta tests
+npx playwright test --config=e2e/playwright.config.ts --project=chromium
+```
+
+**Comandos locales:**
+
 ```bash
 # Instalar navegadores (primera vez)
 npx playwright install chromium
@@ -731,6 +805,9 @@ npx playwright test --config=e2e/playwright.config.ts --headed
 
 # Modo debug (inspector paso a paso)
 npx playwright test --config=e2e/playwright.config.ts --debug
+
+# Ver reporte HTML de la última ejecución
+npx playwright show-report
 ```
 
 ### Credenciales de Test E2E
@@ -746,20 +823,6 @@ También se pueden usar variables de entorno:
 $env:TEST_USER_EMAIL = "tu@email.com"
 $env:TEST_USER_PASSWORD = "tu-contraseña"
 ```
-
-### Tests E2E Disponibles
-
-| Archivo | Cobertura |
-|---|---|
-| `00-culture.spec.ts` | Cambio de idioma |
-| `01-login.spec.ts` | Login y registro |
-| `02-upload-excel.spec.ts` | Importación de extractos |
-| `03-budgets.spec.ts` | Creación y visualización de presupuestos |
-| `03-edit-transaction.spec.ts` | Edición de transacciones |
-| `04-budget-management.spec.ts` | Gestión completa de presupuestos |
-| `05-categories-lifecycle.spec.ts` | Ciclo de vida de categorías |
-| `07-annual-analysis.spec.ts` | Análisis anual |
-| `08-import-system-categories-i18n.spec.ts` | Importación + categorías + multi-idioma |
 
 ---
 
