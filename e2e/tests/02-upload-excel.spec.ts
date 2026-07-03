@@ -92,6 +92,8 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
+        // Wait for Alpine's async pipeline to process the file before clicking.
+        await expect(page.getByTestId('upload-submit')).toBeEnabled({ timeout: 5000 });
         await page.getByTestId('upload-submit').click();
 
         const progressBar = page.locator('[role="progressbar"]');
@@ -108,6 +110,8 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
+        // Wait for Alpine's async pipeline to process the file before clicking.
+        await expect(page.getByTestId('upload-submit')).toBeEnabled({ timeout: 5000 });
         await page.getByTestId('upload-submit').click();
 
         // There are 2x [role="status"] elements on the page (the upload spinner + the result alert).
