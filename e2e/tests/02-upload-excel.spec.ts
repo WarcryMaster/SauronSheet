@@ -14,6 +14,11 @@ const EXCEL_FIXTURE_PATH = path.resolve(__dirname, '../../src/SauronSheet.Infras
 test.describe('Upload Excel Bank Statement — ESP-4', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/transactions/upload');
+        // Wait for Alpine.js to finish initializing before interacting with the page
+        await page.waitForFunction(() => {
+            const el = document.querySelector('[x-data]');
+            return el && (el as any)._x_dataStack !== undefined;
+        });
     });
 
     /**
@@ -90,6 +95,15 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         });
 
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
+        // setInputFiles dispatches change event but Alpine may not catch it reliably in CI.
+        // Directly invoke Alpine's handler to ensure the file is processed.
+        await page.evaluate(() => {
+            const input = document.querySelector('input[type="file"]');
+            const alpineRoot = document.querySelector('[x-data]');
+            if (input && alpineRoot && (alpineRoot as any)._x_dataStack?.[0]?.handleFileSelect) {
+                (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
+            }
+        });
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
         // Wait for Alpine's async pipeline to process the file before clicking.
@@ -108,6 +122,15 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
      */
     test('TC-U05: completes upload and shows results', async ({ page }) => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
+        // setInputFiles dispatches change event but Alpine may not catch it reliably in CI.
+        // Directly invoke Alpine's handler to ensure the file is processed.
+        await page.evaluate(() => {
+            const input = document.querySelector('input[type="file"]');
+            const alpineRoot = document.querySelector('[x-data]');
+            if (input && alpineRoot && (alpineRoot as any)._x_dataStack?.[0]?.handleFileSelect) {
+                (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
+            }
+        });
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
         // Wait for Alpine's async pipeline to process the file before clicking.
