@@ -6,7 +6,9 @@ public sealed record TransactionCategoryDisplay(
     string PrimaryText,
     string? SecondaryText,
     bool IsUncategorized,
-    bool UsesRawCategoryFallback);
+    bool UsesRawCategoryFallback,
+    bool IsSystemCategory,
+    string? SystemCategorySlug);
 
 /// <summary>
 /// Builds the display model for a transaction's category/subcategory.
@@ -59,8 +61,10 @@ public static class TransactionCategoryDisplayHelper
         // UsesRawCategoryFallback: true when the displayed primary text IS the raw PDF value
         // (i.e. non-UserOverride and BankCategory is what's shown)
         bool usesRawCategoryFallback = !isUserOverride && bankCategory is not null;
+        bool isSystemCategory = transaction.CategoryIsSystemDefault;
+        string? systemCategorySlug = transaction.CategorySystemSlug;
 
-        return new TransactionCategoryDisplay(primaryText, secondaryText, isUncategorized, usesRawCategoryFallback);
+        return new TransactionCategoryDisplay(primaryText, secondaryText, isUncategorized, usesRawCategoryFallback, isSystemCategory, systemCategorySlug);
     }
 
     public static CategoryBadgeDisplay BuildBadge(TransactionDto transaction)
@@ -70,7 +74,9 @@ public static class TransactionCategoryDisplayHelper
             display.PrimaryText,
             display.SecondaryText,
             display.IsUncategorized,
-            display.UsesRawCategoryFallback);
+            display.UsesRawCategoryFallback,
+            IsSystemCategory: display.IsSystemCategory,
+            SystemCategorySlug: display.SystemCategorySlug);
     }
 
     private static string? NormalizeDisplayPart(string? value)

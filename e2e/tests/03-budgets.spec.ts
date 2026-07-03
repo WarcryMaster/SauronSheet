@@ -96,7 +96,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '100.00');
 
-            await page.getByRole('button', { name: 'Create Budget' }).click();
+            await page.getByTestId('submit-btn').click();
 
             await Promise.race([
                 page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -149,7 +149,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         });
 
         await expect(catBRow).toHaveCount(1);
-        await expect(catBRow).toContainText('Sin presupuesto');
+        await expect(catBRow.locator('[data-testid="no-budget-label"]')).toBeVisible();
         await expect(catBRow.locator('td').nth(2)).toContainText('€');
     });
 
@@ -178,7 +178,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         await expect(page).toHaveURL(/\/dashboard/i);
         await expect(page).toHaveTitle(/Dashboard/i);
 
-        const budgetWidget = page.locator('.card', { hasText: 'Budget Status' });
+        const budgetWidget = page.locator('[data-testid="budget-status-widget"]');
         await expect(budgetWidget).toBeVisible();
 
         await expect(budgetWidget).toContainText('this month');
@@ -197,7 +197,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
 
         // Dashboard uses pill-style period buttons, not a #DateFilter select.
         // Click "This Year" to change the dashboard date range.
-        const thisYearBtn = page.locator('button', { hasText: 'This Year' });
+        const thisYearBtn = page.getByTestId('dashboard-period-this-year');
         await expect(thisYearBtn).toBeVisible();
         await thisYearBtn.click();
         await page.waitForLoadState('domcontentloaded');
@@ -258,7 +258,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
             await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
             await page.fill('input#LimitAmount', '50.00');
-            await page.getByRole('button', { name: 'Create Budget' }).click();
+            await page.getByTestId('submit-btn').click();
 
             await Promise.race([
                 page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -281,14 +281,14 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         // ── Delete via Edit page (the list has no Delete button — only Deactivate) ──
         const editLink = page.locator('table tbody tr').filter({
             has: page.locator('td', { hasText: 'E2E-Budget-Cat-B' }),
-        }).locator('a', { hasText: 'Edit' });
+        }).locator('[data-testid="edit-budget-btn"]');
         await expect(editLink).toBeVisible();
         const editHref = await editLink.getAttribute('href');
 
         await page.goto(editHref!);
         await expect(page).toHaveURL(/\/budgets\/edit\//i);
 
-        const deletePermBtn = page.getByRole('button', { name: 'Delete Permanently' });
+        const deletePermBtn = page.getByTestId('delete-budget-btn');
         await expect(deletePermBtn).toBeVisible();
 
         // Click opens MDB modal — confirm via the modal's Delete button
@@ -296,7 +296,7 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
 
         const deleteModal = page.locator('#budgetDeleteConfirmModal');
         await expect(deleteModal).toBeVisible({ timeout: 5000 });
-        await deleteModal.getByRole('button', { name: /Delete/i }).click();
+        await deleteModal.getByTestId('confirm-delete-budget-btn').click();
 
         // Wait for redirect back to the list
         await page.waitForURL(/\/budgets(?!\/)/i, { timeout: 10000 });

@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SauronSheet.Domain\SauronSheet.Domain.csproj" />
+    <ProjectReference Include="..\SauronSheet.Application\SauronSheet.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -54,6 +54,22 @@ public class AnnualModel : PageModel
     public bool HasNextYear => Result?.ExecutiveSummary?.HasNextYear ?? false;
 
     /// <summary>
+    /// Localized short month labels based on CurrentUICulture.
+    /// </summary>
+    public string[] MonthShortLabels => Enumerable.Range(1, 12)
+        .Select(month => CultureInfo.CurrentUICulture.DateTimeFormat.GetAbbreviatedMonthName(month))
+        .ToArray();
+
+    /// <summary>
+    /// Single-letter month labels for compact mini-bars, culture-aware.
+    /// </summary>
+    public string[] MonthLetterLabels => MonthShortLabels
+        .Select(label => string.IsNullOrWhiteSpace(label)
+            ? string.Empty
+            : label.Substring(0, 1).ToUpper(CultureInfo.CurrentUICulture))
+        .ToArray();
+
+    /// <summary>
     /// Effective year rendered in the page, resolved from query result when available.
     /// </summary>
     public int YearToRender => Result?.Year ?? Year ?? DateTime.UtcNow.Year;
@@ -319,7 +335,7 @@ public class AnnualModel : PageModel
     public string ChartDataJson => HasData
         ? JsonSerializer.Serialize(new
         {
-            labels = new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" },
+            labels = MonthShortLabels,
             income = MonthlyIncomeTotals,
             expense = MonthlyExpenseTotals
         })

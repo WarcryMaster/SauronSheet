@@ -1,30 +1,35 @@
 @page "/budgets/metrics"
 @model SauronSheet.Frontend.Pages.Budgets.MetricsModel
-@using SauronSheet.Frontend.Helpers
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Budget Metrics";
+    ViewData["Title"] = Localizer["Budgets.Metrics.Title"];
 }
 
 <div class="d-flex flex-column gap-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h3 class="h3 fw-bold mb-0">Budget Metrics</h3>
-        <a href="/budgets" class="small text-brand text-decoration-none">&larr; Back to Budgets</a>
+        <h3 class="h3 fw-bold mb-0" data-testid="metrics-heading">@Localizer["Budgets.Metrics.Title"]</h3>
+        <a href="/budgets" class="small text-brand text-decoration-none" data-testid="back-link">&larr; @Localizer["Budgets.Metrics.Back"]</a>
     </div>
 
     <!-- View Tabs -->
     <div class="card border-0 shadow-sm">
-        <div class="d-flex flex-wrap gap-2 p-3">
+        <div class="d-flex flex-wrap gap-2 p-3" role="tablist" aria-label="@Localizer["Budgets.Metrics.Title"]">
             <a href="/budgets/metrics?View=Month"
-               class="btn @(Model.View == "Month" ? "btn-brand" : "btn-outline-secondary") btn-sm">
-                Current Month
+               class="btn @(Model.View == "Month" ? "btn-brand" : "btn-outline-secondary") btn-sm"
+               data-testid="metrics-tab-month">
+                @Localizer["Budgets.Metrics.CurrentMonth"]
             </a>
             <a href="/budgets/metrics?View=Period"
-               class="btn @(Model.View == "Period" ? "btn-brand" : "btn-outline-secondary") btn-sm">
-                Current Period
+               class="btn @(Model.View == "Period" ? "btn-brand" : "btn-outline-secondary") btn-sm"
+               data-testid="metrics-tab-period">
+                @Localizer["Budgets.Metrics.CurrentPeriod"]
             </a>
             <a href="/budgets/metrics?View=Year"
-               class="btn @(Model.View == "Year" ? "btn-brand" : "btn-outline-secondary") btn-sm">
-                Current Year
+               class="btn @(Model.View == "Year" ? "btn-brand" : "btn-outline-secondary") btn-sm"
+               data-testid="metrics-tab-year">
+                @Localizer["Budgets.Metrics.CurrentYear"]
             </a>
         </div>
     </div>
@@ -34,20 +39,20 @@
         <!-- Overall Summary Cards -->
         <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
             <div class="col">
-                <div class="card border-0 shadow-sm p-3 text-center h-100">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Accumulated Limit</p>
+                <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="metrics-accumulated-limit">
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Metrics.AccumulatedLimit"]</p>
                     <p class="h4 fw-bold text-brand mb-0">&euro;@Model.TotalAccumulatedLimit.ToString("N2")</p>
                 </div>
             </div>
             <div class="col">
                 <div class="card border-0 shadow-sm p-3 text-center h-100">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Spent</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Metrics.Spent"]</p>
                     <p class="h4 fw-bold mb-0">&euro;@Model.TotalSpent.ToString("N2")</p>
                 </div>
             </div>
             <div class="col">
                 <div class="card border-0 shadow-sm p-3 text-center h-100">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Remaining</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Metrics.Remaining"]</p>
                     <p class="h4 fw-bold mb-0 @(Model.TotalRemaining >= 0 ? "text-success" : "text-danger")">
                         &euro;@Model.TotalRemaining.ToString("N2")
                     </p>
@@ -55,7 +60,7 @@
             </div>
             <div class="col">
                 <div class="card border-0 shadow-sm p-3 text-center h-100">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Consumed</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Metrics.Consumed"]</p>
                     <p class="h4 fw-bold mb-0 @(Model.OverallPercentageUsed > 100 ? "text-danger" : Model.OverallPercentageUsed >= 75 ? "text-warning" : "text-success")">
                         @Model.OverallPercentageUsed.ToString("N1")%
                     </p>
@@ -100,7 +105,7 @@
 
                             <!-- Periods info -->
                             <p class="small text-muted mb-2">
-                                @metric.PeriodsElapsed period(s) elapsed
+                                @string.Format(Localizer["Budgets.Metrics.PeriodsElapsed"], metric.PeriodsElapsed)
                             </p>
 
                             <!-- Progress bar -->
@@ -112,21 +117,21 @@
                             </div>
 
                             <p class="small @pctClass fw-semibold mb-3">
-                                @Math.Round(metric.PercentageUsed, 1)% consumed
+                                @string.Format(Localizer["Budgets.Metrics.PercentageConsumed"], Math.Round(metric.PercentageUsed, 1).ToString(System.Globalization.CultureInfo.InvariantCulture))
                             </p>
 
                             <!-- Numbers grid -->
                             <div class="row g-1 text-center small">
                                 <div class="col-4">
-                                    <p class="text-muted mb-0">Limit</p>
+                                    <p class="text-muted mb-0">@Localizer["Budgets.Metrics.Limit"]</p>
                                     <p class="fw-medium mb-0">&euro;@metric.AccumulatedLimit.ToString("N0")</p>
                                 </div>
                                 <div class="col-4">
-                                    <p class="text-muted mb-0">Spent</p>
+                                    <p class="text-muted mb-0">@Localizer["Budgets.Metrics.Spent"]</p>
                                     <p class="fw-medium mb-0">&euro;@metric.Spent.ToString("N0")</p>
                                 </div>
                                 <div class="col-4">
-                                    <p class="text-muted mb-0">Left</p>
+                                    <p class="text-muted mb-0">@Localizer["Budgets.Metrics.Left"]</p>
                                     <p class="fw-medium mb-0 @(metric.Remaining >= 0 ? "text-success" : "text-danger")">
                                         &euro;@metric.Remaining.ToString("N0")
                                     </p>
@@ -141,9 +146,9 @@
     else
     {
         <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite" x-transition.opacity>
-            <p class="h5 text-muted mb-3">No budget data for the current @Model.View.ToLowerInvariant().</p>
-            <p class="text-muted mb-4">Create budgets to see your spending metrics.</p>
-            <div><a href="/budgets/create" class="btn btn-brand">+ Create Budget</a></div>
+            <p class="h5 text-muted mb-3">@string.Format(Localizer["Budgets.Metrics.NoDataTitle"], Model.View.ToLowerInvariant())</p>
+            <p class="text-muted mb-4">@Localizer["Budgets.Metrics.NoDataDescription"]</p>
+            <div><a href="/budgets/create" class="btn btn-brand" data-testid="empty-create-budget-link">+ @Localizer["Budgets.Index.CreateBudget"]</a></div>
         </div>
     }
 </div>

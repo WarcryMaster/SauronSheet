@@ -13,4 +13,6 @@ public record CategoryDto(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     int TransactionCount = 0,
-    bool IsAutoCreated = false);
+    bool IsAutoCreated = false,
+    bool IsSystemDefault = false,
+    string? SystemSlug = null);

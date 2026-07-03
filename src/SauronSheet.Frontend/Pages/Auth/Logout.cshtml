@@ -1,11 +1,12 @@
 @page "/auth/logout"
 @model LogoutModel
+@inject IStringLocalizer<SharedResources> Localizer
 
 @{
-    ViewData["Title"] = "Logging out...";
+    ViewData["Title"] = Localizer["Auth.LoggingOutTitle"];
 }
 
 <!-- Logout is a POST-only action; this page should not render under normal circumstances -->
 <div class="text-center">
-    <p>Logging you out...</p>
+    <p>@Localizer["Auth.LoggingOutMessage"]</p>
 </div>

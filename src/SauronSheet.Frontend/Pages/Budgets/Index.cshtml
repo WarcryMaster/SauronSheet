@@ -1,13 +1,32 @@
 ﻿@page "/budgets"
 @model SauronSheet.Frontend.Pages.Budgets.IndexModel
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Budgets";
+    ViewData["Title"] = Localizer["Budgets.Index.Title"];
+
+    Dictionary<string, string> systemCategoryDisplayByName = Model.Categories
+        .Where(c => c.IsSystemDefault && !string.IsNullOrWhiteSpace(c.SystemSlug))
+        .ToDictionary(
+            c => c.Name,
+            c =>
+            {
+                string key = $"category.system.{c.SystemSlug}";
+                LocalizedString localized = Localizer[key];
+                return localized.ResourceNotFound ? c.Name : localized.Value;
+            });
+
+    string GetDisplayByName(string categoryName)
+    {
+        return systemCategoryDisplayByName.GetValueOrDefault(categoryName, categoryName);
+    }
 }
 
 <div class="d-flex flex-column gap-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h3 class="h3 fw-bold mb-0">Budgets</h3>
-        <a href="/budgets/create" class="btn btn-brand btn-sm">+ Create Budget</a>
+        <h3 class="h3 fw-bold mb-0">@Localizer["Budgets.Index.Title"]</h3>
+        <a href="/budgets/create" class="btn btn-brand btn-sm" data-testid="create-budget-link">+ @Localizer["Budgets.Index.CreateBudget"]</a>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
@@ -32,22 +51,22 @@
                 <input type="checkbox" class="form-check-input" id="ShowActiveOnly"
                        name="ShowActiveOnly" value="true" x-model="showActiveOnly"
                        data-testid="show-active-only" />
-                <label class="form-check-label small fw-semibold text-muted text-uppercase" for="ShowActiveOnly">Active Only</label>
+                <label class="form-check-label small fw-semibold text-muted text-uppercase" for="ShowActiveOnly">@Localizer["Budgets.Index.ActiveOnly"]</label>
             </div>
 
             @* Category filter *@
             <div>
                 <select id="CategoryFilter" name="CategoryFilter" class="form-select form-select-sm" style="width:auto"
                         x-model="categoryFilter" data-testid="category-filter">
-                    <option value="">All Categories</option>
+                    <option value="">@Localizer["Budgets.Index.AllCategories"]</option>
                     @foreach (var cat in Model.Categories)
                     {
-                        <option value="@cat.Id">@cat.Name</option>
+                        <option value="@cat.Id">@GetDisplayByName(cat.Name)</option>
                     }
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-brand btn-sm" data-testid="budget-filter-btn">Filter</button>
+            <button type="submit" class="btn btn-brand btn-sm" data-testid="budget-filter-btn">@Localizer["Budgets.Index.Filter"]</button>
         </div>
     </form>
 
@@ -55,15 +74,15 @@
     {
         <div class="card border-0 shadow-sm">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" aria-label="Budgets list">
+                <table class="table table-hover align-middle mb-0" aria-label="@Localizer["Budgets.Index.Title"]">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-uppercase small fw-semibold text-muted">Category</th>
-                            <th class="text-uppercase small fw-semibold text-muted">Granularity</th>
-                            <th class="text-uppercase small fw-semibold text-muted text-end">Limit</th>
-                            <th class="text-uppercase small fw-semibold text-muted">Validity</th>
-                            <th class="text-uppercase small fw-semibold text-muted text-center">Status</th>
-                            <th class="text-uppercase small fw-semibold text-muted text-center budget-actions-column">Actions</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Budgets.Index.Table.Category"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Budgets.Index.Table.Granularity"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Budgets.Index.Table.Limit"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Budgets.Index.Table.Validity"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-center">@Localizer["Budgets.Index.Table.Status"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted text-center budget-actions-column">@Localizer["Budgets.Index.Table.Actions"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,7 +93,7 @@
 
                             <tr>
                                 <td>
-                                    <span class="fw-medium">@budget.CategoryName</span>
+                                    <span class="fw-medium">@GetDisplayByName(budget.CategoryName)</span>
                                 </td>
                                 <td>
                                     <span class="small">@budget.PeriodGranularity</span>
@@ -84,25 +103,26 @@
                                     <span class="small text-muted">
                                         @budget.EffectiveFrom.ToString("yyyy-MM-dd")
                                         &mdash;
-                                        @(budget.EffectiveUntil?.ToString("yyyy-MM-dd") ?? "Permanent")
+                                        @(budget.EffectiveUntil?.ToString("yyyy-MM-dd") ?? Localizer["Budgets.Index.Permanent"])
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge @(isActive ? "bg-success" : "bg-secondary")" role="status">
-                                        @(isActive ? "Active" : "Inactive")
+                                    <span class="badge @(isActive ? "bg-success" : "bg-secondary")" role="status" data-testid="budget-status-badge">
+                                        @(isActive ? Localizer["Budgets.Index.Status.Active"] : Localizer["Budgets.Index.Status.Inactive"])
                                     </span>
                                 </td>
                                 <td class="text-center">
                                     <div class="budget-actions-group">
-                                        <a href="/budgets/edit/@budget.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        <a href="/budgets/edit/@budget.Id" class="btn btn-sm btn-outline-secondary" data-testid="edit-budget-btn">@Localizer["Budgets.Index.Edit"]</a>
                                         <button type="button"
                                                 class="btn btn-sm @(isActive ? "btn-outline-danger" : "btn-outline-success")"
                                                 data-budget-status-trigger="true"
                                                 data-budget-id="@budget.Id"
-                                                data-budget-name="@budget.CategoryName"
+                                                data-budget-name="@GetDisplayByName(budget.CategoryName)"
                                                 data-budget-period="@budget.PeriodGranularity"
-                                                data-budget-action="@(isActive ? "Deactivate" : "Activate")">
-                                            @(isActive ? "Deactivate" : "Activate")
+                                                data-budget-action="@(isActive ? Localizer["Budgets.Index.Deactivate"] : Localizer["Budgets.Index.Activate"])"
+                                                data-testid="budget-status-btn">
+                                            @(isActive ? Localizer["Budgets.Index.Deactivate"] : Localizer["Budgets.Index.Activate"])
                                         </button>
                                     </div>
                                 </td>
@@ -115,10 +135,10 @@
     }
     else
     {
-        <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
-            <p class="h5 text-muted mb-3">No budgets found.</p>
-            <p class="text-muted mb-4">Create one to start tracking your spending.</p>
-            <div><a href="/budgets/create" class="btn btn-brand">+ Create Budget</a></div>
+        <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite" data-testid="budgets-empty-state">
+            <p class="h5 text-muted mb-3">@Localizer["Budgets.Index.EmptyTitle"]</p>
+            <p class="text-muted mb-4">@Localizer["Budgets.Index.EmptyDescription"]</p>
+            <div><a href="/budgets/create" class="btn btn-brand" data-testid="empty-create-budget-link">+ @Localizer["Budgets.Index.CreateBudget"]</a></div>
         </div>
     }
 </div>

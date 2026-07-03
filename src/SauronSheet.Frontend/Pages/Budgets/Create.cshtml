@@ -1,13 +1,50 @@
 ﻿@page "/budgets/create"
 @model SauronSheet.Frontend.Pages.Budgets.CreateModel
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Create Budget";
+    ViewData["Title"] = Localizer["Budgets.Create.Title"];
+
+    string GetDisplayName(SauronSheet.Application.Features.Categories.DTOs.CategoryDto category)
+    {
+        if (!category.IsSystemDefault || string.IsNullOrWhiteSpace(category.SystemSlug))
+        {
+            return category.Name;
+        }
+
+        string key = $"category.system.{category.SystemSlug}";
+        LocalizedString localized = Localizer[key];
+        return localized.ResourceNotFound ? category.Name : localized.Value;
+    }
+
+    var categoriesForJson = Model.Categories.Select(c => new
+    {
+        c.Id,
+        c.Name,
+        DisplayName = GetDisplayName(c),
+        c.Type
+    });
+
+    var budgetI18n = new
+    {
+        IncomeTarget = Localizer["Budgets.Create.Label.IncomeTarget"].Value,
+        SpendingLimit = Localizer["Budgets.Create.Label.SpendingLimit"].Value,
+        IncomeTargetHint = Localizer["Budgets.Create.Hint.IncomeTarget"].Value,
+        SpendingLimitHint = Localizer["Budgets.Create.Hint.SpendingLimit"].Value,
+        LimitPositive = Localizer["Budgets.Create.Validation.LimitPositive"].Value,
+        UntilAfterFrom = Localizer["Budgets.Create.Validation.UntilAfterFrom"].Value
+    };
+
+    string budgetI18nJson = System.Text.Json.JsonSerializer.Serialize(
+        budgetI18n,
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
 }
 
 <div class="mx-auto d-flex flex-column gap-4" style="max-width:640px">
     <div class="d-flex align-items-center gap-3">
-        <a href="/budgets" class="btn btn-link btn-sm text-muted text-decoration-none">&larr; Back to Budgets</a>
-        <h3 class="h3 fw-bold mb-0">Create Budget</h3>
+        <a href="/budgets" class="btn btn-link btn-sm text-muted text-decoration-none" data-testid="back-link">&larr; @Localizer["Budgets.Create.Back"]</a>
+        <h3 class="h3 fw-bold mb-0">@Localizer["Budgets.Create.Title"]</h3>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -20,9 +57,10 @@
               x-data='{
                   budgetType: "@Model.BudgetType",
                   categoryId: "@Model.CategoryId.ToString()",
-                  categories: @Json.Serialize(Model.Categories.Select(c => new { c.Id, c.Name, c.Type })),
-                  limitLabel: "@(Model.BudgetType == "Income" ? "Income Target" : "Spending Limit")",
-                  limitHint: "@(Model.BudgetType == "Income" ? "Minimum earnings expected per period." : "Maximum spending allowed per period.")",
+                  categories: @Json.Serialize(categoriesForJson),
+                  i18n: @Html.Raw(budgetI18nJson),
+                  limitLabel: "@(Model.BudgetType == "Income" ? Localizer["Budgets.Create.Label.IncomeTarget"] : Localizer["Budgets.Create.Label.SpendingLimit"])",
+                  limitHint: "@(Model.BudgetType == "Income" ? Localizer["Budgets.Create.Hint.IncomeTarget"] : Localizer["Budgets.Create.Hint.SpendingLimit"])",
                   init() {
                       this.rebuildOptions();
                       if (this.budgetType) {
@@ -41,9 +79,9 @@
                       this.filteredCategories.forEach(cat => {
                           const opt = document.createElement("option");
                           opt.value = cat.id;
-                          opt.textContent = cat.name;
-                          sel.appendChild(opt);
-                      });
+                           opt.textContent = cat.displayName;
+                           sel.appendChild(opt);
+                       });
                       if (current && [...sel.options].some(o => o.value === current)) {
                           sel.value = current;
                       } else {
@@ -52,11 +90,11 @@
                   },
                   updateLabels() {
                       if (this.budgetType === "Income") {
-                          this.limitLabel = "Income Target";
-                          this.limitHint = "Minimum earnings expected per period.";
+                          this.limitLabel = this.i18n.incomeTarget;
+                          this.limitHint = this.i18n.incomeTargetHint;
                       } else {
-                          this.limitLabel = "Spending Limit";
-                          this.limitHint = "Maximum spending allowed per period.";
+                          this.limitLabel = this.i18n.spendingLimit;
+                          this.limitHint = this.i18n.spendingLimitHint;
                       }
                   },
                   validateForm(e) {
@@ -64,7 +102,7 @@
                       if (isNaN(limit) || limit <= 0) {
                           e.preventDefault();
                           const errSpan = this.$refs.limitInput?.closest("div")?.querySelector(".text-danger");
-                          if (errSpan) errSpan.textContent = "Limit must be a positive number.";
+                          if (errSpan) errSpan.textContent = this.i18n.limitPositive;
                           return;
                       }
                       const fromVal = this.$refs.fromInput?.value;
@@ -72,7 +110,7 @@
                       if (fromVal && untilVal && new Date(untilVal) < new Date(fromVal)) {
                           e.preventDefault();
                           const errSpan = this.$refs.untilInput?.closest("div")?.querySelector(".text-danger");
-                          if (errSpan) errSpan.textContent = "Effective Until must be on or after Effective From.";
+                          if (errSpan) errSpan.textContent = this.i18n.untilAfterFrom;
                       }
                   }
               }'
@@ -81,8 +119,8 @@
 
             @* ── Budget Type ── *@
             <fieldset class="border-0 p-0 m-0">
-                <legend class="form-label fw-semibold mb-3">What is this budget for?</legend>
-                <div class="d-flex gap-3" role="radiogroup" aria-label="Budget type">
+                <legend class="form-label fw-semibold mb-3">@Localizer["Budgets.Create.Legend.WhatIsThis"]</legend>
+                <div class="d-flex gap-3" role="radiogroup" aria-label="@Localizer["Budgets.Create.Legend.WhatIsThis"]">
                     <label class="budget-type-card flex-fill" id="label-income">
                         <input type="radio" name="BudgetType" value="Income"
                                x-model="budgetType"
@@ -91,8 +129,8 @@
                         <span class="budget-type-content text-center p-3 rounded-3 border d-flex flex-column align-items-center gap-2">
                             <span class="budget-type-icon">&#x1F4C8;</span>
                             <span>
-                                <span class="d-block fw-semibold">Income</span>
-                                <span class="d-block small text-muted">Earnings target</span>
+                                <span class="d-block fw-semibold">@Localizer["Budgets.Create.Type.Income"]</span>
+                                <span class="d-block small text-muted">@Localizer["Budgets.Create.Type.IncomeDescription"]</span>
                             </span>
                         </span>
                     </label>
@@ -104,8 +142,8 @@
                         <span class="budget-type-content text-center p-3 rounded-3 border d-flex flex-column align-items-center gap-2">
                             <span class="budget-type-icon">&#x1F4C9;</span>
                             <span>
-                                <span class="d-block fw-semibold">Expense</span>
-                                <span class="d-block small text-muted">Spending limit</span>
+                                <span class="d-block fw-semibold">@Localizer["Budgets.Create.Type.Expense"]</span>
+                                <span class="d-block small text-muted">@Localizer["Budgets.Create.Type.ExpenseDescription"]</span>
                             </span>
                         </span>
                     </label>
@@ -119,72 +157,72 @@
             @* ── Category ── *@
             <div id="category-section" x-show="budgetType" x-transition.opacity>
                 <label asp-for="CategoryId" class="form-label fw-semibold">
-                    <span id="category-label-text">Category</span>
+                    <span id="category-label-text">@Localizer["Budgets.Create.Label.Category"]</span>
                 </label>
                 <select asp-for="CategoryId" id="CategoryId" class="form-select" required
                         x-model="categoryId" x-init="categoryId = '@Model.CategoryId.ToString()'">
-                    <option value="">-- Select a category --</option>
+                    <option value="">@Localizer["Budgets.Create.SelectCategory"]</option>
                 </select>
-                <div class="form-text" id="category-hint">Choose the category this budget applies to.</div>
+                <div class="form-text" id="category-hint">@Localizer["Budgets.Create.Hint.Category"]</div>
                 <span asp-validation-for="CategoryId" class="text-danger small"></span>
             </div>
 
             @* ── Limit ── *@
             <div id="limit-section" x-show="budgetType" x-transition.opacity>
                 <label asp-for="LimitAmount" class="form-label fw-semibold">
-                    <span id="limit-label-text" x-text="limitLabel">@(Model.BudgetType == "Income" ? "Income Target" : "Spending Limit")</span>
+                    <span id="limit-label-text" x-text="limitLabel">@(Model.BudgetType == "Income" ? Localizer["Budgets.Create.Label.IncomeTarget"] : Localizer["Budgets.Create.Label.SpendingLimit"])</span>
                 </label>
                 <div class="input-group">
                     <span class="input-group-text">&euro;</span>
                     <input type="number" asp-for="LimitAmount" step="0.01" min="0.01"
                            x-ref="limitInput"
-                           class="form-control" placeholder="500.00" required />
+                           class="form-control" placeholder="@Localizer["Budgets.Create.Placeholder.Limit"]" required />
                     <span class="input-group-text">EUR</span>
                 </div>
-                <div class="form-text" id="limit-hint" x-text="limitHint">@(Model.BudgetType == "Income" ? "Minimum earnings expected per period." : "Maximum spending allowed per period.")</div>
+                <div class="form-text" id="limit-hint" x-text="limitHint">@(Model.BudgetType == "Income" ? Localizer["Budgets.Create.Hint.IncomeTarget"] : Localizer["Budgets.Create.Hint.SpendingLimit"])</div>
                 <span asp-validation-for="LimitAmount" class="text-danger small"></span>
             </div>
 
             @* ── Dates ── *@
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label asp-for="EffectiveFrom" class="form-label fw-semibold">Effective From</label>
+                    <label asp-for="EffectiveFrom" class="form-label fw-semibold">@Localizer["Budgets.Create.Label.EffectiveFrom"]</label>
                     <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
                            type="text" asp-for="EffectiveFrom"
                            x-ref="fromInput"
-                           class="form-control" required placeholder="DD/MM/AAAA" autocomplete="off" />
+                           class="form-control" required placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
                     <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="EffectiveUntil" class="form-label fw-semibold">Effective Until</label>
+                    <label asp-for="EffectiveUntil" class="form-label fw-semibold">@Localizer["Budgets.Create.Label.EffectiveUntil"]</label>
                     <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
                            type="text" asp-for="EffectiveUntil"
                            x-ref="untilInput"
-                           class="form-control" placeholder="DD/MM/AAAA" autocomplete="off" />
-                    <div class="form-text">Leave empty for a permanent budget.</div>
+                           class="form-control" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
+                    <div class="form-text">@Localizer["Budgets.Create.Hint.Permanent"]</div>
                     <span asp-validation-for="EffectiveUntil" class="text-danger small"></span>
                 </div>
             </div>
 
             @* ── Period Granularity ── *@
             <div>
-                <label asp-for="PeriodGranularity" class="form-label fw-semibold">Period Granularity</label>
+                <label asp-for="PeriodGranularity" class="form-label fw-semibold">@Localizer["Budgets.Create.Label.PeriodGranularity"]</label>
                 <select asp-for="PeriodGranularity" class="form-select" required>
-                    <option value="">-- Select Granularity --</option>
-                    <option value="Monthly">Monthly</option>
-                    <option value="Quarterly">Quarterly</option>
-                    <option value="Semester">Semester</option>
-                    <option value="Annual">Annual</option>
+                    <option value="">@Localizer["Budgets.Create.SelectGranularity"]</option>
+                    <option value="Monthly">@Localizer["Budgets.Create.Granularity.Monthly"]</option>
+                    <option value="Quarterly">@Localizer["Budgets.Create.Granularity.Quarterly"]</option>
+                    <option value="Semester">@Localizer["Budgets.Create.Granularity.Semester"]</option>
+                    <option value="Annual">@Localizer["Budgets.Create.Granularity.Annual"]</option>
                 </select>
-                <div class="form-text">How often the limit resets.</div>
+                <div class="form-text">@Localizer["Budgets.Create.Hint.Granularity"]</div>
                 <span asp-validation-for="PeriodGranularity" class="text-danger small"></span>
             </div>
 
             @* ── Actions ── *@
             <div class="d-flex justify-content-end gap-2 pt-2">
-                <a href="/budgets" class="btn btn-outline-secondary">Cancel</a>
+                <a href="/budgets" class="btn btn-outline-secondary" data-testid="cancel-link">@Localizer["Common.Cancel"]</a>
                 <button type="submit" id="submit-btn" data-mdb-ripple-init
-                        class="btn btn-brand" :disabled="!budgetType">Create Budget</button>
+                        class="btn btn-brand" :disabled="!budgetType" data-testid="submit-btn">@Localizer["Budgets.Create.Submit"]</button>
             </div>
         </form>
     </div>

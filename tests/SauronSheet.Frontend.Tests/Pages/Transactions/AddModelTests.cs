@@ -1,5 +1,7 @@
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Moq;
+using SauronSheet.Application.Resources;
 using SauronSheet.Frontend.Pages.Transactions;
 using SauronSheet.Application.Features.Categories.Commands;
 using SauronSheet.Application.Features.Categories.DTOs;
@@ -11,11 +13,13 @@ namespace SauronSheet.Frontend.Tests.Pages.Transactions;
 public class AddModelTests
 {
     private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IStringLocalizer<SharedResources>> _mockLocalizer;
     private readonly List<CategoryDto> _existingCategories;
 
     public AddModelTests()
     {
         _mockMediator = new Mock<IMediator>();
+        _mockLocalizer = new Mock<IStringLocalizer<SharedResources>>();
 
         _existingCategories =
         [
@@ -51,7 +55,7 @@ public class AddModelTests
 
     private AddModel CreateModel()
     {
-        var model = new AddModel(_mockMediator.Object);
+        var model = new AddModel(_mockMediator.Object, _mockLocalizer.Object);
         model.Categories = _existingCategories;
         return model;
     }

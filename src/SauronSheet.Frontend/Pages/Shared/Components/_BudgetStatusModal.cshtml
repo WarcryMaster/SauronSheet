@@ -1,3 +1,27 @@
+@inject IStringLocalizer<SharedResources> Localizer
+
+@{
+    Dictionary<string, string> budgetI18n = new()
+    {
+        ["eyebrowDefault"] = Localizer["Budget.ModalEyebrowDefault"],
+        ["titleDefault"] = Localizer["Budget.ModalTitleDefault"],
+        ["confirmPrompt"] = Localizer["Budget.ModalConfirmPrompt"],
+        ["defaultBudgetName"] = Localizer["Budget.ModalDefaultBudgetName"],
+        ["granularityLabel"] = Localizer["Budget.ModalGranularityLabel"],
+        ["deactivateSubmit"] = Localizer["Budget.ModalDeactivateSubmit"],
+        ["actionDeactivate"] = Localizer["Budget.ActionDeactivate"],
+        ["actionActivate"] = Localizer["Budget.ActionActivate"],
+        ["actionTextDeactivate"] = Localizer["Budget.ActionTextDeactivate"],
+        ["actionTextActivate"] = Localizer["Budget.ActionTextActivate"],
+        ["titleDeactivate"] = Localizer["Budget.TitleDeactivate"],
+        ["titleActivate"] = Localizer["Budget.TitleActivate"],
+        ["eyebrowDeactivate"] = Localizer["Budget.EyebrowDeactivate"],
+        ["eyebrowActivate"] = Localizer["Budget.EyebrowActivate"],
+        ["descDeactivate"] = Localizer["Budget.DescDeactivate"],
+        ["descActivate"] = Localizer["Budget.DescActivate"]
+    };
+}
+
 <div class="modal fade" id="budgetStatusModal" tabindex="-1" aria-labelledby="budgetStatusModalLabel" aria-hidden="true"
      x-data="budgetStatusModal">
     <div class="modal-dialog modal-dialog-centered">
@@ -7,27 +31,27 @@
                 <div class="modal-header border-0 pb-0">
                     <div>
                         <p class="text-uppercase small fw-semibold mb-1"
-                           x-text="eyebrow" :class="eyebrowClass">Budget action</p>
-                        <h5 class="modal-title" x-text="title">Update budget status</h5>
+                           x-text="eyebrow" :class="eyebrowClass">@Localizer["Budget.ModalEyebrowDefault"]</p>
+                        <h5 class="modal-title" x-text="title">@Localizer["Budget.ModalTitleDefault"]</h5>
                     </div>
-                    <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="@Localizer["Common.Close"]"></button>
                 </div>
                 <div class="modal-body pt-3">
                     <input type="hidden" name="BudgetId" x-model="budgetId" />
 
                     <p class="mb-2">
-                        Are you sure you want to <span x-text="actionText">update</span>
-                        <strong x-text="budgetName">this budget</strong>?
+                        @Localizer["Budget.ModalConfirmPrompt"] <span x-text="actionText">@Localizer["Budget.ActionTextDeactivate"]</span>
+                        <strong x-text="budgetName">@Localizer["Budget.ModalDefaultBudgetName"]</strong>?
                     </p>
                     <p class="text-muted small mb-0">
-                        Granularity: <span x-text="period">-</span>.
-                        <span x-text="description">This budget will stop applying to future periods.</span>
+                        @Localizer["Budget.ModalGranularityLabel"] <span x-text="period">-</span>.
+                        <span x-text="description">@Localizer["Budget.ModalDeactivateDescription"]</span>
                     </p>
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-outline-secondary" data-mdb-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-secondary" data-mdb-dismiss="modal">@Localizer["Common.Cancel"]</button>
                     <button type="submit" class="btn" id="budgetStatusSubmitButton"
-                            x-text="submitText" :class="submitClass" data-mdb-ripple-init>Deactivate</button>
+                            x-text="submitText" :class="submitClass" data-mdb-ripple-init data-testid="budget-status-submit">@Localizer["Budget.ModalDeactivateSubmit"]</button>
                 </div>
             </form>
         </div>
@@ -39,14 +63,15 @@
         Alpine.data('budgetStatusModal', () => ({
             // State
             budgetId: '',
-            budgetName: 'this budget',
+            budgetName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Budget.ModalDefaultBudgetName"])),
             period: '-',
-            actionText: 'deactivate',
-            title: 'Deactivate budget',
-            eyebrow: 'Budget deactivation',
-            description: 'This budget will stop applying to future periods.',
-            submitText: 'Deactivate',
+            actionText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Budget.ActionTextDeactivate"])),
+            title: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Budget.TitleDeactivate"])),
+            eyebrow: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Budget.EyebrowDeactivate"])),
+            description: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Budget.DescDeactivate"])),
+            submitText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Budget.ActionDeactivate"])),
             isActivation: false,
+            budgetI18n: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(budgetI18n)),
 
             // Computed
             get eyebrowClass() {
@@ -65,17 +90,15 @@
 
             // Methods
             open(trigger) {
-                const action = trigger.getAttribute('data-budget-action') ?? 'Deactivate';
+                const action = trigger.getAttribute('data-budget-action') ?? this.budgetI18n.actionDeactivate;
                 this.budgetId = trigger.getAttribute('data-budget-id') ?? '';
-                this.budgetName = trigger.getAttribute('data-budget-name') ?? 'this budget';
+                this.budgetName = trigger.getAttribute('data-budget-name') ?? this.budgetI18n.defaultBudgetName;
                 this.period = trigger.getAttribute('data-budget-period') ?? '-';
-                this.isActivation = action === 'Activate';
-                this.actionText = action.toLowerCase();
-                this.title = `${action} budget`;
-                this.eyebrow = this.isActivation ? 'Budget activation' : 'Budget deactivation';
-                this.description = this.isActivation
-                    ? 'This budget will apply again to current and future periods.'
-                    : 'This budget will stop applying to future periods.';
+                this.isActivation = action === this.budgetI18n.actionActivate;
+                this.actionText = this.isActivation ? this.budgetI18n.actionTextActivate : this.budgetI18n.actionTextDeactivate;
+                this.title = this.isActivation ? this.budgetI18n.titleActivate : this.budgetI18n.titleDeactivate;
+                this.eyebrow = this.isActivation ? this.budgetI18n.eyebrowActivate : this.budgetI18n.eyebrowDeactivate;
+                this.description = this.isActivation ? this.budgetI18n.descActivate : this.budgetI18n.descDeactivate;
                 this.submitText = action;
 
                 const modalEl = document.getElementById('budgetStatusModal');

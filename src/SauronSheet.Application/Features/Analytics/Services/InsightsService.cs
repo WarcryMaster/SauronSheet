@@ -4,20 +4,29 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Extensions.Localization;
 using Domain.Entities;
 using DTOs;
+using SauronSheet.Application.Resources;
 
 /// <summary>
 /// Pure service that generates rule-based Smart Summary (REQ-002) and insights.
 /// No external dependencies, no AI — purely deterministic rules.
 /// </summary>
-public static class InsightsService
+public class InsightsService
 {
+    private readonly IStringLocalizer<SharedResources> _localizer;
+
+    public InsightsService(IStringLocalizer<SharedResources> localizer)
+    {
+        _localizer = localizer;
+    }
+
     /// <summary>
     /// Generates a 2-4 sentence smart summary from the annual data.
     /// Returns "Sin datos para este año" when no transactions exist.
     /// </summary>
-    public static string GenerateSmartSummary(
+    public string GenerateSmartSummary(
         IReadOnlyList<Transaction> transactions,
         AnnualDashboardSummaryDto summary,
         AnnualDashboardRatiosDto ratios,
@@ -25,21 +34,31 @@ public static class InsightsService
     {
         if (transactions.Count == 0 || summary.Income == 0m && summary.Expense == 0m)
         {
-            return "Sin datos para este año. Añade transacciones para ver el resumen anual.";
+            return _localizer["Insights.EmptyYear"];
         }
 
         List<string> sentences = new List<string>();
+        bool isSpanish = string.Equals(
+            CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
+            "es",
+            StringComparison.OrdinalIgnoreCase);
 
         // Sentence 1: Income change
         if (summary.HasPreviousYear && summary.IncomeChangePct.HasValue)
         {
-            string direction = summary.IncomeChangePct.Value >= 0m ? "crecieron" : "disminuyeron";
+            string direction = summary.IncomeChangePct.Value >= 0m
+                ? (isSpanish ? "crecieron" : "increased")
+                : (isSpanish ? "disminuyeron" : "decreased");
             string absChange = Math.Abs(summary.IncomeChangePct.Value).ToString("F1", CultureInfo.InvariantCulture);
-            sentences.Add($"Tus ingresos {direction} un {absChange}% respecto al año anterior.");
+            sentences.Add(isSpanish
+                ? $"Tus ingresos {direction} un {absChange}% respecto al año anterior."
+                : $"Your income {direction} by {absChange}% compared to last year.");
         }
         else
         {
-            sentences.Add($"Tus ingresos totales fueron de {FormatAmount(summary.Income)}.");
+            sentences.Add(isSpanish
+                ? $"Tus ingresos totales fueron de {FormatAmount(summary.Income)}."
+                : $"Your total income was {FormatAmount(summary.Income)}.");
         }
 
         // Sentence 2: Savings rate
@@ -47,17 +66,29 @@ public static class InsightsService
         {
             string savingsMilestone = summary.SavingsRate switch
             {
-                >= 50m => "excelente: ahorraste más de la mitad de tus ingresos.",
-                >= 30m => "muy bueno: ahorraste un tercio de tus ingresos.",
-                >= 20m => "saludable: alcanzaste el 20% recomendado de ahorro.",
-                >= 10m => "moderado: ahorraste una parte de tus ingresos.",
-                _ => "bajo: intenta aumentar tu tasa de ahorro."
+                >= 50m => isSpanish
+                    ? "excelente: ahorraste más de la mitad de tus ingresos."
+                    : "excellent: you saved more than half of your income.",
+                >= 30m => isSpanish
+                    ? "muy bueno: ahorraste un tercio de tus ingresos."
+                    : "very good: you saved around one third of your income.",
+                >= 20m => isSpanish
+                    ? "saludable: alcanzaste el 20% recomendado de ahorro."
+                    : "healthy: you reached the recommended 20% savings threshold.",
+                >= 10m => isSpanish
+                    ? "moderado: ahorraste una parte de tus ingresos."
+                    : "moderate: you saved part of your income.",
+                _ => isSpanish
+                    ? "bajo: intenta aumentar tu tasa de ahorro."
+                    : "low: try to increase your savings rate."
             };
-            sentences.Add($"Tu tasa de ahorro fue del {summary.SavingsRate:F1}%, un nivel {savingsMilestone}");
+            sentences.Add(isSpanish
+                ? $"Tu tasa de ahorro fue del {summary.SavingsRate:F1}%, un nivel {savingsMilestone}"
+                : $"Your savings rate was {summary.SavingsRate:F1}%, which is {savingsMilestone}");
         }
         else
         {
-            sentences.Add("No se generó ahorro neto este año.");
+            sentences.Add(_localizer["Insights.NoSavings"]);
         }
 
         // Sentence 3: Category insight (if classified rows exist)
@@ -75,7 +106,9 @@ public static class InsightsService
                 decimal top2Pct = Math.Round(top2Sum / totalExpense * 100m, 1);
                 if (top2Pct >= 50m)
                 {
-                    sentences.Add($"Tus dos mayores categorías de gasto representan el {top2Pct}% del total.");
+                    sentences.Add(isSpanish
+                        ? $"Tus dos mayores categorías de gasto representan el {top2Pct}% del total."
+                        : $"Your top two spending categories account for {top2Pct}% of total expenses.");
                 }
             }
         }
@@ -83,15 +116,21 @@ public static class InsightsService
         // Sentence 4: Expense change YoY
         if (summary.HasPreviousYear && summary.ExpenseChangePct.HasValue && Math.Abs(summary.ExpenseChangePct.Value) >= 5m)
         {
-            string expenseDirection = summary.ExpenseChangePct.Value >= 0m ? "aumentaron" : "se redujeron";
+            string expenseDirection = summary.ExpenseChangePct.Value >= 0m
+                ? (isSpanish ? "aumentaron" : "increased")
+                : (isSpanish ? "se redujeron" : "decreased");
             string expenseAbs = Math.Abs(summary.ExpenseChangePct.Value).ToString("F1", CultureInfo.InvariantCulture);
-            sentences.Add($"Tus gastos {expenseDirection} un {expenseAbs}% interanual.");
+            sentences.Add(isSpanish
+                ? $"Tus gastos {expenseDirection} un {expenseAbs}% interanual."
+                : $"Your expenses {expenseDirection} by {expenseAbs}% year over year.");
         }
 
         // Ensure at least 2 sentences
         if (sentences.Count < 2)
         {
-            sentences.Add($"Registraste {ratios.TransactionCount} transacciones en {summary.Year}.");
+            sentences.Add(isSpanish
+                ? $"Registraste {ratios.TransactionCount} transacciones en {summary.Year}."
+                : $"You recorded {ratios.TransactionCount} transactions in {summary.Year}.");
         }
 
         return string.Join(" ", sentences);
@@ -106,8 +145,13 @@ public static class InsightsService
     /// Generates deterministic discoveries for REQ-013.
     /// Returns at least one fallback item when data is insufficient.
     /// </summary>
-    public static IReadOnlyList<DiscoveryDto> GenerateDiscoveries(IReadOnlyList<Transaction> transactions)
+    public IReadOnlyList<DiscoveryDto> GenerateDiscoveries(IReadOnlyList<Transaction> transactions)
     {
+        bool isSpanish = string.Equals(
+            CultureInfo.CurrentUICulture.TwoLetterISOLanguageName,
+            "es",
+            StringComparison.OrdinalIgnoreCase);
+
         List<Transaction> expenseTransactions = transactions
             .Where(t => t.Amount.IsNegative && !t.Amount.IsZero)
             .ToList();
@@ -118,8 +162,8 @@ public static class InsightsService
             {
                 new DiscoveryDto(
                     Icon: "ℹ️",
-                    Title: "No discoveries",
-                    Description: "Not enough data to generate discoveries.",
+                    Title: _localizer["Discovery.TitleNoDiscoveries"],
+                    Description: _localizer["Discovery.InsufficientData"],
                     Category: "insufficient-data")
             };
         }
@@ -142,8 +186,10 @@ public static class InsightsService
             decimal top2Pct = Math.Round((categoryTotals[0] + categoryTotals[1]) / totalExpense * 100m, 1);
             discoveries.Add(new DiscoveryDto(
                 Icon: "📊",
-                Title: "Top categories concentration",
-                Description: $"{top2Pct:F1}% of expenses come from your top 2 categories.",
+                Title: _localizer["Discovery.TitleTopCategoriesConcentration"],
+                Description: isSpanish
+                    ? $"{top2Pct:F1}% de los gastos proviene de tus 2 categorías principales."
+                    : $"{top2Pct:F1}% of expenses come from your top 2 categories.",
                 Category: "category-concentration"));
         }
 
@@ -161,8 +207,10 @@ public static class InsightsService
             string monthName = CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(topMonth.Key);
             discoveries.Add(new DiscoveryDto(
                 Icon: "🗓️",
-                Title: "Highest spending month",
-                Description: $"{monthName} had the highest expense total (€{monthAmount:F2}).",
+                Title: _localizer["Discovery.TitleHighestSpendingMonth"],
+                Description: isSpanish
+                    ? $"{monthName} fue el mes con mayor gasto (€{monthAmount:F2})."
+                    : $"{monthName} had the highest expense total (€{monthAmount:F2}).",
                 Category: "monthly-pattern"));
         }
 
@@ -179,8 +227,10 @@ public static class InsightsService
             decimal weekdayAmount = topWeekday.Sum(t => Math.Abs(t.Amount.Amount));
             discoveries.Add(new DiscoveryDto(
                 Icon: "📅",
-                Title: "Weekday spending pattern",
-                Description: $"{topWeekday.Key} is your highest spending weekday (€{weekdayAmount:F2}).",
+                Title: _localizer["Discovery.TitleWeekdaySpendingPattern"],
+                Description: isSpanish
+                    ? $"{topWeekday.Key} es tu día de mayor gasto (€{weekdayAmount:F2})."
+                    : $"{topWeekday.Key} is your highest spending weekday (€{weekdayAmount:F2}).",
                 Category: "weekday-pattern"));
         }
 
@@ -214,8 +264,10 @@ public static class InsightsService
         {
             discoveries.Add(new DiscoveryDto(
                 Icon: "📉",
-                Title: "Expense reduction streak",
-                Description: $"You sustained {longestReductionStreak + 1} consecutive months of reducing expenses.",
+                Title: _localizer["Discovery.TitleExpenseReductionStreak"],
+                Description: isSpanish
+                    ? $"Mantuviste {longestReductionStreak + 1} meses consecutivos reduciendo gastos."
+                    : $"You sustained {longestReductionStreak + 1} consecutive months of reducing expenses.",
                 Category: "reduction-streak"));
         }
 
@@ -228,8 +280,8 @@ public static class InsightsService
         {
             discoveries.Add(new DiscoveryDto(
                 Icon: "ℹ️",
-                Title: "No discoveries",
-                Description: "Not enough data to generate additional discoveries.",
+                Title: _localizer["Discovery.TitleNoDiscoveries"],
+                Description: _localizer["Discovery.InsufficientAdditionalData"],
                 Category: "insufficient-data"));
         }
 

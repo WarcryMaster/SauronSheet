@@ -1,13 +1,16 @@
 ﻿@page "/budgets/edit/{id:guid}"
 @model SauronSheet.Frontend.Pages.Budgets.EditModel
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Edit Budget";
+    ViewData["Title"] = Localizer["Budgets.Edit.Title"];
 }
 
 <div class="mx-auto d-flex flex-column gap-4" style="max-width:560px">
     <div class="d-flex align-items-center gap-3">
-        <a href="/budgets" class="text-muted text-decoration-none small">&larr; Back to Budgets</a>
-        <h3 class="h3 fw-bold mb-0">Edit Budget</h3>
+        <a href="/budgets" class="text-muted text-decoration-none small" data-testid="back-link">&larr; @Localizer["Budgets.Edit.Back"]</a>
+        <h3 class="h3 fw-bold mb-0">@Localizer["Budgets.Edit.Title"]</h3>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -21,26 +24,26 @@
             @* Read-only info *@
             <div class="row g-3 pb-3 border-bottom">
                 <div class="col-6">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Category</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.Category"]</p>
                     <p class="fw-medium mb-0">@Model.Budget.CategoryName</p>
                 </div>
                 <div class="col-6">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Status</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.Status"]</p>
                     <p class="fw-medium mb-0">
                         @{
                             bool isActive = Model.Budget.EffectiveUntil == null
                                 || Model.Budget.EffectiveUntil.Value >= DateOnly.FromDateTime(DateTime.UtcNow);
                         }
-                        <span class="badge @(isActive ? "bg-success" : "bg-secondary")">@(isActive ? "Active" : "Inactive")</span>
+                        <span class="badge @(isActive ? "bg-success" : "bg-secondary")">@(isActive ? Localizer["Budgets.Edit.Status.Active"] : Localizer["Budgets.Edit.Status.Inactive"])</span>
                     </p>
                 </div>
                 <div class="col-6">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Effective From</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.EffectiveFrom"]</p>
                     <p class="fw-medium mb-0">@Model.Budget.EffectiveFrom.ToString("yyyy-MM-dd")</p>
                 </div>
                 <div class="col-6">
-                    <p class="small fw-semibold text-muted text-uppercase mb-1">Effective Until</p>
-                    <p class="fw-medium mb-0">@(Model.Budget.EffectiveUntil?.ToString("yyyy-MM-dd") ?? "Permanent")</p>
+                    <p class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.EffectiveUntil"]</p>
+                    <p class="fw-medium mb-0">@(Model.Budget.EffectiveUntil?.ToString("yyyy-MM-dd") ?? Localizer["Budgets.Edit.Permanent"])</p>
                 </div>
             </div>
 
@@ -56,7 +59,7 @@
 
                 @* Spending limit *@
                 <div>
-                    <label asp-for="NewLimitAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">Spending Limit</label>
+                    <label asp-for="NewLimitAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.SpendingLimit"]</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text">&euro;</span>
                         <input type="number" asp-for="NewLimitAmount" step="0.01" min="0.01"
@@ -67,27 +70,27 @@
 
                 @* Period granularity *@
                 <div>
-                    <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase mb-1">Period Granularity</label>
+                    <label asp-for="PeriodGranularity" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.PeriodGranularity"]</label>
                     <select asp-for="PeriodGranularity" class="form-select form-select-sm" required>
-                        <option value="Monthly">Monthly</option>
-                        <option value="Quarterly">Quarterly</option>
-                        <option value="Semester">Semester</option>
-                        <option value="Annual">Annual</option>
+                        <option value="Monthly">@Localizer["Budgets.Create.Granularity.Monthly"]</option>
+                        <option value="Quarterly">@Localizer["Budgets.Create.Granularity.Quarterly"]</option>
+                        <option value="Semester">@Localizer["Budgets.Create.Granularity.Semester"]</option>
+                        <option value="Annual">@Localizer["Budgets.Create.Granularity.Annual"]</option>
                     </select>
                 </div>
 
                 @* Effective dates *@
                 <div class="row g-3">
                     <div class="col-6">
-                        <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase mb-1">Effective From</label>
+                        <label asp-for="EffectiveFrom" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.EffectiveFrom"]</label>
                         <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
-                               type="text" asp-for="EffectiveFrom" class="form-control form-control-sm" required placeholder="DD/MM/AAAA" autocomplete="off" />
+                               type="text" asp-for="EffectiveFrom" class="form-control form-control-sm" required placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
                     </div>
                     <div class="col-6">
-                        <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase mb-1">Effective Until</label>
+                        <label asp-for="EffectiveUntil" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Budgets.Edit.Label.EffectiveUntil"]</label>
                         <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true })"
-                               type="text" asp-for="EffectiveUntil" class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
-                        <small class="text-muted">Leave empty for permanent budget.</small>
+                               type="text" asp-for="EffectiveUntil" class="form-control form-control-sm" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
+                        <small class="text-muted">@Localizer["Budgets.Edit.Hint.Permanent"]</small>
                     </div>
                 </div>
 
@@ -98,20 +101,22 @@
                                 id="budgetStatusActionButton"
                                 data-budget-status-trigger="true"
                                 data-budget-id="@Model.Budget.Id"
-                                data-budget-action="@(isActive ? "Deactivate" : "Activate")"
+                                data-budget-action="@(isActive ? Localizer["Budgets.Edit.Action.Deactivate"] : Localizer["Budgets.Edit.Action.Activate"])"
                                 data-budget-name="@Model.Budget.CategoryName"
                                 data-budget-period="@Model.Budget.PeriodGranularity"
-                                class="btn btn-sm @(isActive ? "btn-outline-danger" : "btn-outline-success")">@(isActive ? "Deactivate Budget" : "Activate Budget")</button>
+                                class="btn btn-sm @(isActive ? "btn-outline-danger" : "btn-outline-success")"
+                                data-testid="budget-status-btn">@(isActive ? Localizer["Budgets.Edit.Action.Deactivate"] : Localizer["Budgets.Edit.Action.Activate"])</button>
                         <button type="button"
                                 id="deleteBudgetButton"
                                 @@click="openDeleteModal()"
-                                class="btn btn-outline-danger btn-sm">Delete Permanently</button>
+                                class="btn btn-outline-danger btn-sm"
+                                data-testid="delete-budget-btn">@Localizer["Budgets.Edit.Action.Delete"]</button>
                     </div>
                     <div class="d-flex flex-wrap gap-3">
-                        <a href="/budgets" class="btn btn-outline-secondary btn-sm">Cancel</a>
-                        <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm" :disabled="loading">
-                            <span x-show="!loading">Save Changes</span>
-                            <span x-show="loading">Saving…</span>
+                        <a href="/budgets" class="btn btn-outline-secondary btn-sm" data-testid="cancel-link">@Localizer["Common.Cancel"]</a>
+                        <button type="submit" data-mdb-ripple-init class="btn btn-brand btn-sm" :disabled="loading" data-testid="submit-btn">
+                            <span x-show="!loading">@Localizer["Budgets.Edit.Submit"]</span>
+                            <span x-show="loading">@Localizer["Budgets.Edit.SubmitLoading"]</span>
                             <span x-show="loading" class="spinner-border spinner-border-sm ms-1" role="status" aria-hidden="true"></span>
                         </button>
                     </div>
@@ -130,21 +135,22 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title text-danger fs-6" id="budgetDeleteConfirmLabel">
-                            ⚠️ Delete Budget
+                            ⚠️ @Localizer["Budgets.Edit.Modal.DeleteTitle"]
                         </h5>
-                        <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="@Localizer["Common.Close"]"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-2">Are you sure you want to permanently delete this budget?</p>
-                        <p class="text-muted small mb-0">This action cannot be undone.</p>
+                        <p class="mb-2">@Localizer["Budgets.Edit.Modal.DeleteConfirm"]</p>
+                        <p class="text-muted small mb-0">@Localizer["Budgets.Edit.Modal.DeleteWarning"]</p>
                     </div>
                     <div class="modal-footer border-top gap-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-mdb-dismiss="modal">
-                            ← Cancel
+                            ← @Localizer["Common.Cancel"]
                         </button>
                         <button type="button" class="btn btn-danger btn-sm"
+                                data-testid="confirm-delete-budget-btn"
                                 onclick="document.getElementById('budgetDeleteForm').submit()">
-                            🗑️ Delete
+                            🗑️ @Localizer["Common.Delete"]
                         </button>
                     </div>
                 </div>
@@ -154,8 +160,8 @@
     else
     {
         <div class="card border-0 shadow-sm p-5 text-center">
-            <p class="text-muted mb-3">Budget not found.</p>
-            <a href="/budgets" class="btn btn-outline-secondary btn-sm">Back to Budgets</a>
+            <p class="text-muted mb-3">@Localizer["Budgets.Edit.NotFound"]</p>
+            <a href="/budgets" class="btn btn-outline-secondary btn-sm" data-testid="back-link">@Localizer["Budgets.Edit.Back"]</a>
         </div>
     }
 </div>

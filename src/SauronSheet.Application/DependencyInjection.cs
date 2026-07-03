@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SauronSheet.Application.Common;
 using SauronSheet.Application.Common.Behaviors;
 using SauronSheet.Application.Features.Analytics.Classification;
+using SauronSheet.Application.Features.Analytics.Services;
 using SauronSheet.Application.Services;
 using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Services;
@@ -40,6 +41,10 @@ public static class DependencyInjection
 
         // Annual analysis classification engine (PR 2)
         services.AddSingleton<IAnnualClassificationEngine, AnnualClassificationEngine>();
+
+        // Annual analysis localized services (PR 5)
+        services.AddScoped<InsightsService>();
+        services.AddScoped<AnomalyDetectionService>();
 
         return services;
     }

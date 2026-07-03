@@ -7,6 +7,8 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using ExcelDataReader;
+using Microsoft.Extensions.Localization;
+using SauronSheet.Application.Resources;
 using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
@@ -24,6 +26,8 @@ using SauronSheet.Domain.ValueObjects;
 /// </summary>
 public sealed class IngExcelStatementParser : IStatementParser
 {
+    private readonly IStringLocalizer<SharedResources> _localizer;
+
     private static readonly string[] ExpectedHeaders =
     [
         "F. VALOR",
@@ -50,6 +54,11 @@ public sealed class IngExcelStatementParser : IStatementParser
 
     private static readonly string[] DateFormats = ["dd/MM/yyyy", "d/M/yyyy"];
 
+    public IngExcelStatementParser(IStringLocalizer<SharedResources> localizer)
+    {
+        _localizer = localizer;
+    }
+
     public Task<StatementParseResult> ParseAsync(Stream stream, string filename)
     {
         // Register code pages required for legacy .xls encoding (Windows-1252, ISO-8859-1, etc.)
@@ -74,8 +83,7 @@ public sealed class IngExcelStatementParser : IStatementParser
 
         if (!foundSheet)
             throw new DomainException(
-                $"La hoja '{MovimientosSheet}' no fue encontrada en el archivo. " +
-                "Verifica que el archivo sea un extracto ING con la hoja 'Movimientos'.");
+                _localizer["Import.Parser.SheetNotFound", MovimientosSheet]);
 
         // ── Step 2: Read all rows sequentially ────────────────────────────────
         var validRows = new List<RawTransactionRow>();
@@ -88,7 +96,7 @@ public sealed class IngExcelStatementParser : IStatementParser
         {
             if (rowIndex == HeaderRowIndex)
             {
-                ValidateHeader(reader);
+                ValidateHeader(reader, _localizer);
             }
             else if (rowIndex >= DataStartRowIndex)
             {
@@ -99,6 +107,7 @@ public sealed class IngExcelStatementParser : IStatementParser
                     validRows,
                     rowErrors,
                     seenHashes,
+                    _localizer,
                     ref skippedCount);
             }
 
@@ -116,7 +125,7 @@ public sealed class IngExcelStatementParser : IStatementParser
     /// Validates that the header row exactly matches the expected ING template (by position).
     /// Throws <see cref="DomainException"/> on mismatch.
     /// </summary>
-    private static void ValidateHeader(IExcelDataReader reader)
+    private static void ValidateHeader(IExcelDataReader reader, IStringLocalizer<SharedResources> localizer)
     {
         for (int i = 0; i < ExpectedHeaders.Length; i++)
         {
@@ -126,8 +135,7 @@ public sealed class IngExcelStatementParser : IStatementParser
 
             if (!string.Equals(actual, ExpectedHeaders[i], StringComparison.Ordinal))
                 throw new DomainException(
-                    $"Cabecera incorrecta en columna {i + 1}: " +
-                    $"se esperaba '{ExpectedHeaders[i]}' pero se encontró '{actual ?? "(vacío)"}'.");
+                    localizer["Import.Parser.HeaderMismatch", i + 1, ExpectedHeaders[i], actual ?? localizer["Import.Parser.EmptyValue"]]);
         }
     }
 
@@ -143,6 +151,7 @@ public sealed class IngExcelStatementParser : IStatementParser
         List<RawTransactionRow> validRows,
         List<StatementParseRowError> rowErrors,
         HashSet<string> seenHashes,
+        IStringLocalizer<SharedResources> localizer,
         ref int skippedCount)
     {
         string? rawDate = ReadCellAsString(reader, ColFValor);
@@ -167,7 +176,7 @@ public sealed class IngExcelStatementParser : IStatementParser
             rowErrors.Add(new StatementParseRowError(
                 excelRowNumber,
                 $"{rawDate} | {rawDescripcion} | {rawImporte}",
-                $"Formato de fecha inválido: '{rawDate}'"));
+                localizer["Import.Parser.InvalidDate", rawDate ?? string.Empty]));
             return;
         }
 
@@ -177,7 +186,7 @@ public sealed class IngExcelStatementParser : IStatementParser
             rowErrors.Add(new StatementParseRowError(
                 excelRowNumber,
                 $"{rawDate} | {rawDescripcion} | {rawImporte}",
-                $"Formato de importe inválido: '{rawImporte}'"));
+                localizer["Import.Parser.InvalidAmount", rawImporte ?? string.Empty]));
             return;
         }
 

@@ -28,7 +28,7 @@ async function openBudgetEditPage(page: Page, categoryName: string): Promise<voi
     const row = budgetRow(page, categoryName);
     await expect(row).toHaveCount(1);
 
-    const editLink = row.first().getByRole('link', { name: 'Edit' });
+    const editLink = row.first().getByTestId('edit-budget-btn');
     await expect(editLink).toBeVisible();
 
     const editHref = await editLink.getAttribute('href');
@@ -71,7 +71,7 @@ export async function ensureBudgetExists(page: Page, categoryName: string, limit
 
     await page.selectOption('#PeriodGranularity', 'Monthly');
 
-    await page.getByRole('button', { name: 'Create Budget' }).click();
+    await page.getByTestId('submit-btn').click();
 
     await Promise.race([
         page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -95,11 +95,11 @@ export async function ensureBudgetDeleted(page: Page, categoryName: string): Pro
 
     await openBudgetEditPage(page, categoryName);
 
-    await page.getByRole('button', { name: 'Delete Permanently' }).click();
+    await page.getByTestId('delete-budget-btn').click();
 
     const deleteModal = page.locator('#budgetDeleteConfirmModal');
     await expect(deleteModal).toBeVisible({ timeout: 5000 });
-    await deleteModal.getByRole('button', { name: /Delete/i }).click();
+    await deleteModal.getByTestId('confirm-delete-budget-btn').click();
 
     await page.waitForURL(/\/budgets(?!\/edit\/)/i, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
@@ -115,27 +115,25 @@ export async function ensureBudgetStatus(page: Page, categoryName: string, desir
     const row = budgetRow(page, categoryName);
     await expect(row).toHaveCount(1);
 
-    const statusBadge = row.first().locator('.badge');
-    const currentStatus = (await statusBadge.textContent())?.trim();
-    if (currentStatus === desiredStatus) {
+    const statusBadge = row.first().getByTestId('budget-status-badge');
+    const currentClass = await statusBadge.getAttribute('class');
+    const desiredClass = desiredStatus === 'Active' ? 'bg-success' : 'bg-secondary';
+    if (currentClass?.includes(desiredClass)) {
         return;
     }
 
     await openBudgetEditPage(page, categoryName);
 
-    const actionButtonName = desiredStatus === 'Inactive' ? 'Deactivate Budget' : 'Activate Budget';
-    const confirmButtonName = desiredStatus === 'Inactive' ? 'Deactivate' : 'Activate';
-
-    const actionButton = page.getByRole('button', { name: actionButtonName });
+    const actionButton = page.getByTestId('budget-status-btn');
     await expect(actionButton).toBeVisible();
     await actionButton.click();
 
     const statusModal = page.locator('#budgetStatusModal');
     await expect(statusModal).toBeVisible();
-    await statusModal.getByRole('button', { name: confirmButtonName }).click();
+    await statusModal.getByTestId('budget-status-submit').click();
 
     await page.waitForURL(/\/budgets(?!\/edit\/)/i, { timeout: 10000 });
     await page.waitForLoadState('domcontentloaded');
 
-    await expect(budgetRow(page, categoryName).locator('.badge')).toContainText(desiredStatus);
+    await expect(budgetRow(page, categoryName).getByTestId('budget-status-badge')).toHaveClass(new RegExp(desiredClass));
 }

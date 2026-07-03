@@ -1,7 +1,8 @@
 @page
 @model SauronSheet.Frontend.Pages.IndexModel
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = Localizer["Index.PageTitle"];
 }
 
 <div class="d-flex flex-column align-items-center justify-content-center py-5">
@@ -9,17 +10,17 @@
     <div class="text-center" style="max-width: 680px;" x-transition.opacity>
         <img src="~/img/sauron-sheet-logo.svg" asp-append-version="true" alt="SauronSheet" class="mb-4" height="80" />
         <h1 class="display-5 fw-bold text-dark mb-3">
-            Take Control of Your <span class="text-brand">Finances</span>
+            @Localizer["Index.HeroTitleStart"]<span class="text-brand">@Localizer["Index.HeroTitleEnd"]</span>
         </h1>
         <p class="lead text-muted mb-5">
-            Import bank statements, track spending by category, set budgets, and get smart analytics — all in one place.
+            @Localizer["Index.HeroDescription"]
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-            <a href="/auth/register" class="btn btn-brand btn-lg px-5">
-                Get Started Free
+            <a href="/auth/register" class="btn btn-brand btn-lg px-5" data-testid="index-get-started">
+                @Localizer["Index.GetStartedButton"]
             </a>
-            <a href="/auth/login" class="btn btn-outline-secondary btn-lg px-5">
-                Sign In
+            <a href="/auth/login" class="btn btn-outline-secondary btn-lg px-5" data-testid="index-sign-in">
+                @Localizer["Index.SignInButton"]
             </a>
         </div>
     </div>
@@ -29,22 +30,22 @@
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-center p-4">
                 <div class="fs-1 mb-3">📊</div>
-                <h5 class="fw-semibold mb-2">Excel Import</h5>
-                <p class="text-muted small mb-0">Upload bank statements and let SauronSheet parse your transactions automatically.</p>
+                <h5 class="fw-semibold mb-2">@Localizer["Index.FeatureExcelImportTitle"]</h5>
+                <p class="text-muted small mb-0">@Localizer["Index.FeatureExcelImportDescription"]</p>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-center p-4">
                 <div class="fs-1 mb-3">📊</div>
-                <h5 class="fw-semibold mb-2">Smart Analytics</h5>
-                <p class="text-muted small mb-0">Visualise spending trends, category breakdowns, and yearly comparisons with charts.</p>
+                <h5 class="fw-semibold mb-2">@Localizer["Index.FeatureAnalyticsTitle"]</h5>
+                <p class="text-muted small mb-0">@Localizer["Index.FeatureAnalyticsDescription"]</p>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-center p-4">
                 <div class="fs-1 mb-3">💰</div>
-                <h5 class="fw-semibold mb-2">Budget Tracking</h5>
-                <p class="text-muted small mb-0">Set monthly budgets per category and get alerts when you're approaching the limit.</p>
+                <h5 class="fw-semibold mb-2">@Localizer["Index.FeatureBudgetTitle"]</h5>
+                <p class="text-muted small mb-0">@Localizer["Index.FeatureBudgetDescription"]</p>
             </div>
         </div>
     </div>
@@ -52,7 +53,7 @@
     <!-- System status badge -->
     <div class="mt-5">
         <span class="badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2">
-            <span class="me-1">&#9679;</span> System OK — @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC
+            <span class="me-1">&#9679;</span> @Localizer["Index.SystemStatus"] — @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC
         </span>
     </div>
 </div>

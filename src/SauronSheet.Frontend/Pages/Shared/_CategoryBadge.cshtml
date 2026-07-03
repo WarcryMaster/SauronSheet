@@ -1,4 +1,21 @@
 @model SauronSheet.Frontend.Helpers.CategoryBadgeDisplay
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
+
+@{
+    string displayPrimaryText = Model.PrimaryText;
+
+    if (Model.IsSystemCategory && !string.IsNullOrWhiteSpace(Model.SystemCategorySlug))
+    {
+        string resourceKey = $"category.system.{Model.SystemCategorySlug}";
+        LocalizedString localized = Localizer[resourceKey];
+        if (!localized.ResourceNotFound)
+        {
+            displayPrimaryText = localized.Value;
+        }
+    }
+}
 
 @{
     string primaryClass = Model.IsUncategorized
@@ -14,7 +31,7 @@
         {
             <span class="category-badge-dot" style="background-color:@Model.AccentColor"></span>
         }
-        <span>@Model.PrimaryText</span>
+        <span>@displayPrimaryText</span>
     </span>
 
     @if (!string.IsNullOrWhiteSpace(Model.SecondaryText))

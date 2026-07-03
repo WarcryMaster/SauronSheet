@@ -20,4 +20,6 @@ public record TransactionDto(
     string? BankSubcategory = null,
     string? SubcategoryId = null,
     string? SubcategoryName = null,
-    string CategorySource = "Legacy");
+    string CategorySource = "Legacy",
+    bool CategoryIsSystemDefault = false,
+    string? CategorySystemSlug = null);

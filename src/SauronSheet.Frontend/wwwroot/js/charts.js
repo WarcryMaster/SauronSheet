@@ -15,6 +15,71 @@
  */
 'use strict';
 
+function getI18nRoot() {
+    const globalI18n = window.__i18n;
+    if (globalI18n && typeof globalI18n === 'object') {
+        return globalI18n;
+    }
+
+    return {};
+}
+
+function sentryBreadcrumb(message, data) {
+    if (typeof window.Sentry === 'undefined' || typeof window.Sentry.addBreadcrumb !== 'function') {
+        return;
+    }
+
+    window.Sentry.addBreadcrumb({
+        category: 'i18n',
+        message: message,
+        level: 'warning',
+        data: data
+    });
+}
+
+function i18n(key, fallback) {
+    const root = getI18nRoot();
+    const segments = key.split('.');
+    let current = root;
+
+    for (const segment of segments) {
+        if (!current || typeof current !== 'object' || !(segment in current)) {
+            sentryBreadcrumb('Missing i18n key in window.__i18n', {
+                key: key,
+                fallback: fallback
+            });
+            return key;
+        }
+
+        current = current[segment];
+    }
+
+    if (typeof current === 'string' && current.trim().length > 0) {
+        return current;
+    }
+
+    sentryBreadcrumb('Invalid i18n value in window.__i18n', {
+        key: key,
+        fallback: fallback
+    });
+    return key;
+}
+
+function formatTemplate(template, values) {
+    return template.replace(/\{(\d+)\}/g, function (_, index) {
+        const value = values[Number(index)];
+        if (value === undefined || value === null) {
+            return '';
+        }
+
+        return String(value);
+    });
+}
+
+function formatEuroAmount(value) {
+    return Number(value).toFixed(2);
+}
+
 // Resolve a CSS custom property to its computed value, with fallback.
 function cssVar(name, fallback) {
     if (typeof getComputedStyle === 'undefined') return fallback;
@@ -131,7 +196,7 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
     const monthLabels = periodKeys.map(key => {
         const [y, m] = key.split('-');
         const entry = monthlyCategoryData.find(d => d.year === Number(y) && d.month === Number(m));
-        return entry ? `${entry.monthName} ${y}` : `Month ${m} ${y}`;
+        return entry ? `${entry.monthName} ${y}` : `${i18n('chart.period.monthLabel', 'Month')} ${m} ${y}`;
     });
 
     // Preserve category order from data — handler controls legend order
@@ -191,7 +256,8 @@ function initCategoryStackedChart(canvasId, monthlyCategoryData) {
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            return `${context.dataset.label}: €${context.parsed.y.toFixed(2)}`;
+                            const template = i18n('chart.tooltip.amount', '{0}: €{1}');
+                            return formatTemplate(template, [context.dataset.label, formatEuroAmount(context.parsed.y)]);
                         },
                         // Reverse tooltip items so top of chart = first in tooltip
                         afterBody: function() {
@@ -235,7 +301,7 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Expenses',
+                    label: i18n('chart.series.expenses', 'Expenses'),
                     data: monthlyData.map(d => d.totalExpenses),
                     borderColor: tokens.danger,
                     backgroundColor: hexToRgba(tokens.danger, 0.1),
@@ -246,7 +312,7 @@ function initMonthlyTrendsChart(canvasId, monthlyData) {
                     borderWidth: 2
                 },
                 {
-                    label: 'Income',
+                    label: i18n('chart.series.income', 'Income'),
                     data: monthlyData.map(d => d.totalIncome),
                     borderColor: tokens.success,
                     backgroundColor: hexToRgba(tokens.success, 0.1),
@@ -283,8 +349,8 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
     if (existing) existing.destroy();
 
     const labels = yearlyData.map(d => d.monthName);
-    const y1 = year1Label || 'Year 1';
-    const y2 = year2Label || 'Year 2';
+    const y1 = year1Label || i18n('chart.year.first', 'Year 1');
+    const y2 = year2Label || i18n('chart.year.second', 'Year 2');
 
     const ctx = canvas.getContext('2d');
     new Chart(ctx, {
@@ -293,7 +359,7 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
             labels: labels,
             datasets: [
                 {
-                    label: `${y1} Income`,
+                    label: `${y1} ${i18n('chart.series.income', 'Income')}`,
                     data: yearlyData.map(d => d.year1Income),
                     backgroundColor: hexToRgba(tokens.success, 0.2),
                     borderColor: tokens.success,
@@ -302,7 +368,7 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                     borderSkipped: false
                 },
                 {
-                    label: `${y1} Expenses`,
+                    label: `${y1} ${i18n('chart.series.expenses', 'Expenses')}`,
                     data: yearlyData.map(d => d.year1Expenses),
                     backgroundColor: hexToRgba(tokens.danger, 0.2),
                     borderColor: tokens.danger,
@@ -311,7 +377,7 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                     borderSkipped: false
                 },
                 {
-                    label: `${y2} Income`,
+                    label: `${y2} ${i18n('chart.series.income', 'Income')}`,
                     data: yearlyData.map(d => d.year2Income),
                     backgroundColor: hexToRgba('#0d6e35', 0.2),
                     borderColor: '#0d6e35',
@@ -320,7 +386,7 @@ function initYearlyComparisonChart(canvasId, yearlyData, year1Label, year2Label)
                     borderSkipped: false
                 },
                 {
-                    label: `${y2} Expenses`,
+                    label: `${y2} ${i18n('chart.series.expenses', 'Expenses')}`,
                     data: yearlyData.map(d => d.year2Expenses),
                     backgroundColor: hexToRgba('#b43246', 0.2),
                     borderColor: '#b43246',
@@ -381,7 +447,7 @@ function initAnnualTrendChart(canvas, data) {
             labels: data.labels,
             datasets: [
                 {
-                    label: 'Income',
+                    label: i18n('chart.series.income', 'Income'),
                     data: data.income,
                     borderColor: tokens.success,
                     backgroundColor: hexToRgba(tokens.success, 0.1),
@@ -392,7 +458,7 @@ function initAnnualTrendChart(canvas, data) {
                     borderWidth: 2
                 },
                 {
-                    label: 'Expenses',
+                    label: i18n('chart.series.expenses', 'Expenses'),
                     data: data.expense,
                     borderColor: tokens.danger,
                     backgroundColor: hexToRgba(tokens.danger, 0.1),
@@ -437,11 +503,20 @@ function initAnnualDistributionChart(canvas, data) {
         hexToRgba(tokens.danger, 0.65)
     ];
 
+    const labels = Array.isArray(data.labels) && data.labels.length === 4
+        ? [
+            i18n('chart.legend.fixedIncome', 'Fixed Income'),
+            i18n('chart.legend.variableIncome', 'Variable Income'),
+            i18n('chart.legend.fixedExpense', 'Fixed Expense'),
+            i18n('chart.legend.variableExpense', 'Variable Expense')
+        ]
+        : data.labels;
+
     const ctx = canvas.getContext('2d');
     new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: data.labels,
+            labels: labels,
             datasets: [{
                 data: data.values,
                 backgroundColor: donutColors,
@@ -465,7 +540,8 @@ function initAnnualDistributionChart(canvas, data) {
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            return `${context.label}: €${Number(context.parsed).toFixed(2)}`;
+                            const template = i18n('chart.tooltip.amount', '{0}: €{1}');
+                            return formatTemplate(template, [context.label, formatEuroAmount(context.parsed)]);
                         }
                     }
                 }
@@ -501,7 +577,7 @@ function initMultiYearChart(canvas, data) {
             labels: data.labels,
             datasets: [
                 {
-                    label: 'Income',
+                    label: i18n('chart.series.income', 'Income'),
                     data: data.income,
                     backgroundColor: data.income.map((_, i) =>
                         i === highlightIdx ? hexToRgba(tokens.success, 0.75) : hexToRgba(tokens.success, 0.35)
@@ -514,7 +590,7 @@ function initMultiYearChart(canvas, data) {
                     borderSkipped: false
                 },
                 {
-                    label: 'Expenses',
+                    label: i18n('chart.series.expenses', 'Expenses'),
                     data: data.expenses,
                     backgroundColor: data.expenses.map((_, i) =>
                         i === highlightIdx ? hexToRgba(tokens.danger, 0.75) : hexToRgba(tokens.danger, 0.35)
@@ -527,7 +603,7 @@ function initMultiYearChart(canvas, data) {
                     borderSkipped: false
                 },
                 {
-                    label: 'Net',
+                    label: i18n('chart.series.net', 'Net'),
                     data: data.balances,
                     backgroundColor: data.balances.map((_, i) =>
                         i === highlightIdx ? hexToRgba(tokens.brand, 0.85) : hexToRgba(tokens.brand, 0.4)
@@ -557,7 +633,8 @@ function initMultiYearChart(canvas, data) {
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            return `${context.dataset.label}: €${Number(context.parsed.y).toFixed(2)}`;
+                            const template = i18n('chart.tooltip.amount', '{0}: €{1}');
+                            return formatTemplate(template, [context.dataset.label, formatEuroAmount(context.parsed.y)]);
                         }
                     }
                 }
@@ -591,7 +668,7 @@ function initMonthlyEvolutionChart(canvas, data) {
 
     const datasets = [
         {
-            label: 'Income',
+            label: i18n('chart.series.income', 'Income'),
             data: data.income,
             borderColor: tokens.success,
             backgroundColor: hexToRgba(tokens.success, 0.08),
@@ -603,7 +680,7 @@ function initMonthlyEvolutionChart(canvas, data) {
             order: 1
         },
         {
-            label: 'Expenses',
+            label: i18n('chart.series.expenses', 'Expenses'),
             data: data.expenses,
             borderColor: tokens.danger,
             backgroundColor: hexToRgba(tokens.danger, 0.08),
@@ -615,7 +692,7 @@ function initMonthlyEvolutionChart(canvas, data) {
             order: 1
         },
         {
-            label: 'Savings',
+            label: i18n('chart.series.savings', 'Savings'),
             data: data.savings,
             borderColor: tokens.info,
             backgroundColor: hexToRgba(tokens.info, 0.08),
@@ -632,7 +709,7 @@ function initMonthlyEvolutionChart(canvas, data) {
     // Add average lines if available (rendered as horizontal dashed lines)
     if (data.avgIncome != null) {
         datasets.push({
-            label: 'Avg Income',
+            label: i18n('chart.series.avgIncome', 'Avg Income'),
             data: Array(12).fill(data.avgIncome),
             borderColor: hexToRgba(tokens.success, 0.5),
             backgroundColor: 'transparent',
@@ -647,7 +724,7 @@ function initMonthlyEvolutionChart(canvas, data) {
 
     if (data.avgExpense != null) {
         datasets.push({
-            label: 'Avg Expense',
+            label: i18n('chart.series.avgExpense', 'Avg Expense'),
             data: Array(12).fill(data.avgExpense),
             borderColor: hexToRgba(tokens.danger, 0.5),
             backgroundColor: 'transparent',
@@ -745,7 +822,8 @@ function initCategoryDonutChart(canvas, data) {
                         label: function (context) {
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
-                            return `${context.label}: €${Number(context.parsed).toFixed(2)} (${pct}%)`;
+                            const template = i18n('chart.tooltip.amountWithPercentage', '{0}: €{1} ({2}%)');
+                            return formatTemplate(template, [context.label, formatEuroAmount(context.parsed), pct]);
                         }
                     }
                 }
@@ -781,7 +859,7 @@ function initAnomalyChart(canvas, data) {
             datasets: [
                 {
                     type: 'bar',
-                    label: 'Anomaly amount',
+                    label: i18n('chart.series.anomalyAmount', 'Anomaly amount'),
                     data: data.values,
                     backgroundColor: barColors,
                     borderColor: barColors,
@@ -791,7 +869,7 @@ function initAnomalyChart(canvas, data) {
                 },
                 {
                     type: 'line',
-                    label: 'Historical mean',
+                    label: i18n('chart.series.historicalMean', 'Historical mean'),
                     data: data.means,
                     borderColor: tokens.muted,
                     backgroundColor: 'transparent',
@@ -810,7 +888,8 @@ function initAnomalyChart(canvas, data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.dataset.label}: €${Number(context.parsed.y).toFixed(2)}`;
+                            const template = i18n('chart.tooltip.amount', '{0}: €{1}');
+                            return formatTemplate(template, [context.dataset.label, formatEuroAmount(context.parsed.y)]);
                         }
                     }
                 }

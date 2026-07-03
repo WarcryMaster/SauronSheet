@@ -1,10 +1,11 @@
 @page "/dashboard"
 @model DashboardModel
+@inject IStringLocalizer<SharedResources> Localizer
 @using System.Text.Json
 @using SauronSheet.Frontend.Helpers
 
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = Localizer["Dashboard.Title"];
 }
 
 <div id="dashboard-content"
@@ -46,7 +47,7 @@
     <!-- Full-page spinner overlay during HTMX requests -->
     <div id="dashboard-spinner" class="htmx-indicator position-fixed top-50 start-50 translate-middle z-3" style="display:none">
         <div class="spinner-border text-brand" role="status" style="width:3rem;height:3rem">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">@Localizer["Common.Loading"]</span>
         </div>
     </div>
         <!-- Pill-style period selector -->
@@ -57,8 +58,9 @@
                     hx-select="#dashboard-content"
                     hx-swap="outerHTML"
                     hx-indicator="#dashboard-spinner"
-                    :class="period === 'all' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
-                All Time
+                    :class="period === 'all' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'"
+                    data-testid="dashboard-period-all">
+                @Localizer["Dashboard.PeriodAllTime"]
             </button>
             <button @@click="period = 'this-month'"
                     hx-get="/dashboard?DateFilter=this-month"
@@ -66,8 +68,9 @@
                     hx-select="#dashboard-content"
                     hx-swap="outerHTML"
                     hx-indicator="#dashboard-spinner"
-                    :class="period === 'this-month' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
-                This Month
+                    :class="period === 'this-month' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'"
+                    data-testid="dashboard-period-this-month">
+                @Localizer["Dashboard.PeriodThisMonth"]
             </button>
             <button @@click="period = 'last-3-months'"
                     hx-get="/dashboard?DateFilter=last-3-months"
@@ -75,8 +78,9 @@
                     hx-select="#dashboard-content"
                     hx-swap="outerHTML"
                     hx-indicator="#dashboard-spinner"
-                    :class="period === 'last-3-months' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
-                Last 3 Months
+                    :class="period === 'last-3-months' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'"
+                    data-testid="dashboard-period-last-3-months">
+                @Localizer["Dashboard.PeriodLast3Months"]
             </button>
             <button @@click="period = 'this-year'"
                     hx-get="/dashboard?DateFilter=this-year"
@@ -84,8 +88,9 @@
                     hx-select="#dashboard-content"
                     hx-swap="outerHTML"
                     hx-indicator="#dashboard-spinner"
-                    :class="period === 'this-year' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'">
-                This Year
+                    :class="period === 'this-year' ? 'btn btn-brand btn-sm rounded-pill px-3' : 'btn btn-outline-secondary btn-sm rounded-pill px-3'"
+                    data-testid="dashboard-period-this-year">
+                @Localizer["Dashboard.PeriodThisYear"]
             </button>
         </div>
 
@@ -94,11 +99,11 @@
         <div x-show="!hasData" x-transition.opacity>
             <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
                 <div class="fs-1 mb-3">📊</div>
-                <p class="h5 fw-semibold mb-2">No spending data yet</p>
-                <p class="text-muted mb-4">Import a bank statement or add transactions to see analytics.</p>
+                <p class="h5 fw-semibold mb-2">@Localizer["Dashboard.EmptyTitle"]</p>
+                <p class="text-muted mb-4">@Localizer["Dashboard.EmptyDescription"]</p>
                 <div class="d-flex justify-content-center gap-3">
-                    <a href="/transactions/upload" class="btn btn-brand">📊 Upload Statement</a>
-                    <a href="/transactions/add" class="btn btn-outline-secondary">➕ Add Transaction</a>
+                    <a href="/transactions/upload" class="btn btn-brand" data-testid="dashboard-upload-statement">📊 @Localizer["Dashboard.UploadStatementButton"]</a>
+                    <a href="/transactions/add" class="btn btn-outline-secondary" data-testid="dashboard-add-transaction">➕ @Localizer["Dashboard.AddTransactionButton"]</a>
                 </div>
             </div>
         </div>
@@ -113,7 +118,7 @@
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
                          x-data="{ display: 0, target: @((Model.Summary?.TotalIncome ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                        <div class="small fw-semibold text-muted text-uppercase mb-1">Total Income</div>
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Dashboard.KpiTotalIncome"]</div>
                         <div class="h4 fw-bold text-success mb-0 counter-value">
                             <span x-text="'€' + display.toFixed(2)"></span>
                         </div>
@@ -123,7 +128,7 @@
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
                          x-data="{ display: 0, target: @((Model.Summary?.TotalExpenses ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                        <div class="small fw-semibold text-muted text-uppercase mb-1">Total Expenses</div>
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Dashboard.KpiTotalExpenses"]</div>
                         <div class="h4 fw-bold text-danger mb-0 counter-value">
                             <span x-text="'€' + display.toFixed(2)"></span>
                         </div>
@@ -133,7 +138,7 @@
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
                          x-data="{ display: 0, target: @((Model.Summary?.NetAmount ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                        <div class="small fw-semibold text-muted text-uppercase mb-1">Net Amount</div>
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Dashboard.KpiNetAmount"]</div>
                         <div class="h4 fw-bold mb-0 counter-value @(Model.Summary?.NetAmount >= 0 ? "text-success" : "text-danger")">
                             <span x-text="'€' + display.toFixed(2)"></span>
                         </div>
@@ -143,7 +148,7 @@
                 <div class="col">
                     <div class="card border-0 shadow-sm h-100 p-3" x-transition
                          x-data="{ display: 0, target: @((Model.Summary?.TransactionCount ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture)), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                        <div class="small fw-semibold text-muted text-uppercase mb-1">Transactions</div>
+                        <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Dashboard.KpiTransactions"]</div>
                         <div class="h4 fw-bold text-dark mb-0 counter-value">
                             <span x-text="Math.round(display)"></span>
                         </div>
@@ -155,7 +160,7 @@
             <div class="row g-4">
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                        <h3 class="h6 fw-semibold mb-3">Spending by Category — @Model.ChartDateRangeLabel</h3>
+                        <h3 class="h6 fw-semibold mb-3">@Localizer["Dashboard.ChartSpendingByCategory"] — @Model.ChartDateRangeLabel</h3>
                         <div class="chart-wrapper flex-grow-1">
                             @if (Model.MonthlySpendingByCategory.Any())
                             {
@@ -163,14 +168,14 @@
                             }
                             else
                             {
-                                <p class="text-muted text-center py-4">No expense data for this period.</p>
+                                <p class="text-muted text-center py-4">@Localizer["Dashboard.NoExpenseData"]</p>
                             }
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm p-4 h-100 d-flex flex-column">
-                        <h3 class="h6 fw-semibold mb-3">Monthly Trends — @Model.ChartDateRangeLabel</h3>
+                        <h3 class="h6 fw-semibold mb-3">@Localizer["Dashboard.ChartMonthlyTrends"] — @Model.ChartDateRangeLabel</h3>
                         <div class="chart-wrapper flex-grow-1">
                             <canvas id="monthlyTrendsChart"></canvas>
                         </div>
@@ -179,7 +184,7 @@
             </div>
 
             <div class="card border-0 shadow-sm p-4">
-                <h3 class="h6 fw-semibold mb-3">Year over Year — @Model.YoYYear1 vs @Model.YoYYear2</h3>
+                <h3 class="h6 fw-semibold mb-3">@Localizer["Dashboard.ChartYearOverYear"] — @Model.YoYYear1 vs @Model.YoYYear2</h3>
                 <div class="chart-wrapper" style="height: 320px;">
                     <canvas id="yearlyComparisonChart"></canvas>
                 </div>
@@ -188,8 +193,8 @@
             <!-- Recent Transactions -->
             <div class="card border-0 shadow-sm p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3 class="h6 fw-semibold mb-0">Recent Transactions</h3>
-                    <a href="/transactions" class="small text-brand">View all →</a>
+                    <h3 class="h6 fw-semibold mb-0">@Localizer["Dashboard.RecentTransactionsTitle"]</h3>
+                    <a href="/transactions" class="small text-brand" data-testid="dashboard-view-all-transactions">@Localizer["Dashboard.ViewAll"] →</a>
                 </div>
                 @if (Model.RecentTransactions.Any())
                 {
@@ -197,10 +202,10 @@
                         <table class="table table-hover table-sm mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="text-uppercase small fw-semibold text-muted">Date</th>
-                                    <th class="text-uppercase small fw-semibold text-muted">Description</th>
-                                    <th class="text-uppercase small fw-semibold text-muted text-end">Amount</th>
-                                    <th class="text-uppercase small fw-semibold text-muted">Category</th>
+                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Dashboard.TableDate"]</th>
+                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Dashboard.TableDescription"]</th>
+                                    <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Dashboard.TableAmount"]</th>
+                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Dashboard.TableCategory"]</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -223,30 +228,30 @@
                 }
                 else
                 {
-                    <p class="text-muted text-center py-3">No recent transactions.</p>
+                    <p class="text-muted text-center py-3">@Localizer["Dashboard.NoRecentTransactions"]</p>
                 }
             </div>
 
             <!-- Budget Status Widget -->
-            <div class="card border-0 shadow-sm p-4">
+            <div class="card border-0 shadow-sm p-4" data-testid="budget-status-widget">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3 class="h6 fw-semibold mb-0">Budget Status</h3>
-                    <a href="/budgets" class="small text-brand">Manage &rarr;</a>
+                    <h3 class="h6 fw-semibold mb-0">@Localizer["Dashboard.BudgetStatusTitle"]</h3>
+                    <a href="/budgets" class="small text-brand" data-testid="dashboard-manage-budgets">@Localizer["Dashboard.BudgetManage"] &rarr;</a>
                 </div>
                 @if (!Model.BudgetMetrics.Any())
                 {
-                    <p class="text-muted small">No budgets set.
-                       <a href="/budgets/create" class="text-brand fw-semibold">Create budgets to track spending.</a>
+                    <p class="text-muted small">@Localizer["Dashboard.NoBudgetsSet"]
+                       <a href="/budgets/create" class="text-brand fw-semibold" data-testid="dashboard-create-budgets">@Localizer["Dashboard.CreateBudgetsLink"]</a>
                     </p>
                 }
                 else
                 {
                     <!-- Overall summary line -->
                     <p class="small text-muted mb-3">
-                        @Model.BudgetMetrics.Count budget(s) this month
+                        @Model.BudgetMetrics.Count @Localizer["Dashboard.BudgetCountSuffix"]
                         —
                         <span class="fw-semibold @(Model.BudgetTotalPercentageUsed > 100 ? "text-danger" : Model.BudgetTotalPercentageUsed >= 75 ? "text-warning" : "text-success")">
-                            @Model.BudgetTotalPercentageUsed.ToString("N1")% consumed
+                            @Model.BudgetTotalPercentageUsed.ToString("N1")% @Localizer["Dashboard.BudgetConsumed"]
                         </span>
                     </p>
 
@@ -254,19 +259,19 @@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         @if (Model.BudgetGreenCount > 0)
                         {
-                            <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount On Track</span>
+                            <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount @Localizer["Dashboard.BudgetOnTrack"]</span>
                         }
                         @if (Model.BudgetYellowCount > 0)
                         {
-                            <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount Warning</span>
+                            <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount @Localizer["Dashboard.BudgetWarning"]</span>
                         }
                         @if (Model.BudgetRedCount > 0)
                         {
-                            <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount Near Limit</span>
+                            <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount @Localizer["Dashboard.BudgetNearLimit"]</span>
                         }
                         @if (Model.BudgetOverageCount > 0)
                         {
-                            <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount Over</span>
+                            <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount @Localizer["Dashboard.BudgetOver"]</span>
                         }
                     </div>
 
@@ -295,9 +300,9 @@
                                 <div class="progress-bar @barColor transition" style="width:@(pct)%"></div>
                             </div>
                             <div class="d-flex justify-content-between small text-muted mt-1">
-                                <span>@Math.Round(metric.PercentageUsed, 1)% used</span>
+                                <span>@Math.Round(metric.PercentageUsed, 1)% @Localizer["Dashboard.BudgetUsed"]</span>
                                 <span class="@(metric.Remaining >= 0 ? "text-success" : "text-danger")">
-                                    &euro;@metric.Remaining.ToString("N0") left
+                                    &euro;@metric.Remaining.ToString("N0") @Localizer["Dashboard.BudgetLeft"]
                                 </span>
                             </div>
                         </div>

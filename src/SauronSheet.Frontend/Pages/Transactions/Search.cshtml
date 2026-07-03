@@ -1,65 +1,80 @@
 @page "/transactions/search"
 @model SauronSheet.Frontend.Pages.Transactions.SearchModel
 @using SauronSheet.Frontend.Helpers
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 
 @{
-    ViewData["Title"] = "Search Transactions";
+    ViewData["Title"] = Localizer["Transactions.Search.Title"];
+
+    string GetDisplayName(SauronSheet.Application.Features.Categories.DTOs.CategoryDto category)
+    {
+        if (!category.IsSystemDefault || string.IsNullOrWhiteSpace(category.SystemSlug))
+        {
+            return category.Name;
+        }
+
+        string key = $"category.system.{category.SystemSlug}";
+        LocalizedString localized = Localizer[key];
+        return localized.ResourceNotFound ? category.Name : localized.Value;
+    }
 }
 
 <div class="d-flex flex-column gap-4">
-    <h3 class="h3 fw-bold mb-0">🔍 Search Transactions</h3>
+    <h3 class="h3 fw-bold mb-0">🔍 @Localizer["Transactions.Search.Title"]</h3>
 
     <!-- Filter Panel -->
     <form method="get" action="/transactions/search" class="card border-0 shadow-sm p-4"
           x-data="{ loading: false }" @@submit="loading = true">
         <div class="row g-3 mb-3">
             <div class="col-12 col-sm-6 col-lg-4">
-                <label for="Keyword" class="form-label small fw-semibold text-muted text-uppercase mb-1">Keyword</label>
+                <label for="Keyword" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Transactions.Search.Label.Keyword"]</label>
                 <input type="text" name="Keyword" id="Keyword" value="@Model.Keyword"
-                       placeholder="Search descriptions..."
+                       placeholder="@Localizer["Transactions.Search.Placeholder.Keyword"]"
                        class="form-control form-control-sm" />
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
-                <label for="FromDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">From Date</label>
+                <label for="FromDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Transactions.Search.Label.FromDate"]</label>
                 <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, maxDate: 'today' })"
                        type="text" name="FromDate" id="FromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")"
-                       class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
+                       class="form-control form-control-sm" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
-                <label for="ToDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">To Date</label>
+                <label for="ToDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Transactions.Search.Label.ToDate"]</label>
                 <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, maxDate: 'today' })"
                        type="text" name="ToDate" id="ToDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")"
-                       class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
+                       class="form-control form-control-sm" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
-                <label for="CategoryId" class="form-label small fw-semibold text-muted text-uppercase mb-1">Category</label>
+                <label for="CategoryId" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Common.Category"]</label>
                 <select name="CategoryId" id="CategoryId" class="form-select form-select-sm">
-                    <option value="">All Categories</option>
+                    <option value="">@Localizer["Budgets.Index.AllCategories"]</option>
                     @foreach (var cat in Model.Categories)
                     {
-                        <option value="@cat.Id" selected="@(Model.CategoryId == cat.Id ? "selected" : null)">@cat.Name</option>
+                        <option value="@cat.Id" selected="@(Model.CategoryId == cat.Id ? "selected" : null)">@GetDisplayName(cat)</option>
                     }
                 </select>
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
-                <label for="MinAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">Min Amount</label>
+                <label for="MinAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Transactions.Search.Label.MinAmount"]</label>
                 <input type="number" step="0.01" name="MinAmount" id="MinAmount" value="@Model.MinAmount"
-                       placeholder="€0.00" class="form-control form-control-sm" />
+                       placeholder="@Localizer["Transactions.Search.Placeholder.MinAmount"]" class="form-control form-control-sm" />
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
-                <label for="MaxAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">Max Amount</label>
+                <label for="MaxAmount" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Transactions.Search.Label.MaxAmount"]</label>
                 <input type="number" step="0.01" name="MaxAmount" id="MaxAmount" value="@Model.MaxAmount"
-                       placeholder="€9999.99" class="form-control form-control-sm" />
+                       placeholder="@Localizer["Transactions.Search.Placeholder.MaxAmount"]" class="form-control form-control-sm" />
             </div>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <button type="submit" class="btn btn-brand btn-sm" :disabled="loading">
-                <span x-show="!loading">Search</span>
+            <button type="submit" class="btn btn-brand btn-sm" :disabled="loading" data-testid="search-submit-btn">
+                <span x-show="!loading">@Localizer["Transactions.Search.Submit"]</span>
                 <span x-show="loading" class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                    <span class="visually-hidden">@Localizer["Common.Loading"]</span>
                 </span>
             </button>
-            <a href="/transactions/search" class="btn btn-link btn-sm text-muted text-decoration-none">Clear all filters</a>
+            <a href="/transactions/search" class="btn btn-link btn-sm text-muted text-decoration-none" data-testid="clear-search-link">@Localizer["Transactions.Search.ClearFilters"]</a>
         </div>
     </form>
 
@@ -68,10 +83,10 @@
         <div x-transition.opacity>
         <!-- Results Summary -->
         <p class="small text-muted">
-            Showing @Model.Results.Items.Count of @Model.Results.TotalCount transactions
+            @Localizer["Transactions.Search.ResultsSummary", Model.Results.Items.Count, Model.Results.TotalCount]
             @if (!string.IsNullOrEmpty(Model.Keyword) || Model.FromDate.HasValue || Model.ToDate.HasValue || Model.CategoryId.HasValue || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
             {
-                <span>matching filters</span>
+                <span>@Localizer["Transactions.Search.MatchingFilters"]</span>
             }
         </p>
 
@@ -83,10 +98,10 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-uppercase small fw-semibold text-muted">Date</th>
-                                <th class="text-uppercase small fw-semibold text-muted">Description</th>
-                                <th class="text-uppercase small fw-semibold text-muted text-end">Amount</th>
-                                <th class="text-uppercase small fw-semibold text-muted">Category</th>
+                                <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Date"]</th>
+                                <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Description"]</th>
+                                <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Common.Amount"]</th>
+                                <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Category"]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -111,17 +126,17 @@
                 @if (Model.Results.TotalPages > 1)
                 {
                     <div class="card-footer bg-transparent d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                        <span class="small text-muted">Page @Model.Results.PageNumber of @Model.Results.TotalPages</span>
+                        <span class="small text-muted">@Localizer["Transactions.Search.Page", Model.Results.PageNumber, Model.Results.TotalPages]</span>
                         <div class="d-flex gap-2">
                             @if (Model.Results.PageNumber > 1)
                             {
                                 <a href="/transactions/search?PageNumber=@(Model.Results.PageNumber - 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
-                                   class="btn btn-outline-secondary btn-sm">&larr; Previous</a>
+                                   class="btn btn-outline-secondary btn-sm">&larr; @Localizer["Common.Previous"]</a>
                             }
                             @if (Model.Results.PageNumber < Model.Results.TotalPages)
                             {
                                 <a href="/transactions/search?PageNumber=@(Model.Results.PageNumber + 1)&Keyword=@Model.Keyword&FromDate=@Model.FromDate?.ToString("yyyy-MM-dd")&ToDate=@Model.ToDate?.ToString("yyyy-MM-dd")&CategoryId=@Model.CategoryId&MinAmount=@Model.MinAmount&MaxAmount=@Model.MaxAmount"
-                                   class="btn btn-brand btn-sm">Next &rarr;</a>
+                                   class="btn btn-brand btn-sm">@Localizer["Common.Next"] &rarr;</a>
                             }
                         </div>
                     </div>
@@ -133,8 +148,8 @@
             <!-- Empty State -->
             <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
                 <div class="fs-1 mb-3">🔍</div>
-                <p class="h5 fw-semibold mb-2">No results found</p>
-                <p class="text-muted">Try adjusting your filters or search terms.</p>
+                <p class="h5 fw-semibold mb-2">@Localizer["Transactions.Search.NoResults"]</p>
+                <p class="text-muted">@Localizer["Transactions.Search.NoResultsDescription"]</p>
             </div>
         }
         </div>

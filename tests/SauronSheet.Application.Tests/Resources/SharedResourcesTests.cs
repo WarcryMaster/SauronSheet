@@ -186,4 +186,108 @@ public class SharedResourcesTests
         Assert.Equal("{0}: extraordinary expense (€{1:F2}) above 3× mean (€{2:F2}).", localizer["Anomaly.Extraordinary"]);
         Assert.Equal("{0}: anomaly (€{1:F2}) above μ+2σ threshold (€{2:F2}).", localizer["Anomaly.Generic"]);
     }
+
+    [Fact]
+    public void AnnualExtendedKeys_AreLocalizedForSpanishAndEnglish()
+    {
+        IStringLocalizer<SharedResources> localizer = CreateLocalizer();
+
+        using (IDisposable _ = SetCurrentUiCulture("es-ES"))
+        {
+            Assert.Equal("Año anterior", localizer["Annual.NavPreviousYear"]);
+            Assert.Equal("Año siguiente", localizer["Annual.NavNextYear"]);
+            Assert.Equal("{0} · Puesto #{1} de {2}", localizer["Annual.YearRankSummary"]);
+            Assert.Equal("Fijo", localizer["Annual.FixedKeyword"]);
+            Assert.Equal("Sin datos para este año. Añade transacciones para ver el resumen anual.", localizer["Insights.EmptyYear"]);
+            Assert.Equal("Sin descubrimientos", localizer["Discovery.TitleNoDiscoveries"]);
+        }
+
+        using (IDisposable _ = SetCurrentUiCulture("en-US"))
+        {
+            Assert.Equal("Previous year", localizer["Annual.NavPreviousYear"]);
+            Assert.Equal("Next year", localizer["Annual.NavNextYear"]);
+            Assert.Equal("{0} · Rank #{1} of {2}", localizer["Annual.YearRankSummary"]);
+            Assert.Equal("Fixed", localizer["Annual.FixedKeyword"]);
+            Assert.Equal("No data for this year. Add transactions to see the annual summary.", localizer["Insights.EmptyYear"]);
+            Assert.Equal("No discoveries", localizer["Discovery.TitleNoDiscoveries"]);
+        }
+    }
+
+    [Fact]
+    public void JavaScriptChartKeys_AreLocalizedForSpanishAndEnglish()
+    {
+        IStringLocalizer<SharedResources> localizer = CreateLocalizer();
+
+        using (IDisposable _ = SetCurrentUiCulture("es-ES"))
+        {
+            Assert.Equal("Ingresos", localizer["js.chart.series.income"]);
+            Assert.Equal("Gastos", localizer["js.chart.series.expenses"]);
+            Assert.Equal("Importe anomalía", localizer["js.chart.series.anomalyAmount"]);
+            Assert.Equal("Media histórica", localizer["js.chart.series.historicalMean"]);
+            Assert.Equal("Año", localizer["js.chart.period.yearLabel"]);
+            Assert.Equal("{0}: €{1}", localizer["js.chart.tooltip.amount"]);
+        }
+
+        using (IDisposable _ = SetCurrentUiCulture("en-US"))
+        {
+            Assert.Equal("Income", localizer["js.chart.series.income"]);
+            Assert.Equal("Expenses", localizer["js.chart.series.expenses"]);
+            Assert.Equal("Anomaly amount", localizer["js.chart.series.anomalyAmount"]);
+            Assert.Equal("Historical mean", localizer["js.chart.series.historicalMean"]);
+            Assert.Equal("Year", localizer["js.chart.period.yearLabel"]);
+            Assert.Equal("{0}: €{1}", localizer["js.chart.tooltip.amount"]);
+        }
+    }
+
+    [Fact]
+    public void ImportAndParserKeys_AreLocalizedForSpanishAndEnglish()
+    {
+        IStringLocalizer<SharedResources> localizer = CreateLocalizer();
+
+        using (IDisposable _ = SetCurrentUiCulture("es-ES"))
+        {
+            Assert.Equal("Solo se aceptan archivos Excel (.xls, .xlsx).", localizer["Import.Error.InvalidExtension"]);
+            Assert.Equal("No se pudo procesar el archivo subido. Comprueba el formato e inténtalo de nuevo.", localizer["Import.Error.ParseFailed"]);
+            Assert.Equal("Formato de fecha inválido", localizer["Import.Error.InvalidDateFormat"]);
+            Assert.Equal("Formato de importe inválido", localizer["Import.Error.InvalidAmountFormat"]);
+            Assert.Equal("Duplicado", localizer["Import.Error.Duplicate"]);
+            Assert.Equal("Formato de fecha inválido: '{0}'", localizer["Import.Parser.InvalidDate"]);
+            Assert.Equal("Formato de importe inválido: '{0}'", localizer["Import.Parser.InvalidAmount"]);
+        }
+
+        using (IDisposable _ = SetCurrentUiCulture("en-US"))
+        {
+            Assert.Equal("Only Excel files (.xls, .xlsx) are accepted.", localizer["Import.Error.InvalidExtension"]);
+            Assert.Equal("Could not parse the uploaded file. Please check the format and try again.", localizer["Import.Error.ParseFailed"]);
+            Assert.Equal("Invalid date format", localizer["Import.Error.InvalidDateFormat"]);
+            Assert.Equal("Invalid amount format", localizer["Import.Error.InvalidAmountFormat"]);
+            Assert.Equal("Duplicate", localizer["Import.Error.Duplicate"]);
+            Assert.Equal("Invalid date format: '{0}'", localizer["Import.Parser.InvalidDate"]);
+            Assert.Equal("Invalid amount format: '{0}'", localizer["Import.Parser.InvalidAmount"]);
+        }
+    }
+
+    [Fact]
+    public void SystemCategoryKeys_AreLocalizedForSpanishAndEnglish()
+    {
+        IStringLocalizer<SharedResources> localizer = CreateLocalizer();
+
+        using (IDisposable _ = SetCurrentUiCulture("es-ES"))
+        {
+            Assert.Equal("Salario", localizer["category.system.salary"]);
+            Assert.Equal("Supermercado", localizer["category.system.groceries"]);
+            Assert.Equal("Comer fuera", localizer["category.system.dining-out"]);
+            Assert.Equal("Regalos dados", localizer["category.system.gifts-given"]);
+            Assert.Equal("Otros gastos", localizer["category.system.other-expense"]);
+        }
+
+        using (IDisposable _ = SetCurrentUiCulture("en-US"))
+        {
+            Assert.Equal("Salary", localizer["category.system.salary"]);
+            Assert.Equal("Groceries", localizer["category.system.groceries"]);
+            Assert.Equal("Dining Out", localizer["category.system.dining-out"]);
+            Assert.Equal("Gifts Given", localizer["category.system.gifts-given"]);
+            Assert.Equal("Other Expense", localizer["category.system.other-expense"]);
+        }
+    }
 }

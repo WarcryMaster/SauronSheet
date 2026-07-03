@@ -42,29 +42,29 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
         await ensureBudgetExists(page, E2E_CAT_B, '100.00');
 
         const views = [
-            { label: 'Current Month', query: 'Month' },
-            { label: 'Current Period', query: 'Period' },
-            { label: 'Current Year', query: 'Year' },
+            { testId: 'metrics-tab-month', query: 'Month' },
+            { testId: 'metrics-tab-period', query: 'Period' },
+            { testId: 'metrics-tab-year', query: 'Year' },
         ];
 
         await page.goto('/budgets/metrics?View=Month');
-        await expect(page.getByRole('heading', { name: 'Budget Metrics' })).toBeVisible();
+        await expect(page.getByTestId('metrics-heading')).toBeVisible();
 
         for (const view of views) {
-            const tab = page.getByRole('link', { name: view.label });
+            const tab = page.getByTestId(view.testId);
             await expect(tab).toBeVisible();
             await tab.click();
 
             await expect(page).toHaveURL(new RegExp(`View=${view.query}`, 'i'));
             await expect(tab).toHaveClass(/btn-brand/);
-            await expect(page.getByText('Accumulated Limit')).toBeVisible();
+            await expect(page.getByTestId('metrics-accumulated-limit')).toBeVisible();
 
             const catBCard = page.locator('.metric-card').filter({
-                has: page.getByRole('heading', { name: E2E_CAT_B }),
+                has: page.locator('h6', { hasText: E2E_CAT_B }),
             });
 
             await expect(catBCard).toHaveCount(1);
-            await expect(catBCard).toContainText('% consumed');
+            await expect(catBCard).toContainText('%');
             await expect(catBCard).toContainText('€');
         }
     });
@@ -81,7 +81,7 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
         const previousYear = (new Date().getFullYear() - 1).toString();
 
         await page.goto(`/budgets/history?Year=${currentYear}`);
-        await expect(page.getByRole('heading', { name: 'Budget History' })).toBeVisible();
+        await expect(page.getByTestId('history-heading')).toBeVisible();
 
         const yearSelector = page.locator('#Year');
         await expect(yearSelector).toBeVisible();
@@ -89,19 +89,19 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
 
         const currentYearTable = page.locator(`table[aria-label="Budget history for ${currentYear}"]`);
         await expect(currentYearTable).toBeVisible();
-        await expect(currentYearTable.locator('th', { hasText: 'Period' })).toBeVisible();
-        await expect(currentYearTable).toContainText(`Total ${currentYear}`);
+        await expect(currentYearTable.getByTestId('history-period-header')).toBeVisible();
+        await expect(currentYearTable.getByTestId('history-total-year')).toContainText(currentYear);
 
         await yearSelector.selectOption(previousYear);
-        await page.getByRole('button', { name: 'View' }).click();
+        await page.getByTestId('view-year-btn').click();
 
         await expect(page).toHaveURL(new RegExp(`Year=${previousYear}`, 'i'));
 
         const previousYearTable = page.locator(`table[aria-label="Budget history for ${previousYear}"]`);
         if (await previousYearTable.isVisible().catch(() => false)) {
-            await expect(previousYearTable).toContainText(`Total ${previousYear}`);
+            await expect(previousYearTable.getByTestId('history-total-year')).toContainText(previousYear);
         } else {
-            await expect(page.getByText(`No budget data for ${previousYear}.`)).toBeVisible();
+            await expect(page.getByTestId('history-empty-state')).toBeVisible();
         }
     });
 
@@ -118,21 +118,21 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
         await page.goto('/budgets/comparison');
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.locator('h3.h3', { hasText: 'Budget vs Actual' })).toBeVisible();
+        await expect(page.getByTestId('comparison-heading')).toBeVisible();
 
         const monthPicker = page.locator('#monthPicker');
         await expect(monthPicker).toBeVisible();
 
         await monthPicker.fill(`${currentMonth.year}-${currentMonth.month}`);
-        await page.getByRole('button', { name: 'Filter' }).click();
+        await page.getByTestId('filter-month-btn').click();
 
         await expect(page).toHaveURL(new RegExp(`Year=${currentMonth.year}.*Month=${currentMonth.monthNumber}`, 'i'));
 
         const table = page.locator('table');
         await expect(table).toBeVisible();
-        await expect(page.getByText('Total Budgeted').first()).toBeVisible();
-        await expect(page.getByText('Total Actual').first()).toBeVisible();
-        await expect(table.getByRole('columnheader', { name: 'Difference' })).toBeVisible();
+        await expect(page.getByTestId('comparison-total-budgeted')).toBeVisible();
+        await expect(page.getByTestId('comparison-total-actual')).toBeVisible();
+        await expect(table.getByTestId('comparison-difference-header')).toBeVisible();
 
         const catBRow = table.locator('tbody tr').filter({
             has: page.locator('td', { hasText: E2E_CAT_B }),
@@ -140,7 +140,7 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
 
         await expect(catBRow).toHaveCount(1);
         await expect(catBRow.locator('td').nth(1)).toContainText('€');
-        await expect(catBRow.locator('td').nth(1)).not.toContainText('Sin presupuesto');
+        await expect(catBRow.locator('td').nth(1).locator('[data-testid="no-budget-label"]')).toHaveCount(0);
         await expect(catBRow.locator('td').nth(2)).toContainText('€');
     });
 
@@ -157,23 +157,19 @@ test.describe('Budgets — visualization (budget-redesign Slice 7)', () => {
         await expect(page.locator('main')).toBeVisible();
 
         // ── The Budget Status widget should be present ──────────────────────
-        const budgetWidget = page.locator('h3, h6, .h6, h5, .h5').filter({
-            hasText: /Budget|Presupuesto/i,
-        });
+        const budgetWidget = page.locator('[data-testid="budget-status-widget"]');
 
-        const hasBudgetWidget = await budgetWidget.first().isVisible().catch(() => false);
+        const hasBudgetWidget = await budgetWidget.isVisible().catch(() => false);
 
         if (hasBudgetWidget) {
             // Widget heading is visible
-            await expect(budgetWidget.first()).toBeVisible();
+            await expect(budgetWidget).toBeVisible();
 
-            // The widget section (card containing the budget widget)
-            const widgetCard = budgetWidget.first().locator('..').locator('..');
-            const cardText = await widgetCard.textContent();
+            const cardText = await budgetWidget.textContent();
 
             // Widget should show either budget data or empty state with CTA
-            const hasBudgetData = cardText.includes('€') || cardText.includes('on track') || cardText.includes('en orden');
-            const hasEmptyState = cardText.includes('No budgets') || cardText.includes('No hay presupuestos') || cardText.includes('Create budgets');
+            const hasBudgetData = cardText.includes('€');
+            const hasEmptyState = cardText.includes('No budgets') || cardText.includes('No hay presupuestos');
 
             expect(hasBudgetData || hasEmptyState, 'Budget widget must show data or empty state CTA').toBeTruthy();
         }

@@ -5,12 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Moq;
 using Xunit;
 
 using SauronSheet.Application.Features.Analytics.Classification;
 using SauronSheet.Application.Features.Analytics.DTOs;
 using SauronSheet.Application.Features.Analytics.Queries;
+using SauronSheet.Application.Features.Analytics.Services;
+using SauronSheet.Application.Resources;
 using SauronSheet.Application.Tests.Common;
 using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Entities;
@@ -30,12 +34,22 @@ public class GetAnnualDashboardQueryHandlerTests
 
     public GetAnnualDashboardQueryHandlerTests()
     {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddLocalization();
+        ServiceProvider provider = services.BuildServiceProvider();
+        IStringLocalizer<SharedResources> localizer = provider.GetRequiredService<IStringLocalizer<SharedResources>>();
+        InsightsService insightsService = new InsightsService(localizer);
+        AnomalyDetectionService anomalyDetectionService = new AnomalyDetectionService(localizer);
+
         _userContextMock.Setup(x => x.UserId).Returns("user-1");
         _handler = new GetAnnualDashboardQueryHandler(
             _transactionRepoMock.Object,
             _subcategoryRepoMock.Object,
             _userContextMock.Object,
-            new AnnualClassificationEngine());
+            new AnnualClassificationEngine(),
+            insightsService,
+            anomalyDetectionService);
     }
 
     private static Transaction CreateTransaction(
@@ -112,7 +126,7 @@ public class GetAnnualDashboardQueryHandlerTests
         Assert.Equal(2026, result.ExecutiveSummary.Year);
         Assert.Equal(0m, result.ExecutiveSummary.Income);
         Assert.Equal(0m, result.ExecutiveSummary.Expense);
-        Assert.Contains("Sin datos", result.SmartSummary);
+        Assert.Contains("No data", result.SmartSummary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -164,7 +178,7 @@ public class GetAnnualDashboardQueryHandlerTests
 
         // Assert — Smart Summary
         Assert.False(string.IsNullOrEmpty(result.SmartSummary));
-        Assert.DoesNotContain("Sin datos", result.SmartSummary);
+        Assert.DoesNotContain("No data", result.SmartSummary, StringComparison.OrdinalIgnoreCase);
 
         // Assert — AnalysisSummary (existing format)
         Assert.Equal(9000m, result.AnalysisSummary.IncomeTotal);

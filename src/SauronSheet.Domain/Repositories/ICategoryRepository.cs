@@ -19,6 +19,11 @@ public interface ICategoryRepository
     Task<Category?> FindByNameAsync(string name);
 
     /// <summary>
+    /// Returns global system default categories (NULL user_id, IsSystemDefault=true).
+    /// </summary>
+    Task<IReadOnlyList<Category>> GetSystemDefaultsAsync();
+
+    /// <summary>
     /// Find a user-scoped category by its normalized deduplication key and type.
     /// Used by PDF import resolver to detect existing categories before creating new ones.
     /// normalizedName must be pre-computed via CategoryNormalizer.Normalize().

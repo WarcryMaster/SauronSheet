@@ -1,8 +1,9 @@
 @page "/auth/register"
 @model RegisterModel
+@inject IStringLocalizer<SharedResources> Localizer
 
 @{
-    ViewData["Title"] = "Create Account";
+    ViewData["Title"] = Localizer["Auth.CreateAccountTitle"];
 }
 
 <div class="d-flex align-items-center justify-content-center" style="min-height: 70vh;">
@@ -11,20 +12,20 @@
             <!-- Header -->
             <div class="text-center mb-4">
                 <img src="~/img/sauron-sheet-logo.svg" asp-append-version="true" alt="SauronSheet" class="mb-3" height="56" />
-                <h3 class="h3 fw-bold mb-1">Create your account</h3>
-                <p class="text-muted small">Start tracking your finances for free</p>
+                <h3 class="h3 fw-bold mb-1">@Localizer["Auth.RegisterHeading"]</h3>
+                <p class="text-muted small">@Localizer["Auth.RegisterSubtitle"]</p>
             </div>
 
             @if (!string.IsNullOrEmpty(Model.ErrorMessage))
             {
-                <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity>
+                <div class="alert alert-danger rounded-3" role="alert" x-transition.opacity data-testid="register-error">
                     @Model.ErrorMessage
                 </div>
             }
 
             @if (!string.IsNullOrEmpty(Model.SuccessMessage))
             {
-                <div class="alert alert-success rounded-3" role="status" x-transition.opacity>
+                <div class="alert alert-success rounded-3" role="status" x-transition.opacity data-testid="register-success">
                     @Model.SuccessMessage
                 </div>
             }
@@ -33,29 +34,32 @@
                   x-data="{ loading: false }"
                   @@submit="loading = true">
                 <div class="mb-3">
-                    <label for="email" class="form-label fw-semibold">Email address</label>
+                    <label for="email" class="form-label fw-semibold">@Localizer["Auth.EmailLabel"]</label>
                     <input id="email" name="Input.Email" type="email" required autofocus
                            class="form-control rounded-3"
-                           value="@Model.Input.Email" />
+                           value="@Model.Input.Email"
+                           data-testid="register-email" />
                 </div>
 
                 <div class="mb-3">
                     <label for="password" class="form-label fw-semibold">
-                        Password <span class="text-muted fw-normal">(minimum 8 characters)</span>
+                        @Localizer["Auth.PasswordLabel"] <span class="text-muted fw-normal">@Localizer["Auth.PasswordHint"]</span>
                     </label>
                     <input id="password" name="Input.Password" type="password" required minlength="8"
-                           class="form-control rounded-3" />
+                           class="form-control rounded-3"
+                           data-testid="register-password" />
                 </div>
 
                 <div class="mb-4">
-                    <label for="confirmPassword" class="form-label fw-semibold">Confirm password</label>
+                    <label for="confirmPassword" class="form-label fw-semibold">@Localizer["Auth.ConfirmPasswordLabel"]</label>
                     <input id="confirmPassword" name="Input.ConfirmPassword" type="password" required
-                           class="form-control rounded-3" />
+                           class="form-control rounded-3"
+                           data-testid="register-confirm-password" />
                 </div>
 
-                <button type="submit" id="registerBtn" class="btn btn-brand w-100 rounded-3 fw-bold" :disabled="loading">
-                    <span x-show="!loading">Create account</span>
-                    <span x-show="loading">Creating...</span>
+                <button type="submit" id="registerBtn" class="btn btn-brand w-100 rounded-3 fw-bold" :disabled="loading" data-testid="register-submit">
+                    <span x-show="!loading">@Localizer["Auth.RegisterSubmit"]</span>
+                    <span x-show="loading">@Localizer["Auth.RegisterSubmitLoading"]</span>
                     <span x-show="loading" class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
                 </button>
             </form>
@@ -63,25 +67,26 @@
             @if (Model.ShowResendConfirmation)
             {
                 <div class="mt-3 pt-2 border-top">
-                    <p class="text-muted small mb-2">Didn't receive the confirmation email?</p>
+                    <p class="text-muted small mb-2">@Localizer["Auth.ResendConfirmationPrompt"]</p>
                     <form method="post" asp-page-handler="ResendConfirmation" class="d-flex gap-2 align-items-start">
                         @Html.AntiForgeryToken()
                         <input type="email"
                                name="resendEmail"
                                class="form-control form-control-sm"
-                               placeholder="Email"
+                               placeholder="@Localizer["Auth.ResendEmailPlaceholder"]"
                                value="@Model.Input.Email"
-                               required />
+                               required
+                               data-testid="resend-email-input" />
                         <button type="submit" class="btn btn-outline-secondary btn-sm text-nowrap" data-testid="resend-confirmation-btn">
-                            Resend confirmation
+                            @Localizer["Auth.ResendConfirmationButton"]
                         </button>
                     </form>
                 </div>
             }
 
             <p class="text-center text-muted small mt-4 mb-0">
-                Already have an account?
-                <a href="/auth/login" class="text-brand fw-semibold">Sign in</a>
+                @Localizer["Auth.AlreadyHaveAccount"]
+                <a href="/auth/login" class="text-brand fw-semibold" data-testid="register-signin-link">@Localizer["Auth.SignInLink"]</a>
             </p>
         </div>
     </div>

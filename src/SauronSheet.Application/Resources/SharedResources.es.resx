@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -175,9 +175,6 @@
   <data name="Annual.EmptyTitle" xml:space="preserve">
     <value>Sin datos para este año</value>
   </data>
-  <data name="Annual.EmptyDescription" xml:space="preserve">
-    <value>Añade transacciones para ver el desglose anual.</value>
-  </data>
   <data name="Annual.HealthScore" xml:space="preserve">
     <value>Salud Financiera</value>
   </data>
@@ -211,30 +208,6 @@
   <data name="Annual.RatioSavingsRate" xml:space="preserve">
     <value>Tasa de Ahorro</value>
   </data>
-  <data name="Annual.RatioAvgIncome" xml:space="preserve">
-    <value>Ingreso Medio Mensual</value>
-  </data>
-  <data name="Annual.RatioAvgExpense" xml:space="preserve">
-    <value>Gasto Medio Mensual</value>
-  </data>
-  <data name="Annual.RatioTransactionCount" xml:space="preserve">
-    <value>Transacciones</value>
-  </data>
-  <data name="Annual.MonthsWithData" xml:space="preserve">
-    <value>Meses con datos</value>
-  </data>
-  <data name="Annual.FullYear" xml:space="preserve">
-    <value>Año completo</value>
-  </data>
-  <data name="Annual.MonthsWithDataCount" xml:space="preserve">
-    <value>{0} / 12 meses con datos</value>
-  </data>
-  <data name="Annual.ChartTrend" xml:space="preserve">
-    <value>Tendencia Mensual</value>
-  </data>
-  <data name="Annual.ChartDistribution" xml:space="preserve">
-    <value>Distribución Fijo / Variable</value>
-  </data>
   <data name="Annual.YoyTitle" xml:space="preserve">
     <value>Interanual</value>
   </data>
@@ -262,20 +235,8 @@
   <data name="Annual.MultiYear" xml:space="preserve">
     <value>Comparativa Multi-Anual</value>
   </data>
-  <data name="Annual.MonthlyEvolution" xml:space="preserve">
-    <value>Evolución Mensual</value>
-  </data>
-  <data name="Annual.BestIncomeMonth" xml:space="preserve">
-    <value>Mejor Mes de Ingresos</value>
-  </data>
-  <data name="Annual.BestExpenseMonth" xml:space="preserve">
-    <value>Peor Mes de Gastos</value>
-  </data>
   <data name="Annual.Categories" xml:space="preserve">
     <value>Categorías de Gastos</value>
-  </data>
-  <data name="Annual.CategoryBreakdown" xml:space="preserve">
-    <value>Desglose por Categoría</value>
   </data>
   <data name="Annual.ColCategory" xml:space="preserve">
     <value>Categoría</value>
@@ -292,23 +253,8 @@
   <data name="Annual.NewBadge" xml:space="preserve">
     <value>NUEVA</value>
   </data>
-  <data name="Annual.CategoryComparison" xml:space="preserve">
-    <value>Comparativa de Categorías</value>
-  </data>
   <data name="Annual.TimelineTitle" xml:space="preserve">
     <value>Cronología del Año</value>
-  </data>
-  <data name="Annual.TopMovements" xml:space="preserve">
-    <value>Principales Movimientos</value>
-  </data>
-  <data name="Annual.TopExpenses" xml:space="preserve">
-    <value>Principales Gastos</value>
-  </data>
-  <data name="Annual.TopIncomes" xml:space="preserve">
-    <value>Principales Ingresos</value>
-  </data>
-  <data name="Annual.MostFrequent" xml:space="preserve">
-    <value>Más Frecuentes</value>
   </data>
   <data name="Annual.Anomalies" xml:space="preserve">
     <value>Anomalías</value>
@@ -340,9 +286,6 @@
   <data name="Annual.NoAchievements" xml:space="preserve">
     <value>Sin logros</value>
   </data>
-  <data name="Annual.Trends" xml:space="preserve">
-    <value>Tendencias</value>
-  </data>
   <data name="Annual.Insufficient" xml:space="preserve">
     <value>Datos insuficientes</value>
   </data>
@@ -363,9 +306,6 @@
   </data>
   <data name="Annual.PredConfidence" xml:space="preserve">
     <value>Confianza</value>
-  </data>
-  <data name="Annual.HistoricalComparison" xml:space="preserve">
-    <value>Comparativa Histórica</value>
   </data>
   <data name="Annual.ShowDetail" xml:space="preserve">
     <value>Mostrar detalle</value>
@@ -404,5 +344,1518 @@
   </data>
   <data name="Anomaly.Generic" xml:space="preserve">
     <value>{0}: anomalía (€{1:F2}) sobre umbral μ+2σ (€{2:F2}).</value>
+  </data>
+  <!-- PR5: Annual View (T5.2) -->
+  <data name="Annual.EmptyDescription" xml:space="preserve">
+    <value>Añade transacciones para ver el desglose anual y el dashboard.</value>
+  </data>
+  <data name="Annual.RatioAvgIncome" xml:space="preserve">
+    <value>Ingreso Mensual Promedio</value>
+  </data>
+  <data name="Annual.RatioAvgExpense" xml:space="preserve">
+    <value>Gasto Mensual Promedio</value>
+  </data>
+  <data name="Annual.RatioTransactionCount" xml:space="preserve">
+    <value>Transacciones</value>
+  </data>
+  <data name="Annual.MonthsWithData" xml:space="preserve">
+    <value>Meses con datos</value>
+  </data>
+  <data name="Annual.FullYear" xml:space="preserve">
+    <value>Año completo</value>
+  </data>
+  <data name="Annual.MonthsWithDataCount" xml:space="preserve">
+    <value>{0} / 12 meses con datos</value>
+  </data>
+  <data name="Annual.ChartTrend" xml:space="preserve">
+    <value>Tendencia Mensual</value>
+  </data>
+  <data name="Annual.ChartDistribution" xml:space="preserve">
+    <value>Distribución Fijo / Variable</value>
+  </data>
+  <data name="Annual.YoySavings" xml:space="preserve">
+    <value>Ahorro</value>
+  </data>
+  <data name="Annual.YoySavingsRate" xml:space="preserve">
+    <value>Tasa de Ahorro</value>
+  </data>
+  <data name="Annual.HealthBreakdownSavings" xml:space="preserve">
+    <value>Ahorro (25%)</value>
+  </data>
+  <data name="Annual.HealthBreakdownIncomeStability" xml:space="preserve">
+    <value>Estabilidad Ingresos (15%)</value>
+  </data>
+  <data name="Annual.HealthBreakdownExpenseStability" xml:space="preserve">
+    <value>Estabilidad Gastos (15%)</value>
+  </data>
+  <data name="Annual.HealthBreakdownCategoryDependency" xml:space="preserve">
+    <value>Dependencia Categorías (10%)</value>
+  </data>
+  <data name="Annual.HealthBreakdownBalance" xml:space="preserve">
+    <value>Balance I/E (20%)</value>
+  </data>
+  <data name="Annual.HealthBreakdownTrend" xml:space="preserve">
+    <value>Tendencia (15%)</value>
+  </data>
+  <data name="Annual.HealthScoreBreakdown" xml:space="preserve">
+    <value>Desglose de Salud Financiera</value>
+  </data>
+  <data name="Annual.MultiYearTitle" xml:space="preserve">
+    <value>Comparativa Multi-Anual</value>
+  </data>
+  <data name="Annual.MonthlyEvolution" xml:space="preserve">
+    <value>Evolución Mensual</value>
+  </data>
+  <data name="Annual.BestIncomeMonth" xml:space="preserve">
+    <value>Mejor Mes de Ingresos</value>
+  </data>
+  <data name="Annual.BestExpenseMonth" xml:space="preserve">
+    <value>Mejor Mes de Gastos</value>
+  </data>
+  <data name="Annual.ExpenseCategories" xml:space="preserve">
+    <value>Categorías de Gastos</value>
+  </data>
+  <data name="Annual.IncomeDetailTitle" xml:space="preserve">
+    <value>Detalle de Ingresos</value>
+  </data>
+  <data name="Annual.ExpenseDetailTitle" xml:space="preserve">
+    <value>Detalle de Gastos</value>
+  </data>
+  <data name="Annual.TableHeaderMovement" xml:space="preserve">
+    <value>Movimiento</value>
+  </data>
+  <data name="Annual.TableHeaderType" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="Annual.TableHeaderTotalAnnual" xml:space="preserve">
+    <value>Total Anual</value>
+  </data>
+  <data name="Annual.TableHeaderMonthlyAverage" xml:space="preserve">
+    <value>Media Mensual</value>
+  </data>
+  <data name="Annual.Trends" xml:space="preserve">
+    <value>Tendencias</value>
+  </data>
+  <data name="Annual.HistoricalComparison" xml:space="preserve">
+    <value>Comparativa Histórica</value>
+  </data>
+  <data name="Annual.PredictionsNeedsTwoYears" xml:space="preserve">
+    <value>Se necesitan 2 años de datos</value>
+  </data>
+  <data name="Annual.YearTimeline" xml:space="preserve">
+    <value>Línea de Tiempo</value>
+  </data>
+  <data name="Annual.TopMovements" xml:space="preserve">
+    <value>Movimientos Destacados</value>
+  </data>
+  <data name="Annual.TopExpenses" xml:space="preserve">
+    <value>Mayores Gastos</value>
+  </data>
+  <data name="Annual.TopIncomes" xml:space="preserve">
+    <value>Mayores Ingresos</value>
+  </data>
+  <data name="Annual.MostFrequent" xml:space="preserve">
+    <value>Más Frecuentes</value>
+  </data>
+  <data name="Annual.CategoryBreakdown" xml:space="preserve">
+    <value>Desglose por Categoría</value>
+  </data>
+  <data name="Annual.CategoryComparison" xml:space="preserve">
+    <value>Comparativa de Categorías</value>
+  </data>
+  <data name="Annual.NavPreviousYear" xml:space="preserve">
+    <value>Año anterior</value>
+  </data>
+  <data name="Annual.NavNextYear" xml:space="preserve">
+    <value>Año siguiente</value>
+  </data>
+  <data name="Annual.MetaHasPreviousYear" xml:space="preserve">
+    <value>Tiene año anterior</value>
+  </data>
+  <data name="Annual.MetaHasNextYear" xml:space="preserve">
+    <value>Tiene año siguiente</value>
+  </data>
+  <data name="Annual.MetaTotalYears" xml:space="preserve">
+    <value>Total de años</value>
+  </data>
+  <data name="Annual.YearRankSummary" xml:space="preserve">
+    <value>{0} · Puesto #{1} de {2}</value>
+  </data>
+  <data name="Annual.FixedKeyword" xml:space="preserve">
+    <value>Fijo</value>
+  </data>
+  <data name="Annual.FixedIncome" xml:space="preserve">
+    <value>Ingreso Fijo</value>
+  </data>
+  <data name="Annual.VariableIncome" xml:space="preserve">
+    <value>Ingreso Variable</value>
+  </data>
+  <data name="Annual.FixedExpense" xml:space="preserve">
+    <value>Gasto Fijo</value>
+  </data>
+  <data name="Annual.VariableExpense" xml:space="preserve">
+    <value>Gasto Variable</value>
+  </data>
+  <data name="Annual.TrendIncreased" xml:space="preserve">
+    <value>Aumentó respecto al año anterior</value>
+  </data>
+  <data name="Annual.TrendDecreased" xml:space="preserve">
+    <value>Disminuyó respecto al año anterior</value>
+  </data>
+  <data name="Annual.TrendSame" xml:space="preserve">
+    <value>Igual que el año anterior</value>
+  </data>
+  <data name="Annual.ColChange" xml:space="preserve">
+    <value>Cambio</value>
+  </data>
+  <data name="Annual.ColChangePercent" xml:space="preserve">
+    <value>Cambio %</value>
+  </data>
+  <data name="Annual.HistoricalMetric" xml:space="preserve">
+    <value>Métrica</value>
+  </data>
+  <data name="Annual.HistoricalCurrent" xml:space="preserve">
+    <value>Actual</value>
+  </data>
+  <data name="Annual.HistoricalVsPrev" xml:space="preserve">
+    <value>vs Anterior</value>
+  </data>
+  <data name="Annual.HistoricalVsAvg" xml:space="preserve">
+    <value>vs Media</value>
+  </data>
+  <data name="Annual.HistoricalVsBest" xml:space="preserve">
+    <value>vs Mejor</value>
+  </data>
+  <data name="Annual.HistoricalVsWorst" xml:space="preserve">
+    <value>vs Peor</value>
+  </data>
+  <data name="Insights.EmptyYear" xml:space="preserve">
+    <value>Sin datos para este año. Añade transacciones para ver el resumen anual.</value>
+  </data>
+  <data name="Discovery.TitleNoDiscoveries" xml:space="preserve">
+    <value>Sin descubrimientos</value>
+  </data>
+  <data name="Discovery.TitleTopCategoriesConcentration" xml:space="preserve">
+    <value>Concentración en categorías principales</value>
+  </data>
+  <data name="Discovery.TitleHighestSpendingMonth" xml:space="preserve">
+    <value>Mes con mayor gasto</value>
+  </data>
+  <data name="Discovery.TitleWeekdaySpendingPattern" xml:space="preserve">
+    <value>Patrón de gasto por día de la semana</value>
+  </data>
+  <data name="Discovery.TitleExpenseReductionStreak" xml:space="preserve">
+    <value>Racha de reducción de gastos</value>
+  </data>
+  <data name="Discovery.InsufficientAdditionalData" xml:space="preserve">
+    <value>Datos insuficientes para generar descubrimientos adicionales.</value>
+  </data>
+  <data name="Annual.AriaTrendChart" xml:space="preserve">
+    <value>Gráfico de tendencia mensual con ingresos y gastos por mes</value>
+  </data>
+  <data name="Annual.AriaDistributionChart" xml:space="preserve">
+    <value>Gráfico donut con distribución de ingresos y gastos fijos y variables</value>
+  </data>
+  <data name="Annual.AriaMultiYearChart" xml:space="preserve">
+    <value>Gráfico de barras de comparativa multi-anual</value>
+  </data>
+  <data name="Annual.AriaMonthlyChart" xml:space="preserve">
+    <value>Gráfico de evolución mensual con medias</value>
+  </data>
+  <data name="Annual.AriaCategoryChart" xml:space="preserve">
+    <value>Gráfico donut de distribución por categoría</value>
+  </data>
+  <data name="Annual.AriaCategoryTable" xml:space="preserve">
+    <value>Desglose por categoría</value>
+  </data>
+  <data name="Annual.AriaCategoryComparisonTable" xml:space="preserve">
+    <value>Comparativa interanual por categoría</value>
+  </data>
+  <data name="Annual.AriaTopExpensesTable" xml:space="preserve">
+    <value>Mayores gastos</value>
+  </data>
+  <data name="Annual.AriaTopIncomesTable" xml:space="preserve">
+    <value>Mayores ingresos</value>
+  </data>
+  <data name="Annual.AriaMostFrequentTable" xml:space="preserve">
+    <value>Movimientos más frecuentes</value>
+  </data>
+  <data name="Annual.AriaAnomalyChart" xml:space="preserve">
+    <value>Gráfico de anomalías</value>
+  </data>
+  <data name="Annual.AriaIncomeDetailTable" xml:space="preserve">
+    <value>Detalle anual de ingresos</value>
+  </data>
+  <data name="Annual.AriaExpenseDetailTable" xml:space="preserve">
+    <value>Detalle anual de gastos</value>
+  </data>
+  <data name="Annual.CaptionMonthlyTrendFallback" xml:space="preserve">
+    <value>Tendencia mensual (tabla de respaldo)</value>
+  </data>
+  <data name="Annual.CaptionDistributionFallback" xml:space="preserve">
+    <value>Distribución fijo/variable (tabla de respaldo)</value>
+  </data>
+  <!-- PR6: JavaScript chart/date localization keys (js.*) -->
+  <data name="js.chart.series.income" xml:space="preserve">
+    <value>Ingresos</value>
+  </data>
+  <data name="js.chart.series.expenses" xml:space="preserve">
+    <value>Gastos</value>
+  </data>
+  <data name="js.chart.series.net" xml:space="preserve">
+    <value>Neto</value>
+  </data>
+  <data name="js.chart.series.savings" xml:space="preserve">
+    <value>Ahorro</value>
+  </data>
+  <data name="js.chart.series.avgIncome" xml:space="preserve">
+    <value>Ingreso medio</value>
+  </data>
+  <data name="js.chart.series.avgExpense" xml:space="preserve">
+    <value>Gasto medio</value>
+  </data>
+  <data name="js.chart.series.anomalyAmount" xml:space="preserve">
+    <value>Importe anomalía</value>
+  </data>
+  <data name="js.chart.series.historicalMean" xml:space="preserve">
+    <value>Media histórica</value>
+  </data>
+  <data name="js.chart.year.first" xml:space="preserve">
+    <value>Año 1</value>
+  </data>
+  <data name="js.chart.year.second" xml:space="preserve">
+    <value>Año 2</value>
+  </data>
+  <data name="js.chart.period.monthLabel" xml:space="preserve">
+    <value>Mes</value>
+  </data>
+  <data name="js.chart.period.yearLabel" xml:space="preserve">
+    <value>Año</value>
+  </data>
+  <data name="js.chart.tooltip.amount" xml:space="preserve">
+    <value>{0}: €{1}</value>
+  </data>
+  <data name="js.chart.tooltip.amountWithPercentage" xml:space="preserve">
+    <value>{0}: €{1} ({2}%)</value>
+  </data>
+  <data name="js.chart.legend.fixedIncome" xml:space="preserve">
+    <value>Ingreso fijo</value>
+  </data>
+  <data name="js.chart.legend.variableIncome" xml:space="preserve">
+    <value>Ingreso variable</value>
+  </data>
+  <data name="js.chart.legend.fixedExpense" xml:space="preserve">
+    <value>Gasto fijo</value>
+  </data>
+  <data name="js.chart.legend.variableExpense" xml:space="preserve">
+    <value>Gasto variable</value>
+  </data>
+  <!-- PR7: Import / Parser errors -->
+  <data name="Import.Error.InvalidExtension" xml:space="preserve">
+    <value>Solo se aceptan archivos Excel (.xls, .xlsx).</value>
+  </data>
+  <data name="Import.Error.ParseFailed" xml:space="preserve">
+    <value>No se pudo procesar el archivo subido. Comprueba el formato e inténtalo de nuevo.</value>
+  </data>
+  <data name="Import.Error.InvalidDateFormat" xml:space="preserve">
+    <value>Formato de fecha inválido</value>
+  </data>
+  <data name="Import.Error.InvalidAmountFormat" xml:space="preserve">
+    <value>Formato de importe inválido</value>
+  </data>
+  <data name="Import.Error.Duplicate" xml:space="preserve">
+    <value>Duplicado</value>
+  </data>
+  <data name="Import.Parser.SheetNotFound" xml:space="preserve">
+    <value>No se encontró la hoja '{0}' en el archivo. Verifica que sea un extracto ING con la hoja 'Movimientos'.</value>
+  </data>
+  <data name="Import.Parser.HeaderMismatch" xml:space="preserve">
+    <value>Cabecera incorrecta en columna {0}: se esperaba '{1}' pero se encontró '{2}'.</value>
+  </data>
+  <data name="Import.Parser.EmptyValue" xml:space="preserve">
+    <value>(vacío)</value>
+  </data>
+  <data name="Import.Parser.InvalidDate" xml:space="preserve">
+    <value>Formato de fecha inválido: '{0}'</value>
+  </data>
+  <data name="Import.Parser.InvalidAmount" xml:space="preserve">
+    <value>Formato de importe inválido: '{0}'</value>
+  </data>
+  <!-- PR7: System category display names -->
+  <data name="category.system.salary" xml:space="preserve">
+    <value>Salario</value>
+  </data>
+  <data name="category.system.sales" xml:space="preserve">
+    <value>Ventas</value>
+  </data>
+  <data name="category.system.investments" xml:space="preserve">
+    <value>Inversiones</value>
+  </data>
+  <data name="category.system.gifts" xml:space="preserve">
+    <value>Regalos</value>
+  </data>
+  <data name="category.system.other-income" xml:space="preserve">
+    <value>Otros ingresos</value>
+  </data>
+  <data name="category.system.housing" xml:space="preserve">
+    <value>Vivienda</value>
+  </data>
+  <data name="category.system.utilities" xml:space="preserve">
+    <value>Suministros</value>
+  </data>
+  <data name="category.system.groceries" xml:space="preserve">
+    <value>Supermercado</value>
+  </data>
+  <data name="category.system.transportation" xml:space="preserve">
+    <value>Transporte</value>
+  </data>
+  <data name="category.system.entertainment" xml:space="preserve">
+    <value>Ocio</value>
+  </data>
+  <data name="category.system.dining-out" xml:space="preserve">
+    <value>Comer fuera</value>
+  </data>
+  <data name="category.system.coffee" xml:space="preserve">
+    <value>Café</value>
+  </data>
+  <data name="category.system.subscription" xml:space="preserve">
+    <value>Suscripción</value>
+  </data>
+  <data name="category.system.insurance" xml:space="preserve">
+    <value>Seguros</value>
+  </data>
+  <data name="category.system.healthcare" xml:space="preserve">
+    <value>Salud</value>
+  </data>
+  <data name="category.system.fitness" xml:space="preserve">
+    <value>Deporte</value>
+  </data>
+  <data name="category.system.education" xml:space="preserve">
+    <value>Educación</value>
+  </data>
+  <data name="category.system.shopping" xml:space="preserve">
+    <value>Compras</value>
+  </data>
+  <data name="category.system.gas" xml:space="preserve">
+    <value>Combustible</value>
+  </data>
+  <data name="category.system.phone" xml:space="preserve">
+    <value>Teléfono</value>
+  </data>
+  <data name="category.system.internet" xml:space="preserve">
+    <value>Internet</value>
+  </data>
+  <data name="category.system.hobbies" xml:space="preserve">
+    <value>Aficiones</value>
+  </data>
+  <data name="category.system.gifts-given" xml:space="preserve">
+    <value>Regalos dados</value>
+  </data>
+  <data name="category.system.other-expense" xml:space="preserve">
+    <value>Otros gastos</value>
+  </data>
+  <!-- PR2/PR3/PR4: Auth, Dashboard, Transactions, Navigation, Common -->
+  <data name="Auth.CreateAccountTitle" xml:space="preserve">
+    <value>Crear Cuenta</value>
+  </data>
+  <data name="Auth.RegisterHeading" xml:space="preserve">
+    <value>Crea tu cuenta</value>
+  </data>
+  <data name="Auth.EmailLabel" xml:space="preserve">
+    <value>Correo electrónico</value>
+  </data>
+  <data name="Auth.PasswordLabel" xml:space="preserve">
+    <value>Contraseña</value>
+  </data>
+  <data name="Auth.PasswordHint" xml:space="preserve">
+    <value>(mínimo 8 caracteres)</value>
+  </data>
+  <data name="Auth.ConfirmPasswordLabel" xml:space="preserve">
+    <value>Confirmar contraseña</value>
+  </data>
+  <data name="Auth.RegisterSubmit" xml:space="preserve">
+    <value>Crear cuenta</value>
+  </data>
+  <data name="Auth.RegisterSubmitLoading" xml:space="preserve">
+    <value>Creando...</value>
+  </data>
+  <data name="Auth.ResendConfirmationPrompt" xml:space="preserve">
+    <value>¿No recibiste el correo de confirmación?</value>
+  </data>
+  <data name="Auth.ResendEmailPlaceholder" xml:space="preserve">
+    <value>Correo electrónico</value>
+  </data>
+  <data name="Auth.ResendConfirmationButton" xml:space="preserve">
+    <value>Reenviar confirmación</value>
+  </data>
+  <data name="Auth.AlreadyHaveAccount" xml:space="preserve">
+    <value>¿Ya tienes una cuenta?</value>
+  </data>
+  <data name="Auth.SignInLink" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="Auth.LoggingOutTitle" xml:space="preserve">
+    <value>Cerrando sesión...</value>
+  </data>
+  <data name="Auth.LoggingOutMessage" xml:space="preserve">
+    <value>Cerrando tu sesión...</value>
+  </data>
+  <data name="Index.PageTitle" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="Index.HeroTitle" xml:space="preserve">
+    <value>Toma el Control de tus Finanzas</value>
+  </data>
+  <data name="Index.HeroTitleStart" xml:space="preserve">
+    <value>Toma el Control de tus </value>
+  </data>
+  <data name="Index.HeroTitleEnd" xml:space="preserve">
+    <value>Finanzas</value>
+  </data>
+  <data name="Index.HeroDescription" xml:space="preserve">
+    <value>Importa extractos bancarios, controla gastos por categoría, establece presupuestos y obtén análisis inteligentes — todo en un solo lugar.</value>
+  </data>
+  <data name="Index.GetStartedButton" xml:space="preserve">
+    <value>Empezar Gratis</value>
+  </data>
+  <data name="Index.SignInButton" xml:space="preserve">
+    <value>Iniciar Sesión</value>
+  </data>
+  <data name="Index.FeatureExcelImportTitle" xml:space="preserve">
+    <value>Importación Excel</value>
+  </data>
+  <data name="Index.FeatureExcelImportDescription" xml:space="preserve">
+    <value>Sube extractos bancarios y deja que SauronSheet analice tus transacciones automáticamente.</value>
+  </data>
+  <data name="Index.FeatureAnalyticsTitle" xml:space="preserve">
+    <value>Análisis Inteligente</value>
+  </data>
+  <data name="Index.FeatureAnalyticsDescription" xml:space="preserve">
+    <value>Visualiza tendencias de gasto, desglose por categoría y comparativas anuales con gráficos.</value>
+  </data>
+  <data name="Index.FeatureBudgetTitle" xml:space="preserve">
+    <value>Control de Presupuestos</value>
+  </data>
+  <data name="Index.FeatureBudgetDescription" xml:space="preserve">
+    <value>Establece presupuestos mensuales por categoría y recibe alertas cuando te acerques al límite.</value>
+  </data>
+  <data name="Index.SystemStatus" xml:space="preserve">
+    <value>Sistema OK</value>
+  </data>
+  <data name="Error.Title" xml:space="preserve">
+    <value>Algo salió mal</value>
+  </data>
+  <data name="Error.Description" xml:space="preserve">
+    <value>Ha ocurrido un error inesperado. Inténtalo de nuevo o contacta con soporte si el problema persiste.</value>
+  </data>
+  <data name="Error.BackToHome" xml:space="preserve">
+    <value>Volver al Inicio</value>
+  </data>
+  <data name="Dashboard.PeriodAllTime" xml:space="preserve">
+    <value>Todo el Tiempo</value>
+  </data>
+  <data name="Dashboard.PeriodThisMonth" xml:space="preserve">
+    <value>Este Mes</value>
+  </data>
+  <data name="Dashboard.PeriodLast3Months" xml:space="preserve">
+    <value>Últimos 3 Meses</value>
+  </data>
+  <data name="Dashboard.PeriodThisYear" xml:space="preserve">
+    <value>Este Año</value>
+  </data>
+  <data name="Dashboard.EmptyTitle" xml:space="preserve">
+    <value>Aún no hay datos de gastos</value>
+  </data>
+  <data name="Dashboard.EmptyDescription" xml:space="preserve">
+    <value>Importa un extracto bancario o añade transacciones para ver el análisis.</value>
+  </data>
+  <data name="Dashboard.UploadStatementButton" xml:space="preserve">
+    <value>Subir Extracto</value>
+  </data>
+  <data name="Dashboard.AddTransactionButton" xml:space="preserve">
+    <value>Añadir Transacción</value>
+  </data>
+  <data name="Dashboard.KpiTotalIncome" xml:space="preserve">
+    <value>Ingresos Totales</value>
+  </data>
+  <data name="Dashboard.KpiTotalExpenses" xml:space="preserve">
+    <value>Gastos Totales</value>
+  </data>
+  <data name="Dashboard.KpiNetAmount" xml:space="preserve">
+    <value>Importe Neto</value>
+  </data>
+  <data name="Dashboard.KpiTransactions" xml:space="preserve">
+    <value>Transacciones</value>
+  </data>
+  <data name="Dashboard.ChartSpendingByCategory" xml:space="preserve">
+    <value>Gastos por Categoría</value>
+  </data>
+  <data name="Dashboard.NoExpenseData" xml:space="preserve">
+    <value>No hay datos de gastos para este periodo.</value>
+  </data>
+  <data name="Dashboard.ChartMonthlyTrends" xml:space="preserve">
+    <value>Tendencias Mensuales</value>
+  </data>
+  <data name="Dashboard.ChartYearOverYear" xml:space="preserve">
+    <value>Interanual</value>
+  </data>
+  <data name="Dashboard.RecentTransactionsTitle" xml:space="preserve">
+    <value>Transacciones Recientes</value>
+  </data>
+  <data name="Dashboard.ViewAll" xml:space="preserve">
+    <value>Ver todas</value>
+  </data>
+  <data name="Dashboard.TableDate" xml:space="preserve">
+    <value>Fecha</value>
+  </data>
+  <data name="Dashboard.TableDescription" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Dashboard.TableAmount" xml:space="preserve">
+    <value>Importe</value>
+  </data>
+  <data name="Dashboard.TableCategory" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Dashboard.NoRecentTransactions" xml:space="preserve">
+    <value>No hay transacciones recientes.</value>
+  </data>
+  <data name="Dashboard.BudgetStatusTitle" xml:space="preserve">
+    <value>Estado de Presupuestos</value>
+  </data>
+  <data name="Dashboard.BudgetManage" xml:space="preserve">
+    <value>Gestionar</value>
+  </data>
+  <data name="Dashboard.NoBudgetsSet" xml:space="preserve">
+    <value>No hay presupuestos configurados.</value>
+  </data>
+  <data name="Dashboard.CreateBudgetsLink" xml:space="preserve">
+    <value>Crea presupuestos para seguir tus gastos.</value>
+  </data>
+  <data name="Dashboard.BudgetCountSuffix" xml:space="preserve">
+    <value>presupuesto(s) este mes</value>
+  </data>
+  <data name="Dashboard.BudgetConsumed" xml:space="preserve">
+    <value>consumido</value>
+  </data>
+  <data name="Dashboard.BudgetOnTrack" xml:space="preserve">
+    <value>En Curso</value>
+  </data>
+  <data name="Dashboard.BudgetWarning" xml:space="preserve">
+    <value>Advertencia</value>
+  </data>
+  <data name="Dashboard.BudgetNearLimit" xml:space="preserve">
+    <value>Cerca del Límite</value>
+  </data>
+  <data name="Dashboard.BudgetOver" xml:space="preserve">
+    <value>Excedido</value>
+  </data>
+  <data name="Dashboard.BudgetLeft" xml:space="preserve">
+    <value>restante</value>
+  </data>
+  <data name="Dashboard.BudgetUsed" xml:space="preserve">
+    <value>usado</value>
+  </data>
+  <data name="Upload.Title" xml:space="preserve">
+    <value>Subir Extracto Bancario</value>
+  </data>
+  <data name="Upload.Heading" xml:space="preserve">
+    <value>Subir Extracto Bancario</value>
+  </data>
+  <data name="Upload.Back" xml:space="preserve">
+    <value>Volver</value>
+  </data>
+  <data name="Upload.ErrorHeading" xml:space="preserve">
+    <value>Algunos archivos no pudieron procesarse:</value>
+  </data>
+  <data name="Upload.ImportCompleteSummary" xml:space="preserve">
+    <value>Importación Completada: {0} importadas, {1} omitidas en {2} archivo(s)</value>
+  </data>
+  <data name="Upload.FileSummary" xml:space="preserve">
+    <value>{0} — {1} importadas, {2} omitidas</value>
+  </data>
+  <data name="Upload.ErrorsCount" xml:space="preserve">
+    <value>Errores ({0})</value>
+  </data>
+  <data name="Upload.ErrorRow" xml:space="preserve">
+    <value>Fila {0}: {1}</value>
+  </data>
+  <data name="Upload.ViewImportedTransactions" xml:space="preserve">
+    <value>Ver transacciones importadas</value>
+  </data>
+  <data name="Upload.FormatGuideTitle" xml:space="preserve">
+    <value>Formato Excel Requerido (ING Bank)</value>
+  </data>
+  <data name="Upload.FormatSheetNameLabel" xml:space="preserve">
+    <value>Nombre de hoja:</value>
+  </data>
+  <data name="Upload.FormatHeaderDescription" xml:space="preserve">
+    <value>La fila 4 debe contener exactamente esta cabecera:</value>
+  </data>
+  <data name="Upload.FormatDataDescription" xml:space="preserve">
+    <value>Los datos empiezan en la fila 5. Solo se aceptan archivos .xls y .xlsx.</value>
+  </data>
+  <data name="Upload.SelectFilesLabel" xml:space="preserve">
+    <value>Selecciona Extracto(s) Bancario(s) Excel</value>
+  </data>
+  <data name="Upload.ChooseFiles" xml:space="preserve">
+    <value>Elige archivos Excel</value>
+  </data>
+  <data name="Upload.OrDragDrop" xml:space="preserve">
+    <value>o arrastra y suelta</value>
+  </data>
+  <data name="Upload.FileConstraints" xml:space="preserve">
+    <value>Excel (.xls / .xlsx) hasta 10MB cada uno — se permiten varios archivos</value>
+  </data>
+  <data name="Upload.FilesSelected" xml:space="preserve">
+    <value>archivo(s) seleccionado(s):</value>
+  </data>
+  <data name="Upload.RemoveFile" xml:space="preserve">
+    <value>Quitar archivo</value>
+  </data>
+  <data name="Upload.UploadFailed" xml:space="preserve">
+    <value>Error al subir</value>
+  </data>
+  <data name="Upload.Submit" xml:space="preserve">
+    <value>Subir e Importar</value>
+  </data>
+  <data name="Upload.Uploading" xml:space="preserve">
+    <value>Subiendo...</value>
+  </data>
+  <data name="Upload.NetworkError" xml:space="preserve">
+    <value>Error de red. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Upload.ServerErrorPrefix" xml:space="preserve">
+    <value>El servidor devolvió </value>
+  </data>
+  <data name="Common.Back" xml:space="preserve">
+    <value>Volver</value>
+  </data>
+  <data name="Common.Period" xml:space="preserve">
+    <value>Periodo</value>
+  </data>
+  <data name="Common.PeriodLastMonth" xml:space="preserve">
+    <value>Mes Pasado</value>
+  </data>
+  <data name="Common.PeriodCustom" xml:space="preserve">
+    <value>Rango Personalizado</value>
+  </data>
+  <data name="Common.From" xml:space="preserve">
+    <value>Desde</value>
+  </data>
+  <data name="Common.To" xml:space="preserve">
+    <value>Hasta</value>
+  </data>
+  <data name="Common.Apply" xml:space="preserve">
+    <value>Aplicar</value>
+  </data>
+  <data name="Common.Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="Common.Uploading" xml:space="preserve">
+    <value>Subiendo...</value>
+  </data>
+  <data name="Layout.NavSearch" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
+  <data name="Layout.NavUpload" xml:space="preserve">
+    <value>Subir</value>
+  </data>
+  <data name="Layout.NavSignIn" xml:space="preserve">
+    <value>Iniciar Sesión</value>
+  </data>
+  <data name="Budget.ModalEyebrowDefault" xml:space="preserve">
+    <value>Acción de presupuesto</value>
+  </data>
+  <data name="Budget.ModalTitleDefault" xml:space="preserve">
+    <value>Actualizar estado del presupuesto</value>
+  </data>
+  <data name="Budget.ModalConfirmPrompt" xml:space="preserve">
+    <value>¿Estás seguro de que quieres</value>
+  </data>
+  <data name="Budget.ModalDefaultBudgetName" xml:space="preserve">
+    <value>este presupuesto</value>
+  </data>
+  <data name="Budget.ModalGranularityLabel" xml:space="preserve">
+    <value>Granularidad:</value>
+  </data>
+  <data name="Budget.ModalDeactivateDescription" xml:space="preserve">
+    <value>Este presupuesto dejará de aplicarse a periodos futuros.</value>
+  </data>
+  <data name="Budget.ModalDeactivateSubmit" xml:space="preserve">
+    <value>Desactivar</value>
+  </data>
+  <data name="Budget.ActionDeactivate" xml:space="preserve">
+    <value>Desactivar</value>
+  </data>
+  <data name="Budget.ActionActivate" xml:space="preserve">
+    <value>Activar</value>
+  </data>
+  <data name="Budget.ActionTextDeactivate" xml:space="preserve">
+    <value>desactivar</value>
+  </data>
+  <data name="Budget.ActionTextActivate" xml:space="preserve">
+    <value>activar</value>
+  </data>
+  <data name="Budget.TitleDeactivate" xml:space="preserve">
+    <value>Desactivar presupuesto</value>
+  </data>
+  <data name="Budget.TitleActivate" xml:space="preserve">
+    <value>Activar presupuesto</value>
+  </data>
+  <data name="Budget.EyebrowDeactivate" xml:space="preserve">
+    <value>Desactivación de presupuesto</value>
+  </data>
+  <data name="Budget.EyebrowActivate" xml:space="preserve">
+    <value>Activación de presupuesto</value>
+  </data>
+  <data name="Budget.DescDeactivate" xml:space="preserve">
+    <value>Este presupuesto dejará de aplicarse a periodos futuros.</value>
+  </data>
+  <data name="Budget.DescActivate" xml:space="preserve">
+    <value>Este presupuesto volverá a aplicarse a periodos actuales y futuros.</value>
+  </data>
+  <!-- PR4 Fix Round 2: Transactions, Categories, Budgets -->
+  <data name="Common.Date" xml:space="preserve">
+    <value>Fecha</value>
+  </data>
+  <data name="Common.Description" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Common.Amount" xml:space="preserve">
+    <value>Importe</value>
+  </data>
+  <data name="Common.Category" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Common.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="Common.Delete" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Common.Edit" xml:space="preserve">
+    <value>Editar</value>
+  </data>
+  <data name="Common.Previous" xml:space="preserve">
+    <value>Anterior</value>
+  </data>
+  <data name="Common.Next" xml:space="preserve">
+    <value>Siguiente</value>
+  </data>
+  <data name="Transactions.Index.Title" xml:space="preserve">
+    <value>Transacciones</value>
+  </data>
+  <data name="Transactions.Index.UploadStatement" xml:space="preserve">
+    <value>Subir Extracto</value>
+  </data>
+  <data name="Transactions.Index.AddTransaction" xml:space="preserve">
+    <value>Añadir Transacción</value>
+  </data>
+  <data name="Transactions.Index.ImportStatement" xml:space="preserve">
+    <value>Importar Extracto</value>
+  </data>
+  <data name="Transactions.Index.ClearFilters" xml:space="preserve">
+    <value>Limpiar</value>
+  </data>
+  <data name="Transactions.Index.Source" xml:space="preserve">
+    <value>Origen</value>
+  </data>
+  <data name="Transactions.Index.SourceSearchPlaceholder" xml:space="preserve">
+    <value>Busca un origen y selecciónalo...</value>
+  </data>
+  <data name="Transactions.Index.SourceSummaryNone" xml:space="preserve">
+    <value>Busca y añade uno o más orígenes. Si no seleccionas ninguno, se muestran todos.</value>
+  </data>
+  <data name="Transactions.Index.SourceSummary" xml:space="preserve">
+    <value>{0} origen(es) seleccionado(s)</value>
+  </data>
+  <data name="Transactions.Index.SourceRemove" xml:space="preserve">
+    <value>Quitar origen {0}</value>
+  </data>
+  <data name="Transactions.Index.SelectAll" xml:space="preserve">
+    <value>Seleccionar todo</value>
+  </data>
+  <data name="Transactions.Index.EmptyTitle" xml:space="preserve">
+    <value>Aún no hay transacciones</value>
+  </data>
+  <data name="Transactions.Index.EmptyDescription" xml:space="preserve">
+    <value>Importa un extracto bancario o añade una transacción para empezar.</value>
+  </data>
+  <data name="Transactions.Index.DeleteSelected" xml:space="preserve">
+    <value>Eliminar Seleccionadas</value>
+  </data>
+  <data name="Transactions.Index.SelectedCount" xml:space="preserve">
+    <value>{0} / {1} seleccionadas</value>
+  </data>
+  <data name="Transactions.Index.SelectionLimitWarning" xml:space="preserve">
+    <value>Límite de 1000 por transacción</value>
+  </data>
+  <data name="Transactions.Index.PaginationShowing" xml:space="preserve">
+    <value>Mostrando {0} a {1} de {2} resultados</value>
+  </data>
+  <data name="Transactions.Index.EditTransaction" xml:space="preserve">
+    <value>Editar transacción</value>
+  </data>
+  <data name="Transactions.Modal.SingleDeleteTitle" xml:space="preserve">
+    <value>Eliminar Transacción</value>
+  </data>
+  <data name="Transactions.Modal.SingleDeleteConfirm" xml:space="preserve">
+    <value>¿Estás seguro de que quieres eliminar esta transacción?</value>
+  </data>
+  <data name="Transactions.Modal.SingleDeleteWarning" xml:space="preserve">
+    <value>Esta acción no se puede deshacer.</value>
+  </data>
+  <data name="Transactions.Modal.BulkDeleteTitle" xml:space="preserve">
+    <value>Eliminar Transacciones</value>
+  </data>
+  <data name="Transactions.Modal.BulkDeleteConfirm" xml:space="preserve">
+    <value>¿Eliminar {0} transacción{1}?</value>
+  </data>
+  <data name="Transactions.Modal.BulkDeleteWarning" xml:space="preserve">
+    <value>Todas las transacciones seleccionadas se eliminarán permanentemente.</value>
+  </data>
+  <data name="Transactions.Modal.Countdown" xml:space="preserve">
+    <value>Confirma la eliminación en {0} segundos</value>
+  </data>
+  <data name="Transactions.Add.Title" xml:space="preserve">
+    <value>Añadir Transacción</value>
+  </data>
+  <data name="Transactions.Add.Label.Date" xml:space="preserve">
+    <value>Fecha</value>
+  </data>
+  <data name="Transactions.Add.Label.Description" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Transactions.Add.Label.Amount" xml:space="preserve">
+    <value>Importe</value>
+  </data>
+  <data name="Transactions.Add.Label.Currency" xml:space="preserve">
+    <value>Moneda</value>
+  </data>
+  <data name="Transactions.Add.Label.Category" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Transactions.Add.Hint.Amount" xml:space="preserve">
+    <value>Usa valores negativos para gastos, positivos para ingresos</value>
+  </data>
+  <data name="Transactions.Add.Hint.Category" xml:space="preserve">
+    <value>opcional — escribe para buscar o crear</value>
+  </data>
+  <data name="Transactions.Add.Placeholder.Date" xml:space="preserve">
+    <value>DD/MM/AAAA</value>
+  </data>
+  <data name="Transactions.Add.Placeholder.Description" xml:space="preserve">
+    <value>p. ej., Café en Starbucks</value>
+  </data>
+  <data name="Transactions.Add.Placeholder.Amount" xml:space="preserve">
+    <value>0,00</value>
+  </data>
+  <data name="Transactions.Add.Placeholder.Category" xml:space="preserve">
+    <value>Busca una existente o escribe una nueva...</value>
+  </data>
+  <data name="Transactions.Add.Submit" xml:space="preserve">
+    <value>Añadir Transacción</value>
+  </data>
+  <data name="Transactions.Add.SubmitLoading" xml:space="preserve">
+    <value>Añadiendo…</value>
+  </data>
+  <data name="Transactions.Edit.Title" xml:space="preserve">
+    <value>Editar Transacción</value>
+  </data>
+  <data name="Transactions.Edit.CurrentValues" xml:space="preserve">
+    <value>Valores Actuales</value>
+  </data>
+  <data name="Transactions.Edit.Label.Date" xml:space="preserve">
+    <value>Fecha</value>
+  </data>
+  <data name="Transactions.Edit.Label.Amount" xml:space="preserve">
+    <value>Importe</value>
+  </data>
+  <data name="Transactions.Edit.Label.Description" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Transactions.Edit.Label.Category" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Transactions.Edit.Label.Subcategory" xml:space="preserve">
+    <value>Subcategoría</value>
+  </data>
+  <data name="Transactions.Edit.Label.ImportedFrom" xml:space="preserve">
+    <value>Importado desde</value>
+  </data>
+  <data name="Transactions.Edit.SelectCategory" xml:space="preserve">
+    <value>Selecciona una categoría</value>
+  </data>
+  <data name="Transactions.Edit.SubcategoryOptional" xml:space="preserve">
+    <value>Subcategoría (opcional)</value>
+  </data>
+  <data name="Transactions.Edit.Option.None" xml:space="preserve">
+    <value>Ninguna</value>
+  </data>
+  <data name="Transactions.Edit.Submit" xml:space="preserve">
+    <value>Guardar Cambios</value>
+  </data>
+  <data name="Transactions.Edit.SubmitLoading" xml:space="preserve">
+    <value>Guardando...</value>
+  </data>
+  <data name="Transactions.Search.Title" xml:space="preserve">
+    <value>Buscar Transacciones</value>
+  </data>
+  <data name="Transactions.Search.Label.Keyword" xml:space="preserve">
+    <value>Palabra clave</value>
+  </data>
+  <data name="Transactions.Search.Label.FromDate" xml:space="preserve">
+    <value>Fecha Desde</value>
+  </data>
+  <data name="Transactions.Search.Label.ToDate" xml:space="preserve">
+    <value>Fecha Hasta</value>
+  </data>
+  <data name="Transactions.Search.Label.MinAmount" xml:space="preserve">
+    <value>Importe Mín.</value>
+  </data>
+  <data name="Transactions.Search.Label.MaxAmount" xml:space="preserve">
+    <value>Importe Máx.</value>
+  </data>
+  <data name="Transactions.Search.Placeholder.Keyword" xml:space="preserve">
+    <value>Buscar descripciones...</value>
+  </data>
+  <data name="Transactions.Search.Placeholder.MinAmount" xml:space="preserve">
+    <value>€0,00</value>
+  </data>
+  <data name="Transactions.Search.Placeholder.MaxAmount" xml:space="preserve">
+    <value>€9999,99</value>
+  </data>
+  <data name="Transactions.Search.Submit" xml:space="preserve">
+    <value>Buscar</value>
+  </data>
+  <data name="Transactions.Search.ClearFilters" xml:space="preserve">
+    <value>Limpiar todos los filtros</value>
+  </data>
+  <data name="Transactions.Search.ResultsSummary" xml:space="preserve">
+    <value>Mostrando {0} de {1} transacciones</value>
+  </data>
+  <data name="Transactions.Search.MatchingFilters" xml:space="preserve">
+    <value>que coinciden con los filtros</value>
+  </data>
+  <data name="Transactions.Search.NoResults" xml:space="preserve">
+    <value>No se encontraron resultados</value>
+  </data>
+  <data name="Transactions.Search.NoResultsDescription" xml:space="preserve">
+    <value>Prueba a ajustar los filtros o los términos de búsqueda.</value>
+  </data>
+  <data name="Transactions.Search.Page" xml:space="preserve">
+    <value>Página {0} de {1}</value>
+  </data>
+  <data name="Categories.Index.Title" xml:space="preserve">
+    <value>Gestionar Categorías</value>
+  </data>
+  <data name="Categories.Index.Description" xml:space="preserve">
+    <value>Crea y organiza categorías de gasto personalizadas. Las categorías de sistema son de solo lectura.</value>
+  </data>
+  <data name="Categories.Index.AddCategory" xml:space="preserve">
+    <value>Añadir Nueva Categoría</value>
+  </data>
+  <data name="Categories.Index.IncomeCategories" xml:space="preserve">
+    <value>Categorías de Ingresos</value>
+  </data>
+  <data name="Categories.Index.ExpenseCategories" xml:space="preserve">
+    <value>Categorías de Gastos</value>
+  </data>
+  <data name="Categories.Index.AutoCreated" xml:space="preserve">
+    <value>Auto-creada</value>
+  </data>
+  <data name="Categories.Index.NoIncomeCategories" xml:space="preserve">
+    <value>Aún no hay categorías de ingresos</value>
+  </data>
+  <data name="Categories.Index.NoExpenseCategories" xml:space="preserve">
+    <value>Aún no hay categorías de gastos</value>
+  </data>
+  <data name="Categories.Index.Subcategories" xml:space="preserve">
+    <value>Subcategorías</value>
+  </data>
+  <data name="Categories.Index.Edit" xml:space="preserve">
+    <value>Editar</value>
+  </data>
+  <data name="Categories.Index.Delete" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Categories.Modal.Create.Title" xml:space="preserve">
+    <value>Añadir Nueva Categoría</value>
+  </data>
+  <data name="Categories.Modal.Create.NameLabel" xml:space="preserve">
+    <value>Nombre de Categoría</value>
+  </data>
+  <data name="Categories.Modal.Create.TypeLabel" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="Categories.Modal.Create.ColorLabel" xml:space="preserve">
+    <value>Color</value>
+  </data>
+  <data name="Categories.Modal.Create.IconLabel" xml:space="preserve">
+    <value>Icono</value>
+  </data>
+  <data name="Categories.Modal.Create.TypeIncome" xml:space="preserve">
+    <value>Ingreso</value>
+  </data>
+  <data name="Categories.Modal.Create.TypeExpense" xml:space="preserve">
+    <value>Gasto</value>
+  </data>
+  <data name="Categories.Modal.Create.SelectType" xml:space="preserve">
+    <value>Selecciona tipo...</value>
+  </data>
+  <data name="Categories.Modal.Create.SelectIcon" xml:space="preserve">
+    <value>Selecciona icono...</value>
+  </data>
+  <data name="Categories.Modal.Create.NameRequired" xml:space="preserve">
+    <value>El nombre de categoría es obligatorio</value>
+  </data>
+  <data name="Categories.Modal.Create.CharCount" xml:space="preserve">
+    <value>Máx. 50 caracteres ({0}/50)</value>
+  </data>
+  <data name="Categories.Modal.Create.Submit" xml:space="preserve">
+    <value>Guardar Categoría</value>
+  </data>
+  <data name="Categories.Modal.Edit.Title" xml:space="preserve">
+    <value>Editar Categoría</value>
+  </data>
+  <data name="Categories.Modal.Edit.Submit" xml:space="preserve">
+    <value>Actualizar Categoría</value>
+  </data>
+  <data name="Categories.Modal.Delete.Title" xml:space="preserve">
+    <value>Eliminar Categoría</value>
+  </data>
+  <data name="Categories.Modal.Delete.Confirm" xml:space="preserve">
+    <value>¿Estás seguro de que quieres eliminar la categoría {0}?</value>
+  </data>
+  <data name="Categories.Modal.Delete.Warning" xml:space="preserve">
+    <value>Esta acción no se puede deshacer.</value>
+  </data>
+  <data name="Categories.Modal.Delete.Submit" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Categories.Error.Generic" xml:space="preserve">
+    <value>Se produjo un error</value>
+  </data>
+  <data name="Categories.Error.RequestFailed" xml:space="preserve">
+    <value>La solicitud falló</value>
+  </data>
+  <data name="Budgets.Index.Title" xml:space="preserve">
+    <value>Presupuestos</value>
+  </data>
+  <data name="Budgets.Index.CreateBudget" xml:space="preserve">
+    <value>Crear Presupuesto</value>
+  </data>
+  <data name="Budgets.Index.ActiveOnly" xml:space="preserve">
+    <value>Solo Activos</value>
+  </data>
+  <data name="Budgets.Index.AllCategories" xml:space="preserve">
+    <value>Todas las Categorías</value>
+  </data>
+  <data name="Budgets.Index.Filter" xml:space="preserve">
+    <value>Filtrar</value>
+  </data>
+  <data name="Budgets.Index.Table.Category" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Budgets.Index.Table.Granularity" xml:space="preserve">
+    <value>Granularidad</value>
+  </data>
+  <data name="Budgets.Index.Table.Limit" xml:space="preserve">
+    <value>Límite</value>
+  </data>
+  <data name="Budgets.Index.Table.Validity" xml:space="preserve">
+    <value>Vigencia</value>
+  </data>
+  <data name="Budgets.Index.Table.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Budgets.Index.Table.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="Budgets.Index.Status.Active" xml:space="preserve">
+    <value>Activo</value>
+  </data>
+  <data name="Budgets.Index.Status.Inactive" xml:space="preserve">
+    <value>Inactivo</value>
+  </data>
+  <data name="Budgets.Index.Permanent" xml:space="preserve">
+    <value>Permanente</value>
+  </data>
+  <data name="Budgets.Index.Edit" xml:space="preserve">
+    <value>Editar</value>
+  </data>
+  <data name="Budgets.Index.Deactivate" xml:space="preserve">
+    <value>Desactivar</value>
+  </data>
+  <data name="Budgets.Index.Activate" xml:space="preserve">
+    <value>Activar</value>
+  </data>
+  <data name="Budgets.Index.EmptyTitle" xml:space="preserve">
+    <value>No se encontraron presupuestos.</value>
+  </data>
+  <data name="Budgets.Index.EmptyDescription" xml:space="preserve">
+    <value>Crea uno para empezar a controlar tus gastos.</value>
+  </data>
+  <data name="Budgets.Create.Title" xml:space="preserve">
+    <value>Crear Presupuesto</value>
+  </data>
+  <data name="Budgets.Create.Back" xml:space="preserve">
+    <value>Volver a Presupuestos</value>
+  </data>
+  <data name="Budgets.Create.Legend.WhatIsThis" xml:space="preserve">
+    <value>¿Para qué es este presupuesto?</value>
+  </data>
+  <data name="Budgets.Create.Type.Income" xml:space="preserve">
+    <value>Ingreso</value>
+  </data>
+  <data name="Budgets.Create.Type.IncomeDescription" xml:space="preserve">
+    <value>Objetivo de ingresos</value>
+  </data>
+  <data name="Budgets.Create.Type.Expense" xml:space="preserve">
+    <value>Gasto</value>
+  </data>
+  <data name="Budgets.Create.Type.ExpenseDescription" xml:space="preserve">
+    <value>Límite de gasto</value>
+  </data>
+  <data name="Budgets.Create.Label.Category" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Budgets.Create.SelectCategory" xml:space="preserve">
+    <value>-- Selecciona una categoría --</value>
+  </data>
+  <data name="Budgets.Create.Hint.Category" xml:space="preserve">
+    <value>Elige la categoría a la que aplica este presupuesto.</value>
+  </data>
+  <data name="Budgets.Create.Label.IncomeTarget" xml:space="preserve">
+    <value>Objetivo de Ingresos</value>
+  </data>
+  <data name="Budgets.Create.Label.SpendingLimit" xml:space="preserve">
+    <value>Límite de Gasto</value>
+  </data>
+  <data name="Budgets.Create.Hint.IncomeTarget" xml:space="preserve">
+    <value>Ingresos mínimos esperados por periodo.</value>
+  </data>
+  <data name="Budgets.Create.Hint.SpendingLimit" xml:space="preserve">
+    <value>Gasto máximo permitido por periodo.</value>
+  </data>
+  <data name="Budgets.Create.Placeholder.Limit" xml:space="preserve">
+    <value>500,00</value>
+  </data>
+  <data name="Budgets.Create.Label.EffectiveFrom" xml:space="preserve">
+    <value>Vigente Desde</value>
+  </data>
+  <data name="Budgets.Create.Label.EffectiveUntil" xml:space="preserve">
+    <value>Vigente Hasta</value>
+  </data>
+  <data name="Budgets.Create.Hint.Permanent" xml:space="preserve">
+    <value>Déjalo vacío para un presupuesto permanente.</value>
+  </data>
+  <data name="Budgets.Create.Label.PeriodGranularity" xml:space="preserve">
+    <value>Periodicidad</value>
+  </data>
+  <data name="Budgets.Create.SelectGranularity" xml:space="preserve">
+    <value>-- Selecciona Periodicidad --</value>
+  </data>
+  <data name="Budgets.Create.Granularity.Monthly" xml:space="preserve">
+    <value>Mensual</value>
+  </data>
+  <data name="Budgets.Create.Granularity.Quarterly" xml:space="preserve">
+    <value>Trimestral</value>
+  </data>
+  <data name="Budgets.Create.Granularity.Semester" xml:space="preserve">
+    <value>Semestral</value>
+  </data>
+  <data name="Budgets.Create.Granularity.Annual" xml:space="preserve">
+    <value>Anual</value>
+  </data>
+  <data name="Budgets.Create.Hint.Granularity" xml:space="preserve">
+    <value>Con qué frecuencia se reinicia el límite.</value>
+  </data>
+  <data name="Budgets.Create.Submit" xml:space="preserve">
+    <value>Crear Presupuesto</value>
+  </data>
+  <data name="Budgets.Create.Validation.LimitPositive" xml:space="preserve">
+    <value>El límite debe ser un número positivo.</value>
+  </data>
+  <data name="Budgets.Create.Validation.UntilAfterFrom" xml:space="preserve">
+    <value>La fecha de fin debe ser igual o posterior a la de inicio.</value>
+  </data>
+  <data name="Budgets.Edit.Title" xml:space="preserve">
+    <value>Editar Presupuesto</value>
+  </data>
+  <data name="Budgets.Edit.Back" xml:space="preserve">
+    <value>Volver a Presupuestos</value>
+  </data>
+  <data name="Budgets.Edit.Label.Category" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="Budgets.Edit.Label.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Budgets.Edit.Label.EffectiveFrom" xml:space="preserve">
+    <value>Vigente Desde</value>
+  </data>
+  <data name="Budgets.Edit.Label.EffectiveUntil" xml:space="preserve">
+    <value>Vigente Hasta</value>
+  </data>
+  <data name="Budgets.Edit.Permanent" xml:space="preserve">
+    <value>Permanente</value>
+  </data>
+  <data name="Budgets.Edit.Status.Active" xml:space="preserve">
+    <value>Activo</value>
+  </data>
+  <data name="Budgets.Edit.Status.Inactive" xml:space="preserve">
+    <value>Inactivo</value>
+  </data>
+  <data name="Budgets.Edit.Action.Deactivate" xml:space="preserve">
+    <value>Desactivar Presupuesto</value>
+  </data>
+  <data name="Budgets.Edit.Action.Activate" xml:space="preserve">
+    <value>Activar Presupuesto</value>
+  </data>
+  <data name="Budgets.Edit.Action.Delete" xml:space="preserve">
+    <value>Eliminar Permanentemente</value>
+  </data>
+  <data name="Budgets.Edit.Label.SpendingLimit" xml:space="preserve">
+    <value>Límite de Gasto</value>
+  </data>
+  <data name="Budgets.Edit.Label.PeriodGranularity" xml:space="preserve">
+    <value>Periodicidad</value>
+  </data>
+  <data name="Budgets.Edit.Hint.Permanent" xml:space="preserve">
+    <value>Déjalo vacío para un presupuesto permanente.</value>
+  </data>
+  <data name="Budgets.Edit.Submit" xml:space="preserve">
+    <value>Guardar Cambios</value>
+  </data>
+  <data name="Budgets.Edit.SubmitLoading" xml:space="preserve">
+    <value>Guardando…</value>
+  </data>
+  <data name="Budgets.Edit.NotFound" xml:space="preserve">
+    <value>Presupuesto no encontrado.</value>
+  </data>
+  <data name="Budgets.Edit.Modal.DeleteTitle" xml:space="preserve">
+    <value>Eliminar Presupuesto</value>
+  </data>
+  <data name="Budgets.Edit.Modal.DeleteConfirm" xml:space="preserve">
+    <value>¿Estás seguro de que quieres eliminar permanentemente este presupuesto?</value>
+  </data>
+  <data name="Budgets.Edit.Modal.DeleteWarning" xml:space="preserve">
+    <value>Esta acción no se puede deshacer.</value>
+  </data>
+  <data name="Budgets.Badge.OnTrack" xml:space="preserve">
+    <value>En Curso</value>
+  </data>
+  <data name="Budgets.Badge.Warning" xml:space="preserve">
+    <value>Advertencia</value>
+  </data>
+  <data name="Budgets.Badge.NearLimit" xml:space="preserve">
+    <value>Cerca del Límite</value>
+  </data>
+  <data name="Budgets.Badge.OverBudget" xml:space="preserve">
+    <value>Sobre Presupuesto</value>
+  </data>
+  <data name="Budgets.Badge.Unknown" xml:space="preserve">
+    <value>Desconocido</value>
+  </data>
+  <!-- PR4 Final Fix: Subcategories, Budgets History/Metrics/Comparison -->
+  <data name="Categories.Subcategories.Title" xml:space="preserve">
+    <value>Subcategorías - {0}</value>
+  </data>
+  <data name="Categories.Subcategories.Breadcrumb" xml:space="preserve">
+    <value>Categorías</value>
+  </data>
+  <data name="Categories.Subcategories.Heading" xml:space="preserve">
+    <value>Subcategorías de {0}</value>
+  </data>
+  <data name="Categories.Subcategories.Description" xml:space="preserve">
+    <value>Gestiona las subcategorías de esta categoría. Las subcategorías auto-creadas provienen de importaciones Excel.</value>
+  </data>
+  <data name="Categories.Subcategories.Back" xml:space="preserve">
+    <value>Volver</value>
+  </data>
+  <data name="Categories.Subcategories.AddNewSubcategory" xml:space="preserve">
+    <value>Añadir Nueva Subcategoría</value>
+  </data>
+  <data name="Categories.Subcategories.ListAriaLabel" xml:space="preserve">
+    <value>Lista de subcategorías</value>
+  </data>
+  <data name="Categories.Subcategories.Empty" xml:space="preserve">
+    <value>Aún no hay subcategorías</value>
+  </data>
+  <data name="Categories.Subcategories.EditAriaLabel" xml:space="preserve">
+    <value>Editar subcategoría {0}</value>
+  </data>
+  <data name="Categories.Subcategories.DeleteAriaLabel" xml:space="preserve">
+    <value>Eliminar subcategoría {0}</value>
+  </data>
+  <data name="Categories.Modal.Create.SubcategoryTitle" xml:space="preserve">
+    <value>Añadir Nueva Subcategoría</value>
+  </data>
+  <data name="Categories.Modal.Create.SubcategoryNameLabel" xml:space="preserve">
+    <value>Nombre de Subcategoría</value>
+  </data>
+  <data name="Categories.Modal.Create.SubcategoryNameRequired" xml:space="preserve">
+    <value>El nombre de subcategoría es obligatorio</value>
+  </data>
+  <data name="Categories.Modal.Create.SaveSubcategory" xml:space="preserve">
+    <value>Guardar Subcategoría</value>
+  </data>
+  <data name="Categories.Modal.Edit.SubcategoryTitle" xml:space="preserve">
+    <value>Editar Subcategoría</value>
+  </data>
+  <data name="Categories.Modal.Edit.UpdateSubcategory" xml:space="preserve">
+    <value>Actualizar Subcategoría</value>
+  </data>
+  <data name="Categories.Modal.Delete.SubcategoryTitle" xml:space="preserve">
+    <value>Eliminar Subcategoría</value>
+  </data>
+  <data name="Categories.Modal.Delete.SubcategoryConfirm" xml:space="preserve">
+    <value>¿Estás seguro de que quieres eliminar la subcategoría {0}?</value>
+  </data>
+  <data name="Budgets.History.Title" xml:space="preserve">
+    <value>Historial de Presupuestos</value>
+  </data>
+  <data name="Budgets.History.Back" xml:space="preserve">
+    <value>Volver a Presupuestos</value>
+  </data>
+  <data name="Budgets.History.YearLabel" xml:space="preserve">
+    <value>Año:</value>
+  </data>
+  <data name="Budgets.History.View" xml:space="preserve">
+    <value>Ver</value>
+  </data>
+  <data name="Budgets.History.TotalLimit" xml:space="preserve">
+    <value>Límite Total</value>
+  </data>
+  <data name="Budgets.History.TotalSpent" xml:space="preserve">
+    <value>Gasto Total</value>
+  </data>
+  <data name="Budgets.History.Remaining" xml:space="preserve">
+    <value>Restante</value>
+  </data>
+  <data name="Budgets.History.TableAriaLabel" xml:space="preserve">
+    <value>Historial de presupuestos para {0}</value>
+  </data>
+  <data name="Budgets.History.Period" xml:space="preserve">
+    <value>Periodo</value>
+  </data>
+  <data name="Budgets.History.AccumulatedLimit" xml:space="preserve">
+    <value>Límite Acumulado</value>
+  </data>
+  <data name="Budgets.History.Spent" xml:space="preserve">
+    <value>Gastado</value>
+  </data>
+  <data name="Budgets.History.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Budgets.History.TotalYear" xml:space="preserve">
+    <value>Total {0}</value>
+  </data>
+  <data name="Budgets.History.NoDataTitle" xml:space="preserve">
+    <value>Sin datos de presupuesto para {0}.</value>
+  </data>
+  <data name="Budgets.History.NoDataDescription" xml:space="preserve">
+    <value>Selecciona otro año o crea presupuestos para empezar a seguir tus gastos.</value>
+  </data>
+  <data name="Budgets.Metrics.Title" xml:space="preserve">
+    <value>Métricas de Presupuestos</value>
+  </data>
+  <data name="Budgets.Metrics.Back" xml:space="preserve">
+    <value>Volver a Presupuestos</value>
+  </data>
+  <data name="Budgets.Metrics.CurrentMonth" xml:space="preserve">
+    <value>Mes Actual</value>
+  </data>
+  <data name="Budgets.Metrics.CurrentPeriod" xml:space="preserve">
+    <value>Periodo Actual</value>
+  </data>
+  <data name="Budgets.Metrics.CurrentYear" xml:space="preserve">
+    <value>Año Actual</value>
+  </data>
+  <data name="Budgets.Metrics.AccumulatedLimit" xml:space="preserve">
+    <value>Límite Acumulado</value>
+  </data>
+  <data name="Budgets.Metrics.Spent" xml:space="preserve">
+    <value>Gastado</value>
+  </data>
+  <data name="Budgets.Metrics.Remaining" xml:space="preserve">
+    <value>Restante</value>
+  </data>
+  <data name="Budgets.Metrics.Consumed" xml:space="preserve">
+    <value>Consumido</value>
+  </data>
+  <data name="Budgets.Metrics.PeriodsElapsed" xml:space="preserve">
+    <value>{0} periodo(s) transcurrido(s)</value>
+  </data>
+  <data name="Budgets.Metrics.PercentageConsumed" xml:space="preserve">
+    <value>{0}% consumido</value>
+  </data>
+  <data name="Budgets.Metrics.Limit" xml:space="preserve">
+    <value>Límite</value>
+  </data>
+  <data name="Budgets.Metrics.Left" xml:space="preserve">
+    <value>Quedan</value>
+  </data>
+  <data name="Budgets.Metrics.NoDataTitle" xml:space="preserve">
+    <value>Sin datos de presupuesto para el {0} actual.</value>
+  </data>
+  <data name="Budgets.Metrics.NoDataDescription" xml:space="preserve">
+    <value>Crea presupuestos para ver tus métricas de gasto.</value>
+  </data>
+  <data name="Budgets.Comparison.Title" xml:space="preserve">
+    <value>Presupuesto vs Real</value>
+  </data>
+  <data name="Budgets.Comparison.Heading" xml:space="preserve">
+    <value>Presupuesto vs Real</value>
+  </data>
+  <data name="Budgets.Comparison.Back" xml:space="preserve">
+    <value>Volver a Presupuestos</value>
+  </data>
+  <data name="Budgets.Comparison.MonthLabel" xml:space="preserve">
+    <value>Mes:</value>
+  </data>
+  <data name="Budgets.Comparison.Filter" xml:space="preserve">
+    <value>Filtrar</value>
+  </data>
+  <data name="Budgets.Comparison.TotalBudgeted" xml:space="preserve">
+    <value>Total Presupuestado</value>
+  </data>
+  <data name="Budgets.Comparison.TotalActual" xml:space="preserve">
+    <value>Total Real</value>
+  </data>
+  <data name="Budgets.Comparison.Difference" xml:space="preserve">
+    <value>Diferencia</value>
+  </data>
+  <data name="Budgets.Comparison.ChartBudget" xml:space="preserve">
+    <value>Presupuesto</value>
+  </data>
+  <data name="Budgets.Comparison.ChartActual" xml:space="preserve">
+    <value>Real</value>
+  </data>
+  <data name="Budgets.Comparison.ChartTitle" xml:space="preserve">
+    <value>Presupuesto vs Real por Categoría</value>
+  </data>
+  <data name="Budgets.Comparison.Budget" xml:space="preserve">
+    <value>Presupuesto</value>
+  </data>
+  <data name="Budgets.Comparison.Actual" xml:space="preserve">
+    <value>Real</value>
+  </data>
+  <data name="Budgets.Comparison.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Budgets.Comparison.NoBudget" xml:space="preserve">
+    <value>Sin presupuesto</value>
+  </data>
+  <data name="Budgets.Comparison.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Budgets.Comparison.NoDataTitle" xml:space="preserve">
+    <value>Sin datos de presupuesto para {0}.</value>
+  </data>
+  <data name="Budgets.Comparison.NoDataDescription" xml:space="preserve">
+    <value>Crea presupuestos para compararlos con el gasto real.</value>
   </data>
 </root>

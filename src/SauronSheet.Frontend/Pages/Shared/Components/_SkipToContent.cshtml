@@ -1,2 +1,3 @@
-﻿@* Accessibility skip link for keyboard navigation *@
-<a href="#main-content" class="visually-hidden-focusable position-absolute top-0 start-0 bg-white text-brand px-4 py-2 rounded shadow z-3">Saltar al contenido principal</a>
+﻿@inject IStringLocalizer<SharedResources> Localizer
+@* Accessibility skip link for keyboard navigation *@
+<a href="#main-content" class="visually-hidden-focusable position-absolute top-0 start-0 bg-white text-brand px-4 py-2 rounded shadow z-3">@Localizer["Layout.SkipToContent"]</a>

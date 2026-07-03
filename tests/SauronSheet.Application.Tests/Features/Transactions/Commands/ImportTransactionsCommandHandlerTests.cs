@@ -1,8 +1,12 @@
 namespace SauronSheet.Application.Tests.Features.Transactions.Commands;
 
 using System.IO;
+using System.Globalization;
+using Microsoft.Extensions.Localization;
 using Moq;
 using SauronSheet.Application.Features.Transactions.Commands;
+using SauronSheet.Application.Features.Transactions.DTOs;
+using SauronSheet.Application.Resources;
 using SauronSheet.Application.Services;
 using SauronSheet.Domain.Common;
 using SauronSheet.Domain.Entities;
@@ -38,6 +42,7 @@ public class ImportTransactionsCommandHandlerTests
     private readonly Mock<IUserContext> _mockUserContext;
     private readonly Mock<IBankCategoryResolutionService> _mockResolutionService;
     private readonly Mock<IImportProgressTracker> _mockProgressTracker;
+    private readonly Mock<IStringLocalizer<SharedResources>> _mockLocalizer;
 
     public ImportTransactionsCommandHandlerTests()
     {
@@ -48,6 +53,9 @@ public class ImportTransactionsCommandHandlerTests
         _mockUserContext = new Mock<IUserContext>();
         _mockResolutionService = new Mock<IBankCategoryResolutionService>();
         _mockProgressTracker = new Mock<IImportProgressTracker>();
+        _mockLocalizer = new Mock<IStringLocalizer<SharedResources>>();
+
+        SetupLocalizerTranslations();
 
         _mockUserContext.Setup(x => x.UserId).Returns("test-user-id");
         _mockUserContext.Setup(x => x.UserEmail).Returns("test@example.com");
@@ -72,6 +80,7 @@ public class ImportTransactionsCommandHandlerTests
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
             _mockResolutionService.Object,
+            _mockLocalizer.Object,
             null);
 
     private ImportTransactionsCommandHandler CreateHandlerWithTracker() =>
@@ -82,7 +91,39 @@ public class ImportTransactionsCommandHandlerTests
             _mockUserProfileRepo.Object,
             _mockUserContext.Object,
             _mockResolutionService.Object,
+            _mockLocalizer.Object,
             _mockProgressTracker.Object);
+
+    private void SetupLocalizerTranslations()
+    {
+        Dictionary<string, string> englishTranslations = new Dictionary<string, string>
+        {
+            ["Import.Error.InvalidExtension"] = "Only Excel files (.xls, .xlsx) are accepted.",
+            ["Import.Error.ParseFailed"] = "Could not parse the uploaded file. Please check the format and try again.",
+            ["Import.Error.InvalidDateFormat"] = "Invalid date format",
+            ["Import.Error.InvalidAmountFormat"] = "Invalid amount format",
+            ["Import.Error.Duplicate"] = "Duplicate"
+        };
+
+        Dictionary<string, string> spanishTranslations = new Dictionary<string, string>
+        {
+            ["Import.Error.InvalidExtension"] = "Solo se aceptan archivos Excel (.xls, .xlsx).",
+            ["Import.Error.ParseFailed"] = "No se pudo procesar el archivo subido. Comprueba el formato e inténtalo de nuevo.",
+            ["Import.Error.InvalidDateFormat"] = "Formato de fecha inválido",
+            ["Import.Error.InvalidAmountFormat"] = "Formato de importe inválido",
+            ["Import.Error.Duplicate"] = "Duplicado"
+        };
+
+        _mockLocalizer
+            .Setup(localizer => localizer[It.IsAny<string>()])
+            .Returns((string key) =>
+            {
+                string language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                Dictionary<string, string> dictionary = language == "es" ? spanishTranslations : englishTranslations;
+                string value = dictionary.GetValueOrDefault(key, key);
+                return new LocalizedString(key, value, resourceNotFound: false);
+            });
+    }
 
     // ── IH-2a: Happy path ────────────────────────────────────────────────────
 
@@ -201,6 +242,32 @@ public class ImportTransactionsCommandHandlerTests
         _mockImportBatchRepo.Verify(x => x.AddAsync(It.IsAny<ImportBatch>(), It.IsAny<UserId>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_ParserThrowsIoException_WithSpanishCulture_ThrowsLocalizedGenericDomainException()
+    {
+        // Arrange
+        _mockParser
+            .Setup(x => x.ParseAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ThrowsAsync(new IOException("Disk read error"));
+
+        ImportTransactionsCommand command = new ImportTransactionsCommand(new MemoryStream(), "corrupt.xls");
+        CultureInfo previousCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("es-ES");
+
+        try
+        {
+            // Act & Assert
+            DomainException ex = await Assert.ThrowsAsync<DomainException>(() =>
+                CreateHandler().Handle(command, CancellationToken.None));
+
+            Assert.Equal("No se pudo procesar el archivo subido. Comprueba el formato e inténtalo de nuevo.", ex.Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
     // ── IH-2e: Invalid file extension ────────────────────────────────────────
 
     /// <summary>
@@ -222,6 +289,28 @@ public class ImportTransactionsCommandHandlerTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_PdfExtension_WithSpanishCulture_ThrowsLocalizedDomainException()
+    {
+        // Arrange
+        ImportTransactionsCommand command = new ImportTransactionsCommand(new MemoryStream(), "statement.pdf");
+        CultureInfo previousCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("es-ES");
+
+        try
+        {
+            // Act & Assert
+            DomainException ex = await Assert.ThrowsAsync<DomainException>(() =>
+                CreateHandler().Handle(command, CancellationToken.None));
+
+            Assert.Equal("Solo se aceptan archivos Excel (.xls, .xlsx).", ex.Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
     // ── IH-2f: Cross-store duplicate ─────────────────────────────────────────
 
     /// <summary>
@@ -232,6 +321,11 @@ public class ImportTransactionsCommandHandlerTests
     public async Task Handle_CrossStoreDuplicate_SkipsAndRecordsError()
     {
         // Arrange
+        CultureInfo previousCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+
+        try
+        {
         var rows = new List<RawTransactionRow>
         {
             new(1, "01/01/2024", null, null, "Coffee shop", null, "-5.50", null),
@@ -259,6 +353,49 @@ public class ImportTransactionsCommandHandlerTests
         Assert.Contains("Duplicate", result.Errors[0].ErrorMessage);
         _mockTransactionRepo.Verify(x => x.AddAsync(It.IsAny<Transaction>()), Times.Never);
         _mockImportBatchRepo.Verify(x => x.AddAsync(It.IsAny<ImportBatch>(), It.IsAny<UserId>()), Times.Once);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
+    [Fact]
+    public async Task Handle_CrossStoreDuplicate_WithSpanishCulture_UsesLocalizedDuplicateError()
+    {
+        // Arrange
+        List<RawTransactionRow> rows =
+        [
+            new(1, "01/01/2024", null, null, "Coffee shop", null, "-5.50", null),
+        ];
+        StatementParseResult parseResult = new StatementParseResult(rows, Array.Empty<StatementParseRowError>(), 0);
+
+        _mockParser
+            .Setup(x => x.ParseAsync(It.IsAny<Stream>(), It.IsAny<string>()))
+            .ReturnsAsync(parseResult);
+
+        _mockTransactionRepo
+            .Setup(x => x.ExistsDuplicateAsync(
+                It.IsAny<UserId>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<decimal?>()))
+            .ReturnsAsync(true);
+
+        ImportTransactionsCommand command = new ImportTransactionsCommand(new MemoryStream(), "statement.xlsx");
+        CultureInfo previousCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("es-ES");
+
+        try
+        {
+            // Act
+            ImportResultDto result = await CreateHandler().Handle(command, CancellationToken.None);
+
+            // Assert
+            Assert.Single(result.Errors);
+            Assert.Equal("Duplicado", result.Errors[0].ErrorMessage);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previousCulture;
+        }
     }
 
     // ── IH-2g: Parser row errors appear in ImportResultDto.Errors ─────────────

@@ -1,9 +1,12 @@
 @page "/Analysis/Annual"
 @using System.Globalization
+@using Microsoft.Extensions.Localization
 @using SauronSheet.Application.Features.Analytics.DTOs
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @model SauronSheet.Frontend.Pages.Analysis.AnnualModel
 @{
-    ViewData["Title"] = "Annual Dashboard";
+    ViewData["Title"] = Localizer["Annual.PageTitle"];
     int selectedYear = Model.YearToRender;
     int? previousAvailableYear = Model.PreviousAvailableYear;
     int? nextAvailableYear = Model.NextAvailableYear;
@@ -13,6 +16,7 @@
     AnnualDashboardHealthScoreDto? health = Model.Result?.HealthScore;
     AnnualAnalysisSummaryDto? analysisSummary = Model.Result?.AnalysisSummary;
     bool hasData = Model.HasData;
+    string[] monthShortLabels = Model.MonthShortLabels;
 }
 
 <style>
@@ -33,6 +37,7 @@
              x-data='{
                  hasData: @(hasData.ToString().ToLowerInvariant()),
                  showDetail: false,
+                 monthLetters: @Html.Raw(Json.Serialize(Model.MonthLetterLabels)),
                  incomeRows: @(hasData ? Json.Serialize(Model.IncomeRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })) : "[]"),
                  expenseRows: @(hasData ? Json.Serialize(Model.ExpenseRows.Select(r => new { movement = r.Movement, typeLabel = r.TypeLabel, average = r.Average, totalAnnual = r.MonthlyAmounts.Sum(), monthlyAmounts = r.MonthlyAmounts, expanded = false, isIncome = r.IsIncome })) : "[]"),
 
@@ -78,10 +83,10 @@
             @* ── Header + Year Nav (REQ-018: HTMX fetch+swap, ◀ ▶ buttons, dropdown) ── *@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h3 class="h3 fw-bold mb-0">Annual Dashboard</h3>
+                    <h3 class="h3 fw-bold mb-0">@Localizer["Annual.PageTitle"]</h3>
                     @if (hasData && exec is not null)
                     {
-                        <p class="text-muted small mb-0 mt-1">@exec.Year · Rank #@(exec.YearRank?.ToString() ?? "—") of @exec.TotalYears</p>
+                        <p class="text-muted small mb-0 mt-1">@Localizer["Annual.YearRankSummary", exec.Year, exec.YearRank?.ToString() ?? "—", exec.TotalYears]</p>
                     }
                 </div>
                 <div class="d-flex align-items-center gap-2">
@@ -93,8 +98,8 @@
                             hx-select="#annual-content"
                             hx-swap="outerHTML"
                             disabled="@(!previousAvailableYear.HasValue)"
-                            aria-label="Previous year"
-                            title="Previous year">
+                            aria-label="@Localizer["Annual.NavPreviousYear"]"
+                            title="@Localizer["Annual.NavPreviousYear"]">
                         ◀
                     </button>
 
@@ -127,8 +132,8 @@
                             hx-select="#annual-content"
                             hx-swap="outerHTML"
                             disabled="@(!nextAvailableYear.HasValue)"
-                            aria-label="Next year"
-                            title="Next year">
+                            aria-label="@Localizer["Annual.NavNextYear"]"
+                            title="@Localizer["Annual.NavNextYear"]">
                         ▶
                     </button>
                 </div>
@@ -140,21 +145,21 @@
                      class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite"
                      data-testid="annual-empty-state">
                     <div class="fs-1 mb-3">📊</div>
-                    <p class="h5 fw-semibold mb-2">Sin datos para este año</p>
-                    <p class="text-muted mb-4">Add transactions to see the annual breakdown and dashboard.</p>
+                    <p class="h5 fw-semibold mb-2">@Localizer["Annual.EmptyTitle"]</p>
+                    <p class="text-muted mb-4">@Localizer["Annual.EmptyDescription"]</p>
                     @if (Model.Result?.ExecutiveSummary is not null)
                     {
                         <div class="d-flex justify-content-center gap-3 flex-wrap">
                             <div class="card border-0 bg-light p-3">
-                                <div class="small text-muted">HasPreviousYear</div>
-                                <div class="fw-bold">@(Model.Result.ExecutiveSummary.HasPreviousYear ? "Yes" : "No")</div>
+                                <div class="small text-muted">@Localizer["Annual.MetaHasPreviousYear"]</div>
+                                <div class="fw-bold">@(Model.Result.ExecutiveSummary.HasPreviousYear ? Localizer["Common.Yes"] : Localizer["Common.No"])</div>
                             </div>
                             <div class="card border-0 bg-light p-3">
-                                <div class="small text-muted">HasNextYear</div>
-                                <div class="fw-bold">@(Model.Result.ExecutiveSummary.HasNextYear ? "Yes" : "No")</div>
+                                <div class="small text-muted">@Localizer["Annual.MetaHasNextYear"]</div>
+                                <div class="fw-bold">@(Model.Result.ExecutiveSummary.HasNextYear ? Localizer["Common.Yes"] : Localizer["Common.No"])</div>
                             </div>
                             <div class="card border-0 bg-light p-3">
-                                <div class="small text-muted">Total Years</div>
+                                <div class="small text-muted">@Localizer["Annual.MetaTotalYears"]</div>
                                 <div class="fw-bold">@Model.Result.ExecutiveSummary.TotalYears</div>
                             </div>
                         </div>
@@ -182,7 +187,7 @@
                     @if (health is not null)
                     {
                         <div class="card border-0 shadow-sm p-4 text-center" data-testid="annual-health-score">
-                            <div class="small fw-semibold text-muted text-uppercase mb-3">Health Score</div>
+                            <div class="small fw-semibold text-muted text-uppercase mb-3">@Localizer["Annual.HealthScore"]</div>
                             <div class="health-ring"
                                  style="background: conic-gradient(@(health.Total.HasValue ? (health.Total.Value >= 80m ? "var(--mdb-success)" : health.Total.Value >= 50m ? "var(--mdb-warning)" : "var(--mdb-danger)") : "var(--mdb-gray)") @(health.Total.HasValue ? $"{health.Total.Value}%" : "0%") transparent @(health.Total.HasValue ? $"{health.Total.Value}%" : "0%") 100%)">
                                 <div class="health-ring-inner">
@@ -195,7 +200,7 @@
                             @if (health.Total.HasValue)
                             {
                                 <div class="mt-2 small text-muted">
-                                    @(health.Total.Value >= 80m ? "Excelente" : health.Total.Value >= 60m ? "Buena" : health.Total.Value >= 40m ? "Regular" : "Necesita atención")
+                                    @(health.Total.Value >= 80m ? Localizer["Annual.HealthExcellent"] : health.Total.Value >= 60m ? Localizer["Annual.HealthGood"] : health.Total.Value >= 40m ? Localizer["Annual.HealthFair"] : Localizer["Annual.HealthNeedsAttention"])
                                 </div>
                             }
                         </div>
@@ -208,7 +213,7 @@
                             <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-success"
                                  data-testid="annual-kpi-income"
                                  x-data="{ display: 0, target: @exec.Income.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiIncome"]</div>
                                 <div class="h4 fw-bold text-success mb-0">
                                     <span x-text="'€' + display.toFixed(2)"></span>
                                 </div>
@@ -226,7 +231,7 @@
                             <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-danger"
                                  data-testid="annual-kpi-expense"
                                  x-data="{ display: 0, target: @exec.Expense.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiExpense"]</div>
                                 <div class="h4 fw-bold text-danger mb-0">
                                     <span x-text="'€' + display.toFixed(2)"></span>
                                 </div>
@@ -244,7 +249,7 @@
                             <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-primary"
                                  data-testid="annual-kpi-net"
                                  x-data="{ display: 0, target: @exec.Net.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiNet"]</div>
                                 <div class="h4 fw-bold mb-0 @(exec.Net >= 0 ? "text-success" : "text-danger")">
                                     <span x-text="'€' + display.toFixed(2)"></span>
                                 </div>
@@ -262,7 +267,7 @@
                             <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-info"
                                  data-testid="annual-kpi-fixed-pct"
                                  x-data="{ display: 0, target: @Model.FixedCostPercentage.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Fixed Cost %</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiFixedCost"]</div>
                                 <div class="h4 fw-bold text-info mb-0">
                                     <span x-text="display.toFixed(1) + '%'"></span>
                                 </div>
@@ -274,7 +279,7 @@
                             <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start border-secondary"
                                  data-testid="annual-kpi-savings-rate"
                                  x-data="{ display: 0, target: @exec.SavingsRate.ToString(CultureInfo.InvariantCulture), init() { const duration = 800; const start = performance.now(); const animate = (now) => { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - (1 - progress) * (1 - progress); this.display = Math.round(eased * this.target * 100) / 100; if (progress < 1) requestAnimationFrame(animate); else this.display = this.target; }; requestAnimationFrame(animate); } }">
-                                <div class="small fw-semibold text-muted text-uppercase mb-1">Tasa Ahorro</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiSavingsRate"]</div>
                                 <div class="h4 fw-bold text-secondary mb-0">
                                     <span x-text="display.toFixed(1) + '%'"></span>
                                 </div>
@@ -292,7 +297,7 @@
                     <div class="row row-cols-2 row-cols-md-4 g-2">
                         <div class="col">
                             <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-savings-rate">
-                                <div class="small fw-semibold text-muted text-uppercase">Savings Rate</div>
+                                <div class="small fw-semibold text-muted text-uppercase">@Localizer["Annual.RatioSavingsRate"]</div>
                                 <div class="h5 fw-bold mb-0 @(ratios.SavingsRate >= 20m ? "text-success" : "text-warning")">
                                     @(ratios.SavingsRate?.ToString("F1") ?? "—")%
                                 </div>
@@ -300,19 +305,19 @@
                         </div>
                         <div class="col">
                             <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-avg-monthly-income">
-                                <div class="small fw-semibold text-muted text-uppercase">Avg Monthly Income</div>
+                                <div class="small fw-semibold text-muted text-uppercase">@Localizer["Annual.RatioAvgIncome"]</div>
                                 <div class="h5 fw-bold mb-0">€@(ratios.AverageMonthlyIncome?.ToString("N0") ?? "—")</div>
                             </div>
                         </div>
                         <div class="col">
                             <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-avg-monthly-expense">
-                                <div class="small fw-semibold text-muted text-uppercase">Avg Monthly Expense</div>
+                                <div class="small fw-semibold text-muted text-uppercase">@Localizer["Annual.RatioAvgExpense"]</div>
                                 <div class="h5 fw-bold mb-0">€@(ratios.AverageMonthlyExpense?.ToString("N0") ?? "—")</div>
                             </div>
                         </div>
                         <div class="col">
                             <div class="card border-0 shadow-sm p-3 text-center h-100" data-testid="annual-ratio-transaction-count">
-                                <div class="small fw-semibold text-muted text-uppercase">Transactions</div>
+                                <div class="small fw-semibold text-muted text-uppercase">@Localizer["Annual.RatioTransactionCount"]</div>
                                 <div class="h5 fw-bold mb-0">@ratios.TransactionCount</div>
                             </div>
                         </div>
@@ -324,16 +329,16 @@
                     }
                     <div data-testid="annual-months-card" class="card border-0 shadow-sm p-3 text-center">
                         <div class="small fw-semibold text-muted text-uppercase mb-1">
-                            📅 Meses con datos
+                            📅 @Localizer["Annual.MonthsWithData"]
                         </div>
                         <div class="h4 fw-bold mb-0">
                             @if (monthsWithData >= 12)
                             {
-                                <span data-testid="months-full-year" class="text-success">Año completo</span>
+                                <span data-testid="months-full-year" class="text-success">@Localizer["Annual.FullYear"]</span>
                             }
                             else
                             {
-                                <span>@monthsWithData / 12 meses con datos</span>
+                                <span>@Localizer["Annual.MonthsWithDataCount", monthsWithData]</span>
                             }
                         </div>
                     </div>
@@ -342,24 +347,24 @@
                     <div class="row g-4">
                         <div class="col-12 col-lg-6">
                             <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column">
-                                <h4 class="h6 fw-semibold mb-3">Monthly Trend</h4>
+                                <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.ChartTrend"]</h4>
                                 <div class="chart-wrapper flex-grow-1">
                                     <canvas x-ref="trendCanvas"
                                             id="annual-trend-chart"
                                             data-testid="annual-trend-chart"
                                             role="img"
-                                            aria-label="Monthly trend chart showing income and expenses for each month of the year"></canvas>
+                                            aria-label="@Localizer["Annual.AriaTrendChart"]"></canvas>
                                 </div>
                                 <table class="visually-hidden" aria-hidden="true">
-                                    <caption>Monthly trend (fallback table)</caption>
+                                    <caption>@Localizer["Annual.CaptionMonthlyTrendFallback"]</caption>
                                     <thead>
-                                        <tr><th>Month</th><th>Income</th><th>Expenses</th></tr>
+                                        <tr><th>@Localizer["Annual.ColMonth"]</th><th>@Localizer["Annual.KpiIncome"]</th><th>@Localizer["Annual.KpiExpense"]</th></tr>
                                     </thead>
                                     <tbody>
                                         @for (int m = 0; m < 12; m++)
                                         {
                                             <tr>
-                                                <td>@(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[m])</td>
+                                                <td>@monthShortLabels[m]</td>
                                                 <td>€@Model.MonthlyIncomeTotals[m].ToString("N2", CultureInfo.InvariantCulture)</td>
                                                 <td>€@Model.MonthlyExpenseTotals[m].ToString("N2", CultureInfo.InvariantCulture)</td>
                                             </tr>
@@ -370,26 +375,26 @@
                         </div>
                         <div class="col-12 col-lg-6">
                             <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column">
-                                <h4 class="h6 fw-semibold mb-3">Fixed / Variable Distribution</h4>
+                                <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.ChartDistribution"]</h4>
                                 <div class="chart-wrapper flex-grow-1">
                                     <canvas x-ref="distCanvas"
                                             id="annual-distribution-chart"
                                             data-testid="annual-distribution-chart"
                                             role="img"
-                                            aria-label="Donut chart showing fixed versus variable income and expenses"></canvas>
+                                            aria-label="@Localizer["Annual.AriaDistributionChart"]"></canvas>
                                 </div>
                                 <table class="visually-hidden" aria-hidden="true">
-                                    <caption>Fixed / variable distribution (fallback table)</caption>
+                                    <caption>@Localizer["Annual.CaptionDistributionFallback"]</caption>
                                     <thead>
-                                        <tr><th>Category</th><th>Amount</th></tr>
+                                        <tr><th>@Localizer["Annual.ColCategory"]</th><th>@Localizer["Annual.ColAmount"]</th></tr>
                                     </thead>
                                     <tbody>
                                         @if (analysisSummary is not null)
                                         {
-                                            <tr><td>Income Fixed</td><td>€@analysisSummary.IncomeFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                            <tr><td>Income Variable</td><td>€@analysisSummary.IncomeVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                            <tr><td>Expense Fixed</td><td>€@analysisSummary.ExpenseFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
-                                            <tr><td>Expense Variable</td><td>€@analysisSummary.ExpenseVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>@Localizer["Annual.FixedIncome"]</td><td>€@analysisSummary.IncomeFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>@Localizer["Annual.VariableIncome"]</td><td>€@analysisSummary.IncomeVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>@Localizer["Annual.FixedExpense"]</td><td>€@analysisSummary.ExpenseFixed.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
+                                            <tr><td>@Localizer["Annual.VariableExpense"]</td><td>€@analysisSummary.ExpenseVariable.ToString("N2", CultureInfo.InvariantCulture)</td></tr>
                                         }
                                     </tbody>
                                 </table>
@@ -401,12 +406,12 @@
                     @if (exec.HasPreviousYear)
                     {
                         <div data-testid="annual-yoy-section">
-                            <h4 class="h6 fw-semibold mb-3">Year over Year</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.YoyTitle"]</h4>
                             <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-2">
                                 @* Income change *@
                                 <div class="col">
                                     <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.IncomeChangePct, true).Replace("bg-", "border-")">
-                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Ingresos</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiIncome"]</div>
                                         <div class="h5 fw-bold mb-0">€@exec.Income.ToString("N2")</div>
                                         <span class="badge @AnnualModel.GetVariationBadgeClass(exec.IncomeChangePct, true) mt-2">
                                             @AnnualModel.GetVariationArrow(exec.IncomeChangePct) @AnnualModel.FormatVariationPct(exec.IncomeChangePct)
@@ -416,7 +421,7 @@
                                 @* Expense change *@
                                 <div class="col">
                                     <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.ExpenseChangePct, false).Replace("bg-", "border-")">
-                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Gastos</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiExpense"]</div>
                                         <div class="h5 fw-bold mb-0">€@exec.Expense.ToString("N2")</div>
                                         <span class="badge @AnnualModel.GetVariationBadgeClass(exec.ExpenseChangePct, false) mt-2">
                                             @AnnualModel.GetVariationArrow(exec.ExpenseChangePct) @AnnualModel.FormatVariationPct(exec.ExpenseChangePct)
@@ -426,7 +431,7 @@
                                 @* Net change *@
                                 <div class="col">
                                     <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.NetChangePct, true).Replace("bg-", "border-")">
-                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Neto</div>
+                                <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.KpiNet"]</div>
                                         <div class="h5 fw-bold mb-0">€@exec.Net.ToString("N2")</div>
                                         <span class="badge @AnnualModel.GetVariationBadgeClass(exec.NetChangePct, true) mt-2">
                                             @AnnualModel.GetVariationArrow(exec.NetChangePct) @AnnualModel.FormatVariationPct(exec.NetChangePct)
@@ -436,7 +441,7 @@
                                 @* Savings change *@
                                 <div class="col">
                                     <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true).Replace("bg-", "border-")">
-                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Ahorro</div>
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.YoySavings"]</div>
                                         <div class="h5 fw-bold mb-0">€@exec.Savings.ToString("N2")</div>
                                         <span class="badge @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true) mt-2">
                                             @AnnualModel.GetVariationArrow(exec.SavingsChangePct) @AnnualModel.FormatVariationPct(exec.SavingsChangePct)
@@ -446,7 +451,7 @@
                                 @* Savings Rate change *@
                                 <div class="col">
                                     <div class="card border-0 shadow-sm h-100 p-3 kpi-card border-start @AnnualModel.GetVariationBadgeClass(exec.SavingsRate > 0 ? exec.SavingsRate : null, true).Replace("bg-", "border-")">
-                                        <div class="small fw-semibold text-muted text-uppercase mb-1">Tasa Ahorro</div>
+                                        <div class="small fw-semibold text-muted text-uppercase mb-1">@Localizer["Annual.YoySavingsRate"]</div>
                                         <div class="h5 fw-bold mb-0">@exec.SavingsRate.ToString("F1")%</div>
                                         <span class="badge @AnnualModel.GetVariationBadgeClass(exec.SavingsChangePct, true) mt-2">
                                             @AnnualModel.GetVariationArrow(exec.SavingsChangePct) @AnnualModel.FormatVariationPct(exec.SavingsChangePct)
@@ -459,9 +464,9 @@
                     else
                     {
                         <div data-testid="annual-yoy-section">
-                            <h4 class="h6 fw-semibold mb-3">Year over Year</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.YoyTitle"]</h4>
                             <div class="card border-0 shadow-sm p-3 text-center text-muted" data-testid="annual-yoy-no-data">
-                                Sin datos del año anterior
+                                @Localizer["Annual.YoyNoData"]
                             </div>
                         </div>
                     }
@@ -470,11 +475,11 @@
                     @if (health is not null && health.Total.HasValue)
                     {
                         <div class="card border-0 shadow-sm p-4" data-testid="annual-health-sub-scores">
-                            <h4 class="h6 fw-semibold mb-3">Health Score Breakdown</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.HealthScoreBreakdown"]</h4>
                             <div class="d-flex flex-column gap-2">
                                 @* Savings *@
                                 <div class="d-flex align-items-center gap-3">
-                                    <small class="text-muted" style="width: 140px;">Ahorro (25%)</small>
+                                    <small class="text-muted" style="width: 140px;">@Localizer["Annual.HealthBreakdownSavings"]</small>
                                     <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
                                         <div class="rounded h-100 @(health.SavingsScore >= 80m ? "bg-success" : health.SavingsScore >= 50m ? "bg-warning" : "bg-danger")"
                                              style="width: @(health.SavingsScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
@@ -483,7 +488,7 @@
                                 </div>
                                 @* Income Stability *@
                                 <div class="d-flex align-items-center gap-3">
-                                    <small class="text-muted" style="width: 140px;">Estabilidad Ingresos (15%)</small>
+                                    <small class="text-muted" style="width: 140px;">@Localizer["Annual.HealthBreakdownIncomeStability"]</small>
                                     <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
                                         <div class="rounded h-100 @(health.IncomeStabilityScore >= 80m ? "bg-success" : health.IncomeStabilityScore >= 50m ? "bg-warning" : "bg-danger")"
                                              style="width: @(health.IncomeStabilityScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
@@ -492,7 +497,7 @@
                                 </div>
                                 @* Expense Stability *@
                                 <div class="d-flex align-items-center gap-3">
-                                    <small class="text-muted" style="width: 140px;">Estabilidad Gastos (15%)</small>
+                                    <small class="text-muted" style="width: 140px;">@Localizer["Annual.HealthBreakdownExpenseStability"]</small>
                                     <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
                                         <div class="rounded h-100 @(health.ExpenseStabilityScore >= 80m ? "bg-success" : health.ExpenseStabilityScore >= 50m ? "bg-warning" : "bg-danger")"
                                              style="width: @(health.ExpenseStabilityScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
@@ -501,7 +506,7 @@
                                 </div>
                                 @* Category Dependency *@
                                 <div class="d-flex align-items-center gap-3">
-                                    <small class="text-muted" style="width: 140px;">Dependencia Categorías (10%)</small>
+                                    <small class="text-muted" style="width: 140px;">@Localizer["Annual.HealthBreakdownCategoryDependency"]</small>
                                     <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
                                         <div class="rounded h-100 @(health.CategoryDependencyScore >= 80m ? "bg-success" : health.CategoryDependencyScore >= 50m ? "bg-warning" : "bg-danger")"
                                              style="width: @(health.CategoryDependencyScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
@@ -510,7 +515,7 @@
                                 </div>
                                 @* Balance *@
                                 <div class="d-flex align-items-center gap-3">
-                                    <small class="text-muted" style="width: 140px;">Balance I/E (20%)</small>
+                                    <small class="text-muted" style="width: 140px;">@Localizer["Annual.HealthBreakdownBalance"]</small>
                                     <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
                                         <div class="rounded h-100 @(health.BalanceScore >= 80m ? "bg-success" : health.BalanceScore >= 50m ? "bg-warning" : "bg-danger")"
                                              style="width: @(health.BalanceScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
@@ -519,7 +524,7 @@
                                 </div>
                                 @* Trend *@
                                 <div class="d-flex align-items-center gap-3">
-                                    <small class="text-muted" style="width: 140px;">Tendencia (15%)</small>
+                                    <small class="text-muted" style="width: 140px;">@Localizer["Annual.HealthBreakdownTrend"]</small>
                                     <div class="flex-grow-1 bg-light rounded" style="height: 12px;">
                                         <div class="rounded h-100 @(health.TrendScore >= 80m ? "bg-success" : health.TrendScore >= 50m ? "bg-warning" : "bg-danger")"
                                              style="width: @(health.TrendScore?.ToString("F0") ?? "0")%; transition: width 0.5s;"></div>
@@ -534,14 +539,14 @@
                     @if (Model.HasMultiYear)
                     {
                         <div data-testid="annual-multiyear-section">
-                            <h4 class="h6 fw-semibold mb-3">Multi-Year Comparison</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.MultiYearTitle"]</h4>
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="chart-wrapper" style="height: 320px;">
                                     <canvas x-ref="multiyearCanvas"
                                             id="annual-multiyear-chart"
                                             data-testid="annual-multiyear-chart"
                                             role="img"
-                                            aria-label="Multi-year comparison bar chart"></canvas>
+                                            aria-label="@Localizer["Annual.AriaMultiYearChart"]"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -551,14 +556,14 @@
                     @if (Model.Result?.MonthlyEvolution is not null)
                     {
                         <div data-testid="annual-monthly-section">
-                            <h4 class="h6 fw-semibold mb-3">Monthly Evolution</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.MonthlyEvolution"]</h4>
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="chart-wrapper" style="height: 320px;">
                                     <canvas x-ref="monthlyCanvas"
                                             id="annual-monthly-chart"
                                             data-testid="annual-monthly-chart"
                                             role="img"
-                                            aria-label="Monthly evolution chart with averages"></canvas>
+                                            aria-label="@Localizer["Annual.AriaMonthlyChart"]"></canvas>
                                 </div>
                             </div>
                             @{
@@ -571,9 +576,9 @@
                                     {
                                         <div class="col">
                                             <div class="card border-0 bg-light p-2 text-center">
-                                                <small class="text-muted">Best Income Month</small>
+                                                <small class="text-muted">@Localizer["Annual.BestIncomeMonth"]</small>
                                                 <div class="fw-bold text-success">
-                                                    @(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[monthly.BestIncomeMonth.Value])
+                                                    @monthShortLabels[monthly.BestIncomeMonth.Value]
                                                 </div>
                                             </div>
                                         </div>
@@ -582,9 +587,9 @@
                                     {
                                         <div class="col">
                                             <div class="card border-0 bg-light p-2 text-center">
-                                                <small class="text-muted">Best Expense Month</small>
+                                                <small class="text-muted">@Localizer["Annual.BestExpenseMonth"]</small>
                                                 <div class="fw-bold text-danger">
-                                                    @(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }[monthly.BestExpenseMonth.Value])
+                                                    @monthShortLabels[monthly.BestExpenseMonth.Value]
                                                 </div>
                                             </div>
                                         </div>
@@ -598,7 +603,7 @@
                     @if (Model.Result?.Categories is { Count: > 0 })
                     {
                         <div data-testid="annual-category-section">
-                            <h4 class="h6 fw-semibold mb-3">Expense Categories</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.ExpenseCategories"]</h4>
                             <div class="row g-3">
                                 <div class="col-12 col-lg-6">
                                     <div class="card border-0 shadow-sm p-3">
@@ -607,23 +612,23 @@
                                                     id="annual-category-chart"
                                                     data-testid="annual-category-chart"
                                                     role="img"
-                                                    aria-label="Category distribution donut chart"></canvas>
+                                                    aria-label="@Localizer["Annual.AriaCategoryChart"]"></canvas>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-lg-6">
                                     <div class="card border-0 shadow-sm p-3">
-                                        <h5 class="h6 fw-semibold mb-3">Category Breakdown</h5>
+                                        <h5 class="h6 fw-semibold mb-3">@Localizer["Annual.CategoryBreakdown"]</h5>
                                         <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
                                             <table class="table table-sm table-hover mb-0"
                                                    data-testid="annual-category-table"
-                                                   aria-label="Category breakdown">
+                                                   aria-label="@Localizer["Annual.AriaCategoryTable"]">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th class="small fw-semibold text-muted">Category</th>
-                                                        <th class="small fw-semibold text-muted text-end">Amount</th>
-                                                        <th class="small fw-semibold text-muted text-end">%</th>
-                                                        <th class="small fw-semibold text-muted text-center">Trend</th>
+                                                        <th class="small fw-semibold text-muted">@Localizer["Annual.ColCategory"]</th>
+                                                        <th class="small fw-semibold text-muted text-end">@Localizer["Annual.ColAmount"]</th>
+                                                        <th class="small fw-semibold text-muted text-end">@Localizer["Annual.ColPercent"]</th>
+                                                        <th class="small fw-semibold text-muted text-center">@Localizer["Annual.ColTrend"]</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -634,7 +639,7 @@
                                                                 @cat.CategoryName
                                                                 @if (cat.IsNewThisYear)
                                                                 {
-                                                                    <span class="badge bg-success ms-1" style="font-size: 0.65rem;">NEW</span>
+                                                                    <span class="badge bg-success ms-1" style="font-size: 0.65rem;">@Localizer["Annual.NewBadge"]</span>
                                                                 }
                                                             </td>
                                                             <td class="text-end">€@cat.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
@@ -642,15 +647,15 @@
                                                             <td class="text-center">
                                                                 @if (cat.Trend == "up")
                                                                 {
-                                                                    <span class="text-danger" title="Increased from last year">▲</span>
+                                                                    <span class="text-danger" title="@Localizer["Annual.TrendIncreased"]">▲</span>
                                                                 }
                                                                 else if (cat.Trend == "down")
                                                                 {
-                                                                    <span class="text-success" title="Decreased from last year">▼</span>
+                                                                    <span class="text-success" title="@Localizer["Annual.TrendDecreased"]">▼</span>
                                                                 }
                                                                 else
                                                                 {
-                                                                    <span class="text-muted" title="Same as last year">—</span>
+                                                                    <span class="text-muted" title="@Localizer["Annual.TrendSame"]">—</span>
                                                                 }
                                                             </td>
                                                         </tr>
@@ -668,19 +673,19 @@
                     @if (Model.HasCategoryComparison)
                     {
                         <div data-testid="annual-category-comparison-section">
-                            <h4 class="h6 fw-semibold mb-3">Category Comparison</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.CategoryComparison"]</h4>
                             <div class="card border-0 shadow-sm p-3">
                                 <div class="table-responsive">
                                     <table class="table table-sm table-hover mb-0"
                                            data-testid="annual-category-comparison-table"
-                                           aria-label="Year-over-year category comparison">
+                                           aria-label="@Localizer["Annual.AriaCategoryComparisonTable"]">
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="small fw-semibold text-muted">Category</th>
+                                                <th class="small fw-semibold text-muted">@Localizer["Annual.ColCategory"]</th>
                                                 <th class="small fw-semibold text-muted text-end">@(Model.Result!.Year - 1)</th>
                                                 <th class="small fw-semibold text-muted text-end">@Model.Result.Year</th>
-                                                <th class="small fw-semibold text-muted text-end">Change</th>
-                                                <th class="small fw-semibold text-muted text-end">Change %</th>
+                                                <th class="small fw-semibold text-muted text-end">@Localizer["Annual.ColChange"]</th>
+                                                <th class="small fw-semibold text-muted text-end">@Localizer["Annual.ColChangePercent"]</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -709,7 +714,7 @@
                     @if (Model.Result?.Timeline is { Count: > 0 })
                     {
                         <div data-testid="annual-timeline-section">
-                            <h4 class="h6 fw-semibold mb-3">Year Timeline</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.YearTimeline"]</h4>
                             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
                                 @foreach (TimelineEventDto evt in Model.Result.Timeline)
                                 {
@@ -742,17 +747,17 @@
                     @if (Model.Result?.TopExpenses is { Count: > 0 } || Model.Result?.TopIncomes is { Count: > 0 } || Model.Result?.MostFrequent is { Count: > 0 })
                     {
                         <div data-testid="annual-top-movements-section">
-                            <h4 class="h6 fw-semibold mb-3">Top Movements</h4>
+                            <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.TopMovements"]</h4>
                             <div class="row g-3">
                                 @if (Model.Result.TopExpenses is { Count: > 0 })
                                 {
                                     <div class="col-12 col-md-4">
                                         <div class="card border-0 shadow-sm h-100 p-3">
-                                            <h5 class="h6 fw-semibold mb-3 text-danger">Top Expenses</h5>
+                                            <h5 class="h6 fw-semibold mb-3 text-danger">@Localizer["Annual.TopExpenses"]</h5>
                                             <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
                                                 <table class="table table-sm table-borderless mb-0"
                                                        data-testid="annual-top-expenses-table"
-                                                       aria-label="Top expenses">
+                                                       aria-label="@Localizer["Annual.AriaTopExpensesTable"]">
                                                     <tbody>
                                                         @foreach (TopMovementDto mov in Model.Result.TopExpenses)
                                                         {
@@ -781,11 +786,11 @@
                                  {
                                      <div class="col-12 col-md-4">
                                          <div class="card border-0 shadow-sm h-100 p-3">
-                                             <h5 class="h6 fw-semibold mb-3 text-success">Top Incomes</h5>
+                                             <h5 class="h6 fw-semibold mb-3 text-success">@Localizer["Annual.TopIncomes"]</h5>
                                              <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
                                                  <table class="table table-sm table-borderless mb-0"
                                                         data-testid="annual-top-incomes-table"
-                                                        aria-label="Top incomes">
+                                                        aria-label="@Localizer["Annual.AriaTopIncomesTable"]">
                                                      <tbody>
                                                          @foreach (TopMovementDto mov in Model.Result.TopIncomes)
                                                          {
@@ -814,11 +819,11 @@
                                 {
                                     <div class="col-12 col-md-4">
                                         <div class="card border-0 shadow-sm h-100 p-3">
-                                            <h5 class="h6 fw-semibold mb-3 text-info">Most Frequent</h5>
+                                            <h5 class="h6 fw-semibold mb-3 text-info">@Localizer["Annual.MostFrequent"]</h5>
                                             <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
                                                 <table class="table table-sm table-borderless mb-0"
                                                        data-testid="annual-most-frequent-table"
-                                                       aria-label="Most frequent movements">
+                                                       aria-label="@Localizer["Annual.AriaMostFrequentTable"]">
                                                     <tbody>
                                                         @foreach (TopMovementDto mov in Model.Result.MostFrequent)
                                                         {
@@ -842,10 +847,10 @@
 
                     @* ── T3: Anomalies (REQ-008) ── *@
                     <div data-testid="annual-anomalies-section">
-                        <h4 class="h6 fw-semibold mb-3">Anomalies</h4>
+                        <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.Anomalies"]</h4>
                         @if (Model.Anomalies.Count == 0)
                         {
-                            <div class="card border-0 shadow-sm p-3 text-muted">No anomalies</div>
+                            <div class="card border-0 shadow-sm p-3 text-muted">@Localizer["Annual.NoAnomalies"]</div>
                         }
                         else
                         {
@@ -855,19 +860,19 @@
                                             id="annual-anomaly-chart"
                                             data-testid="annual-anomaly-chart"
                                             role="img"
-                                            aria-label="Anomaly chart"></canvas>
+                                            aria-label="@Localizer["Annual.AriaAnomalyChart"]"></canvas>
                                 </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Category</th>
-                                            <th>Month</th>
-                                            <th class="text-end">Amount</th>
+                                            <th>@Localizer["Annual.ColCategory"]</th>
+                                            <th>@Localizer["Annual.ColMonth"]</th>
+                                            <th class="text-end">@Localizer["Annual.ColAmount"]</th>
                                             <th class="text-end">μ</th>
                                             <th class="text-end">σ</th>
-                                            <th>Type</th>
+                                            <th>@Localizer["Annual.ColType"]</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -894,10 +899,10 @@
 
                     @* ── T3: Discoveries (REQ-013) ── *@
                     <div data-testid="annual-discoveries-section">
-                        <h4 class="h6 fw-semibold mb-3">Discoveries</h4>
+                        <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.Discoveries"]</h4>
                         @if (Model.Discoveries.Count == 0 || (Model.Discoveries.Count == 1 && Model.Discoveries[0].Category == "insufficient-data"))
                         {
-                            <div class="card border-0 shadow-sm p-3 text-muted">No discoveries</div>
+                            <div class="card border-0 shadow-sm p-3 text-muted">@Localizer["Annual.NoDiscoveries"]</div>
                         }
                         else
                         {
@@ -920,10 +925,10 @@
 
                     @* ── T3: Achievements (REQ-014) ── *@
                     <div data-testid="annual-achievements-section">
-                        <h4 class="h6 fw-semibold mb-3">Achievements</h4>
+                        <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.Achievements"]</h4>
                         @if (Model.Achievements.Count == 0 || !Model.Achievements.Any(a => a.Unlocked))
                         {
-                            <div class="card border-0 shadow-sm p-3 text-muted">No achievements</div>
+                            <div class="card border-0 shadow-sm p-3 text-muted">@Localizer["Annual.NoAchievements"]</div>
                         }
                         else
                         {
@@ -938,10 +943,10 @@
 
                     @* ── T3: Trends (REQ-015) ── *@
                     <div data-testid="annual-trends-section">
-                        <h4 class="h6 fw-semibold mb-3">Trends</h4>
+                        <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.Trends"]</h4>
                         @if (Model.Trends.Count == 0)
                         {
-                            <div class="card border-0 shadow-sm p-3 text-muted">insufficient</div>
+                            <div class="card border-0 shadow-sm p-3 text-muted">@Localizer["Annual.Insufficient"]</div>
                         }
                         else
                         {
@@ -965,25 +970,25 @@
 
                     @* ── T3: Predictions (REQ-016) ── *@
                     <div data-testid="annual-predictions-section">
-                        <h4 class="h6 fw-semibold mb-3">Predictions</h4>
+                        <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.Predictions"]</h4>
                         @if (!Model.HasPredictions || Model.Predictions is null)
                         {
-                            <div class="card border-0 shadow-sm p-3 text-muted">2 years needed</div>
+                            <div class="card border-0 shadow-sm p-3 text-muted">@Localizer["Annual.PredictionsNeedsTwoYears"]</div>
                         }
                         else
                         {
                             <div class="row row-cols-2 row-cols-md-4 g-2">
-                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Income</small><div class="fw-bold">€@Model.Predictions.ProjectedIncome?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
-                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Expense</small><div class="fw-bold">€@Model.Predictions.ProjectedExpense?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
-                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Savings</small><div class="fw-bold">€@Model.Predictions.ProjectedSavings?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
-                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">Confidence</small><div class="fw-bold">@((Model.Predictions.Confidence ?? 0m).ToString("P0", CultureInfo.InvariantCulture))</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">@Localizer["Annual.PredIncome"]</small><div class="fw-bold">€@Model.Predictions.ProjectedIncome?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">@Localizer["Annual.PredExpense"]</small><div class="fw-bold">€@Model.Predictions.ProjectedExpense?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">@Localizer["Annual.PredSavings"]</small><div class="fw-bold">€@Model.Predictions.ProjectedSavings?.ToString("N2", CultureInfo.InvariantCulture)</div></div></div>
+                                <div class="col"><div class="card border-0 shadow-sm p-3 text-center"><small class="text-muted">@Localizer["Annual.PredConfidence"]</small><div class="fw-bold">@((Model.Predictions.Confidence ?? 0m).ToString("P0", CultureInfo.InvariantCulture))</div></div></div>
                             </div>
                         }
                     </div>
 
                     @* ── T3: Historical Comparison (REQ-017) ── *@
                     <div data-testid="annual-historical-comparison-section">
-                        <h4 class="h6 fw-semibold mb-3">Historical Comparison</h4>
+                        <h4 class="h6 fw-semibold mb-3">@Localizer["Annual.HistoricalComparison"]</h4>
                         @if (Model.HistoricalComparison?.Message is not null)
                         {
                             <div class="card border-0 shadow-sm p-3 text-muted">@Model.HistoricalComparison.Message</div>
@@ -994,17 +999,17 @@
                                 <table class="table table-sm table-hover mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Metric</th>
-                                            <th class="text-end">Current</th>
-                                            <th class="text-end">vs Prev</th>
-                                            <th class="text-end">vs Avg</th>
-                                            <th class="text-end">vs Best</th>
-                                            <th class="text-end">vs Worst</th>
+                                            <th>@Localizer["Annual.HistoricalMetric"]</th>
+                                            <th class="text-end">@Localizer["Annual.HistoricalCurrent"]</th>
+                                            <th class="text-end">@Localizer["Annual.HistoricalVsPrev"]</th>
+                                            <th class="text-end">@Localizer["Annual.HistoricalVsAvg"]</th>
+                                            <th class="text-end">@Localizer["Annual.HistoricalVsBest"]</th>
+                                            <th class="text-end">@Localizer["Annual.HistoricalVsWorst"]</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td>Income</td>
+                                            <td>@Localizer["Annual.KpiIncome"]</td>
                                             <td class="text-end">@Model.HistoricalComparison.Income?.Current.ToString("N2", CultureInfo.InvariantCulture)</td>
                                             <td class="text-end">@Model.HistoricalComparison.Income?.PreviousDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
                                             <td class="text-end">@Model.HistoricalComparison.Income?.AverageDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
@@ -1012,7 +1017,7 @@
                                             <td class="text-end">@Model.HistoricalComparison.Income?.WorstDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
                                         </tr>
                                         <tr>
-                                            <td>Expense</td>
+                                            <td>@Localizer["Annual.KpiExpense"]</td>
                                             <td class="text-end">@Model.HistoricalComparison.Expense?.Current.ToString("N2", CultureInfo.InvariantCulture)</td>
                                             <td class="text-end">@Model.HistoricalComparison.Expense?.PreviousDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
                                             <td class="text-end">@Model.HistoricalComparison.Expense?.AverageDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
@@ -1020,7 +1025,7 @@
                                             <td class="text-end">@Model.HistoricalComparison.Expense?.WorstDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
                                         </tr>
                                         <tr>
-                                            <td>Savings</td>
+                                            <td>@Localizer["Annual.YoySavings"]</td>
                                             <td class="text-end">@Model.HistoricalComparison.Savings?.Current.ToString("N2", CultureInfo.InvariantCulture)</td>
                                             <td class="text-end">@Model.HistoricalComparison.Savings?.PreviousDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
                                             <td class="text-end">@Model.HistoricalComparison.Savings?.AverageDiffAbs?.ToString("N2", CultureInfo.InvariantCulture)</td>
@@ -1043,8 +1048,8 @@
                                 @@keydown.space.prevent="toggleDetail()"
                                 tabindex="0"
                                 :aria-expanded="showDetail">
-                            <span x-show="!showDetail">📂 Mostrar detalle</span>
-                            <span x-show="showDetail">📁 Ocultar detalle</span>
+                            <span x-show="!showDetail">📂 @Localizer["Annual.ShowDetail"]</span>
+                            <span x-show="showDetail">📁 @Localizer["Annual.HideDetail"]</span>
                         </button>
                     </div>
 
@@ -1055,17 +1060,17 @@
                             @* Income Table *@
                             <div class="card border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="h6 fw-semibold mb-3 text-success">Income Detail</h5>
+                                    <h5 class="h6 fw-semibold mb-3 text-success">@Localizer["Annual.IncomeDetailTitle"]</h5>
                                     <div class="table-responsive">
                                         <table class="table table-hover align-middle mb-0"
-                                               aria-label="Annual income detail"
+                                               aria-label="@Localizer["Annual.AriaIncomeDetailTable"]"
                                                data-testid="annual-income-table">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
-                                                    <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
-                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
-                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Annual.TableHeaderMovement"]</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Annual.TableHeaderType"]</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Annual.TableHeaderTotalAnnual"]</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Annual.TableHeaderMonthlyAverage"]</th>
                                                 </tr>
                                             </thead>
                                             <template x-for="row in incomeRows" :key="row.movement">
@@ -1082,7 +1087,7 @@
                                                         </td>
                                                         <td>
                                                             <span class="badge"
-                                                                  :class="row.typeLabel.includes('Fijo') ? 'bg-success' : 'bg-info'"
+                                                                   :class="row.typeLabel.includes('@Localizer["Annual.FixedKeyword"]') ? 'bg-success' : 'bg-info'"
                                                                   x-text="row.typeLabel"></span>
                                                         </td>
                                                         <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
@@ -1094,7 +1099,7 @@
                                                                 <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
                                                                     <div class="d-flex align-items-center gap-2">
                                                                         <small class="text-muted" style="width: 24px;"
-                                                                               x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
+                                                                               x-text="monthLetters[idx]"></small>
                                                                         <div class="flex-grow-1 bg-white rounded">
                                                                             <div class="mini-bar"
                                                                                  :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"
@@ -1118,17 +1123,17 @@
                             @* Expense Table *@
                             <div class="card border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="h6 fw-semibold mb-3 text-danger">Expense Detail</h5>
+                                    <h5 class="h6 fw-semibold mb-3 text-danger">@Localizer["Annual.ExpenseDetailTitle"]</h5>
                                     <div class="table-responsive">
                                         <table class="table table-hover align-middle mb-0"
-                                               aria-label="Annual expense detail"
+                                               aria-label="@Localizer["Annual.AriaExpenseDetailTable"]"
                                                data-testid="annual-expense-table">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th class="text-uppercase small fw-semibold text-muted">Movimiento</th>
-                                                    <th class="text-uppercase small fw-semibold text-muted">Tipo</th>
-                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Total Anual</th>
-                                                    <th class="text-uppercase small fw-semibold text-muted text-end">Media Mensual</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Annual.TableHeaderMovement"]</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted">@Localizer["Annual.TableHeaderType"]</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Annual.TableHeaderTotalAnnual"]</th>
+                                                    <th class="text-uppercase small fw-semibold text-muted text-end">@Localizer["Annual.TableHeaderMonthlyAverage"]</th>
                                                 </tr>
                                             </thead>
                                             <template x-for="row in expenseRows" :key="row.movement">
@@ -1145,7 +1150,7 @@
                                                         </td>
                                                         <td>
                                                             <span class="badge"
-                                                                  :class="row.typeLabel.includes('Fijo') ? 'bg-danger' : 'bg-warning'"
+                                                                   :class="row.typeLabel.includes('@Localizer["Annual.FixedKeyword"]') ? 'bg-danger' : 'bg-warning'"
                                                                   x-text="row.typeLabel"></span>
                                                         </td>
                                                         <td class="text-end fw-medium" x-text="formatCurrency(row.totalAnnual)"></td>
@@ -1157,7 +1162,7 @@
                                                                 <template x-for="(amount, idx) in row.monthlyAmounts" :key="idx">
                                                                     <div class="d-flex align-items-center gap-2">
                                                                         <small class="text-muted" style="width: 24px;"
-                                                                               x-text="['E','F','M','A','M','J','J','A','S','O','N','D'][idx]"></small>
+                                                                               x-text="monthLetters[idx]"></small>
                                                                         <div class="flex-grow-1 bg-white rounded">
                                                                             <div class="mini-bar"
                                                                                  :class="row.isIncome ? 'mini-bar-income' : 'mini-bar-expense'"

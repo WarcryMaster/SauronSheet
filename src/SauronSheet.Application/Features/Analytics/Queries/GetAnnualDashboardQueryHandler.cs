@@ -32,17 +32,23 @@ public class GetAnnualDashboardQueryHandler
     private readonly ISubcategoryRepository _subcategoryRepo;
     private readonly IUserContext _userContext;
     private readonly IAnnualClassificationEngine _classificationEngine;
+    private readonly InsightsService _insightsService;
+    private readonly AnomalyDetectionService _anomalyDetectionService;
 
     public GetAnnualDashboardQueryHandler(
         ITransactionRepository transactionRepo,
         ISubcategoryRepository subcategoryRepo,
         IUserContext userContext,
-        IAnnualClassificationEngine classificationEngine)
+        IAnnualClassificationEngine classificationEngine,
+        InsightsService insightsService,
+        AnomalyDetectionService anomalyDetectionService)
     {
         _transactionRepo = transactionRepo;
         _subcategoryRepo = subcategoryRepo;
         _userContext = userContext;
         _classificationEngine = classificationEngine;
+        _insightsService = insightsService;
+        _anomalyDetectionService = anomalyDetectionService;
     }
 
     public async Task<GetAnnualDashboardResultDto> Handle(
@@ -186,7 +192,7 @@ public class GetAnnualDashboardQueryHandler
 
         // 12. Generate smart summary
         DateTime smartSummaryStart = DateTime.UtcNow;
-        string smartSummary = InsightsService.GenerateSmartSummary(
+        string smartSummary = _insightsService.GenerateSmartSummary(
             currentYearTransactions, executiveSummary, ratios, rows);
         SentrySdk.Experimental.Metrics.EmitDistribution(
             "app.analytics.annual_dashboard.smart_summary_ms",
@@ -237,13 +243,13 @@ public class GetAnnualDashboardQueryHandler
 
         // 19. T3 — Advanced (REQ-008, 013, 014, 015, 016, 017)
         DateTime anomalyStart = DateTime.UtcNow;
-        IReadOnlyList<AnomalyDto> anomalies = AnomalyDetectionService.Compute(transactionsByYear, selectedYear);
+        IReadOnlyList<AnomalyDto> anomalies = _anomalyDetectionService.Compute(transactionsByYear, selectedYear);
         SentrySdk.Experimental.Metrics.EmitDistribution(
             "app.analytics.annual_dashboard.anomaly_detection_ms",
             (DateTime.UtcNow - anomalyStart).TotalMilliseconds);
 
         DateTime discoveriesStart = DateTime.UtcNow;
-        IReadOnlyList<DiscoveryDto> discoveries = InsightsService.GenerateDiscoveries(currentYearTransactions);
+        IReadOnlyList<DiscoveryDto> discoveries = _insightsService.GenerateDiscoveries(currentYearTransactions);
         SentrySdk.Experimental.Metrics.EmitDistribution(
             "app.analytics.annual_dashboard.discoveries_ms",
             (DateTime.UtcNow - discoveriesStart).TotalMilliseconds);
@@ -348,7 +354,7 @@ public class GetAnnualDashboardQueryHandler
             ExecutiveSummary: emptySummary,
             Ratios: null,
             HealthScore: null,
-            SmartSummary: "Sin datos para este año. Añade transacciones para ver el resumen anual.",
+            SmartSummary: "No data for this year. Add transactions to see the annual summary.",
             HasData: false,
             Currency: "EUR",
             AvailableYears: years,

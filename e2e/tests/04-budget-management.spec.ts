@@ -82,7 +82,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await page.selectOption('#PeriodGranularity', 'Monthly');
 
             // ── Submit ────────────────────────────────────────────────────────
-            await page.getByRole('button', { name: 'Create Budget' }).click();
+            await page.getByTestId('submit-btn').click();
 
             await Promise.race([
                 page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -144,11 +144,11 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         await page.selectOption('#PeriodGranularity', 'Monthly');
 
-        await page.getByRole('button', { name: 'Create Budget' }).click();
+        await page.getByTestId('submit-btn').click();
 
         await expect(page).toHaveURL(/\/budgets\/create/i);
         await expect(page.locator('#LimitAmount')).toHaveValue(/-50(?:\.00)?/);
-        await expect(page.getByRole('heading', { name: 'Create Budget' })).toBeVisible();
+        await expect(page.locator('h3')).toBeVisible();
 
         await page.goto('/budgets');
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(0);
@@ -195,7 +195,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
             await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
-            await page.getByRole('button', { name: 'Create Budget' }).click();
+            await page.getByTestId('submit-btn').click();
 
             await Promise.race([
                 page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -215,7 +215,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         // Click the Edit link for E2E-Budget-Cat-A
         const editLink = page.locator('table tbody tr').filter({
             has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
-        }).locator('a', { hasText: 'Edit' });
+        }).locator('[data-testid="edit-budget-btn"]');
 
         await expect(editLink).toBeVisible();
         const editHref = await editLink.getAttribute('href');
@@ -228,7 +228,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await limitInput.fill('300.00');
 
         // ── Submit ────────────────────────────────────────────────────────────
-        await page.getByRole('button', { name: 'Save Changes' }).click();
+        await page.getByTestId('submit-btn').click();
 
         await Promise.race([
             page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -283,7 +283,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
             await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
-            await page.getByRole('button', { name: 'Create Budget' }).click();
+            await page.getByTestId('submit-btn').click();
 
             await Promise.race([
                 page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -302,7 +302,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         const editLink = page.locator('table tbody tr').filter({
             has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
-        }).locator('a', { hasText: 'Edit' });
+        }).locator('[data-testid="edit-budget-btn"]');
 
         await expect(editLink).toBeVisible();
         const editHref = await editLink.getAttribute('href');
@@ -310,15 +310,14 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await expect(page).toHaveURL(/\/budgets\/edit\//i);
 
         // ── Click Deactivate and confirm via MDB modal ───────────────────────
-        const deactivateBtn = page.getByRole('button', { name: 'Deactivate Budget' });
+        const deactivateBtn = page.getByTestId('budget-status-btn');
         await expect(deactivateBtn).toBeVisible();
         await deactivateBtn.click();
 
         const statusModal = page.locator('#budgetStatusModal');
         await expect(statusModal).toBeVisible();
-        await expect(statusModal).toContainText('Deactivate budget');
 
-        await statusModal.getByRole('button', { name: 'Deactivate' }).click();
+        await statusModal.getByTestId('budget-status-submit').click();
         await page.waitForURL(/\/budgets(?!\/edit\/)/i, { timeout: 10000 });
         await page.waitForLoadState('domcontentloaded');
 
@@ -328,7 +327,10 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         }
 
         await expect(page.locator('table')).toBeVisible();
-        await expect(page.locator('table')).toContainText('Inactive');
+        const catARow = page.locator('table tbody tr').filter({
+            has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
+        });
+        await expect(catARow.locator('[data-testid="budget-status-badge"]')).toHaveClass(/bg-secondary/);
     });
 
     /**
@@ -371,7 +373,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             // EffectiveFrom is a Flatpickr input — use Flatpickr API
             await setFlatpickrDate(page, 'EffectiveFrom', `${year}-${month}-01`);
             await page.selectOption('#PeriodGranularity', 'Monthly');
-            await page.getByRole('button', { name: 'Create Budget' }).click();
+            await page.getByTestId('submit-btn').click();
 
             await Promise.race([
                 page.waitForURL((url: URL) => url.pathname === '/budgets', { timeout: 30000 }),
@@ -390,7 +392,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         const editLink = page.locator('table tbody tr').filter({
             has: page.locator('td', { hasText: 'E2E-Budget-Cat-A' }),
-        }).locator('a', { hasText: 'Edit' });
+        }).locator('[data-testid="edit-budget-btn"]');
 
         await expect(editLink).toBeVisible();
         const editHref = await editLink.getAttribute('href');
@@ -398,7 +400,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await expect(page).toHaveURL(/\/budgets\/edit\//i);
 
         // ── Click Delete Permanently ──────────────────────────────────────────
-        const deleteBtn = page.getByRole('button', { name: 'Delete Permanently' });
+        const deleteBtn = page.getByTestId('delete-budget-btn');
         await expect(deleteBtn).toBeVisible();
 
         // Click opens MDB modal — confirm via the modal's Delete button
@@ -406,7 +408,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         const deleteModal = page.locator('#budgetDeleteConfirmModal');
         await expect(deleteModal).toBeVisible({ timeout: 5000 });
-        await deleteModal.getByRole('button', { name: /Delete/i }).click();
+        await deleteModal.getByTestId('confirm-delete-budget-btn').click();
 
         await page.waitForLoadState('domcontentloaded');
 
@@ -428,7 +430,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
             await expect(goneRow).toHaveCount(0);
         } else {
             // Empty state — no table at all
-            await expect(page.locator('text=No budgets found')).toBeVisible();
+            await expect(page.getByTestId('budgets-empty-state')).toBeVisible();
         }
     });
 
@@ -450,8 +452,8 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         const table = page.locator('table[aria-label="Budgets list"]');
         await expect(table).toBeVisible();
-        await expect(budgetRow(page, E2E_CAT_A)).toContainText('Active');
-        await expect(budgetRow(page, E2E_CAT_B)).toContainText('Inactive');
+        await expect(budgetRow(page, E2E_CAT_A).getByTestId('budget-status-badge')).toHaveClass(/bg-success/);
+        await expect(budgetRow(page, E2E_CAT_B).getByTestId('budget-status-badge')).toHaveClass(/bg-secondary/);
 
         // Use data-testid selectors and Promise.all to properly track GET form navigation.
         // The GET form with Alpine x-model can race on CI — Promise.all ensures navigation
@@ -473,8 +475,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         ]);
 
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(1);
-        await expect(budgetRow(page, E2E_CAT_B)).toContainText('Inactive');
-        await expect(budgetRow(page, E2E_CAT_A)).toHaveCount(0);
+        await expect(budgetRow(page, E2E_CAT_B).getByTestId('budget-status-badge')).toHaveClass(/bg-secondary/);
         await expect(page.locator('table[aria-label="Budgets list"] tbody tr')).toHaveCount(1);
     });
 });

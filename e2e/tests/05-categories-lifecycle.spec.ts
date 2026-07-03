@@ -37,7 +37,7 @@ test.describe('Categories — create and delete lifecycle', () => {
         });
 
         if ((await catItem.count()) > 0) {
-            const deleteBtn = catItem.locator('button', { hasText: /delete/i });
+            const deleteBtn = catItem.locator('[data-testid="delete-category-btn"]');
             if (await deleteBtn.isVisible().catch(() => false)) {
                 page.on('dialog', async dialog => {
                     await dialog.accept();
@@ -68,7 +68,7 @@ test.describe('Categories — create and delete lifecycle', () => {
         }
 
         // ── Create category via modal form ───────────────────────────────────
-        await page.getByRole('button', { name: 'Add New Category' }).click();
+        await page.getByTestId('add-category-btn').click();
         await page.locator('#createCategoryModal').waitFor({ state: 'visible' });
 
         await page.fill('#createName', E2E_CAT_DELETE);
@@ -104,7 +104,7 @@ test.describe('Categories — create and delete lifecycle', () => {
 
         if ((await existing.count()) === 0) {
             // Create it first
-            await page.getByRole('button', { name: 'Add New Category' }).click();
+            await page.getByTestId('add-category-btn').click();
             await page.locator('#createCategoryModal').waitFor({ state: 'visible' });
             await page.fill('#createName', E2E_CAT_DELETE);
             await page.selectOption('#createType', '1');
@@ -122,7 +122,7 @@ test.describe('Categories — create and delete lifecycle', () => {
 
         await expect(catItem).toBeVisible();
 
-        const deleteBtn = catItem.locator('button', { hasText: /delete/i });
+        const deleteBtn = catItem.locator('[data-testid="delete-category-btn"]');
         await expect(deleteBtn).toBeVisible();
 
         // The delete button opens an MDB modal (#deleteConfirmModal), NOT a native browser dialog.

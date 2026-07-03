@@ -1,8 +1,23 @@
 @page
 @model SauronSheet.Frontend.Pages.Categories.IndexModel
 @using SauronSheet.Domain.ValueObjects
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Category Management";
+    ViewData["Title"] = Localizer["Categories.Index.Title"];
+
+    string GetDisplayName(SauronSheet.Application.Features.Categories.DTOs.CategoryDto category)
+    {
+        if (!category.IsSystemDefault || string.IsNullOrWhiteSpace(category.SystemSlug))
+        {
+            return category.Name;
+        }
+
+        string key = $"category.system.{category.SystemSlug}";
+        LocalizedString localized = Localizer[key];
+        return localized.ResourceNotFound ? category.Name : localized.Value;
+    }
 }
 
 <div class="d-flex flex-column gap-4" x-data="{
@@ -21,6 +36,11 @@
     editError: '',
     editCharCount: 0,
     deleteError: '',
+    categoryI18n: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+        errorGeneric = Localizer["Categories.Error.Generic"].Value,
+        errorRequestFailed = Localizer["Categories.Error.RequestFailed"].Value,
+        charCount = Localizer["Categories.Modal.Create.CharCount"].Value
+    })),
 
     get createValid() {
         return this.createName.trim() && this.createType && this.createIcon;
@@ -84,7 +104,7 @@
                     });
                 }
                 const body = isJson ? await r.json() : null;
-                this.createError = (body && body.error) || 'An error occurred';
+                this.createError = (body && body.error) || this.categoryI18n.errorGeneric;
                 return;
             }
             const data = await r.json();
@@ -92,7 +112,7 @@
                 mdb.Modal.getInstance(document.getElementById('createCategoryModal'))?.hide();
                 location.reload();
             } else {
-                this.createError = (data && data.error) || 'An error occurred';
+                this.createError = (data && data.error) || this.categoryI18n.errorGeneric;
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category create returned success:false', {
                         level: 'warning',
@@ -101,7 +121,7 @@
                 }
             }
         } catch (err) {
-            this.createError = 'Request failed';
+            this.createError = this.categoryI18n.errorRequestFailed;
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(
                     err instanceof Error ? err : new Error('Category create fetch failed'),
@@ -135,7 +155,7 @@
                     });
                 }
                 const body = isJson ? await r.json() : null;
-                this.editError = (body && body.error) || 'An error occurred';
+                this.editError = (body && body.error) || this.categoryI18n.errorGeneric;
                 return;
             }
             const data = await r.json();
@@ -143,7 +163,7 @@
                 mdb.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
                 location.reload();
             } else {
-                this.editError = (data && data.error) || 'An error occurred';
+                this.editError = (data && data.error) || this.categoryI18n.errorGeneric;
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category update returned success:false', {
                         level: 'warning',
@@ -152,7 +172,7 @@
                 }
             }
         } catch (err) {
-            this.editError = 'Request failed';
+            this.editError = this.categoryI18n.errorRequestFailed;
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(
                     err instanceof Error ? err : new Error('Category update fetch failed'),
@@ -182,7 +202,7 @@
                     });
                 }
                 const body = isJson ? await r.json() : null;
-                this.deleteError = (body && body.error) || 'An error occurred';
+                this.deleteError = (body && body.error) || this.categoryI18n.errorGeneric;
                 return;
             }
             const data = await r.json();
@@ -190,7 +210,7 @@
                 mdb.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
                 location.reload();
             } else {
-                this.deleteError = (data && data.error) || 'An error occurred';
+                this.deleteError = (data && data.error) || this.categoryI18n.errorGeneric;
                 if (typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Category delete returned success:false', {
                         level: 'warning',
@@ -199,7 +219,7 @@
                 }
             }
         } catch (err) {
-            this.deleteError = 'Request failed';
+            this.deleteError = this.categoryI18n.errorRequestFailed;
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(
                     err instanceof Error ? err : new Error('Category delete fetch failed'),
@@ -211,19 +231,19 @@
 }" x-init="setupModalFocusTraps()">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="h3 fw-bold mb-2">Manage Categories</h3>
-            <p class="text-muted mb-0">Create and organize custom expense categories. System categories are read-only.</p>
+            <h3 class="h3 fw-bold mb-2">@Localizer["Categories.Index.Title"]</h3>
+            <p class="text-muted mb-0">@Localizer["Categories.Index.Description"]</p>
         </div>
-        <button type="button" class="btn btn-brand" @@click="openCreateModal()" aria-label="Add new category">
-            + Add New Category
+        <button type="button" class="btn btn-brand" @@click="openCreateModal()" aria-label="@Localizer["Categories.Index.AddCategory"]" data-testid="add-category-btn">
+            + @Localizer["Categories.Index.AddCategory"]
         </button>
     </div>
 
     <!-- Category List by Type -->
     <div class="row">
         <div class="col-lg-6 mb-4">
-            <h3 class="h5 fw-bold mb-3">Income Categories</h3>
-            <div class="list-group" role="region" aria-label="Income categories">
+            <h3 class="h5 fw-bold mb-3">@Localizer["Categories.Index.IncomeCategories"]</h3>
+            <div class="list-group" role="region" aria-label="@Localizer["Categories.Index.IncomeCategories"]">
                 @{
                     var incomeCategories = Model.Categories.Where(c => c.Type == "Income").OrderBy(c => c.Name).ToList();
                 }
@@ -235,18 +255,18 @@
                             <div class="d-flex align-items-center gap-3">
                                 <div class="category-color-chip" style="background-color: @category.Color; width: 24px; height: 24px; border-radius: 4px;" aria-label="Category color @category.Color"></div>
                                 <div>
-                                    <div class="fw-bold">@category.Name</div>
+                                    <div class="fw-bold" data-testid="@(category.IsSystemDefault && !string.IsNullOrWhiteSpace(category.SystemSlug) ? "system-category-name" : "custom-category-name")" data-system-slug="@(category.SystemSlug ?? string.Empty)">@GetDisplayName(category)</div>
                                     @if (category.IsAutoCreated)
                                     {
-                                        <span class="badge bg-light text-muted border">Auto-created</span>
+                                        <span class="badge bg-light text-muted border">@Localizer["Categories.Index.AutoCreated"]</span>
                                     }
                                 </div>
                             </div>
                             <div>
                                 <a href="/Categories/Subcategories?categoryId=@category.Id"
                                    class="btn btn-sm btn-outline-secondary me-2"
-                                   aria-label="Manage subcategories for @category.Name">
-                                    Subcategories
+                                   aria-label="@Localizer["Categories.Index.Subcategories"] @category.Name">
+                                    @Localizer["Categories.Index.Subcategories"]
                                 </a>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-secondary me-2 js-edit-category"
@@ -255,16 +275,18 @@
                                         data-category-color="@category.Color"
                                         data-category-icon="@category.IconName"
                                         @@click="openEditModal({ id: $el.dataset.categoryId, name: $el.dataset.categoryName, color: $el.dataset.categoryColor, iconName: $el.dataset.categoryIcon })"
-                                        aria-label="Edit @category.Name category">
-                                    Edit
+                                        aria-label="@Localizer["Categories.Index.Edit"] @category.Name"
+                                        data-testid="edit-category-btn">
+                                    @Localizer["Categories.Index.Edit"]
                                 </button>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-danger js-delete-category"
                                         data-category-id="@category.Id"
                                         data-category-name="@category.Name"
                                         @@click="showDeleteConfirm($el.dataset.categoryId, $el.dataset.categoryName)"
-                                        aria-label="Delete @category.Name category">
-                                    Delete
+                                        aria-label="@Localizer["Categories.Index.Delete"] @category.Name"
+                                        data-testid="delete-category-btn">
+                                    @Localizer["Categories.Index.Delete"]
                                 </button>
                             </div>
                         </div>
@@ -272,14 +294,14 @@
                 }
                 else
                 {
-                    <div class="text-muted text-center py-3">No income categories yet</div>
+                    <div class="text-muted text-center py-3">@Localizer["Categories.Index.NoIncomeCategories"]</div>
                 }
             </div>
         </div>
 
         <div class="col-lg-6 mb-4">
-            <h3 class="h5 fw-bold mb-3">Expense Categories</h3>
-            <div class="list-group" role="region" aria-label="Expense categories">
+            <h3 class="h5 fw-bold mb-3">@Localizer["Categories.Index.ExpenseCategories"]</h3>
+            <div class="list-group" role="region" aria-label="@Localizer["Categories.Index.ExpenseCategories"]">
                 @{
                     var expenseCategories = Model.Categories.Where(c => c.Type == "Expense").OrderBy(c => c.Name).ToList();
                 }
@@ -291,18 +313,18 @@
                             <div class="d-flex align-items-center gap-3">
                                 <div class="category-color-chip" style="background-color: @category.Color; width: 24px; height: 24px; border-radius: 4px;" aria-label="Category color @category.Color"></div>
                                 <div>
-                                    <div class="fw-bold">@category.Name</div>
+                                    <div class="fw-bold" data-testid="@(category.IsSystemDefault && !string.IsNullOrWhiteSpace(category.SystemSlug) ? "system-category-name" : "custom-category-name")" data-system-slug="@(category.SystemSlug ?? string.Empty)">@GetDisplayName(category)</div>
                                     @if (category.IsAutoCreated)
                                     {
-                                        <span class="badge bg-light text-muted border">Auto-created</span>
+                                        <span class="badge bg-light text-muted border">@Localizer["Categories.Index.AutoCreated"]</span>
                                     }
                                 </div>
                             </div>
                             <div>
                                 <a href="/Categories/Subcategories?categoryId=@category.Id"
                                    class="btn btn-sm btn-outline-secondary me-2"
-                                   aria-label="Manage subcategories for @category.Name">
-                                    Subcategories
+                                   aria-label="@Localizer["Categories.Index.Subcategories"] @category.Name">
+                                    @Localizer["Categories.Index.Subcategories"]
                                 </a>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-secondary me-2 js-edit-category"
@@ -311,16 +333,18 @@
                                         data-category-color="@category.Color"
                                         data-category-icon="@category.IconName"
                                         @@click="openEditModal({ id: $el.dataset.categoryId, name: $el.dataset.categoryName, color: $el.dataset.categoryColor, iconName: $el.dataset.categoryIcon })"
-                                        aria-label="Edit @category.Name category">
-                                    Edit
+                                        aria-label="@Localizer["Categories.Index.Edit"] @category.Name"
+                                        data-testid="edit-category-btn">
+                                    @Localizer["Categories.Index.Edit"]
                                 </button>
                                 <button type="button"
                                         class="btn btn-sm btn-outline-danger js-delete-category"
                                         data-category-id="@category.Id"
                                         data-category-name="@category.Name"
                                         @@click="showDeleteConfirm($el.dataset.categoryId, $el.dataset.categoryName)"
-                                        aria-label="Delete @category.Name category">
-                                    Delete
+                                        aria-label="@Localizer["Categories.Index.Delete"] @category.Name"
+                                        data-testid="delete-category-btn">
+                                    @Localizer["Categories.Index.Delete"]
                                 </button>
                             </div>
                         </div>
@@ -328,7 +352,7 @@
                 }
                 else
                 {
-                    <div class="text-muted text-center py-3">No expense categories yet</div>
+                    <div class="text-muted text-center py-3">@Localizer["Categories.Index.NoExpenseCategories"]</div>
                 }
             </div>
         </div>
@@ -339,48 +363,48 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="createCategoryLabel">Add New Category</h5>
-                <button type="button" class="btn-close" @@click="closeModal('createCategoryModal')" aria-label="Close"></button>
+                <h5 class="modal-title" id="createCategoryLabel">@Localizer["Categories.Modal.Create.Title"]</h5>
+                <button type="button" class="btn-close" @@click="closeModal('createCategoryModal')" aria-label="@Localizer["Common.Close"]"></button>
             </div>
             <form id="createForm" method="post" asp-page-handler="Create" @@submit.prevent="submitCreateForm($event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
-                        <label for="createName" class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
+                        <label for="createName" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.NameLabel"] <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required
                                aria-describedby="nameError" aria-required="true"
                                x-model="createName"
                                @@input="createCharCount = $el.value.length"
                                :class="{ 'is-invalid': createError && !createName.trim() }" />
-                        <div id="nameError" class="invalid-feedback">Category name is required</div>
-                        <div class="form-text text-end">Max 50 characters (<span x-text="createCharCount">0</span>/50)</div>
+                        <div id="nameError" class="invalid-feedback">@Localizer["Categories.Modal.Create.NameRequired"]</div>
+                        <div class="form-text text-end"><span x-text="categoryI18n.charCount.replace('{0}', createCharCount)">@Localizer["Categories.Modal.Create.CharCount", 0]</span></div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="createType" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+                        <label for="createType" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.TypeLabel"] <span class="text-danger">*</span></label>
                         <select class="form-select" id="createType" name="CreateForm.Type" required aria-required="true"
                                 x-model="createType">
-                            <option value="">Select type...</option>
-                            <option value="0">Income</option>
-                            <option value="1">Expense</option>
+                            <option value="">@Localizer["Categories.Modal.Create.SelectType"]</option>
+                            <option value="0">@Localizer["Categories.Modal.Create.TypeIncome"]</option>
+                            <option value="1">@Localizer["Categories.Modal.Create.TypeExpense"]</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label for="createColor" class="form-label fw-semibold">Color <span class="text-danger">*</span></label>
+                        <label for="createColor" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.ColorLabel"] <span class="text-danger">*</span></label>
                         <div class="d-flex gap-2 align-items-center">
                             <input type="color" class="form-control form-control-color" id="createColor" name="CreateForm.Color" value="#3498DB" required
-                                   style="width: 60px;" aria-label="Select category color"
+                                   style="width: 60px;" aria-label="@Localizer["Categories.Modal.Create.ColorLabel"]"
                                    x-model="createColor" />
                             <span class="badge" :style="'background-color: ' + createColor" x-text="createColor"></span>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="createIcon" class="form-label fw-semibold">Icon <span class="text-danger">*</span></label>
+                        <label for="createIcon" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.IconLabel"] <span class="text-danger">*</span></label>
                         <select class="form-select" id="createIcon" name="CreateForm.IconName" required aria-required="true"
                                 x-model="createIcon">
-                            <option value="">Select icon...</option>
+                            <option value="">@Localizer["Categories.Modal.Create.SelectIcon"]</option>
                             @foreach (var icon in Model.AvailableIcons)
                             {
                                 <option value="@icon">@icon</option>
@@ -391,8 +415,8 @@
                     <div id="createError" class="alert alert-danger rounded-3" x-show="createError" x-text="createError" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @@click="closeModal('createCategoryModal')">Cancel</button>
-                    <button type="submit" class="btn btn-brand" id="createSubmitBtn" :disabled="!createValid">Save Category</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('createCategoryModal')">@Localizer["Common.Cancel"]</button>
+                    <button type="submit" class="btn btn-brand" id="createSubmitBtn" :disabled="!createValid">@Localizer["Categories.Modal.Create.Submit"]</button>
                 </div>
             </form>
         </div>
@@ -404,8 +428,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editCategoryLabel">Edit Category</h5>
-                <button type="button" class="btn-close" @@click="closeModal('editCategoryModal')" aria-label="Close"></button>
+                <h5 class="modal-title" id="editCategoryLabel">@Localizer["Categories.Modal.Edit.Title"]</h5>
+                <button type="button" class="btn-close" @@click="closeModal('editCategoryModal')" aria-label="@Localizer["Common.Close"]"></button>
             </div>
             <form id="editForm" method="post" asp-page-handler="Update" @@submit.prevent="submitEditForm($event)">
                 <div class="modal-body">
@@ -413,26 +437,26 @@
                     <input type="hidden" id="editCategoryId" name="EditForm.CategoryId" x-model="editCategoryId" />
 
                     <div class="mb-3">
-                        <label for="editName" class="form-label fw-semibold">Category Name <span class="text-danger">*</span></label>
+                        <label for="editName" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.NameLabel"] <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true"
                                x-model="editName"
                                @@input="editCharCount = $el.value.length"
                                :class="{ 'is-invalid': editError && !editName.trim() }" />
-                        <div class="form-text text-end">Max 50 characters (<span x-text="editCharCount">0</span>/50)</div>
+                        <div class="form-text text-end"><span x-text="categoryI18n.charCount.replace('{0}', editCharCount)">@Localizer["Categories.Modal.Create.CharCount", 0]</span></div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="editColor" class="form-label fw-semibold">Color <span class="text-danger">*</span></label>
+                        <label for="editColor" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.ColorLabel"] <span class="text-danger">*</span></label>
                         <div class="d-flex gap-2 align-items-center">
                             <input type="color" class="form-control form-control-color" id="editColor" name="EditForm.Color" required
-                                   style="width: 60px;" aria-label="Select category color"
+                                   style="width: 60px;" aria-label="@Localizer["Categories.Modal.Create.ColorLabel"]"
                                    x-model="editColor" />
                             <span class="badge" :style="'background-color: ' + editColor" x-text="editColor"></span>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="editIcon" class="form-label fw-semibold">Icon <span class="text-danger">*</span></label>
+                        <label for="editIcon" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.IconLabel"] <span class="text-danger">*</span></label>
                         <select class="form-select" id="editIcon" name="EditForm.IconName" required aria-required="true"
                                 x-model="editIcon">
                             @foreach (var icon in Model.AvailableIcons)
@@ -445,8 +469,8 @@
                     <div id="editError" class="alert alert-danger rounded-3" x-show="editError" x-text="editError" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @@click="closeModal('editCategoryModal')">Cancel</button>
-                    <button type="submit" class="btn btn-brand" id="editSubmitBtn" :disabled="!editValid">Update Category</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('editCategoryModal')">@Localizer["Common.Cancel"]</button>
+                    <button type="submit" class="btn btn-brand" id="editSubmitBtn" :disabled="!editValid">@Localizer["Categories.Modal.Edit.Submit"]</button>
                 </div>
             </form>
         </div>
@@ -458,17 +482,17 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmLabel">Delete Category</h5>
-                <button type="button" class="btn-close" @@click="closeModal('deleteConfirmModal')" aria-label="Close"></button>
+                <h5 class="modal-title" id="deleteConfirmLabel">@Localizer["Categories.Modal.Delete.Title"]</h5>
+                <button type="button" class="btn-close" @@click="closeModal('deleteConfirmModal')" aria-label="@Localizer["Common.Close"]"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the category <strong x-text="deleteCategoryName"></strong>?</p>
-                <p class="text-muted small">This action cannot be undone.</p>
+                <p>@Html.Raw(Localizer["Categories.Modal.Delete.Confirm", "<strong x-text=\"deleteCategoryName\"></strong>"])</p>
+                <p class="text-muted small">@Localizer["Categories.Modal.Delete.Warning"]</p>
                 <div id="deleteError" class="alert alert-danger rounded-3" x-show="deleteError" x-text="deleteError" role="alert" aria-live="polite"></div>
             </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @@click="closeModal('deleteConfirmModal')">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="deleteConfirmBtn" @@click="performDelete()">Delete</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('deleteConfirmModal')">@Localizer["Common.Cancel"]</button>
+                    <button type="button" class="btn btn-danger" id="deleteConfirmBtn" @@click="performDelete()">@Localizer["Categories.Modal.Delete.Submit"]</button>
                 </div>
         </div>
     </div>

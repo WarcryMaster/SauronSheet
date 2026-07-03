@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Extensions.Localization;
 using Domain.Entities;
 using DTOs;
+using SauronSheet.Application.Resources;
 
 /// <summary>
 /// Pure anomaly detection service (REQ-008).
@@ -14,9 +16,16 @@ using DTOs;
 /// - extraordinary: current amount > 3 × historical mean
 /// - exceptional: extraordinary spike that does not repeat same month previous year
 /// </summary>
-public static class AnomalyDetectionService
+public class AnomalyDetectionService
 {
-    public static IReadOnlyList<AnomalyDto> Compute(
+    private readonly IStringLocalizer<SharedResources> _localizer;
+
+    public AnomalyDetectionService(IStringLocalizer<SharedResources> localizer)
+    {
+        _localizer = localizer;
+    }
+
+    public IReadOnlyList<AnomalyDto> Compute(
         Dictionary<int, List<Transaction>> transactionsByYear,
         int selectedYear)
     {
@@ -165,15 +174,15 @@ public static class AnomalyDetectionService
         return (decimal)Math.Sqrt((double)variance);
     }
 
-    private static string BuildDescription(string type, int month, decimal amount, decimal mean, decimal stdDev)
+    private string BuildDescription(string type, int month, decimal amount, decimal mean, decimal stdDev)
     {
-        string monthLabel = CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
+        string monthLabel = CultureInfo.CurrentUICulture.DateTimeFormat.GetAbbreviatedMonthName(month);
 
         return type switch
         {
-            "exceptional" => $"{monthLabel}: exceptional spike (€{amount:F2}) with no repeated spike in previous year.",
-            "extraordinary" => $"{monthLabel}: extraordinary expense (€{amount:F2}) above 3× mean (€{mean:F2}).",
-            _ => $"{monthLabel}: anomaly (€{amount:F2}) above μ+2σ threshold (€{(mean + 2m * stdDev):F2}).",
+            "exceptional" => _localizer["Anomaly.Exceptional", monthLabel, amount],
+            "extraordinary" => _localizer["Anomaly.Extraordinary", monthLabel, amount, mean],
+            _ => _localizer["Anomaly.Generic", monthLabel, amount, mean + 2m * stdDev],
         };
     }
 

@@ -2,13 +2,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Categories.Queries;
 using SauronSheet.Application.Features.Categories.Commands;
 using SauronSheet.Application.Features.Categories.DTOs;
+using SauronSheet.Application.Resources;
 using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.ValueObjects;
 using System.ComponentModel.DataAnnotations;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SauronSheet.Frontend.Pages.Transactions;
 
@@ -16,6 +20,8 @@ namespace SauronSheet.Frontend.Pages.Transactions;
 public class AddModel : PageModel
 {
     private readonly IMediator _mediator;
+    private readonly IStringLocalizer<SharedResources> _localizer;
+    private static readonly Regex SlugInvalidCharsRegex = new Regex("[^a-z0-9]+", RegexOptions.Compiled);
 
     [BindProperty]
     public AddTransactionInputModel Input { get; set; } = new();
@@ -23,9 +29,10 @@ public class AddModel : PageModel
     public List<CategoryDto> Categories { get; set; } = new();
     public string? ErrorMessage { get; set; }
 
-    public AddModel(IMediator mediator)
+    public AddModel(IMediator mediator, IStringLocalizer<SharedResources> localizer)
     {
         _mediator = mediator;
+        _localizer = localizer;
     }
 
     internal async Task<Guid?> ResolveCategoryIdAsync(string? categoryName)
@@ -33,14 +40,61 @@ public class AddModel : PageModel
         if (string.IsNullOrWhiteSpace(categoryName))
             return null;
 
-        var match = Categories.FirstOrDefault(c =>
-            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+        CategoryDto? match = Categories.FirstOrDefault(c =>
+            c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase)
+            || GetDisplayName(c).Equals(categoryName, StringComparison.OrdinalIgnoreCase));
 
         if (match is not null)
             return match.Id;
 
         var type = Input.Amount >= 0 ? CategoryType.Income : CategoryType.Expense;
         return await _mediator.Send(new CreateCategoryCommand(categoryName, type));
+    }
+
+    private string GetDisplayName(CategoryDto category)
+    {
+        if (!category.IsSystemDefault || string.IsNullOrWhiteSpace(category.SystemSlug))
+        {
+            return category.Name;
+        }
+
+        string key = $"category.system.{category.SystemSlug}";
+        LocalizedString localized = _localizer[key];
+
+        if (!localized.ResourceNotFound)
+        {
+            return localized.Value;
+        }
+
+        string fallbackKey = $"category.system.{BuildSystemCategorySlug(category.Name)}";
+        LocalizedString fallback = _localizer[fallbackKey];
+        return fallback.ResourceNotFound ? category.Name : fallback.Value;
+    }
+
+    private static string BuildSystemCategorySlug(string categoryName)
+    {
+        string normalized = NormalizeForSlug(categoryName);
+        string collapsed = SlugInvalidCharsRegex.Replace(normalized, "-").Trim('-');
+
+        return string.IsNullOrWhiteSpace(collapsed)
+            ? "unknown"
+            : collapsed;
+    }
+
+    private static string NormalizeForSlug(string value)
+    {
+        string formD = value.Normalize(NormalizationForm.FormD);
+        StringBuilder builder = new StringBuilder(formD.Length);
+
+        foreach (char character in formD)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
 
     public async Task<IActionResult> OnGetAsync()

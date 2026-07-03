@@ -5,4 +5,6 @@ public sealed record CategoryBadgeDisplay(
     string? SecondaryText = null,
     bool IsUncategorized = false,
     bool UsesWarningStyle = false,
-    string? AccentColor = null);
+    string? AccentColor = null,
+    bool IsSystemCategory = false,
+    string? SystemCategorySlug = null);

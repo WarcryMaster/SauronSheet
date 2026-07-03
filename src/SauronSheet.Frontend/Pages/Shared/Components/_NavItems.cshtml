@@ -1,14 +1,16 @@
+@inject IStringLocalizer<SharedResources> Localizer
+
 @if (User?.Identity?.IsAuthenticated == true)
 {
-    <li class="nav-item"><a class="nav-link" href="/dashboard">📊 Dashboard</a></li>
-    <li class="nav-item"><a class="nav-link" href="/transactions">💳 Transactions</a></li>
-    <li class="nav-item"><a class="nav-link" href="/transactions/search">🔍 Search</a></li>
-    <li class="nav-item"><a class="nav-link" href="/transactions/upload">📄 Upload</a></li>
-    <li class="nav-item"><a class="nav-link" href="/categories">🏷️ Categories</a></li>
-    <li class="nav-item"><a class="nav-link" href="/budgets">💰 Budgets</a></li>
-    <li class="nav-item"><a class="nav-link" href="/Analysis/Annual">📈 Annual Analysis</a></li>
+    <li class="nav-item"><a class="nav-link" href="/dashboard" data-testid="nav-dashboard">📊 @Localizer["Layout.NavDashboard"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="/transactions" data-testid="nav-transactions">💳 @Localizer["Layout.NavTransactions"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="/transactions/search" data-testid="nav-search">🔍 @Localizer["Layout.NavSearch"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="/transactions/upload" data-testid="nav-upload">📄 @Localizer["Layout.NavUpload"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="/categories" data-testid="nav-categories">🏷️ @Localizer["Layout.NavCategories"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="/budgets" data-testid="nav-budgets">💰 @Localizer["Layout.NavBudgets"]</a></li>
+    <li class="nav-item"><a class="nav-link" href="/Analysis/Annual" data-testid="nav-annual">📈 @Localizer["Layout.NavAnnual"]</a></li>
 }
 else
 {
-    <li class="nav-item"><a class="nav-link" href="/auth/login">Sign In</a></li>
+    <li class="nav-item"><a class="nav-link" href="/auth/login" data-testid="nav-sign-in">@Localizer["Layout.NavSignIn"]</a></li>
 }

@@ -92,7 +92,7 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
-        await page.getByRole('button', { name: /Upload and Import/i }).click();
+        await page.getByTestId('upload-submit').click();
 
         const progressBar = page.locator('[role="progressbar"]');
         await expect(progressBar).toBeVisible({ timeout: 15000 });
@@ -108,7 +108,7 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
-        await page.getByRole('button', { name: /Upload and Import/i }).click();
+        await page.getByTestId('upload-submit').click();
 
         // There are 2x [role="status"] elements on the page (the upload spinner + the result alert).
         // Use a more specific selector to target only the result alert.

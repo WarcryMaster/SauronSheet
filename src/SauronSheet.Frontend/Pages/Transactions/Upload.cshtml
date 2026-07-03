@@ -1,19 +1,28 @@
 @page
 @model SauronSheet.Frontend.Pages.Transactions.UploadModel
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Upload Bank Statement";
+    ViewData["Title"] = Localizer["Upload.Title"];
+
+    Dictionary<string, string> uploadI18n = new()
+    {
+        ["networkError"] = Localizer["Upload.NetworkError"],
+        ["serverErrorPrefix"] = Localizer["Upload.ServerErrorPrefix"],
+        ["uploadFailed"] = Localizer["Upload.UploadFailed"],
+        ["removeFile"] = Localizer["Upload.RemoveFile"]
+    };
 }
 
 <div class="mx-auto d-flex flex-column gap-4" style="max-width: 640px;">
     <div class="d-flex align-items-center gap-3">
-        <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">&larr; Back</a>
-        <h3 class="h3 fw-bold mb-0">Upload Bank Statement</h3>
+        <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none" data-testid="upload-back">&larr; @Localizer["Upload.Back"]</a>
+        <h3 class="h3 fw-bold mb-0">@Localizer["Upload.Heading"]</h3>
     </div>
 
     @if (Model.FileErrors.Any())
     {
-        <div class="alert alert-danger d-flex flex-column gap-2 rounded-3" role="alert" x-transition.opacity>
-            <p class="fw-semibold mb-0">⚠️ Some files could not be processed:</p>
+        <div class="alert alert-danger d-flex flex-column gap-2 rounded-3" role="alert" x-transition.opacity data-testid="upload-file-errors">
+            <p class="fw-semibold mb-0">⚠️ @Localizer["Upload.ErrorHeading"]</p>
             <ul class="mb-0 small">
                 @foreach (var error in Model.FileErrors)
                 {
@@ -27,44 +36,43 @@
     {
         var totalImported = Model.ImportResults.Sum(r => r.ImportedCount);
         var totalSkipped = Model.ImportResults.Sum(r => r.SkippedCount);
-        <div class="alert alert-success rounded-3" x-transition.opacity>
+        <div class="alert alert-success rounded-3" x-transition.opacity data-testid="upload-import-results">
             <p class="fw-semibold mb-1">
-                ✅ Import Complete: @totalImported imported, @totalSkipped skipped
-                across @Model.ImportResults.Count file(s)
+                ✅ @string.Format(Localizer["Upload.ImportCompleteSummary"], totalImported, totalSkipped, Model.ImportResults.Count)
             </p>
             @foreach (var result in Model.ImportResults)
             {
                 <div class="mt-2 ps-2 border-start border-2 border-success-subtle">
-                    <p class="small mb-1 fw-medium">@result.Filename — @result.ImportedCount imported, @result.SkippedCount skipped</p>
+                    <p class="small mb-1 fw-medium">@string.Format(Localizer["Upload.FileSummary"], result.Filename, result.ImportedCount, result.SkippedCount)</p>
                     @if (result.Errors.Any())
                     {
                         <details>
-                            <summary class="small">Errors (@result.Errors.Count)</summary>
+                            <summary class="small">@string.Format(Localizer["Upload.ErrorsCount"], result.Errors.Count)</summary>
                             <ul class="mt-1 mb-0">
                                 @foreach (var error in result.Errors)
                                 {
-                                    <li class="small text-danger">Row @error.RowNumber: @error.ErrorMessage</li>
+                                    <li class="small text-danger">@string.Format(Localizer["Upload.ErrorRow"], error.RowNumber, error.ErrorMessage)</li>
                                 }
                             </ul>
                         </details>
                     }
                 </div>
             }
-            <a href="/transactions" class="d-block mt-2 small fw-semibold">View imported transactions →</a>
+            <a href="/transactions" class="d-block mt-2 small fw-semibold" data-testid="upload-view-transactions">@Localizer["Upload.ViewImportedTransactions"] →</a>
         </div>
     }
 
     <!-- Excel Format Guide — ESP-4b: visible above the fold -->
     <div class="card border-0 bg-light p-3 rounded-3" data-testid="excel-format-guide">
-        <h2 class="h6 fw-semibold mb-2">📋 Required Excel Format (ING Bank)</h2>
+        <h2 class="h6 fw-semibold mb-2">📋 @Localizer["Upload.FormatGuideTitle"]</h2>
         <ul class="mb-2 small ps-3">
-            <li>Sheet name: <strong>Movimientos</strong></li>
-            <li>Row 4 must contain this exact header:</li>
+            <li>@Localizer["Upload.FormatSheetNameLabel"] <strong>Movimientos</strong></li>
+            <li>@Localizer["Upload.FormatHeaderDescription"]</li>
         </ul>
         <code class="small d-block bg-white border rounded p-2 mb-2" style="overflow-x: auto; white-space: nowrap;">
             F. VALOR | CATEGORÍA | SUBCATEGORÍA | DESCRIPCIÓN | COMENTARIO | IMPORTE (€) | SALDO (€)
         </code>
-        <p class="small text-muted mb-0">Transaction data starts at row 5. Only <strong>.xls</strong> and <strong>.xlsx</strong> files are accepted.</p>
+        <p class="small text-muted mb-0">@Localizer["Upload.FormatDataDescription"]</p>
     </div>
 
     <div class="card border-0 shadow-sm p-4">
@@ -78,6 +86,7 @@
                   progressUploadId: null,
                   errorMessage: null,
                   stopPollingHandler: null,
+                  uploadI18n: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(uploadI18n)),
 
                   // Read a File into a plain object (name, size, type, lastModified, buffer).
                   // This sidesteps Alpine's deep proxy which would break the native File object
@@ -165,7 +174,7 @@
                           const contentType = response.headers.get('content-type') || '';
                           if (!contentType.includes('application/json')) {
                               const text = await response.text();
-                              throw new Error('Server returned ' + response.status + ' ' + contentType + ': ' + text.substring(0, 200));
+                              throw new Error(this.uploadI18n.serverErrorPrefix + response.status + ' ' + contentType + ': ' + text.substring(0, 200));
                           }
 
                           const result = await response.json();
@@ -197,12 +206,12 @@
                           } else {
                               this.uploading = false;
                               this.progressVisible = false;
-                              this.errorMessage = result.error || 'Upload failed';
+                              this.errorMessage = result.error || this.uploadI18n.uploadFailed;
                           }
                       } catch (error) {
                           this.uploading = false;
                           this.progressVisible = false;
-                          this.errorMessage = 'Network error. Please try again.';
+                          this.errorMessage = this.uploadI18n.networkError;
                           if (typeof Sentry !== 'undefined') {
                               Sentry.captureException(error);
                           }
@@ -212,7 +221,7 @@
               @@submit.prevent="handleUpload()">
 
             <div>
-                <label class="form-label fw-semibold">Select Excel Bank Statement(s)</label>
+                <label class="form-label fw-semibold">@Localizer["Upload.SelectFilesLabel"]</label>
                 <div class="border border-2 rounded-3 p-5 text-center"
                      :class="dragging ? 'border-brand bg-brand-subtle' : ''"
                      :style="'cursor: pointer; border-style: dashed; border-color: ' + (dragging ? 'var(--mdb-brand)' : '#ced4da') + ' !important;'"
@@ -220,15 +229,16 @@
                      @@dragenter.prevent="dragging = true"
                      @@dragover.prevent="dragging = true"
                      @@dragleave.prevent="dragging = false"
-                     @@drop.prevent="handleDrop($event)">
+                     @@drop.prevent="handleDrop($event)"
+                     data-testid="upload-drop-zone">
                     <div class="fs-1 mb-2">📊</div>
                     <p class="mb-1 small">
                         <span class="fw-semibold text-brand" style="cursor: pointer;">
-                            Choose Excel files
+                            @Localizer["Upload.ChooseFiles"]
                         </span>
-                        <span class="text-muted"> or drag and drop</span>
+                        <span class="text-muted">@Localizer["Upload.OrDragDrop"]</span>
                     </p>
-                    <p class="text-muted small mb-2">Excel (.xls / .xlsx) up to 10MB each — multiple files allowed</p>
+                    <p class="text-muted small mb-2">@Localizer["Upload.FileConstraints"]</p>
                     <input x-ref="fileInput" name="ExcelFiles" type="file" accept=".xls,.xlsx" multiple class="visually-hidden"
                            @@change="handleFileSelect($event)" />
                 </div>
@@ -237,14 +247,14 @@
             <!-- File list -->
             <div x-show="files.length > 0" x-transition x-cloak class="upload-flex-col">
                 <p class="small fw-semibold mb-0 text-muted">
-                    <span x-text="files.length"></span> file(s) selected:
+                    <span x-text="files.length"></span> @Localizer["Upload.FilesSelected"]
                 </p>
                 <template x-for="(file, idx) in files" :key="idx">
                     <div class="d-flex align-items-center gap-2 bg-light rounded-2 px-3 py-2">
                         <span class="small text-truncate flex-grow-1" x-text="file.name"></span>
                         <span class="small text-muted flex-shrink-0" x-text="formatSize(file.size)"></span>
                         <button type="button" class="btn btn-sm btn-link text-danger p-0 flex-shrink-0"
-                                @@click="removeFile(idx)" title="Remove file">
+                                @@click="removeFile(idx)" :title="uploadI18n.removeFile" data-testid="upload-remove-file">
                             ✕
                         </button>
                     </div>
@@ -252,19 +262,19 @@
             </div>
 
             <!-- Async upload error message -->
-            <div x-show="errorMessage" x-transition x-cloak class="alert alert-danger rounded-3" role="alert">
-                <p class="fw-semibold mb-1">⚠️ Upload failed</p>
+            <div x-show="errorMessage" x-transition x-cloak class="alert alert-danger rounded-3" role="alert" data-testid="upload-error-message">
+                <p class="fw-semibold mb-1">⚠️ @Localizer["Upload.UploadFailed"]</p>
                 <p class="small mb-0" x-text="errorMessage"></p>
             </div>
 
             <!-- Real-time progress container (HTMX attributes set dynamically in handleUpload) -->
             <div id="upload-progress" x-show="progressVisible" x-transition x-cloak></div>
 
-            <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold"
+            <button type="submit" class="btn btn-brand w-100 rounded-3 fw-bold" data-testid="upload-submit"
                     :disabled="uploading || files.length === 0">
-                <span x-show="!uploading">Upload and Import</span>
+                <span x-show="!uploading">@Localizer["Upload.Submit"]</span>
                 <span x-show="uploading" class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Uploading...</span>
+                    <span class="visually-hidden">@Localizer["Upload.Uploading"]</span>
                 </span>
             </button>
         </form>

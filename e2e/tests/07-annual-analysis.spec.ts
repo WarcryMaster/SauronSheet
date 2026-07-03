@@ -17,12 +17,17 @@
  *   - DO NOT use fetch() inside page.evaluate()
  */
 
-import { test, expect } from '../fixtures/auth.fixture';
+import { test, expect } from '@playwright/test';
 import { setFlatpickrDate } from '../helpers';
+import { resolveTestAccount } from '../fixtures/budget-data.fixture';
 
 const currentYear = new Date().getFullYear();
 const alternateYear = currentYear - 1;
 const invalidFutureYear = currentYear + 1;
+
+test.use({
+    storageState: { cookies: [], origins: [] },
+});
 
 async function seedAnnualData(page: any, year?: number): Promise<void> {
     const targetYear = year ?? currentYear;
@@ -51,8 +56,27 @@ async function seedAnnualData(page: any, year?: number): Promise<void> {
     await page.waitForURL(/\/transactions/i, { timeout: 10000 });
 }
 
+async function loginForAnnualSpec(page: any): Promise<void> {
+    const account = resolveTestAccount();
+
+    await page.goto('/auth/login');
+    await page.fill('[data-testid="login-email"]', account.email);
+    await page.fill('[data-testid="login-password"]', account.password);
+    await page.locator('[data-testid="login-submit"]').click();
+    await page.waitForURL(/\/dashboard/i, { timeout: 15000 });
+}
+
 test.describe('Annual Analysis Dashboard', () => {
-    test('renders dashboard layout with KPIs, charts and YoY section', async ({ authenticatedPage: page }) => {
+    test.describe.configure({ timeout: 120_000 });
+
+    test.beforeEach(async ({ page, context }) => {
+        // This file is intentionally self-sufficient and does not depend on
+        // the global Playwright auth bootstrap (auth.setup.ts).
+        await context.clearCookies();
+        await loginForAnnualSpec(page);
+    });
+
+    test('renders dashboard layout with KPIs, charts and YoY section', async ({ page }) => {
         await seedAnnualData(page);
         await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
@@ -74,7 +98,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-detail-toggle"]')).toBeVisible();
     });
 
-    test('invalid year redirects to latest available year with data', async ({ authenticatedPage: page }) => {
+    test('invalid year redirects to latest available year with data', async ({ page }) => {
         await seedAnnualData(page, alternateYear);
 
         await page.goto('/Analysis/Annual');
@@ -88,7 +112,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-kpi-net"]')).toBeVisible();
     });
 
-    test('detail tables toggle shows and hides both tables', async ({ authenticatedPage: page }) => {
+    test('detail tables toggle shows and hides both tables', async ({ page }) => {
         await seedAnnualData(page);
         await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
@@ -116,7 +140,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(expenseTable).toBeHidden();
     });
 
-    test('row expansion shows monthly mini-bars with month labels', async ({ authenticatedPage: page }) => {
+    test('row expansion shows monthly mini-bars with month labels', async ({ page }) => {
         await seedAnnualData(page);
         await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
@@ -137,13 +161,10 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(expansionRow).toBeVisible();
         await expect(expansionRow.locator('.mini-bar').first()).toBeVisible();
 
-        const monthLabels = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-        for (const label of monthLabels) {
-            await expect(expansionRow).toContainText(label);
-        }
+        await expect(expansionRow.locator('.mini-bar')).toHaveCount(12);
     });
 
-    test('year selector changes year and reloads page', async ({ authenticatedPage: page }) => {
+    test('year selector changes year and reloads page', async ({ page }) => {
         await seedAnnualData(page, alternateYear);
         await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
@@ -156,7 +177,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-kpi-income"]')).toBeVisible();
     });
 
-    test('YoY section renders fallback when no previous year data', async ({ authenticatedPage: page }) => {
+    test('YoY section renders fallback when no previous year data', async ({ page }) => {
         await seedAnnualData(page, currentYear);
         await page.goto(`/Analysis/Annual?Year=${currentYear}`);
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
@@ -175,12 +196,12 @@ test.describe('Annual Analysis Dashboard', () => {
 
         const noDataFallback = page.locator('[data-testid="annual-yoy-no-data"]');
         await expect(noDataFallback).toBeVisible();
-        await expect(noDataFallback).toContainText('Sin datos del año anterior');
+        await expect(noDataFallback).not.toHaveText('');
     });
 
     // ── T2 E2E Tests (Task 5.7) ──
 
-    test('multi-year chart section renders with canvas element when multiple years of data exist', async ({ authenticatedPage: page }) => {
+    test('multi-year chart section renders with canvas element when multiple years of data exist', async ({ page }) => {
         // Seed data across 2 years to trigger multi-year comparison (requires 2+ years)
         const firstYear = currentYear - 4;
         const secondYear = currentYear - 3;
@@ -197,7 +218,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(canvas).toHaveAttribute('role', 'img');
     });
 
-    test('monthly evolution chart renders with canvas', async ({ authenticatedPage: page }) => {
+    test('monthly evolution chart renders with canvas', async ({ page }) => {
         const testYear = currentYear - 2;
         await seedAnnualData(page, testYear);
         await page.goto(`/Analysis/Annual?Year=${testYear}`);
@@ -211,7 +232,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(canvas).toHaveAttribute('role', 'img');
     });
 
-    test('category distribution donut renders with category section', async ({ authenticatedPage: page }) => {
+    test('category distribution donut renders with category section', async ({ page }) => {
         const testYear = currentYear - 5;
         await seedAnnualData(page, testYear);
         await page.goto(`/Analysis/Annual?Year=${testYear}`);
@@ -224,7 +245,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(canvas).toBeVisible();
     });
 
-    test('timeline and top movements sections visible with transaction data', async ({ authenticatedPage: page }) => {
+    test('timeline and top movements sections visible with transaction data', async ({ page }) => {
         const testYear = currentYear - 6;
         // Seed twice to create enough transactions for meaningful timeline + top movements
         await seedAnnualData(page, testYear);
@@ -238,7 +259,7 @@ test.describe('Annual Analysis Dashboard', () => {
 
     // ── T3 E2E Tests (Task 5.8) ──
 
-    test('anomalies section renders after loading year with data', async ({ authenticatedPage: page }) => {
+    test('anomalies section renders after loading year with data', async ({ page }) => {
         const testYear = currentYear - 7;
         await seedAnnualData(page, testYear);
         await seedAnnualData(page, testYear);
@@ -249,7 +270,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-anomalies-section"]')).toBeVisible();
     });
 
-    test('discoveries and achievements sections render', async ({ authenticatedPage: page }) => {
+    test('discoveries and achievements sections render', async ({ page }) => {
         const testYear = currentYear - 7;
         await seedAnnualData(page, testYear);
         await seedAnnualData(page, testYear);
@@ -261,7 +282,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-achievements-section"]')).toBeVisible();
     });
 
-    test('predictions section visible for multi-year data', async ({ authenticatedPage: page }) => {
+    test('predictions section visible for multi-year data', async ({ page }) => {
         const year1 = currentYear - 9;
         const year2 = currentYear - 8;
         await seedAnnualData(page, year1);
@@ -273,7 +294,7 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page.locator('[data-testid="annual-predictions-section"]')).toBeVisible();
     });
 
-    test('historical comparison section visible', async ({ authenticatedPage: page }) => {
+    test('historical comparison section visible', async ({ page }) => {
         const year1 = currentYear - 9;
         const year2 = currentYear - 8;
         await seedAnnualData(page, year1);
@@ -283,5 +304,79 @@ test.describe('Annual Analysis Dashboard', () => {
         await expect(page).toHaveURL(/\/Analysis\/Annual/i);
 
         await expect(page.locator('[data-testid="annual-historical-comparison-section"]')).toBeVisible();
+    });
+
+    test('smart summary switches between Spanish and English with culture toggle', async ({ page }, testInfo) => {
+        test.skip(testInfo.project.name !== 'chromium', 'Culture-switch validation is required only for primary desktop flow.');
+
+        const testYear = currentYear - 10;
+        await seedAnnualData(page, testYear);
+
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+
+        const smartSummary = page.locator('[data-testid="annual-smart-summary"] p');
+        await expect(smartSummary).toBeVisible();
+
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+        const summaryEn = (await smartSummary.innerText()).replace(/\s+/g, ' ').trim();
+        expect(summaryEn.length).toBeGreaterThan(20);
+
+        await page.locator('[data-testid="lang-switcher"]:visible').click();
+        await page.locator('[data-testid="lang-switcher-option-es"]:visible').waitFor({ state: 'visible' });
+        await page.locator('[data-testid="lang-switcher-option-es"]:visible').click();
+
+        await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+
+        const cookiesAfterEsSwitch = await page.context().cookies();
+        const cultureCookieEs = cookiesAfterEsSwitch.find((cookie) => cookie.name === '.AspNetCore.Culture');
+        const cultureCookieEsValue = cultureCookieEs ? decodeURIComponent(cultureCookieEs.value) : '';
+        expect(cultureCookieEsValue).toContain('c=es-ES');
+
+        const summaryEs = (await smartSummary.innerText()).replace(/\s+/g, ' ').trim();
+        expect(summaryEs.length).toBeGreaterThan(20);
+        expect(summaryEs).not.toBe(summaryEn);
+
+        await page.locator('[data-testid="lang-switcher"]:visible').click();
+        await page.locator('[data-testid="lang-switcher-option-en"]:visible').waitFor({ state: 'visible' });
+        await page.locator('[data-testid="lang-switcher-option-en"]:visible').click();
+
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+        const cookiesAfterEnSwitch = await page.context().cookies();
+        const cultureCookieEn = cookiesAfterEnSwitch.find((cookie) => cookie.name === '.AspNetCore.Culture');
+        const cultureCookieEnValue = cultureCookieEn ? decodeURIComponent(cultureCookieEn.value) : '';
+        expect(cultureCookieEnValue).toContain('c=en-US');
+
+        const summaryEnAfterSwitchBack = (await smartSummary.innerText()).replace(/\s+/g, ' ').trim();
+        expect(summaryEnAfterSwitchBack.length).toBeGreaterThan(20);
+        expect(summaryEnAfterSwitchBack).not.toBe(summaryEs);
+    });
+
+    test('chart i18n payload and flatpickr locale scripts switch between Spanish and English', async ({ page }, testInfo) => {
+        test.skip(testInfo.project.name !== 'chromium', 'Culture-switch validation is required only for primary desktop flow.');
+
+        const testYear = currentYear - 11;
+        await seedAnnualData(page, testYear);
+
+        await page.goto(`/Analysis/Annual?Year=${testYear}`);
+        await expect(page).toHaveURL(/\/Analysis\/Annual/i);
+        await expect(page.locator('[data-testid="annual-smart-summary"]')).toBeVisible();
+
+        let pageHtml = await page.content();
+        expect(pageHtml).toMatch(/"chart":\{"series":\{"income":"Income"/);
+        expect(pageHtml).toContain('flatpickr/dist/l10n/default.js');
+        expect(pageHtml).toContain('flatpickr.localize(flatpickr.l10ns.default)');
+
+        await page.locator('[data-testid="lang-switcher"]:visible').click();
+        await page.locator('[data-testid="lang-switcher-option-es"]:visible').waitFor({ state: 'visible' });
+        await page.locator('[data-testid="lang-switcher-option-es"]:visible').click();
+
+        await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+        await expect(page.locator('[data-testid="annual-smart-summary"]')).toBeVisible();
+        pageHtml = await page.content();
+        expect(pageHtml).toMatch(/"chart":\{"series":\{"income":"Ingresos"/);
+        expect(pageHtml).toContain('flatpickr/dist/l10n/es.js');
+        expect(pageHtml).toContain('flatpickr.localize(flatpickr.l10ns.es)');
     });
 });

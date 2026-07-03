@@ -1,8 +1,11 @@
 ﻿@page
 @model SauronSheet.Frontend.Pages.Transactions.IndexModel
 @using SauronSheet.Frontend.Helpers
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Transactions";
+    ViewData["Title"] = Localizer["Transactions.Index.Title"];
 }
 
 <div class="d-flex flex-column gap-4"
@@ -12,6 +15,19 @@
          countdown: 2,
          countdownInterval: null,
          canConfirm: false,
+         transactionI18n: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+             sourceSummaryNone = Localizer["Transactions.Index.SourceSummaryNone"].Value,
+             sourceSummary = Localizer["Transactions.Index.SourceSummary"].Value,
+             sourceRemove = Localizer["Transactions.Index.SourceRemove"].Value,
+             sourceSearchPlaceholder = Localizer["Transactions.Index.SourceSearchPlaceholder"].Value,
+             selectedCount = Localizer["Transactions.Index.SelectedCount"].Value,
+             selectionLimitWarning = Localizer["Transactions.Index.SelectionLimitWarning"].Value,
+             paginationShowing = Localizer["Transactions.Index.PaginationShowing"].Value,
+             bulkDeleteConfirm = Localizer["Transactions.Modal.BulkDeleteConfirm"].Value,
+             countdownTemplate = Localizer["Transactions.Modal.Countdown"].Value,
+             delete = Localizer["Common.Delete"].Value,
+             cancel = Localizer["Common.Cancel"].Value
+         })),
 
          get selectionCount() { return this.selectedIds.length; },
          get canDelete() { return this.selectionCount > 0; },
@@ -86,10 +102,10 @@
          }
      }'>
     <div class="d-flex justify-content-between align-items-center">
-        <h3 class="h3 fw-bold mb-0">Transactions</h3>
+        <h3 class="h3 fw-bold mb-0" data-testid="transactions-heading">@Localizer["Transactions.Index.Title"]</h3>
         <div class="d-flex gap-2">
-            <a href="/transactions/upload" class="btn btn-brand btn-sm">📊 Upload Statement</a>
-            <a href="/transactions/add" class="btn btn-outline-secondary btn-sm">➕ Add Transaction</a>
+            <a href="/transactions/upload" class="btn btn-brand btn-sm" data-testid="upload-statement-link">📊 @Localizer["Transactions.Index.UploadStatement"]</a>
+            <a href="/transactions/add" class="btn btn-outline-secondary btn-sm" data-testid="add-transaction-link">➕ @Localizer["Transactions.Index.AddTransaction"]</a>
         </div>
     </div>
 
@@ -97,20 +113,20 @@
     <form method="get" class="card border-0 shadow-sm p-4">
         <div class="row g-3 align-items-end">
             <div class="col-12 col-md-3">
-                <label for="StartDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">From</label>
+                <label for="StartDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Common.From"]</label>
                 <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, maxDate: 'today' })"
                        type="text" name="StartDate" id="StartDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")"
-                       class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
+                       class="form-control form-control-sm" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
             </div>
             <div class="col-12 col-md-3">
-                <label for="EndDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">To</label>
+                <label for="EndDate" class="form-label small fw-semibold text-muted text-uppercase mb-1">@Localizer["Common.To"]</label>
                 <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, maxDate: 'today' })"
                        type="text" name="EndDate" id="EndDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")"
-                       class="form-control form-control-sm" placeholder="DD/MM/AAAA" autocomplete="off" />
+                       class="form-control form-control-sm" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
             </div>
             <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
-                <button type="submit" class="btn btn-brand btn-sm">Apply</button>
-                <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
+                <button type="submit" class="btn btn-brand btn-sm" data-testid="apply-filters-btn">@Localizer["Common.Apply"]</button>
+                <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none" data-testid="clear-filters-link">@Localizer["Transactions.Index.ClearFilters"]</a>
             </div>
             <div class="col-12">
                 <div class="source-filter-panel"
@@ -118,6 +134,7 @@
                          selectedSources: @Json.Serialize(Model.SelectedSources),
                          sourceInput: "",
                          availableSources: @Json.Serialize(Model.AvailableSources),
+                         i18n: transactionI18n,
                          addSource() {
                              const s = this.sourceInput.trim();
                              if (!s || !this.availableSources.includes(s) || this.selectedSources.includes(s)) {
@@ -133,16 +150,16 @@
                          get summaryText() {
                              const count = this.selectedSources.length;
                              return count === 0
-                                 ? `Search and add one or more sources. If none are selected, all sources are shown.`
-                                 : `${count} selected source(s)`;
+                                 ? this.i18n.sourceSummaryNone
+                                 : this.i18n.sourceSummary.replace("{0}", count);
                          }
                      }'>
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
                         <div>
-                            <label class="form-label small fw-semibold text-muted text-uppercase mb-1 d-block">Source</label>
+                            <label class="form-label small fw-semibold text-muted text-uppercase mb-1 d-block">@Localizer["Transactions.Index.Source"]</label>
                             <span x-text="summaryText"
                                   :class="selectedSources.length === 0 ? 'small text-muted' : 'badge rounded-pill bg-brand-light border border-brand text-brand px-3 py-2'"
-                                  x-cloak>@(Model.SelectedSources.Any() ? $"{Model.SelectedSources.Count} selected source(s)" : "Search and add one or more sources. If none are selected, all sources are shown.")</span>
+                                  x-cloak>@(Model.SelectedSources.Any() ? string.Format(Localizer["Transactions.Index.SourceSummary"], Model.SelectedSources.Count) : Localizer["Transactions.Index.SourceSummaryNone"])</span>
                         </div>
                     </div>
                     <div class="source-picker">
@@ -154,7 +171,7 @@
                                         <button type="button"
                                                 class="source-chip-remove"
                                                 @@click="removeSource(source)"
-                                                :aria-label="'Remove source ' + source">
+                                                :aria-label="i18n.sourceRemove.replace('{0}', source)">
                                             ×
                                         </button>
                                     </span>
@@ -168,7 +185,7 @@
                                    x-model="sourceInput"
                                    list="availableSourcesList"
                                    class="form-control form-control-sm"
-                                   placeholder="Search source and select it..."
+                                   :placeholder="i18n.sourceSearchPlaceholder"
                                    autocomplete="off"
                                    @@change="addSource()"
                                    @@keydown.enter.prevent="addSource()" />
@@ -189,11 +206,11 @@
     {
         <div class="card border-0 shadow-sm p-5 text-center" role="status" aria-live="polite">
             <div class="fs-1 mb-3">💳</div>
-            <p class="h5 fw-semibold mb-2">No transactions yet</p>
-            <p class="text-muted mb-4">Import a bank statement or add a transaction to get started.</p>
+            <p class="h5 fw-semibold mb-2">@Localizer["Transactions.Index.EmptyTitle"]</p>
+            <p class="text-muted mb-4">@Localizer["Transactions.Index.EmptyDescription"]</p>
             <div class="d-flex justify-content-center gap-3">
-                <a href="/transactions/upload" class="btn btn-brand">📊 Import Statement</a>
-                <a href="/transactions/add" class="btn btn-outline-secondary">➕ Add Transaction</a>
+                <a href="/transactions/upload" class="btn btn-brand" data-testid="empty-import-link">📊 @Localizer["Transactions.Index.ImportStatement"]</a>
+                <a href="/transactions/add" class="btn btn-outline-secondary" data-testid="empty-add-link">➕ @Localizer["Transactions.Index.AddTransaction"]</a>
             </div>
         </div>
     }
@@ -202,15 +219,15 @@
         <!-- Bulk Delete Toolbar -->
         <div class="d-flex justify-content-between align-items-center">
             <div class="small text-muted">
-                <span x-text="selectionCount + ' / ' + maxSelections + ' selected'">0 / @Math.Min(Model.Transactions.TotalCount, 1000) selected</span>
+                <span x-text="transactionI18n.selectedCount.replace('{0}', selectionCount).replace('{1}', maxSelections)">@string.Format(Localizer["Transactions.Index.SelectedCount"], 0, Math.Min(Model.Transactions.TotalCount, 1000))</span>
                 @if (Model.Transactions.TotalCount > 1000)
                 {
-                    <span class="badge bg-warning text-dark ms-2">⚠️ Limited to 1000 per transaction</span>
+                    <span class="badge bg-warning text-dark ms-2">⚠️ @Localizer["Transactions.Index.SelectionLimitWarning"]</span>
                 }
             </div>
             <button type="button" id="deleteSelectedBtn" class="btn btn-danger btn-sm"
-                    :disabled="!canDelete" @@click="openDeleteModal()">
-                🗑️ Delete Selected
+                    :disabled="!canDelete" @@click="openDeleteModal()" data-testid="delete-selected-btn">
+                🗑️ @Localizer["Transactions.Index.DeleteSelected"]
             </button>
         </div>
 
@@ -221,15 +238,15 @@
                         <tr>
                             <th style="width: 40px;">
                                 <div class="form-check m-0">
-                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox" @@change="toggleAll($el.checked)" />
-                                    <label class="form-check-label" for="selectAllCheckbox" title="Select all"></label>
+                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox" @@change="toggleAll($el.checked)" data-testid="select-all-checkbox" />
+                                    <label class="form-check-label" for="selectAllCheckbox" title="@Localizer["Transactions.Index.SelectAll"]"></label>
                                 </div>
                             </th>
-                            <th class="text-uppercase small fw-semibold text-muted">Date</th>
-                            <th class="text-uppercase small fw-semibold text-muted">Description</th>
-                            <th class="text-uppercase small fw-semibold text-muted">Amount</th>
-                            <th class="text-uppercase small fw-semibold text-muted">Category</th>
-                            <th class="text-uppercase small fw-semibold text-muted">Actions</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Date"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Description"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Amount"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Category"]</th>
+                            <th class="text-uppercase small fw-semibold text-muted">@Localizer["Common.Actions"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -263,14 +280,15 @@
                                     <div class="d-flex gap-1 align-items-center">
                                         <a href="/transactions/edit/@transaction.Id"
                                            class="btn btn-sm btn-outline-primary rounded-2"
-                                           title="Edit transaction"
+                                           title="@Localizer["Transactions.Index.EditTransaction"]"
                                            data-testid="edit-transaction-btn">
                                             <i class="fas fa-pencil-alt"></i>
                                         </a>
                                         <form method="post" asp-page-handler="Delete" asp-route-id="@transaction.Id" class="d-inline m-0" id="deleteForm_@transaction.Id">
                                             <button type="button" class="btn btn-link btn-sm text-danger p-0"
-                                                    @@click="openSingleDeleteModal('deleteForm_@transaction.Id')">
-                                                🗑️ Delete
+                                                    @@click="openSingleDeleteModal('deleteForm_@transaction.Id')"
+                                                    data-testid="delete-transaction-btn">
+                                                🗑️ @Localizer["Common.Delete"]
                                             </button>
                                         </form>
                                     </div>
@@ -286,9 +304,7 @@
             {
                 <div class="card-footer bg-transparent d-flex align-items-center justify-content-between gap-2 flex-wrap">
                     <p class="small text-muted mb-0">
-                        Showing <strong>@((Model.Transactions.PageNumber - 1) * Model.Transactions.PageSize + 1)</strong>
-                        to <strong>@Math.Min(Model.Transactions.PageNumber * Model.Transactions.PageSize, Model.Transactions.TotalCount)</strong>
-                        of <strong>@Model.Transactions.TotalCount</strong> results
+                        @Localizer["Transactions.Index.PaginationShowing", (Model.Transactions.PageNumber - 1) * Model.Transactions.PageSize + 1, Math.Min(Model.Transactions.PageNumber * Model.Transactions.PageSize, Model.Transactions.TotalCount), Model.Transactions.TotalCount]
                     </p>
                     <nav aria-label="Pagination">
                         <ul class="pagination pagination-sm mb-0">
@@ -314,20 +330,20 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title text-danger fs-6" id="singleDeleteConfirmLabel">
-                        ⚠️ Delete Transaction
+                        ⚠️ @Localizer["Transactions.Modal.SingleDeleteTitle"]
                     </h5>
-                    <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="@Localizer["Common.Close"]"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-2">Are you sure you want to delete this transaction?</p>
-                    <p class="text-muted small mb-0">This action cannot be undone.</p>
+                    <p class="mb-2">@Localizer["Transactions.Modal.SingleDeleteConfirm"]</p>
+                    <p class="text-muted small mb-0">@Localizer["Transactions.Modal.SingleDeleteWarning"]</p>
                 </div>
                 <div class="modal-footer border-top gap-2">
                     <button type="button" class="btn btn-outline-secondary btn-sm" data-mdb-dismiss="modal">
-                        ← Cancel
+                        ← @Localizer["Common.Cancel"]
                     </button>
                     <button type="button" class="btn btn-danger btn-sm" @@click="confirmSingleDelete()">
-                        🗑️ Delete
+                        🗑️ @Localizer["Common.Delete"]
                     </button>
                 </div>
             </div>

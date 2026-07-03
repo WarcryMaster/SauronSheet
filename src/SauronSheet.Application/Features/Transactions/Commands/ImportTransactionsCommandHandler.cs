@@ -14,6 +14,8 @@ using DTOs;
 using MediatR;
 using Sentry;
 using Sentry.Extensibility;
+using Microsoft.Extensions.Localization;
+using SauronSheet.Application.Resources;
 using SauronSheet.Application.Services;
 
 /// <summary>
@@ -40,6 +42,7 @@ public class ImportTransactionsCommandHandler
     private readonly IUserContext _userContext;
     private readonly IBankCategoryResolutionService _resolutionService;
     private readonly IImportProgressTracker? _progressTracker;
+    private readonly IStringLocalizer<SharedResources> _localizer;
 
     public ImportTransactionsCommandHandler(
         IStatementParser statementParser,
@@ -48,6 +51,7 @@ public class ImportTransactionsCommandHandler
         IUserProfileRepository userProfileRepo,
         IUserContext userContext,
         IBankCategoryResolutionService resolutionService,
+        IStringLocalizer<SharedResources> localizer,
         IImportProgressTracker? progressTracker = null)
     {
         _statementParser = statementParser;
@@ -56,6 +60,7 @@ public class ImportTransactionsCommandHandler
         _userProfileRepo = userProfileRepo;
         _userContext = userContext;
         _resolutionService = resolutionService;
+        _localizer = localizer;
         _progressTracker = progressTracker;
     }
 
@@ -67,7 +72,6 @@ public class ImportTransactionsCommandHandler
         // preventing Postgrest numeric input errors with comma-separated values.
         CultureInfo previousCulture = Thread.CurrentThread.CurrentCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-        Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 
         try
         {
@@ -76,7 +80,7 @@ public class ImportTransactionsCommandHandler
 
             if (!request.Filename.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) &&
                 !request.Filename.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
-                throw new DomainException("Only Excel files (.xls, .xlsx) are accepted.");
+                throw new DomainException(_localizer["Import.Error.InvalidExtension"]);
 
             // ── Sentry observability: import started ──────────────────────────────
             string fileExt = Path.GetExtension(request.Filename).ToLowerInvariant();
@@ -133,7 +137,7 @@ public class ImportTransactionsCommandHandler
                         new("reason", "parse_error")
                     });
                 throw new DomainException(
-                    "Could not parse the uploaded file. Please check the format and try again.");
+                    _localizer["Import.Error.ParseFailed"]);
             }
 
             int importedCount = 0;
@@ -184,7 +188,7 @@ public class ImportTransactionsCommandHandler
                             errors.Add(new ImportRowErrorDto(
                                 row.RowNumber,
                                 row.Date ?? string.Empty,
-                                "Invalid date format"));
+                                _localizer["Import.Error.InvalidDateFormat"]));
                             skippedCount++;
                             await ReportProgressIfActiveAsync(
                                 request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
@@ -202,7 +206,7 @@ public class ImportTransactionsCommandHandler
                             errors.Add(new ImportRowErrorDto(
                                 row.RowNumber,
                                 row.Amount ?? string.Empty,
-                                "Invalid amount format"));
+                                _localizer["Import.Error.InvalidAmountFormat"]));
                             skippedCount++;
                             await ReportProgressIfActiveAsync(
                                 request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
@@ -226,7 +230,7 @@ public class ImportTransactionsCommandHandler
                             errors.Add(new ImportRowErrorDto(
                                 row.RowNumber,
                                 $"{date:yyyy-MM-dd} | {row.Description} | {amount}",
-                                "Duplicate"));
+                                _localizer["Import.Error.Duplicate"]));
                             skippedCount++;
                             await ReportProgressIfActiveAsync(
                                 request.UploadId, totalRows, processedCount, importedCount, skippedCount, cancellationToken);
@@ -330,7 +334,6 @@ public class ImportTransactionsCommandHandler
         finally
         {
             Thread.CurrentThread.CurrentCulture = previousCulture;
-            Thread.CurrentThread.CurrentUICulture = previousCulture;
         }
     }
 

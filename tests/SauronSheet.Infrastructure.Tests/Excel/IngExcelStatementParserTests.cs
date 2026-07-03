@@ -1,8 +1,12 @@
 namespace SauronSheet.Infrastructure.Tests.Excel;
 
 using System.IO;
+using System.Globalization;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
+using Microsoft.Extensions.Localization;
+using Moq;
+using SauronSheet.Application.Resources;
 using SauronSheet.Domain.Exceptions;
 using SauronSheet.Domain.Services;
 using SauronSheet.Domain.ValueObjects;
@@ -24,6 +28,57 @@ using Xunit;
 [Trait("Category", "Infrastructure")]
 public class IngExcelStatementParserTests
 {
+    private static IngExcelStatementParser CreateParser()
+    {
+        Mock<IStringLocalizer<SharedResources>> localizerMock = CreateLocalizerMock();
+        return new IngExcelStatementParser(localizerMock.Object);
+    }
+
+    private static Mock<IStringLocalizer<SharedResources>> CreateLocalizerMock()
+    {
+        Dictionary<string, string> englishTranslations = new Dictionary<string, string>
+        {
+            ["Import.Parser.SheetNotFound"] = "The '{0}' sheet was not found in the file. Verify this is an ING statement with a 'Movimientos' sheet.",
+            ["Import.Parser.HeaderMismatch"] = "Invalid header in column {0}: expected '{1}' but found '{2}'.",
+            ["Import.Parser.EmptyValue"] = "(empty)",
+            ["Import.Parser.InvalidDate"] = "Invalid date format: '{0}'",
+            ["Import.Parser.InvalidAmount"] = "Invalid amount format: '{0}'"
+        };
+
+        Dictionary<string, string> spanishTranslations = new Dictionary<string, string>
+        {
+            ["Import.Parser.SheetNotFound"] = "No se encontró la hoja '{0}' en el archivo. Verifica que sea un extracto ING con la hoja 'Movimientos'.",
+            ["Import.Parser.HeaderMismatch"] = "Cabecera incorrecta en columna {0}: se esperaba '{1}' pero se encontró '{2}'.",
+            ["Import.Parser.EmptyValue"] = "(vacío)",
+            ["Import.Parser.InvalidDate"] = "Formato de fecha inválido: '{0}'",
+            ["Import.Parser.InvalidAmount"] = "Formato de importe inválido: '{0}'"
+        };
+
+        Mock<IStringLocalizer<SharedResources>> localizerMock = new Mock<IStringLocalizer<SharedResources>>();
+        localizerMock
+            .Setup(localizer => localizer[It.IsAny<string>(), It.IsAny<object[]>()])
+            .Returns((string key, object[] args) =>
+            {
+                string language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                Dictionary<string, string> dictionary = language == "es" ? spanishTranslations : englishTranslations;
+                string format = dictionary.GetValueOrDefault(key, key);
+                string value = string.Format(CultureInfo.CurrentCulture, format, args);
+                return new LocalizedString(key, value, resourceNotFound: false);
+            });
+
+        localizerMock
+            .Setup(localizer => localizer[It.IsAny<string>()])
+            .Returns((string key) =>
+            {
+                string language = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                Dictionary<string, string> dictionary = language == "es" ? spanishTranslations : englishTranslations;
+                string value = dictionary.GetValueOrDefault(key, key);
+                return new LocalizedString(key, value, resourceNotFound: false);
+            });
+
+        return localizerMock;
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Helpers — build minimal .xlsx test fixtures in memory
     // ──────────────────────────────────────────────────────────────────────────
@@ -98,7 +153,7 @@ public class IngExcelStatementParserTests
                 balance: "1000,00");
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "test.xlsx");
@@ -125,7 +180,7 @@ public class IngExcelStatementParserTests
         }
         ms.Position = 0;
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act & Assert — ESP-1b: DomainException because sheet is absent
         var ex = await Assert.ThrowsAsync<DomainException>(
@@ -158,7 +213,7 @@ public class IngExcelStatementParserTests
         }
         ms.Position = 0;
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act & Assert — ESP-1c: DomainException because header does not match
         await Assert.ThrowsAsync<DomainException>(
@@ -186,7 +241,7 @@ public class IngExcelStatementParserTests
                 balance: "987,01");
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
@@ -223,7 +278,7 @@ public class IngExcelStatementParserTests
                 balance: "500,00");
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
@@ -256,7 +311,7 @@ public class IngExcelStatementParserTests
                 balance: "0,00");
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
@@ -288,7 +343,7 @@ public class IngExcelStatementParserTests
                 balance: "300,00");
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
@@ -318,7 +373,7 @@ public class IngExcelStatementParserTests
             // NOTE: row 6 is a DUPLICATE of row 5 (same date+amount+description hash)
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
@@ -348,7 +403,7 @@ public class IngExcelStatementParserTests
                 description: "NETFLIX", comment: "", amount: "-15,99", balance: "784,01");
         });
 
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "statement.xlsx");
@@ -401,7 +456,7 @@ public class IngExcelStatementParserTests
         Assert.True(File.Exists(samplePath), $"XLS fixture not found: {samplePath}");
 
         await using var stream = File.OpenRead(samplePath);
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "movements-non-2501.xls");
@@ -437,7 +492,7 @@ public class IngExcelStatementParserTests
         Assert.True(File.Exists(samplePath), $"XLS fixture not found: {samplePath}");
 
         await using var stream = File.OpenRead(samplePath);
-        var parser = new IngExcelStatementParser();
+        IngExcelStatementParser parser = CreateParser();
 
         // Act
         StatementParseResult result = await parser.ParseAsync(stream, "movements-non-2501.xls");

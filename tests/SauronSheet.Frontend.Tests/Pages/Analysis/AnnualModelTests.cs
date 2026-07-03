@@ -267,7 +267,7 @@ public class AnnualModelTests
         decimal[] income = root.GetProperty("income").EnumerateArray().Select(e => e.GetDecimal()).ToArray();
         decimal[] expense = root.GetProperty("expense").EnumerateArray().Select(e => e.GetDecimal()).ToArray();
 
-        Assert.Equal(new[] { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" }, labels);
+        Assert.Equal(model.MonthShortLabels, labels);
         Assert.Equal(ExpectedMonthlyIncomeTotals, income);
         Assert.Equal(ExpectedMonthlyExpenseTotals, expense);
     }

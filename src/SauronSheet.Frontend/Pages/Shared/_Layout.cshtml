@@ -4,6 +4,85 @@
     string fontAwesomeUrl = "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css";
     string sentryDsn = _config["Sentry:Dsn"] ?? "";
     string currentLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    string[] jsLocalizationKeys =
+    [
+        "js.chart.series.income",
+        "js.chart.series.expenses",
+        "js.chart.series.net",
+        "js.chart.series.savings",
+        "js.chart.series.avgIncome",
+        "js.chart.series.avgExpense",
+        "js.chart.series.anomalyAmount",
+        "js.chart.series.historicalMean",
+        "js.chart.year.first",
+        "js.chart.year.second",
+        "js.chart.period.monthLabel",
+        "js.chart.period.yearLabel",
+        "js.chart.tooltip.amount",
+        "js.chart.tooltip.amountWithPercentage",
+        "js.chart.legend.fixedIncome",
+        "js.chart.legend.variableIncome",
+        "js.chart.legend.fixedExpense",
+        "js.chart.legend.variableExpense"
+    ];
+
+    Dictionary<string, object> jsI18n = new(StringComparer.Ordinal);
+    Dictionary<string, object> jsChart = new(StringComparer.Ordinal);
+    Dictionary<string, object> jsSeries = new(StringComparer.Ordinal);
+    Dictionary<string, object> jsYear = new(StringComparer.Ordinal);
+    Dictionary<string, object> jsPeriod = new(StringComparer.Ordinal);
+    Dictionary<string, object> jsTooltip = new(StringComparer.Ordinal);
+    Dictionary<string, object> jsLegend = new(StringComparer.Ordinal);
+
+    foreach (string key in jsLocalizationKeys)
+    {
+        string[] segments = key.Split('.');
+        if (segments.Length != 4 || segments[0] != "js" || segments[1] != "chart")
+        {
+            continue;
+        }
+
+        string section = segments[2];
+        string leaf = segments[3];
+        string value = Localizer[key];
+
+        if (section == "series")
+        {
+            jsSeries[leaf] = value;
+            continue;
+        }
+
+        if (section == "year")
+        {
+            jsYear[leaf] = value;
+            continue;
+        }
+
+        if (section == "period")
+        {
+            jsPeriod[leaf] = value;
+            continue;
+        }
+
+        if (section == "tooltip")
+        {
+            jsTooltip[leaf] = value;
+            continue;
+        }
+
+        if (section == "legend")
+        {
+            jsLegend[leaf] = value;
+        }
+    }
+
+    jsChart["series"] = jsSeries;
+    jsChart["year"] = jsYear;
+    jsChart["period"] = jsPeriod;
+    jsChart["tooltip"] = jsTooltip;
+    jsChart["legend"] = jsLegend;
+    jsI18n["chart"] = jsChart;
 }
 
 <!DOCTYPE html>
@@ -99,13 +178,13 @@
     }
     else
     {
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/en.js"></script>
-        <script>flatpickr.localize(flatpickr.l10ns.en);</script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/default.js"></script>
+        <script>flatpickr.localize(flatpickr.l10ns.default);</script>
     }
 
     <!-- Client-side i18n scaffold: JS-relevant keys are serialized here (populated in PR6). -->
     <script>
-        window.__i18n = @System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object>());
+        window.__i18n = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(jsI18n));
     </script>
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />

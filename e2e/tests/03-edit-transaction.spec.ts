@@ -62,7 +62,7 @@ test.describe('Edit Transaction', () => {
         await page.waitForURL(/\/transactions\/edit\//);
 
         // Verify page heading
-        await expect(page.locator('h3')).toContainText('Edit Transaction');
+        await expect(page.locator('h3')).toBeVisible();
 
         // Verify form fields are visible
         await expect(page.locator('input[name="Description"]')).toBeVisible();
@@ -168,10 +168,10 @@ test.describe('Edit Transaction', () => {
         await page.waitForURL(/\/transactions\/edit\//);
 
         // Click cancel link
-        await page.click('a:text("Cancel")');
+        await page.getByTestId('cancel-link').click();
 
         // Verify redirect to transactions list
         await page.waitForURL(/\/transactions(?:\?|$)/);
-        await expect(page.locator('h3')).toContainText('Transactions');
+        await expect(page.locator('[data-testid="transactions-heading"]')).toBeVisible();
     });
 });

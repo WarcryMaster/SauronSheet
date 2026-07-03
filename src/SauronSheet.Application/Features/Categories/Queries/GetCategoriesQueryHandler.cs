@@ -2,6 +2,8 @@ namespace SauronSheet.Application.Features.Categories.Queries;
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using SauronSheet.Domain.Common;
@@ -16,6 +18,7 @@ public class GetCategoriesQueryHandler
     private readonly ICategoryRepository _categoryRepo;
     private readonly ITransactionRepository _transactionRepo;
     private readonly IUserContext _userContext;
+    private static readonly Regex SlugInvalidCharsRegex = new Regex("[^a-z0-9]+", RegexOptions.Compiled);
 
     public GetCategoriesQueryHandler(
         ICategoryRepository categoryRepo,
@@ -47,12 +50,40 @@ public class GetCategoriesQueryHandler
             c.CreatedAt,
             c.UpdatedAt ?? DateTime.UtcNow,
             TransactionCount: counts.GetValueOrDefault(c.Id, 0),
-            IsAutoCreated: c.IsAutoCreated
+            IsAutoCreated: c.IsAutoCreated,
+            IsSystemDefault: c.IsSystemDefault,
+            SystemSlug: c.IsSystemDefault ? BuildSystemCategorySlug(c.Name.Value) : null
         )).ToList();
 
         // Sort alphabetically by name (system defaults removed in Chunk 3)
         return result
             .OrderBy(c => c.Name)
             .ToList();
+    }
+
+    private static string BuildSystemCategorySlug(string categoryName)
+    {
+        string normalized = NormalizeForSlug(categoryName);
+        string collapsed = SlugInvalidCharsRegex.Replace(normalized, "-").Trim('-');
+
+        return string.IsNullOrWhiteSpace(collapsed)
+            ? "unknown"
+            : collapsed;
+    }
+
+    private static string NormalizeForSlug(string value)
+    {
+        string formD = value.Normalize(NormalizationForm.FormD);
+        StringBuilder builder = new StringBuilder(formD.Length);
+
+        foreach (char character in formD)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(character) != System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
 }

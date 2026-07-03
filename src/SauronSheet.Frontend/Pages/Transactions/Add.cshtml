@@ -1,13 +1,28 @@
 @page
 @model SauronSheet.Frontend.Pages.Transactions.AddModel
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Add Transaction";
+    ViewData["Title"] = Localizer["Transactions.Add.Title"];
+
+    string GetDisplayName(SauronSheet.Application.Features.Categories.DTOs.CategoryDto category)
+    {
+        if (!category.IsSystemDefault || string.IsNullOrWhiteSpace(category.SystemSlug))
+        {
+            return category.Name;
+        }
+
+        string key = $"category.system.{category.SystemSlug}";
+        LocalizedString localized = Localizer[key];
+        return localized.ResourceNotFound ? category.Name : localized.Value;
+    }
 }
 
 <div class="mx-auto d-flex flex-column gap-4" style="max-width: 640px;">
     <div class="d-flex align-items-center gap-3">
-        <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none">&larr; Back</a>
-        <h3 class="h3 fw-bold mb-0">Add Transaction</h3>
+        <a href="/transactions" class="btn btn-link btn-sm text-muted text-decoration-none" data-testid="back-link">&larr; @Localizer["Common.Back"]</a>
+        <h3 class="h3 fw-bold mb-0">@Localizer["Transactions.Add.Title"]</h3>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -19,28 +34,28 @@
         <form method="post" class="d-flex flex-column gap-3"
               x-data="{ loading: false }" @@submit="loading = true">
             <div>
-                <label for="Date" class="form-label fw-semibold">Date</label>
+                <label for="Date" class="form-label fw-semibold">@Localizer["Transactions.Add.Label.Date"]</label>
                 <input x-data x-init="flatpickr($el, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, maxDate: 'today' })"
                        type="text" id="Date" name="Input.Date" asp-for="Input.Date"
-                       class="form-control" required aria-required="true" placeholder="DD/MM/AAAA" autocomplete="off" />
+                       class="form-control" required aria-required="true" placeholder="@Localizer["Transactions.Add.Placeholder.Date"]" autocomplete="off" />
             </div>
 
             <div>
-                <label for="Description" class="form-label fw-semibold">Description</label>
+                <label for="Description" class="form-label fw-semibold">@Localizer["Transactions.Add.Label.Description"]</label>
                 <input type="text" id="Description" name="Input.Description" asp-for="Input.Description"
-                       class="form-control" placeholder="e.g., Coffee at Starbucks"
+                       class="form-control" placeholder="@Localizer["Transactions.Add.Placeholder.Description"]"
                        required aria-required="true" />
             </div>
 
             <div>
-                <label for="Amount" class="form-label fw-semibold">Amount</label>
+                <label for="Amount" class="form-label fw-semibold">@Localizer["Transactions.Add.Label.Amount"]</label>
                 <input type="number" id="Amount" name="Input.Amount" asp-for="Input.Amount" step="0.01"
-                       class="form-control" placeholder="0.00" required aria-required="true" />
-                <div class="form-text">Use negative values for expenses, positive for income</div>
+                       class="form-control" placeholder="@Localizer["Transactions.Add.Placeholder.Amount"]" required aria-required="true" />
+                <div class="form-text">@Localizer["Transactions.Add.Hint.Amount"]</div>
             </div>
 
             <div>
-                <label for="Currency" class="form-label fw-semibold">Currency</label>
+                <label for="Currency" class="form-label fw-semibold">@Localizer["Transactions.Add.Label.Currency"]</label>
                 <select id="Currency" name="Input.Currency" asp-for="Input.Currency" class="form-select">
                     <option value="EUR">EUR (&euro;)</option>
                     <option value="USD">USD ($)</option>
@@ -49,24 +64,24 @@
             </div>
 
             <div>
-                <label for="CategoryName" class="form-label fw-semibold">Category <span class="text-muted fw-normal">(optional — type to search or create)</span></label>
+                <label for="CategoryName" class="form-label fw-semibold">@Localizer["Transactions.Add.Label.Category"] <span class="text-muted fw-normal">(@Localizer["Transactions.Add.Hint.Category"])</span></label>
                 <input type="text" id="CategoryName" name="Input.CategoryName"
                        list="categories" asp-for="Input.CategoryName"
-                       class="form-control" placeholder="Search existing or type new category..." />
+                       class="form-control" placeholder="@Localizer["Transactions.Add.Placeholder.Category"]" />
                 <datalist id="categories">
                     <option value="" />
                     @foreach (var category in Model.Categories)
                     {
-                        <option value="@category.Name" />
+                        <option value="@GetDisplayName(category)" data-canonical-name="@category.Name" />
                     }
                 </datalist>
             </div>
 
             <div class="d-flex justify-content-end gap-2 mt-2">
-                <a href="/transactions" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-brand" :disabled="loading">
-                    <span x-show="!loading">Add Transaction</span>
-                    <span x-show="loading">Adding…</span>
+                <a href="/transactions" class="btn btn-outline-secondary" data-testid="cancel-link">@Localizer["Common.Cancel"]</a>
+                <button type="submit" class="btn btn-brand" :disabled="loading" data-testid="submit-btn">
+                    <span x-show="!loading">@Localizer["Transactions.Add.Submit"]</span>
+                    <span x-show="loading">@Localizer["Transactions.Add.SubmitLoading"]</span>
                     <span x-show="loading" class="spinner-border spinner-border-sm ms-1" role="status" aria-hidden="true"></span>
                 </button>
             </div>

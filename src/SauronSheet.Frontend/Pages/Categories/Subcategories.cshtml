@@ -1,33 +1,36 @@
 @page "{categoryId:guid?}"
 @model SauronSheet.Frontend.Pages.Categories.SubcategoriesModel
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 @{
-    ViewData["Title"] = "Subcategories - " + Model.ParentCategory?.Name;
+    ViewData["Title"] = string.Format(Localizer["Categories.Subcategories.Title"], Model.ParentCategory?.Name);
 }
 
 <div class="d-flex flex-column gap-4" x-data x-init="setupEventListeners()">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/Categories">Categories</a></li>
+            <li class="breadcrumb-item"><a href="/Categories">@Localizer["Categories.Subcategories.Breadcrumb"]</a></li>
             <li class="breadcrumb-item active" aria-current="page">@Model.ParentCategory?.Name</li>
         </ol>
     </nav>
 
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="h3 fw-bold mb-2">Subcategories of @Model.ParentCategory?.Name</h3>
-            <p class="text-muted mb-0">Manage subcategories for this category. Auto-created subcategories come from Excel imports.</p>
+            <h3 class="h3 fw-bold mb-2">@string.Format(Localizer["Categories.Subcategories.Heading"], Model.ParentCategory?.Name)</h3>
+            <p class="text-muted mb-0">@Localizer["Categories.Subcategories.Description"]</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="/Categories" class="btn btn-outline-secondary" aria-label="Back to categories">
-                &larr; Back
+            <a href="/Categories" class="btn btn-outline-secondary" aria-label="@Localizer["Categories.Subcategories.Back"]">
+                &larr; @Localizer["Categories.Subcategories.Back"]
             </a>
-            <button type="button" class="btn btn-brand" @@click="openCreateModal()" aria-label="Add new subcategory">
-                + Add New Subcategory
+            <button type="button" class="btn btn-brand" @@click="openCreateModal()" aria-label="@Localizer["Categories.Subcategories.AddNewSubcategory"]" data-testid="add-subcategory-btn">
+                + @Localizer["Categories.Subcategories.AddNewSubcategory"]
             </button>
         </div>
     </div>
 
-    <div class="list-group" role="region" aria-label="Subcategories list">
+    <div class="list-group" role="region" aria-label="@Localizer["Categories.Subcategories.ListAriaLabel"]">
         @if (Model.Subcategories.Any())
         {
             @foreach (var subcategory in Model.Subcategories.OrderBy(s => s.Name))
@@ -37,7 +40,7 @@
                         <span class="fw-bold">@subcategory.Name</span>
                         @if (subcategory.IsAutoCreated)
                         {
-                            <span class="badge bg-light text-info border">Auto-created</span>
+                            <span class="badge bg-light text-info border">@Localizer["Categories.Index.AutoCreated"]</span>
                         }
                     </div>
                     <div>
@@ -46,16 +49,18 @@
                                 data-subcategory-id="@subcategory.Id"
                                 data-subcategory-name="@subcategory.Name"
                                 @@click="openEditModal({ id: $el.dataset.subcategoryId, name: $el.dataset.subcategoryName })"
-                                aria-label="Edit @subcategory.Name subcategory">
-                            Edit
+                                aria-label="@string.Format(Localizer["Categories.Subcategories.EditAriaLabel"], subcategory.Name)"
+                                data-testid="edit-subcategory-btn">
+                            @Localizer["Common.Edit"]
                         </button>
                         <button type="button"
                                 class="btn btn-sm btn-outline-danger js-delete-subcategory"
                                 data-subcategory-id="@subcategory.Id"
                                 data-subcategory-name="@subcategory.Name"
                                 @@click="showDeleteConfirm($el.dataset.subcategoryId, $el.dataset.subcategoryName)"
-                                aria-label="Delete @subcategory.Name subcategory">
-                            Delete
+                                aria-label="@string.Format(Localizer["Categories.Subcategories.DeleteAriaLabel"], subcategory.Name)"
+                                data-testid="delete-subcategory-btn">
+                            @Localizer["Common.Delete"]
                         </button>
                     </div>
                 </div>
@@ -63,7 +68,7 @@
         }
         else
         {
-            <div class="text-muted text-center py-3">No subcategories yet</div>
+            <div class="text-muted text-center py-3">@Localizer["Categories.Subcategories.Empty"]</div>
         }
     </div>
 </div>
@@ -73,26 +78,26 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="createSubcategoryLabel">Add New Subcategory</h5>
-                <button type="button" class="btn-close" @@click="closeModal('createSubcategoryModal')" aria-label="Close"></button>
+                <h5 class="modal-title" id="createSubcategoryLabel">@Localizer["Categories.Modal.Create.SubcategoryTitle"]</h5>
+                <button type="button" class="btn-close" @@click="closeModal('createSubcategoryModal')" aria-label="@Localizer["Common.Close"]"></button>
             </div>
             <form id="createForm" method="post" asp-page-handler="Create" asp-route-categoryId="@Model.ParentCategory?.Id" @@submit.prevent="validateCreateForm($event)">
                 <div class="modal-body">
                     @Html.AntiForgeryToken()
                     <div class="mb-3">
-                        <label for="createName" class="form-label fw-semibold">Subcategory Name <span class="text-danger">*</span></label>
+                        <label for="createName" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.SubcategoryNameLabel"] <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="createName" name="CreateForm.Name" maxlength="50" required
                                aria-describedby="nameError" aria-required="true"
                                @@input="updateCharCounter('charCounter', $el.value.length); $el.classList.remove('is-invalid'); validateCreateForm()" />
-                        <div id="nameError" class="invalid-feedback">Subcategory name is required</div>
-                        <div class="form-text text-end">Max 50 characters (<span id="charCounter">0</span>/50)</div>
+                        <div id="nameError" class="invalid-feedback">@Localizer["Categories.Modal.Create.SubcategoryNameRequired"]</div>
+                        <div class="form-text text-end">@Html.Raw(string.Format(Localizer["Categories.Modal.Create.CharCount"].Value, "<span id=\"charCounter\">0</span>"))</div>
                     </div>
 
                     <div id="createError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @@click="closeModal('createSubcategoryModal')">Cancel</button>
-                    <button type="submit" class="btn btn-brand" id="createSubmitBtn" disabled>Save Subcategory</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('createSubcategoryModal')">@Localizer["Common.Cancel"]</button>
+                    <button type="submit" class="btn btn-brand" id="createSubmitBtn" disabled>@Localizer["Categories.Modal.Create.SaveSubcategory"]</button>
                 </div>
             </form>
         </div>
@@ -104,8 +109,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editSubcategoryLabel">Edit Subcategory</h5>
-                <button type="button" class="btn-close" @@click="closeModal('editSubcategoryModal')" aria-label="Close"></button>
+                <h5 class="modal-title" id="editSubcategoryLabel">@Localizer["Categories.Modal.Edit.SubcategoryTitle"]</h5>
+                <button type="button" class="btn-close" @@click="closeModal('editSubcategoryModal')" aria-label="@Localizer["Common.Close"]"></button>
             </div>
             <form id="editForm" method="post" asp-page-handler="Update" @@submit.prevent="validateEditForm($event)">
                 <div class="modal-body">
@@ -113,17 +118,17 @@
                     <input type="hidden" id="editSubcategoryId" name="EditForm.SubcategoryId" />
 
                     <div class="mb-3">
-                        <label for="editName" class="form-label fw-semibold">Subcategory Name <span class="text-danger">*</span></label>
+                        <label for="editName" class="form-label fw-semibold">@Localizer["Categories.Modal.Create.SubcategoryNameLabel"] <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="editName" name="EditForm.Name" maxlength="50" required aria-required="true"
                                @@input="updateCharCounter('editCharCounter', $el.value.length)" />
-                        <div class="form-text text-end">Max 50 characters (<span id="editCharCounter">0</span>/50)</div>
+                        <div class="form-text text-end">@Html.Raw(string.Format(Localizer["Categories.Modal.Create.CharCount"].Value, "<span id=\"editCharCounter\">0</span>"))</div>
                     </div>
 
                     <div id="editError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite" aria-atomic="true"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @@click="closeModal('editSubcategoryModal')">Cancel</button>
-                    <button type="submit" class="btn btn-brand" id="editSubmitBtn">Update Subcategory</button>
+                    <button type="button" class="btn btn-secondary" @@click="closeModal('editSubcategoryModal')">@Localizer["Common.Cancel"]</button>
+                    <button type="submit" class="btn btn-brand" id="editSubmitBtn">@Localizer["Categories.Modal.Edit.UpdateSubcategory"]</button>
                 </div>
             </form>
         </div>
@@ -135,17 +140,17 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmLabel">Delete Subcategory</h5>
-                <button type="button" class="btn-close" @@click="closeModal('deleteConfirmModal')" aria-label="Close"></button>
+                <h5 class="modal-title" id="deleteConfirmLabel">@Localizer["Categories.Modal.Delete.SubcategoryTitle"]</h5>
+                <button type="button" class="btn-close" @@click="closeModal('deleteConfirmModal')" aria-label="@Localizer["Common.Close"]"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the subcategory <strong id="deleteSubcategoryName"></strong>?</p>
-                <p class="text-muted small">This action cannot be undone.</p>
+                <p>@Html.Raw(string.Format(Localizer["Categories.Modal.Delete.SubcategoryConfirm"], "<strong id=\"deleteSubcategoryName\"></strong>"))</p>
+                <p class="text-muted small">@Localizer["Categories.Modal.Delete.Warning"]</p>
                 <div id="deleteError" class="alert alert-danger rounded-3 d-none" role="alert" aria-live="polite"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @@click="closeModal('deleteConfirmModal')">Cancel</button>
-                <button type="button" class="btn btn-danger" id="deleteConfirmBtn" @@click="performDelete()">Delete</button>
+                <button type="button" class="btn btn-secondary" @@click="closeModal('deleteConfirmModal')">@Localizer["Common.Cancel"]</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn" @@click="performDelete()">@Localizer["Common.Delete"]</button>
             </div>
         </div>
     </div>
@@ -175,6 +180,12 @@
 </style>
 
 <script>
+    const subcategoryI18n = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+    {
+        errorGeneric = Localizer["Categories.Error.Generic"].Value,
+        errorRequestFailed = Localizer["Categories.Error.RequestFailed"].Value
+    }));
+
     let currentDeleteSubcategoryId = null;
 
     function openCreateModal() {
@@ -318,7 +329,7 @@
                 location.reload();
             } else {
                 document.getElementById('createError').textContent =
-                    (data && data.error) || 'An error occurred';
+                    (data && data.error) || subcategoryI18n.errorGeneric;
                 document.getElementById('createError').classList.remove('d-none');
                 if (payload.ok && typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Subcategory create returned success:false', {
@@ -329,7 +340,7 @@
             }
         })
         .catch(err => {
-            document.getElementById('createError').textContent = 'Request failed';
+            document.getElementById('createError').textContent = subcategoryI18n.errorRequestFailed;
             document.getElementById('createError').classList.remove('d-none');
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(
@@ -388,7 +399,7 @@
                 location.reload();
             } else {
                 document.getElementById('editError').textContent =
-                    (data && data.error) || 'An error occurred';
+                    (data && data.error) || subcategoryI18n.errorGeneric;
                 document.getElementById('editError').classList.remove('d-none');
                 if (payload.ok && typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Subcategory update returned success:false', {
@@ -399,7 +410,7 @@
             }
         })
         .catch(err => {
-            document.getElementById('editError').textContent = 'Request failed';
+            document.getElementById('editError').textContent = subcategoryI18n.errorRequestFailed;
             document.getElementById('editError').classList.remove('d-none');
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(
@@ -457,7 +468,7 @@
                 location.reload();
             } else {
                 document.getElementById('deleteError').textContent =
-                    (data && data.error) || 'An error occurred';
+                    (data && data.error) || subcategoryI18n.errorGeneric;
                 document.getElementById('deleteError').classList.remove('d-none');
                 if (payload.ok && typeof Sentry !== 'undefined') {
                     Sentry.captureMessage('Subcategory delete returned success:false', {
@@ -468,7 +479,7 @@
             }
         })
         .catch(err => {
-            document.getElementById('deleteError').textContent = 'Request failed';
+            document.getElementById('deleteError').textContent = subcategoryI18n.errorRequestFailed;
             document.getElementById('deleteError').classList.remove('d-none');
             if (typeof Sentry !== 'undefined') {
                 Sentry.captureException(

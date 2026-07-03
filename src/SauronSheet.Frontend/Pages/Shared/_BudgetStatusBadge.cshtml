@@ -1,16 +1,21 @@
 ﻿@* Budget status badge partial view.
    Model: string StatusLevel (Green, Yellow, Red, Overage). *@
 @model string
+@using Microsoft.Extensions.Localization
+@using SauronSheet.Application.Resources
+@inject IStringLocalizer<SharedResources> Localizer
 
 @{
-    var (badgeClass, label) = Model switch
+    var (badgeClass, labelKey) = Model switch
     {
-        "Green"   => ("badge bg-success", "On Track"),
-        "Yellow"  => ("badge bg-warning text-dark", "Warning"),
-        "Red"     => ("badge bg-danger", "Near Limit"),
-        "Overage" => ("badge bg-danger", "Over Budget"),
-        _         => ("badge bg-secondary", "Unknown")
+        "Green"   => ("badge bg-success", "Budgets.Badge.OnTrack"),
+        "Yellow"  => ("badge bg-warning text-dark", "Budgets.Badge.Warning"),
+        "Red"     => ("badge bg-danger", "Budgets.Badge.NearLimit"),
+        "Overage" => ("badge bg-danger", "Budgets.Badge.OverBudget"),
+        _         => ("badge bg-secondary", "Budgets.Badge.Unknown")
     };
+
+    string label = Localizer[labelKey];
 }
 
 <span class="@badgeClass" role="status" aria-label="@label">@label</span>

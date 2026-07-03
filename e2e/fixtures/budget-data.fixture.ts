@@ -45,9 +45,9 @@ interface BudgetFixtures {
  */
 async function loginWith(page: Page, email: string, password: string): Promise<boolean> {
     await page.goto('/auth/login');
-    await page.fill('input[type="email"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.click('button[type="submit"]');
+    await page.fill('[data-testid="login-email"]', email);
+    await page.fill('[data-testid="login-password"]', password);
+    await page.locator('[data-testid="login-submit"]').click();
     try {
         await page.waitForURL(/dashboard/i, { timeout: 15000 });
         return true;

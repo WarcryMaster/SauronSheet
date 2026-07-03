@@ -46,4 +46,30 @@ public class LayoutLocalizationTests : IClassFixture<LocalizationWebApplicationF
 
         Assert.Matches(new Regex(@"window\.__i18n\s*=\s*\{", RegexOptions.IgnoreCase), html);
     }
+
+    [Fact]
+    public async Task Get_LoginWithSpanishCulture_RendersJsI18nDictionaryAndSpanishFlatpickrLocale()
+    {
+        HttpClient client = _factory.CreateClient();
+
+        string html = await client.GetStringAsync("/auth/login?culture=es-ES");
+
+        Assert.Contains("\"chart\"", html, StringComparison.Ordinal);
+        Assert.Contains("\"series\"", html, StringComparison.Ordinal);
+        Assert.Contains("Ingresos", html, StringComparison.Ordinal);
+        Assert.Contains("flatpickr/dist/l10n/es.js", html, StringComparison.Ordinal);
+        Assert.Contains("flatpickr.localize(flatpickr.l10ns.es)", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Get_LoginWithEnglishCulture_RendersEnglishFlatpickrLocale()
+    {
+        HttpClient client = _factory.CreateClient();
+
+        string html = await client.GetStringAsync("/auth/login?culture=en-US");
+
+        Assert.Contains("\"income\":\"Income\"", html, StringComparison.Ordinal);
+        Assert.Contains("flatpickr/dist/l10n/default.js", html, StringComparison.Ordinal);
+        Assert.Contains("flatpickr.localize(flatpickr.l10ns.default)", html, StringComparison.Ordinal);
+    }
 }
