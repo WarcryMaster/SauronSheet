@@ -97,11 +97,11 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
         // setInputFiles dispatches change event but Alpine may not catch it reliably in CI.
         // Directly invoke Alpine's handler to ensure the file is processed.
-        await page.evaluate(() => {
+        await page.evaluate(async () => {
             const input = document.querySelector('input[type="file"]');
             const alpineRoot = document.querySelector('[x-data]');
             if (input && alpineRoot && (alpineRoot as any)._x_dataStack?.[0]?.handleFileSelect) {
-                (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
+                await (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
             }
         });
         // Use a specific locator — there are 3x button[type="submit"] on the page
@@ -128,11 +128,11 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
         // setInputFiles dispatches change event but Alpine may not catch it reliably in CI.
         // Directly invoke Alpine's handler to ensure the file is processed.
-        await page.evaluate(() => {
+        await page.evaluate(async () => {
             const input = document.querySelector('input[type="file"]');
             const alpineRoot = document.querySelector('[x-data]');
             if (input && alpineRoot && (alpineRoot as any)._x_dataStack?.[0]?.handleFileSelect) {
-                (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
+                await (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
             }
         });
         // Use a specific locator — there are 3x button[type="submit"] on the page
