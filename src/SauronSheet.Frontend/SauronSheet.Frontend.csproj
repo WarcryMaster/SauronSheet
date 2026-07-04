@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>sauronsheet-frontend-secrets</UserSecretsId>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <!-- Ignore NuGet compatibility warnings for legacy packages -->
     <WarningLevel>4</WarningLevel>

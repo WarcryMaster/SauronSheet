@@ -18,7 +18,7 @@
  *
  * Auth strategy (handled entirely by the fixture — dual-path):
  *   Priority 1 — Env-var credentials: TEST_USER_EMAIL / TEST_USER_PASSWORD (CI / override)
- *   Priority 2 — Seeded test user: e2e@saurontest.local / ***REMOVED***
+ *   Priority 2 — Seeded test user: e2e@saurontest.local (password via TEST_USER_PASSWORD env var)
  *
  * Execution: workers=1, sequential, single browser context per test.
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.

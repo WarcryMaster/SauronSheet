@@ -22,6 +22,11 @@ build/
 .env.local
 *.env.*
 
+# Secrets / auth state (NEVER commit)
+.auth/
+**/.auth/
+Set-TestEnv.ps1
+
 # Editors
 .vscode/
 .idea/

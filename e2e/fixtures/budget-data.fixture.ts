@@ -26,7 +26,6 @@ import { setFlatpickrDate } from '../helpers';
 
 /** Default seeded test user — exists in Supabase with email_confirmed_at pre-set. */
 const SEEDED_EMAIL    = 'e2e@saurontest.local';
-const SEEDED_PASSWORD = '***REMOVED***';
 
 /** Deterministic category names shared with the budget test suite. */
 export const E2E_CAT_A = 'E2E-Budget-Cat-A';
@@ -75,7 +74,18 @@ export function resolveTestAccount(): { email: string; password: string } {
         }
     }
 
-    return { email: SEEDED_EMAIL, password: SEEDED_PASSWORD };
+    // Local runs always use the seeded test user (email is fixed to avoid
+    // polluting real accounts). The password is never hardcoded — provide it
+    // via the TEST_USER_PASSWORD env var (e.g. run ./Set-TestEnv.ps1).
+    const localPassword = process.env.TEST_USER_PASSWORD;
+    if (!localPassword) {
+        throw new Error(
+            'TEST_USER_PASSWORD is not set. Set it before running E2E tests locally ' +
+            '(e.g. run ./Set-TestEnv.ps1 or export TEST_USER_PASSWORD).'
+        );
+    }
+
+    return { email: SEEDED_EMAIL, password: localPassword };
 }
 
 /**
