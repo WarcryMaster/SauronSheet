@@ -197,7 +197,7 @@ para(tf, "Aplicación web de gestión de finanzas personales con importación "
 rect(s, Inches(4.15), Inches(5.05), Inches(8.2), Pt(2), ACCENT)
 tb2, tf2 = textbox(s, Inches(4.1), Inches(5.25), Inches(8.6), Inches(1.7))
 para(tf2, "Trabajo de Fin de Máster", 15, WHITE, bold=True, first=True, space_after=2)
-para(tf2, "Máster de Programación desde Cero — MoureDev", 13,
+para(tf2, "Máster de Desarrollo con IA", 13,
      RGBColor(0xCF, 0xD6, 0xBE), space_after=10)
 para(tf2, "Gonzalo Cantarero Galvez", 20, ACCENT, bold=True, space_after=0)
 
@@ -927,7 +927,7 @@ para(tf, "Usuario:  demo@sauronsheet.app  /  Demo1234!", 13,
      RGBColor(0xE8, 0xE8, 0xDD), align=PP_ALIGN.CENTER, space_after=14)
 para(tf, "Gonzalo Cantarero Galvez", 20, ACCENT, bold=True,
      align=PP_ALIGN.CENTER, space_after=2)
-para(tf, "Trabajo de Fin de Máster — Máster de Programación desde Cero (MoureDev)",
+para(tf, "Trabajo de Fin de Máster — Máster de Desarrollo con IA",
      12, RGBColor(0xCF, 0xD6, 0xBE), align=PP_ALIGN.CENTER, space_after=0)
 
 # ----------------------------------------------------------------------------
