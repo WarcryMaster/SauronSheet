@@ -14,9 +14,30 @@ async function loginForLocalizationSpec(page: Page): Promise<void> {
 }
 
 async function switchLanguage(page: Page, language: 'es' | 'en'): Promise<void> {
+    const viewport = page.viewportSize();
+    const isMobile = viewport !== null && viewport.width < 992;
+
+    if (isMobile) {
+        const hamburger = page.locator('.navbar-toggler');
+        await hamburger.click();
+        await page.locator('#mobileOffcanvas').waitFor({ state: 'visible', timeout: 5000 });
+
+        await page.evaluate((lang) => {
+            const btn = document.querySelector<HTMLButtonElement>(
+                `[data-testid="lang-switcher-option-${lang}"]`
+            );
+            btn?.click();
+        }, language);
+
+        await page.waitForURL(/\/auth\/login|\/dashboard|\/categories|\/transactions\/upload/, { timeout: 10000 });
+        await expect(page.locator('html')).toHaveAttribute('lang', language);
+        return;
+    }
+
     await page.locator('#desktopNav [data-testid="lang-switcher"]').click();
-    await page.locator(`#desktopNav [data-testid="lang-switcher-option-${language}"]`).waitFor({ state: 'visible' });
-    await page.locator(`#desktopNav [data-testid="lang-switcher-option-${language}"]`).click();
+    const option = page.locator(`#desktopNav [data-testid="lang-switcher-option-${language}"]`);
+    await option.waitFor({ state: 'visible' });
+    await option.click();
     await expect(page.locator('html')).toHaveAttribute('lang', language);
 }
 

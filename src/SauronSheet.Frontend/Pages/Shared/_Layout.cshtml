@@ -263,7 +263,7 @@
         </nav>
 
         <!-- Mobile offcanvas: slides in from the right on mobile (< lg) -->
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileOffcanvas" aria-labelledby="offcanvasLabel">
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileOffcanvas" aria-labelledby="offcanvasLabel" style="overflow-y: visible">
             <div class="offcanvas-header border-bottom">
                 <a class="navbar-brand d-flex align-items-center gap-2" href="/">
                     <img src="~/img/sauron-sheet-logo.svg" asp-append-version="true" alt="SauronSheet logo" height="28" />
@@ -277,7 +277,7 @@
                           if (inst) inst.hide();
                         "></button>
             </div>
-            <div class="offcanvas-body">
+            <div class="offcanvas-body" style="overflow-y: visible">
                 <ul class="navbar-nav">
                     @await Html.PartialAsync("~/Pages/Shared/Components/_NavItems.cshtml")
                     @await Html.PartialAsync("~/Pages/Shared/Components/_LanguageSwitcher.cshtml")
