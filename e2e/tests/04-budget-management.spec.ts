@@ -112,7 +112,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         await page.goto('/budgets');
         await expect(page).toHaveURL(/\/budgets/i);
-        const rowsBefore = await page.locator('table[aria-label="Budgets list"] tbody tr').count();
+        const rowsBefore = await page.locator('[data-testid="budgets-table"] tbody tr').count();
 
         await page.goto('/budgets/create');
         await expect(page).toHaveURL(/\/budgets\/create/i);
@@ -152,7 +152,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         await page.goto('/budgets');
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(0);
-        await expect(page.locator('table[aria-label="Budgets list"] tbody tr')).toHaveCount(rowsBefore);
+        await expect(page.locator('[data-testid="budgets-table"] tbody tr')).toHaveCount(rowsBefore);
     });
 
     /**
@@ -450,7 +450,7 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
         await page.goto('/budgets');
         await expect(page).toHaveURL(/\/budgets/i);
 
-        const table = page.locator('table[aria-label="Budgets list"]');
+        const table = page.locator('[data-testid="budgets-table"]');
         await expect(table).toBeVisible();
         await expect(budgetRow(page, E2E_CAT_A).getByTestId('budget-status-badge')).toHaveClass(/bg-success/);
         await expect(budgetRow(page, E2E_CAT_B).getByTestId('budget-status-badge')).toHaveClass(/bg-secondary/);
@@ -476,6 +476,6 @@ test.describe('Budgets — management CRUD (budget-redesign Slice 6)', () => {
 
         await expect(budgetRow(page, E2E_CAT_B)).toHaveCount(1);
         await expect(budgetRow(page, E2E_CAT_B).getByTestId('budget-status-badge')).toHaveClass(/bg-secondary/);
-        await expect(page.locator('table[aria-label="Budgets list"] tbody tr')).toHaveCount(1);
+        await expect(page.locator('[data-testid="budgets-table"] tbody tr')).toHaveCount(1);
     });
 });
