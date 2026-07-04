@@ -14,11 +14,9 @@ const EXCEL_FIXTURE_PATH = path.resolve(__dirname, '../../src/SauronSheet.Infras
 test.describe('Upload Excel Bank Statement — ESP-4', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/transactions/upload');
-        // Wait for Alpine.js to finish initializing before interacting with the page
-        await page.waitForFunction(() => {
-            const el = document.querySelector('[x-data]');
-            return el && (el as any)._x_dataStack !== undefined;
-        });
+        // Wait for the page content to be visible. Using a server-rendered element
+        // avoids depending on Alpine internals (which may or may not be initialized).
+        await expect(page.getByTestId('excel-format-guide')).toBeVisible({ timeout: 10000 });
     });
 
     /**
@@ -38,14 +36,11 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
      * The guide must mention: sheet "Movimientos", 7 columns, data starts at row 5.
      */
     test('TC-U02: format guide is visible with Movimientos sheet and 7-column header', async ({ page }) => {
-        // The guide section should be visible without scrolling at 1280x720 viewport
         const formatGuide = page.locator('[data-testid="excel-format-guide"]');
         await expect(formatGuide).toBeVisible();
 
-        // Must mention the required sheet name
         await expect(formatGuide).toContainText('Movimientos');
 
-        // Must mention the exact 7-column header
         await expect(formatGuide).toContainText('F. VALOR');
         await expect(formatGuide).toContainText('IMPORTE');
         await expect(formatGuide).toContainText('SALDO');
@@ -58,18 +53,17 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         const title = await page.title();
         expect(title).not.toMatch(/PDF/i);
 
-        // The heading should not mention PDF
         const heading = page.locator('h3');
         await expect(heading).not.toContainText('PDF', { ignoreCase: true });
     });
 
     /**
      * REQ-PROG-011: Real-time progress bar is visible during upload with ARIA attributes and counts.
+     *
+     * The upload is intercepted via page.route to serve a mocked progress bar.
      */
     test('TC-U04: shows progress bar during upload', async ({ page }) => {
-        // Intercept the first progress poll so the fast real upload still renders a progress state.
-        // Using RegExp to avoid glob ambiguity with ? in query strings (Playwright may parse the glob
-        // string as a URL, splitting on ? and treating the query part differently).
+        // Intercept the first progress poll to serve a mocked progress bar.
         let progressRequestCount = 0;
         await page.route(/\/[Tt]ransactions\/[Uu]pload\?handler=Progress(&|$)/, async route => {
             progressRequestCount++;
@@ -94,24 +88,13 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
             await route.continue();
         });
 
-        await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
-        // setInputFiles dispatches change event but Alpine may not catch it reliably in CI.
-        // Directly invoke Alpine's handler to ensure the file is processed.
-        await page.evaluate(async () => {
-            const input = document.querySelector('input[type="file"]');
-            const alpineRoot = document.querySelector('[x-data]');
-            if (input && alpineRoot && (alpineRoot as any)._x_dataStack?.[0]?.handleFileSelect) {
-                await (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
-            }
-        });
-        // Use a specific locator — there are 3x button[type="submit"] on the page
-        // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
-        // Wait for Alpine's async pipeline to process the file before clicking.
-        // Use a robust wait to avoid races with Alpine's reactive update of the disabled attribute.
-        await page.waitForFunction(() => {
-            const btn = document.querySelector('[data-testid="upload-submit"]');
-            return !!btn && !btn.disabled;
-        }, null, { timeout: 15000 });
+        const fileInput = page.locator('input[type="file"]');
+        await fileInput.setInputFiles(EXCEL_FIXTURE_PATH);
+
+        await expect(page.getByText('1 file(s) selected:')).toBeVisible();
+        await expect(page.getByText('movements-non-2501.xls')).toBeVisible();
+        await expect(page.getByTestId('upload-submit')).toBeEnabled();
+
         await page.getByTestId('upload-submit').click();
 
         const progressBar = page.locator('[role="progressbar"]');
@@ -123,30 +106,22 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
 
     /**
      * REQ-PROG-006: Upload completes and the final success result is displayed.
+     *
+     * Uses the same user-observable flow as a real user: select file, wait until
+     * the file appears in the selected list, and submit.
      */
     test('TC-U05: completes upload and shows results', async ({ page }) => {
-        await page.setInputFiles('input[type="file"]', EXCEL_FIXTURE_PATH);
-        // setInputFiles dispatches change event but Alpine may not catch it reliably in CI.
-        // Directly invoke Alpine's handler to ensure the file is processed.
-        await page.evaluate(async () => {
-            const input = document.querySelector('input[type="file"]');
-            const alpineRoot = document.querySelector('[x-data]');
-            if (input && alpineRoot && (alpineRoot as any)._x_dataStack?.[0]?.handleFileSelect) {
-                await (alpineRoot as any)._x_dataStack[0].handleFileSelect({ target: input });
-            }
-        });
-        // Use a specific locator — there are 3x button[type="submit"] on the page
-        // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
-        // Wait for Alpine's async pipeline to process the file before clicking.
-        // Use a robust wait to avoid races with Alpine's reactive update of the disabled attribute.
-        await page.waitForFunction(() => {
-            const btn = document.querySelector('[data-testid="upload-submit"]');
-            return !!btn && !btn.disabled;
-        }, null, { timeout: 15000 });
+        const fileInput = page.locator('input[type="file"]');
+        await fileInput.setInputFiles(EXCEL_FIXTURE_PATH);
+
+        await expect(page.getByText('1 file(s) selected:')).toBeVisible();
+        await expect(page.getByText('movements-non-2501.xls')).toBeVisible();
+        await expect(page.getByTestId('upload-submit')).toBeEnabled();
+
         await page.getByTestId('upload-submit').click();
 
-        // There are 2x [role="status"] elements on the page (the upload spinner + the result alert).
-        // Use a more specific selector to target only the result alert.
+        // Two [role="status"] elements exist: upload spinner + result alert.
+        // Target only the success result alert.
         const successAlert = page.locator('.alert-success[role="status"]');
         await expect(successAlert).toBeVisible({ timeout: 30000 });
         await expect(successAlert).toContainText('Import completed');

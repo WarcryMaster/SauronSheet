@@ -1,8 +1,11 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration _config
+@inject Microsoft.Extensions.Hosting.IHostEnvironment _hostEnvironment
 @inject IStringLocalizer<SharedResources> Localizer
 @{
     string fontAwesomeUrl = "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css";
     string sentryDsn = _config["Sentry:Dsn"] ?? "";
+    string sentryEnvironment = _hostEnvironment.EnvironmentName;
+    bool browserSentryEnabled = !string.IsNullOrWhiteSpace(sentryDsn);
     string currentLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
     string[] jsLocalizationKeys =
@@ -110,9 +113,16 @@
     <script src="https://browser.sentry-cdn.com/8.54.0/bundle.tracing.replay.min.js"
             crossorigin="anonymous"></script>
     <script>
-        if (typeof Sentry !== 'undefined') {
+        if (typeof Sentry !== 'undefined' && @browserSentryEnabled.ToString().ToLowerInvariant()) {
+            const sentryLocalHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+            const currentHostname = window.location.hostname.toLowerCase();
+
+            if (sentryLocalHosts.has(currentHostname)) {
+                console.info('Sentry browser SDK disabled for local host:', currentHostname);
+            } else {
             Sentry.init({
                 dsn: "@sentryDsn",
+                environment: "@sentryEnvironment",
                 integrations: [
                     // Session replay: mask all inputs and text to prevent PII capture.
                     Sentry.replayIntegration({
@@ -132,6 +142,11 @@
                     // Inspect request URL (network events, fetch errors)
                     const url = event.request && event.request.url;
                     if (url) {
+                        const normalizedUrl = url.toLowerCase();
+                        if (normalizedUrl.startsWith('http://localhost') ||
+                            normalizedUrl.startsWith('https://localhost') ||
+                            normalizedUrl.startsWith('http://127.0.0.1') ||
+                            normalizedUrl.startsWith('https://127.0.0.1')) return null;
                         if (url.startsWith('chrome-extension://') ||
                             url.startsWith('moz-extension://') ||
                             url.startsWith('safari-web-extension://') ||
@@ -158,6 +173,7 @@
                     return event;
                 },
             });
+            }
         }
     </script>
 

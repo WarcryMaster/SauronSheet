@@ -147,7 +147,7 @@ async function ensureCategoryExists(page: Page, name: string): Promise<void> {
 /**
  * Ensures the deterministic fixture transaction exists for E2E-Budget-Cat-B.
  */
-async function ensureFixtureTransactionExists(page: Page): Promise<void> {
+export async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     const now        = new Date();
     const year       = now.getFullYear();
     const month      = String(now.getMonth() + 1).padStart(2, '0');

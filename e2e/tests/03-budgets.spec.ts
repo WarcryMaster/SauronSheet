@@ -24,7 +24,7 @@
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, AUTH_FILE, E2E_CAT_B } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, AUTH_FILE, E2E_CAT_B, ensureFixtureTransactionExists } from '../fixtures/budget-data.fixture';
 import { ensureBudgetDeleted, ensureBudgetExists, getCurrentBudgetMonth } from './budgets/helpers';
 import { setFlatpickrDate } from '../helpers';
 
@@ -136,12 +136,15 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const currentMonth = getCurrentBudgetMonth();
 
         await ensureBudgetDeleted(page, E2E_CAT_B);
+        await ensureFixtureTransactionExists(page);
 
         await page.goto(`/budgets/comparison?Year=${currentMonth.year}&Month=${currentMonth.monthNumber}`);
         await expect(page).toHaveURL(/\/budgets\/comparison/i);
         await expect(page).toHaveTitle(/Budget vs Actual/i);
 
-        const table = page.locator('table');
+        await expect(page.getByTestId('empty-create-budget-link')).toHaveCount(0);
+
+        const table = page.getByTestId('comparison-table');
         await expect(table).toBeVisible();
 
         const catBRow = table.locator('tbody tr').filter({
