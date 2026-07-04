@@ -64,7 +64,6 @@ Hacer un seguimiento de los gastos personales es tedioso. La mayoría de la gent
 | **.NET** | 10 | Framework web y API — minimal APIs, Razor Pages |
 | **C#** | 13 | Lenguaje principal |
 | **MediatR** | Última | Patrón CQRS — commands y queries |
-| **FluentValidation** | — | Validación de comandos/querys |
 | **Sentry** | SDK .NET | Observabilidad: trazabilidad, errores, métricas |
 | **ExcelDataReader** | — | Parseo de ficheros Excel (.xls/.xlsx) |
 
@@ -881,7 +880,7 @@ Si prefieres crear tu propio usuario:
 |---|---|
 | **Repositorio GitHub** | [https://github.com/tuusuario/SauronSheet](https://github.com/tuusuario/SauronSheet) |
 | **Despliegue (Azure)** | [https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net](https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net) |
-| **Presentación (Slides)** | [Google Slides — SauronSheet TFM](https://docs.google.com/presentation/d/1JzMKW9ThyMCO2rpvjChIwyrhI-rJ3kbM/edit?usp=drive_link&ouid=103319209421068409572&rtpof=true&sd=true) |
+| **Presentación (Slides)** | [Google Slides — SauronSheet TFM](https://docs.google.com/presentation/d/1G-oNAB_yntnks-ZDd0AG9Rgb9iAed0xI/edit?usp=drive_link&ouid=103319209421068409572&rtpof=true&sd=true) |
 | **Vídeo explicativo** | [URL de YouTube / Google Drive] |
 | **Documentación técnica** | `docs/adr/` (Architecture Decision Records) |
 | **Sistema de diseño** | `DESIGN.md` |

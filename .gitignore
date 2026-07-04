@@ -92,6 +92,7 @@ jspm_packages/
 test-results/
 results/
 e2e/results/
+coverage-results/
 
 # Supabase CLI
 supabase/.temp/
