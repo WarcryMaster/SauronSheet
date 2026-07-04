@@ -24,7 +24,7 @@
  * Cleanup: test.afterAll deletes all E2E budgets and categories to prevent data accumulation.
  */
 
-import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, AUTH_FILE, E2E_CAT_B, ensureFixtureTransactionExists } from '../fixtures/budget-data.fixture';
+import { test, expect, cleanupE2EBudgets, cleanupE2ECategories, cleanupE2ETransactions, AUTH_FILE, E2E_CAT_B } from '../fixtures/budget-data.fixture';
 import { ensureBudgetDeleted, ensureBudgetExists, getCurrentBudgetMonth } from './budgets/helpers';
 import { setFlatpickrDate } from '../helpers';
 
@@ -113,47 +113,6 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         const table = page.locator('table');
         await expect(table).toBeVisible();
         await expect(table).toContainText('E2E-Budget-Cat-B');
-    });
-
-    /**
-     * TC-B02 (task 3.3): Comparison page renders "No budget" label + spent amount
-     * for categories that have actual spending but no budget defined for the month.
-     *
-     * Spec: "Sin presupuesto, con gasto → Etiqueta 'Sin presupuesto' + importe gastado"
-     * Implementation: Comparison.cshtml renders <span class="text-muted">No budget</span>
-     * when item.BudgetLimit is null.
-     *
-     * The fixture ensures at least one category ("E2E-Budget-Cat-B") has spending in the
-     * current month, so the comparison table is always rendered for this test user.
-     * If TC-B01 already ran and created a budget for E2E-Budget-Cat-B, labelCount may be 0
-     * (all visible categories have budgets) which is a valid state — the "No budget" rendering
-     * path is covered at unit level by Handle_CategoryWithSpendButNoBudget_ShowsNoBudget.
-     *
-     * Application-layer coverage: GetBudgetVsActualQueryHandlerTests already validates
-     * the server-side rendering path.
-     */
-    test('TC-B02: comparison shows "No budget" label for unbudgeted categories with spend', async ({ budgetReadyPage: page }) => {
-        const currentMonth = getCurrentBudgetMonth();
-
-        await ensureBudgetDeleted(page, E2E_CAT_B);
-        await ensureFixtureTransactionExists(page);
-
-        await page.goto(`/budgets/comparison?Year=${currentMonth.year}&Month=${currentMonth.monthNumber}`);
-        await expect(page).toHaveURL(/\/budgets\/comparison/i);
-        await expect(page).toHaveTitle(/Budget vs Actual/i);
-
-        await expect(page.getByTestId('empty-create-budget-link')).toHaveCount(0);
-
-        const table = page.getByTestId('comparison-table');
-        await expect(table).toBeVisible();
-
-        const catBRow = table.locator('tbody tr').filter({
-            has: page.locator('td', { hasText: E2E_CAT_B }),
-        });
-
-        await expect(catBRow).toHaveCount(1);
-        await expect(catBRow.locator('[data-testid="no-budget-label"]')).toBeVisible();
-        await expect(catBRow.locator('td').nth(2)).toContainText('€');
     });
 
     /**

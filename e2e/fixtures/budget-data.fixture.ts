@@ -1,4 +1,5 @@
 import { test as base, expect, Page } from '@playwright/test';
+import { setFlatpickrDate } from '../helpers';
 
 /**
  * Budget data fixture for SauronSheet E2E tests.
@@ -146,20 +147,26 @@ async function ensureCategoryExists(page: Page, name: string): Promise<void> {
 
 /**
  * Ensures the deterministic fixture transaction exists for E2E-Budget-Cat-B.
+ *
+ * NOTE: kept because the shared budget fixture still relies on a current-month
+ * expense transaction for downstream dashboard/budget scenarios.
  */
-export async function ensureFixtureTransactionExists(page: Page): Promise<void> {
-    const now        = new Date();
-    const year       = now.getFullYear();
-    const month      = String(now.getMonth() + 1).padStart(2, '0');
-    const firstDay   = `${year}-${month}-01`;
+async function ensureFixtureTransactionExists(page: Page): Promise<void> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const firstDay = `${year}-${month}-01`;
+    const safeDayNumber = Math.min(now.getDate(), 15);
+    const safeDay = `${year}-${month}-${String(safeDayNumber).padStart(2, '0')}`;
     const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
-    const lastDay    = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
+    const lastDay = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
+    const filteredTransactionsUrl = `/transactions?StartDate=${firstDay}&EndDate=${lastDay}`;
 
-    await page.goto(`/transactions?StartDate=${firstDay}&EndDate=${lastDay}`);
+    await page.goto(filteredTransactionsUrl);
     await page.waitForLoadState('domcontentloaded');
 
     const fixtureRow = page.locator('#transactionsTable tbody tr').filter({
-        has: page.locator('td', { hasText: new RegExp(`^${FIXTURE_TX_DESCRIPTION}$`) }),
+        has: page.locator('td', { hasText: FIXTURE_TX_DESCRIPTION }),
     });
 
     if ((await fixtureRow.count()) > 0) {
@@ -169,32 +176,35 @@ export async function ensureFixtureTransactionExists(page: Page): Promise<void> 
     await page.goto('/transactions/add');
     await page.waitForLoadState('domcontentloaded');
 
-    // Wait for Flatpickr to be fully initialized before setting the date.
-    // setDate() crashes internally on mobile Chrome (tabIndex on undefined).
-    // Instead, set the native value and let Flatpickr re-sync.
-    await page.waitForFunction(() => {
-        const el = document.getElementById('Date') as HTMLInputElement | null;
-        return el !== null && (el as any)._flatpickr !== undefined;
-    }, { timeout: 10000 });
-    await page.evaluate((dateStr) => {
-        const el = document.getElementById('Date') as HTMLInputElement;
-        const fp = (el as any)._flatpickr;
-        // Bypass setDate() which crashes on mobile Chrome (internal tabIndex on undefined).
-        // Manually set the native value, selectedDates, and let Flatpickr re-sync.
-        el.value = dateStr;
-        const parsed = new Date(dateStr + 'T00:00:00');
-        fp.selectedDates = [parsed];
-        fp.currentYear = parsed.getFullYear();
-        fp.currentMonth = parsed.getMonth();
-        fp.updateValue();
-    }, firstDay);
-    await page.fill('#Description',  FIXTURE_TX_DESCRIPTION);
-    await page.fill('#Amount',       '-25');
+    await setFlatpickrDate(page, 'Date', safeDay);
+    await page.fill('#Description', FIXTURE_TX_DESCRIPTION);
+    await page.fill('#Amount', '-25');
     await page.selectOption('#Currency', 'EUR');
     await page.fill('#CategoryName', E2E_CAT_B);
 
     await page.getByRole('button', { name: 'Add Transaction' }).click();
-    await page.waitForURL(/\/transactions/i, { timeout: 10000 });
+
+    const redirectResult = await Promise.race([
+        page.waitForURL(/\/transactions(?:\?|$)/i, { timeout: 10000 })
+            .then(() => ({ success: true as const })),
+        page.locator('.alert-danger, .validation-summary-errors, .field-validation-error').first()
+            .waitFor({ state: 'visible', timeout: 10000 })
+            .then(() => ({ success: false as const, type: 'error' as const })),
+        new Promise<{ success: false; type: 'timeout' }>((resolve) =>
+            setTimeout(() => resolve({ success: false, type: 'timeout' }), 10000)),
+    ]);
+
+    if (!redirectResult.success) {
+        if (redirectResult.type === 'error') {
+            const errorText = await page.locator('.alert-danger, .validation-summary-errors, .field-validation-error')
+                .first()
+                .textContent()
+                .catch(() => null);
+            throw new Error(`Fixture transaction creation failed: ${errorText?.trim() || 'validation error on form'}`);
+        }
+
+        throw new Error(`Fixture transaction creation failed: did not redirect to /transactions (current URL: ${page.url()})`);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -267,7 +277,7 @@ export async function cleanupE2ETransactions(page: Page): Promise<void> {
         await page.waitForLoadState('domcontentloaded');
 
         const matchingRows = page.locator('#transactionsTable tbody tr').filter({
-            has: page.locator('td', { hasText: new RegExp(`^${FIXTURE_TX_DESCRIPTION}$`) }),
+            has: page.locator('td', { hasText: FIXTURE_TX_DESCRIPTION }),
         });
 
         if ((await matchingRows.count()) === 0) {
