@@ -182,7 +182,23 @@ async function ensureFixtureTransactionExists(page: Page): Promise<void> {
     await page.selectOption('#Currency', 'EUR');
     await page.fill('#CategoryName', E2E_CAT_B);
 
-    await page.getByRole('button', { name: 'Add Transaction' }).click();
+    // Use form.requestSubmit() to avoid Alpine.js reactivity issues on Mobile Chrome.
+    // Alpine's @submit="loading = true" + :disabled="loading" can prevent the native
+    // form submission from completing when the button click triggers a re-render that
+    // disables the submit button before the POST is fully dispatched.
+    //
+    // IMPORTANT: Use a specific selector to find the transaction form. The page has
+    // multiple <form> elements in the layout (language switcher, logout, etc.) and
+    // document.querySelector('form') picks the FIRST one, which is the ES language
+    // form in the desktop nav — submitting that would change culture, not add a
+    // transaction. Target the form that has Alpine's x-data attribute.
+    await page.evaluate(() => {
+        const form = document.querySelector('form[x-data]') as HTMLFormElement | null;
+        const submitBtn = form?.querySelector('button[type="submit"]');
+        if (form && submitBtn) {
+            form.requestSubmit(submitBtn as HTMLElement);
+        }
+    });
 
     const redirectResult = await Promise.race([
         page.waitForURL(/\/transactions(?:\?|$)/i, { timeout: 10000 })

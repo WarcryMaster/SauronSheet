@@ -82,15 +82,15 @@ export default defineConfig({
         ...(process.env.CI ? {} : { channel: 'msedge' }),
       },
     },
-    {
-      name: 'Mobile Chrome',
-      dependencies: ['setup'],
-      use: { ...devices['Pixel 5'], storageState: '.auth/user.json' },
-    },
 
-    // Only run additional browsers locally (CI uses Chromium + Mobile Chrome only)
+    // Only run additional browsers locally (CI uses Chromium only)
     ...(!process.env.CI
       ? [
+          {
+            name: 'Mobile Chrome',
+            dependencies: ['setup'],
+            use: { ...devices['Pixel 5'], storageState: '.auth/user.json' },
+          },
           {
             name: 'firefox',
             dependencies: ['setup'],
