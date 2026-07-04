@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Moq;
+using SauronSheet.Application.Resources;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Transactions.DTOs;
 using SauronSheet.Application.Services;
@@ -24,10 +26,12 @@ namespace SauronSheet.Frontend.Tests.Pages.Transactions;
 public class UploadModelTests
 {
     private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IStringLocalizer<SharedResources>> _mockLocalizer;
 
     public UploadModelTests()
     {
         _mockMediator = new Mock<IMediator>();
+        _mockLocalizer = new Mock<IStringLocalizer<SharedResources>>();
     }
 
     private UploadModel CreateModel(
@@ -50,7 +54,7 @@ public class UploadModelTests
             new PageActionDescriptor(),
             new ModelStateDictionary()));
 
-        UploadModel model = new(_mockMediator.Object, serviceScopeFactory!, progressTracker)
+        UploadModel model = new(_mockMediator.Object, serviceScopeFactory!, _mockLocalizer.Object, progressTracker)
         {
             PageContext = pageContext
         };
