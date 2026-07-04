@@ -666,8 +666,17 @@
   <data name="Import.Error.Duplicate" xml:space="preserve">
     <value>Duplicado</value>
   </data>
+  <data name="Import.Error.Unexpected" xml:space="preserve">
+    <value>Se produjo un error inesperado. Inténtalo de nuevo más tarde.</value>
+  </data>
   <data name="Import.Error.InvalidFileFormat" xml:space="preserve">
     <value>El archivo no es un documento Excel válido. Sube un archivo .xls o .xlsx genuino.</value>
+  </data>
+  <data name="Import.Failed" xml:space="preserve">
+    <value>Importación fallida</value>
+  </data>
+  <data name="Import.TryAgain" xml:space="preserve">
+    <value>Intentar de nuevo</value>
   </data>
   <data name="Import.Parser.SheetNotFound" xml:space="preserve">
     <value>No se encontró la hoja '{0}' en el archivo. Verifica que sea un extracto ING con la hoja 'Movimientos'.</value>

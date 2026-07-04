@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using SauronSheet.Application.Features.Transactions.Commands;
 using SauronSheet.Application.Features.Transactions.DTOs;
+using SauronSheet.Application.Resources;
 using SauronSheet.Application.Services;
 using SauronSheet.Domain.Exceptions;
 
@@ -19,6 +21,7 @@ public class UploadModel : PageModel
     private readonly IMediator _mediator;
     private readonly IImportProgressTracker? _progressTracker;
     private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IStringLocalizer<SharedResources> _localizer;
 
     [BindProperty]
     public IFormFile[] ExcelFiles { get; set; } = Array.Empty<IFormFile>();
@@ -29,11 +32,13 @@ public class UploadModel : PageModel
     public UploadModel(
         IMediator mediator,
         IServiceScopeFactory serviceScopeFactory,
+        IStringLocalizer<SharedResources> localizer,
         IImportProgressTracker? progressTracker = null)
     {
         _mediator = mediator;
         _progressTracker = progressTracker;
         _serviceScopeFactory = serviceScopeFactory;
+        _localizer = localizer;
     }
 
     public void OnGet() { }
@@ -67,7 +72,7 @@ public class UploadModel : PageModel
             Response.Headers["HX-Trigger"] = "{\"stopPolling\": true}";
         }
 
-        string html = BuildProgressHtml(progress);
+        string html = BuildProgressHtml(progress, _localizer);
         return Content(html, "text/html");
     }
 
@@ -332,16 +337,16 @@ public class UploadModel : PageModel
         return Page();
     }
 
-    private static string BuildProgressHtml(ImportProgress progress)
+    private static string BuildProgressHtml(ImportProgress progress, IStringLocalizer<SharedResources> localizer)
     {
         if (progress.IsFailed)
         {
-            string errorMessage = WebUtility.HtmlEncode(progress.ErrorMessage ?? "An unexpected error occurred.");
+            string errorMessage = WebUtility.HtmlEncode(progress.ErrorMessage ?? localizer["Import.Error.Unexpected"]);
             return $"""
                 <div class="alert alert-danger" role="alert">
-                  <p class="fw-semibold">Import failed</p>
+                  <p class="fw-semibold">{localizer["Import.Failed"]}</p>
                   <p class="small">{errorMessage}</p>
-                  <button type="button" class="btn btn-outline-danger btn-sm" @click="uploading = false; progressVisible = false">Try again</button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" @click="uploading = false; progressVisible = false">{localizer["Import.TryAgain"]}</button>
                 </div>
                 """;
         }

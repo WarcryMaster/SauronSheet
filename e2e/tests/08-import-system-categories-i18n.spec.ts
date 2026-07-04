@@ -39,7 +39,7 @@ test.describe('Import errors and system categories localization', () => {
 
         const importFailure = page.locator('#upload-progress .alert-danger');
         await expect(importFailure).toBeVisible({ timeout: 30000 });
-        await expect(importFailure).toContainText('No se pudo procesar el archivo subido. Comprueba el formato e inténtalo de nuevo.');
+        await expect(importFailure).toContainText('El archivo no es un documento Excel válido. Sube un archivo .xls o .xlsx genuino.');
     });
 
     test('TC-I18N-IMPORT-EN: parser/import error is localized in English', async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe('Import errors and system categories localization', () => {
 
         const importFailure = page.locator('#upload-progress .alert-danger');
         await expect(importFailure).toBeVisible({ timeout: 30000 });
-        await expect(importFailure).toContainText('Could not parse the uploaded file. Please check the format and try again.');
+        await expect(importFailure).toContainText('The file is not a valid Excel document. Please upload a genuine .xls or .xlsx file.');
     });
 
     test('TC-I18N-CATEGORY-SELECTORS: category list remains locale-agnostic via data-testid', async ({ page }) => {
