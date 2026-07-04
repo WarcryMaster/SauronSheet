@@ -107,7 +107,11 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
         // Wait for Alpine's async pipeline to process the file before clicking.
-        await expect(page.getByTestId('upload-submit')).toBeEnabled({ timeout: 5000 });
+        // Use a robust wait to avoid races with Alpine's reactive update of the disabled attribute.
+        await page.waitForFunction(() => {
+            const btn = document.querySelector('[data-testid="upload-submit"]');
+            return !!btn && !btn.disabled;
+        }, null, { timeout: 15000 });
         await page.getByTestId('upload-submit').click();
 
         const progressBar = page.locator('[role="progressbar"]');
@@ -134,7 +138,11 @@ test.describe('Upload Excel Bank Statement — ESP-4', () => {
         // Use a specific locator — there are 3x button[type="submit"] on the page
         // (Logout × 2 + Upload) and the generic selector hits Logout first, logging out.
         // Wait for Alpine's async pipeline to process the file before clicking.
-        await expect(page.getByTestId('upload-submit')).toBeEnabled({ timeout: 5000 });
+        // Use a robust wait to avoid races with Alpine's reactive update of the disabled attribute.
+        await page.waitForFunction(() => {
+            const btn = document.querySelector('[data-testid="upload-submit"]');
+            return !!btn && !btn.disabled;
+        }, null, { timeout: 15000 });
         await page.getByTestId('upload-submit').click();
 
         // There are 2x [role="status"] elements on the page (the upload spinner + the result alert).
