@@ -858,14 +858,14 @@ Si prefieres crear tu propio usuario:
 | **Fase 4** | Dashboard: KPIs, gráficos Chart.js, tendencias, transacciones recientes, filtros por periodo |
 | **Fase 5** | Presupuestos: CRUD completo, semáforo, barras de progreso, histórico, métricas, comparativas |
 | **Fase 6** | Análisis anual completo: 7 secciones, salud financiera, anomalías, predicciones |
-| **Fase 7** | UI/UX: diseño responsivo, sistema de diseño Olive, Alpine.js, HTMX, multi-idioma |
-| **Fase 8** | Testing: cobertura >80% dominio, >70% aplicación, 10 specs E2E con Playwright |
+| **Fase 7** | UI/UX: diseño responsivo, sistema de diseño Olive, Alpine.js, HTMX |
+| **Fase 8** | Multi-idioma completo: español (es-ES) e inglés (en-US) con cambio en vivo, persistencia en cookie, localización de Chart.js/Flatpickr/fechas/moneda, sistema de recursos .resx |
+| **Fase 9** | Testing: cobertura >80% dominio, >70% aplicación, 10 specs E2E con Playwright |
 
 ### Próximos Pasos 🔜
 
 | Funcionalidad | Prioridad |
 |---|---|
-| Multi-idioma completo (normalizar detección y URLs) | Alta |
 | Exportación a PDF/CSV de informes | Media |
 | Alertas push de presupuestos (notificaciones) | Media |
 | Importación multi-banco (CaixaBank, Santander, BBVA) | Media |
@@ -881,7 +881,7 @@ Si prefieres crear tu propio usuario:
 |---|---|
 | **Repositorio GitHub** | [https://github.com/tuusuario/SauronSheet](https://github.com/tuusuario/SauronSheet) |
 | **Despliegue (Azure)** | [https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net](https://sauronsheet-akd4gkewdpbtbgea.spaincentral-01.azurewebsites.net) |
-| **Presentación (Slides)** | [URL de Google Slides / PowerPoint / Canva] |
+| **Presentación (Slides)** | [Google Slides — SauronSheet TFM](https://docs.google.com/presentation/d/1JzMKW9ThyMCO2rpvjChIwyrhI-rJ3kbM/edit?usp=drive_link&ouid=103319209421068409572&rtpof=true&sd=true) |
 | **Vídeo explicativo** | [URL de YouTube / Google Drive] |
 | **Documentación técnica** | `docs/adr/` (Architecture Decision Records) |
 | **Sistema de diseño** | `DESIGN.md` |
@@ -891,18 +891,7 @@ Si prefieres crear tu propio usuario:
 
 ## 📄 Licencia
 
-Este proyecto es parte del Trabajo de Fin de Máster del **Máster de Programación desde Cero** de [MoureDev](https://mouredev.com).
-
 Todos los derechos reservados — Proyecto educativo.
-
----
-
-## 🙏 Agradecimientos
-
-- **Brais Moure (MoureDev)** — Por el máster y la inspiración.
-- **Comunidad MoureDev** — Por el apoyo y feedback durante el desarrollo.
-- **Supabase** — Plataforma de base de datos y autenticación gratuita.
-- **Azure** — Hosting gratuito para estudiantes.
 
 ---
 
