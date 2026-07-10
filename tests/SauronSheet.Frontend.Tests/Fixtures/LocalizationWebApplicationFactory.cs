@@ -10,17 +10,20 @@ namespace SauronSheet.Frontend.Tests.Fixtures;
 
 public sealed class LocalizationWebApplicationFactory : WebApplicationFactory<Program>
 {
+    static LocalizationWebApplicationFactory()
+    {
+        // Environment variables are loaded by ConfigurationManager during
+        // WebApplication.CreateBuilder, BEFORE Program.Main() continues to
+        // AddInfrastructureServices. This is the only configuration source
+        // that guarantees availability before the fast-fail validation
+        // of Supabase:JwtSecret.
+        Environment.SetEnvironmentVariable("Supabase__Url", "https://test.supabase.co");
+        Environment.SetEnvironmentVariable("Supabase__Key", "test-key");
+        Environment.SetEnvironmentVariable("Supabase__JwtSecret", "test-jwt-secret-that-is-at-least-32-chars");
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Supabase:Url"] = "https://test.supabase.co",
-                ["Supabase:Key"] = "test-key",
-                ["Supabase:JwtSecret"] = "test-jwt-secret-that-is-at-least-32-chars",
-            });
-        });
 
         builder.ConfigureServices(services =>
         {

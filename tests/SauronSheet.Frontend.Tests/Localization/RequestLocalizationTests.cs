@@ -9,6 +9,7 @@ using Xunit;
 /// (REQ-LOC-001, REQ-LOC-010).
 /// </summary>
 [Trait("Category", "Frontend")]
+[Trait("Category", "Integration")]
 public class RequestLocalizationTests : IClassFixture<LocalizationWebApplicationFactory>
 {
     private readonly LocalizationWebApplicationFactory _factory;

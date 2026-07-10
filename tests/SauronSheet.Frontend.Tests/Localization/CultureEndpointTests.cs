@@ -10,6 +10,7 @@ using Xunit;
 /// (REQ-LOC-020).
 /// </summary>
 [Trait("Category", "Frontend")]
+[Trait("Category", "Integration")]
 public class CultureEndpointTests : IClassFixture<LocalizationWebApplicationFactory>
 {
     private readonly LocalizationWebApplicationFactory _factory;

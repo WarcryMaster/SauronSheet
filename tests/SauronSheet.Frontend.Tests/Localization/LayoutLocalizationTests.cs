@@ -8,6 +8,7 @@ using Xunit;
 /// Integration tests for the localized _Layout scaffold (REQ-LOC-070, REQ-LOC-040).
 /// </summary>
 [Trait("Category", "Frontend")]
+[Trait("Category", "Integration")]
 public class LayoutLocalizationTests : IClassFixture<LocalizationWebApplicationFactory>
 {
     private readonly LocalizationWebApplicationFactory _factory;

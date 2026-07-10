@@ -8,6 +8,7 @@ using Xunit;
 /// Integration tests for the localized Login page (REQ-LOC-030, REQ-LOC-080).
 /// </summary>
 [Trait("Category", "Frontend")]
+[Trait("Category", "Integration")]
 public class LoginLocalizationTests : IClassFixture<LocalizationWebApplicationFactory>
 {
     private readonly LocalizationWebApplicationFactory _factory;
