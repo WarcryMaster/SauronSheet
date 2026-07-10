@@ -4,6 +4,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SauronSheet.Application.Features.Analytics.Classification;
@@ -30,6 +31,16 @@ public sealed class AnnualWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Supabase:Url"] = "https://test.supabase.co",
+                ["Supabase:Key"] = "test-key",
+                ["Supabase:JwtSecret"] = "test-jwt-secret-that-is-at-least-32-chars",
+            });
+        });
+
         builder.ConfigureServices(services =>
         {
             // Replace default authentication with the test scheme.

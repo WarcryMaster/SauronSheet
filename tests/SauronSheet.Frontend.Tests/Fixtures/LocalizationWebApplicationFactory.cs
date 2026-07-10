@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SauronSheet.Infrastructure.Auth;
 
@@ -12,6 +13,16 @@ public sealed class LocalizationWebApplicationFactory : WebApplicationFactory<Pr
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Supabase:Url"] = "https://test.supabase.co",
+                ["Supabase:Key"] = "test-key",
+                ["Supabase:JwtSecret"] = "test-jwt-secret-that-is-at-least-32-chars",
+            });
+        });
+
         builder.ConfigureServices(services =>
         {
             services.AddAuthentication(options =>
