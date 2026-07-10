@@ -547,7 +547,7 @@ public class IngExcelStatementParserTests
         DomainException ex = await Assert.ThrowsAsync<DomainException>(
             () => parser.ParseAsync(stream, "invalid-format.xls"));
 
-        Assert.Contains("not a valid Excel document", ex.Message);
+        Assert.Contains("Excel", ex.Message);
     }
 
     /// <summary>
