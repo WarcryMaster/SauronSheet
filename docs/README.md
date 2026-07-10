@@ -30,8 +30,8 @@ to business context. They are not specifications but reference material for futu
 
 ## Related Documentation
 
-| Directory | Purpose |
-|-----------|---------|
+| Directory / Link | Purpose |
+|---|---|
 | `openspec/` | SDD artifacts: specs, changes (archived), and roadmap |
 | `specs/` | Phase-based specifications (phase-0 through phase-6) and feature specs |
 | `sdd/` | Active SDD working files for current changes |
@@ -39,3 +39,5 @@ to business context. They are not specifications but reference material for futu
 | `.specify/memory/constitution.md` | Governance and core principles |
 | `.github/copilot-instructions.md` | Code patterns and quality rules |
 | `AGENTS.md` | AI behavior rules and architecture constraints |
+| `docs/video-guion.md` | Script for the TFM presentation video |
+| [🎬 Video de presentación](https://drive.google.com/file/d/161Rjo0oq3PNhwNGRo4ajZbWckhtUtdRM/view?usp=drive_link) | Grabación del TFM: demo, arquitectura, testing y CI/CD |
