@@ -1,3 +1,13 @@
 @{
     Layout = "_Layout";
+
+    // Restore culture from the request localization middleware's feature store.
+    // In .NET 6+, CultureInfo does not flow across async boundaries by default,
+    // so the middleware's CurrentUICulture can be lost after async operations.
+    IRequestCultureFeature? feature = Context.Features.Get<IRequestCultureFeature>();
+    if (feature?.RequestCulture is not null)
+    {
+        CultureInfo.CurrentCulture = feature.RequestCulture.Culture;
+        CultureInfo.CurrentUICulture = feature.RequestCulture.UICulture;
+    }
 }
