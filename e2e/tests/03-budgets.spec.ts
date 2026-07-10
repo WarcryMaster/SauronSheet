@@ -173,6 +173,17 @@ test.describe('Budgets — monthly budget management (clarify-budgets-feature)',
         }).first();
         await expect(catBProgressAfter).toBeVisible();
         await expect(catBProgressAfter).toContainText(catBProgressText);
+
+        // Regression guard: widget must remain visible even when dashboard date range has no transactions.
+        // Date filter set to a far-future custom range forces hasData=false for the analytics section.
+        await page.goto('/dashboard?DateFilter=custom&CustomFromDate=2099-01-01&CustomToDate=2099-01-31');
+        await expect(page).toHaveURL(/DateFilter=custom/i);
+
+        const emptyStateCard = page.locator('[data-testid="dashboard-upload-statement"]');
+        await expect(emptyStateCard).toBeVisible();
+        await expect(budgetWidget).toBeVisible();
+        await expect(budgetWidget).toContainText('this month');
+        await expect(budgetWidget).toContainText(E2E_CAT_B);
     });
 
     /**

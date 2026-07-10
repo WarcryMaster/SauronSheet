@@ -232,85 +232,86 @@
                 }
             </div>
 
-            <!-- Budget Status Widget -->
-            <div class="card border-0 shadow-sm p-4" data-testid="budget-status-widget">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3 class="h6 fw-semibold mb-0">@Localizer["Dashboard.BudgetStatusTitle"]</h3>
-                    <a href="/budgets" class="small text-brand" data-testid="dashboard-manage-budgets">@Localizer["Dashboard.BudgetManage"] &rarr;</a>
-                </div>
-                @if (!Model.BudgetMetrics.Any())
-                {
-                    <p class="text-muted small">@Localizer["Dashboard.NoBudgetsSet"]
-                       <a href="/budgets/create" class="text-brand fw-semibold" data-testid="dashboard-create-budgets">@Localizer["Dashboard.CreateBudgetsLink"]</a>
-                    </p>
-                }
-                else
-                {
-                    <!-- Overall summary line -->
-                    <p class="small text-muted mb-3">
-                        @Model.BudgetMetrics.Count @Localizer["Dashboard.BudgetCountSuffix"]
-                        —
-                        <span class="fw-semibold @(Model.BudgetTotalPercentageUsed > 100 ? "text-danger" : Model.BudgetTotalPercentageUsed >= 75 ? "text-warning" : "text-success")">
-                            @Model.BudgetTotalPercentageUsed.ToString("N1")% @Localizer["Dashboard.BudgetConsumed"]
-                        </span>
-                    </p>
-
-                    <!-- Status count chips -->
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        @if (Model.BudgetGreenCount > 0)
-                        {
-                            <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount @Localizer["Dashboard.BudgetOnTrack"]</span>
-                        }
-                        @if (Model.BudgetYellowCount > 0)
-                        {
-                            <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount @Localizer["Dashboard.BudgetWarning"]</span>
-                        }
-                        @if (Model.BudgetRedCount > 0)
-                        {
-                            <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount @Localizer["Dashboard.BudgetNearLimit"]</span>
-                        }
-                        @if (Model.BudgetOverageCount > 0)
-                        {
-                            <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount @Localizer["Dashboard.BudgetOver"]</span>
-                        }
-                    </div>
-
-                    <!-- Per-budget progress bars -->
-                    @foreach (var metric in Model.BudgetMetrics)
-                    {
-                        var pct = Math.Min(metric.PercentageUsed, 100);
-                        var barColor = metric.StatusLevel switch
-                        {
-                            "Green" => "bg-success",
-                            "Yellow" => "bg-warning",
-                            "Red" => "bg-danger",
-                            "Overage" => "bg-danger",
-                            _ => "bg-secondary"
-                        };
-
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <a href="/budgets/metrics" class="text-decoration-none">
-                                    <span class="fw-medium">@metric.CategoryName</span>
-                                </a>
-                                <span>&euro;@metric.Spent.ToString("N0") / &euro;@metric.AccumulatedLimit.ToString("N0")</span>
-                            </div>
-                            <div class="progress rounded-pill" style="height:10px" role="progressbar"
-                                 aria-valuenow="@((int)pct)" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar @barColor" style="width:@(pct.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%"></div>
-                            </div>
-                            <div class="d-flex justify-content-between small text-muted mt-1">
-                                <span>@Math.Round(metric.PercentageUsed, 1)% @Localizer["Dashboard.BudgetUsed"]</span>
-                                <span class="@(metric.Remaining >= 0 ? "text-success" : "text-danger")">
-                                    &euro;@metric.Remaining.ToString("N0") @Localizer["Dashboard.BudgetLeft"]
-                                </span>
-                            </div>
-                        </div>
-                    }
-                }
-            </div>
         </div>
         </template>
+
+        <!-- Budget Status Widget (independent of transaction data state) -->
+        <div class="card border-0 shadow-sm p-4" data-testid="budget-status-widget">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 fw-semibold mb-0">@Localizer["Dashboard.BudgetStatusTitle"]</h3>
+                <a href="/budgets" class="small text-brand" data-testid="dashboard-manage-budgets">@Localizer["Dashboard.BudgetManage"] &rarr;</a>
+            </div>
+            @if (!Model.BudgetMetrics.Any())
+            {
+                <p class="text-muted small">@Localizer["Dashboard.NoBudgetsSet"]
+                   <a href="/budgets/create" class="text-brand fw-semibold" data-testid="dashboard-create-budgets">@Localizer["Dashboard.CreateBudgetsLink"]</a>
+                </p>
+            }
+            else
+            {
+                <!-- Overall summary line -->
+                <p class="small text-muted mb-3">
+                    @Model.BudgetMetrics.Count @Localizer["Dashboard.BudgetCountSuffix"]
+                    —
+                    <span class="fw-semibold @(Model.BudgetTotalPercentageUsed > 100 ? "text-danger" : Model.BudgetTotalPercentageUsed >= 75 ? "text-warning" : "text-success")">
+                        @Model.BudgetTotalPercentageUsed.ToString("N1")% @Localizer["Dashboard.BudgetConsumed"]
+                    </span>
+                </p>
+
+                <!-- Status count chips -->
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @if (Model.BudgetGreenCount > 0)
+                    {
+                        <span class="badge bg-success rounded-pill">@Model.BudgetGreenCount @Localizer["Dashboard.BudgetOnTrack"]</span>
+                    }
+                    @if (Model.BudgetYellowCount > 0)
+                    {
+                        <span class="badge bg-warning text-dark rounded-pill">@Model.BudgetYellowCount @Localizer["Dashboard.BudgetWarning"]</span>
+                    }
+                    @if (Model.BudgetRedCount > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill">@Model.BudgetRedCount @Localizer["Dashboard.BudgetNearLimit"]</span>
+                    }
+                    @if (Model.BudgetOverageCount > 0)
+                    {
+                        <span class="badge bg-danger rounded-pill">@Model.BudgetOverageCount @Localizer["Dashboard.BudgetOver"]</span>
+                    }
+                </div>
+
+                <!-- Per-budget progress bars -->
+                @foreach (var metric in Model.BudgetMetrics)
+                {
+                    var pct = Math.Min(metric.PercentageUsed, 100);
+                    var barColor = metric.StatusLevel switch
+                    {
+                        "Green" => "bg-success",
+                        "Yellow" => "bg-warning",
+                        "Red" => "bg-danger",
+                        "Overage" => "bg-danger",
+                        _ => "bg-secondary"
+                    };
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <a href="/budgets/metrics" class="text-decoration-none">
+                                <span class="fw-medium">@metric.CategoryName</span>
+                            </a>
+                            <span>&euro;@metric.Spent.ToString("N0") / &euro;@metric.AccumulatedLimit.ToString("N0")</span>
+                        </div>
+                        <div class="progress rounded-pill" style="height:10px" role="progressbar"
+                             aria-valuenow="@((int)pct)" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar @barColor" style="width:@(pct.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-1">
+                            <span>@Math.Round(metric.PercentageUsed, 1)% @Localizer["Dashboard.BudgetUsed"]</span>
+                            <span class="@(metric.Remaining >= 0 ? "text-success" : "text-danger")">
+                                &euro;@metric.Remaining.ToString("N0") @Localizer["Dashboard.BudgetLeft"]
+                            </span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
 
         <!-- JSON data blocks for Chart.js (ADR-0002 compliant) -->
         @if (Model.Summary?.TransactionCount > 0)

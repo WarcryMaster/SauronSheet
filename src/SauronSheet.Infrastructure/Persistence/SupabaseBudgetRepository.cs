@@ -8,6 +8,7 @@ using Postgrest;
 using Postgrest.Attributes;
 using Postgrest.Models;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Repositories;
 using Domain.ValueObjects;
 
@@ -261,8 +262,19 @@ public class SupabaseBudgetRepository : IBudgetRepository
 
     public async Task AddAsync(Budget budget)
     {
-        var row = BudgetRow.FromDomainForInsert(budget);
-        await _client.From<BudgetRow>().Insert(row);
+        try
+        {
+            BudgetRow row = BudgetRow.FromDomainForInsert(budget);
+            await _client.From<BudgetRow>().Insert(row);
+        }
+        catch (Postgrest.Exceptions.PostgrestException ex)
+            when (ex.Content?.Contains("23P01", StringComparison.Ordinal) == true ||
+                  ex.Content?.Contains("budgets_no_overlap", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            throw new DomainException(
+                "A budget for this category with an overlapping date range already exists. " +
+                "Choose a different category or effective period.");
+        }
     }
 
     public async Task UpdateAsync(Budget budget)
